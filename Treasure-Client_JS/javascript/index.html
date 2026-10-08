@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="und">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
+	<meta name="description" content="Eaglercraft 1.12 test directory HTML page">
+	<meta name="keywords" content="eaglercraft, eaglercraftx, minecraft, 1.12, 1.12.2">
+	<title>Eaglercraft 1.12.2</title>
+
+	<meta property="og:locale" content="en-US">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="Eaglercraft 1.12.2">
+	<meta property="og:description" content="test directory HTML page">
+
+	<link type="image/png" rel="shortcut icon" href="favicon.png">
+
+	<style>
+		html, body {
+			margin: 0;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+
+			background-color: #3b2618;
+			background-image:
+				linear-gradient(45deg, rgba(0,0,0,.20) 25%, transparent 25%),
+				linear-gradient(-45deg, rgba(0,0,0,.20) 25%, transparent 25%),
+				linear-gradient(45deg, transparent 75%, rgba(255,255,255,.06) 75%),
+				linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.06) 75%);
+			background-size: 32px 32px;
+			image-rendering: pixelated;
+		}
+
+		#sound_overlay {
+			position: fixed;
+			inset: 0;
+			z-index: 999999;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+
+			background-color: #3b2618;
+			background-image:
+				linear-gradient(45deg, rgba(0,0,0,.20) 25%, transparent 25%),
+				linear-gradient(-45deg, rgba(0,0,0,.20) 25%, transparent 25%),
+				linear-gradient(45deg, transparent 75%, rgba(255,255,255,.06) 75%),
+				linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.06) 75%);
+			background-size: 32px 32px;
+			image-rendering: pixelated;
+		}
+
+		#sound_text {
+			text-align: center;
+		}
+
+		#sound_button {
+			font-family: monospace;
+			font-size: 24px;
+			color: white;
+			text-shadow: 2px 2px #000;
+			background: #727272;
+			border: 3px solid #222;
+			box-shadow: inset 2px 2px #aaa, inset -2px -2px #333;
+			padding: 14px 34px;
+			cursor: pointer;
+		}
+
+		#sound_button:hover {
+			background: #8a8a8a;
+		}
+
+		#sound_subtext {
+			margin-top: 12px;
+			font-family: monospace;
+			font-size: 14px;
+			color: #ddd;
+			text-shadow: 2px 2px #000;
+		}
+	</style>
+
+	<script type="text/javascript" src="classes.js"></script>
+
+	<script type="text/javascript">
+		"use strict";
+
+		function startGame() {
+			if(window.location.href.indexOf("file:") === 0) {
+				alert("HTTP please, do not open this file locally, run a local HTTP server and load it via HTTP");
+			}else {
+				window.eaglercraftXOpts = {
+					demoMode: false,
+					container: "game_frame",
+					assetsURI: "assets.epk",
+					localesURI: "lang/",
+					worldsDB: "worlds",
+					logInvalidCerts: true,
+					crashOnUncaughtExceptions: true
+				};
+
+				main();
+			}
+		}
+
+		window.addEventListener("load", function() {
+			var button = document.getElementById("sound_button");
+			var overlay = document.getElementById("sound_overlay");
+
+			button.addEventListener("click", function() {
+				overlay.remove();
+				startGame();
+			});
+		});
+	</script>
+</head>
+
+<body id="game_frame">
+<div id="sound_overlay">
+	<div id="sound_text">
+		<button id="sound_button">Click to Enable Sound</button>
+		<div id="sound_subtext">Open xque's Minecraft</div>
+	</div>
+</div>
+</body>
+</html>
