@@ -34,13 +34,22 @@ public class TreasureButtons {
 		return false;
 	}
 
+	/**
+	 * True when the Frost theme is active (selected in the Mod Menu's Themes tab).
+	 * When it is, every button switches to the icy blue/cyan palette so the theme
+	 * applies to the whole client, not just the main menu.
+	 */
+	private static boolean isFrost() {
+		return TreasureTheme.isFrost();
+	}
+
 	// ---- palette (ARGB ints) ----
-	private static int accent()      { return isDeepSea() ? 0xFF7FE9FF : 0xFFFFD76B; } // main accent
-	private static int accentDeep()  { return isDeepSea() ? 0xFF2EC4F1 : 0xFFD4A537; } // darker accent (gradient bottom)
-	private static int textIdle()    { return isDeepSea() ? 0xFFDFF6FF : 0xFFF6ECD2; }
-	private static int textOnFill()  { return isDeepSea() ? 0xFF03101A : 0xFF0F0A05; } // dark text on filled button
+	private static int accent()      { return isFrost() ? 0xFF7FE9FF : 0xFFFFD76B; } // main accent
+	private static int accentDeep()  { return isFrost() ? 0xFF2EC4F1 : 0xFFD4A537; } // darker accent (gradient bottom)
+	private static int textIdle()    { return isFrost() ? 0xFFDFF6FF : 0xFFF6ECD2; }
+	private static int textOnFill()  { return isFrost() ? 0xFF03101A : 0xFF0F0A05; } // dark text on filled button
 	private static int textDisabled(){ return 0xFF6A6A6A; }
-	private static int panelBg()     { return isDeepSea() ? 0xE6031019 : 0xE6140D06; } // hollow interior fill
+	private static int panelBg()     { return isFrost() ? 0xE6031019 : 0xE6140D06; } // hollow interior fill
 
 	private static int lerpColor(int a, int b, float t) {
 		int aa = (a >>> 24) & 0xFF, ar = (a >>> 16) & 0xFF, ag = (a >>> 8) & 0xFF, ab = a & 0xFF;

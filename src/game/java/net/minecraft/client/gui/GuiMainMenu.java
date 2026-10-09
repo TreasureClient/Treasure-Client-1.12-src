@@ -95,12 +95,14 @@ public class GuiMainMenu extends GuiScreen {
 		return brandTitle;
 	}
 
-	// palette helpers, per mode
+	// palette helpers, per theme/mode. Frost (selected in the Mod Menu Themes tab)
+	// uses the icy blue/cyan accent so the whole menu matches the theme.
+	private boolean frost()  { return TreasureTheme.isFrost(); }
 	private int cBgTop()    { return deepSeaMode ? 0xff0a3350 : 0xff2a1b0d; }
 	private int cBgBottom() { return deepSeaMode ? 0xff030f18 : 0xff0f0a05; }
-	private int cAccent()   { return deepSeaMode ? 0xff7fe9ff : 0xffffd76b; }
-	private int cAccentDim(){ return deepSeaMode ? 0xff8fb9cc : 0xffc9b183; }
-	private int cParticle() { return deepSeaMode ? 0x807fe9ff : 0x80ffd76b; }
+	private int cAccent()   { return (deepSeaMode || frost()) ? 0xff7fe9ff : 0xffffd76b; }
+	private int cAccentDim(){ return (deepSeaMode || frost()) ? 0xff8fb9cc : 0xffc9b183; }
+	private int cParticle() { return (deepSeaMode || frost()) ? 0x807fe9ff : 0x80ffd76b; }
 
 	/** Counts the number of screen updates. */
 	private final float updateCounter;
@@ -131,6 +133,9 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation MINECRAFT_TITLE_TEXTURES = new ResourceLocation(
 			"textures/gui/title/minecraft.png");
 	private static final ResourceLocation field_194400_H = new ResourceLocation("textures/gui/title/edition.png");
+	// Treasure Client: Frost theme main-menu background. Packed into assets.epk from
+	// desktopRuntime/resources/assets/minecraft/textures/gui/title/frost_bg.png.
+	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
 
 	/** An array of all the paths to the panorama pictures. */
 	private static final ResourceLocation[] TITLE_PANORAMA_PATHS = new ResourceLocation[] {
@@ -496,35 +501,82 @@ public class GuiMainMenu extends GuiScreen {
 	}
 
 	/**
+	 * Treasure Client: draw the Frost theme background image stretched to fill the
+	 * whole screen (behind the buttons), the same way the panorama blit does.
+	 */
+	private void drawFrostBackground() {
+		GlStateManager.disableDepth();
+		GlStateManager.depthMask(false);
+		GlStateManager.enableTexture2D();
+		GlStateManager.disableBlend();
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		this.mc.getTextureManager().bindTexture(FROST_BG);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer bufferbuilder = tessellator.getBuffer();
+		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		bufferbuilder.pos(0.0D, (double) this.height, (double) this.zLevel).tex(0.0D, 1.0D).color(255, 255, 255, 255)
+				.endVertex();
+		bufferbuilder.pos((double) this.width, (double) this.height, (double) this.zLevel).tex(1.0D, 1.0D)
+				.color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos((double) this.width, 0.0D, (double) this.zLevel).tex(1.0D, 0.0D).color(255, 255, 255, 255)
+				.endVertex();
+		bufferbuilder.pos(0.0D, 0.0D, (double) this.zLevel).tex(0.0D, 0.0D).color(255, 255, 255, 255).endVertex();
+		tessellator.draw();
+		GlStateManager.depthMask(true);
+		GlStateManager.enableDepth();
+	}
+
+	/**
 	 * Draws the screen and all the components in it.
 	 */
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
 		this.panoramaTimer += partialTicks;
 
-		// ---- themed background gradient (mode-based) ----
-		this.drawGradientRect(0, 0, this.width, this.height, cBgTop(), cBgBottom());
-		this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x88000000);
+		boolean frost = this.frost();
 
-		// ---- animated particle field (gold flecks fall / bubbles rise) ----
+		// ---- background ----
+		if (frost) {
+			// Frost theme: the uploaded image IS the real main menu background.
+			this.drawFrostBackground();
+			// light darkening just for text legibility over the photo
+			this.drawGradientRect(0, 0, this.width, this.height, 0x11000000, 0x66000000);
+		} else {
+			// themed background gradient (mode-based)
+			this.drawGradientRect(0, 0, this.width, this.height, cBgTop(), cBgBottom());
+			this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x88000000);
+		}
+
+		// ---- animated particle field (snow on wind / gold flecks fall / bubbles rise) ----
 		// Deterministic pseudo-random field advanced by system time; no textures,
 		// just small drawn rects, so it's cheap and portable.
 		long t = Minecraft.getSystemTime();
-		int particleColor = cParticle();
-		int count = 48;
+		int particleColor = frost ? 0x99EAF6FF : cParticle();
+		// Frost wind: two slow sine waves summed so the gust eases between calm and
+		// windy over time (never a constant gale). Value = horizontal push in px.
+		float gust = frost
+				? (MathHelper.sin((float) (t / 7000.0)) * 0.5F + MathHelper.sin((float) (t / 2300.0)) * 0.5F) * 34.0F
+				: 0.0F;
+		int count = frost ? 70 : 48;
 		for (int i = 0; i < count; i++) {
 			// stable per-particle pseudo-random seeds
 			float sx = ((i * 73 + 11) % 100) / 100.0F;
 			float speed = 0.25F + (((i * 37 + 7) % 100) / 100.0F) * 0.55F;
-			float size = 1.0F + ((i * 53 + 3) % 3);
-			float drift = MathHelper.sin((float) ((t / 1600.0) + i)) * 12.0F;
-			int x = (int) (sx * this.width + drift);
+			float size = frost ? (1.0F + ((i * 29 + 5) % 3)) : (1.0F + ((i * 53 + 3) % 3));
+			float sway = MathHelper.sin((float) ((t / 1600.0) + i)) * (frost ? 7.0F : 12.0F);
+			float lane = 0.4F + ((i * 17 + 9) % 100) / 100.0F; // how strongly this flake catches the wind
+			int x = (int) (sx * this.width + sway + (frost ? gust * lane : 0.0F));
+			if (frost) {
+				// wrap horizontally so wind-blown flakes re-enter from the other edge
+				int w = this.width + 32;
+				x = (((x + 16) % w) + w) % w - 16;
+			}
 			float phase = (float) (((t / 2200.0) * speed + (i * 0.137F)) % 1.0);
 			int y;
-			if (deepSeaMode) {
+			if (!frost && deepSeaMode) {
 				// bubbles rise
 				y = (int) (this.height - phase * this.height);
 			} else {
-				// gold flecks fall
+				// snow / gold flecks fall
 				y = (int) (phase * this.height);
 			}
 			this.drawRect(x, y, x + (int) size, y + (int) size, particleColor);
