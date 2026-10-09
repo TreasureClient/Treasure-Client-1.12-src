@@ -67,6 +67,34 @@ public class GuiMainMenu extends GuiScreen {
 		}
 	}
 
+	// Treasure Client: custom client title chosen in the Mod Menu's Themes tab.
+	// The in-browser overlay writes the active theme's title to storage key
+	// "tctitle" (localStorage "_eaglercraft_1.12.tctitle"); we read it here so the
+	// main-menu brand line shows whatever the user renamed the client to
+	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
+	// renaming in the overlay shows up live without a per-frame storage read.
+	private static String brandTitle = "Treasure Client 1.1";
+	private static long brandRead = 0L;
+
+	private static String brandLine() {
+		try {
+			long now = EagRuntime.steadyTimeMillis();
+			if (now - brandRead > 500L) {
+				brandRead = now;
+				byte[] b = EagRuntime.getStorage("tctitle");
+				if (b != null && b.length > 0) {
+					String s = new String(b, StandardCharsets.UTF_8).trim();
+					brandTitle = s.isEmpty() ? "Treasure Client 1.1" : s;
+				} else {
+					brandTitle = "Treasure Client 1.1";
+				}
+			}
+		} catch (Throwable t) {
+			brandTitle = "Treasure Client 1.1";
+		}
+		return brandTitle;
+	}
+
 	// palette helpers, per mode
 	private int cBgTop()    { return deepSeaMode ? 0xff0a3350 : 0xff2a1b0d; }
 	private int cBgBottom() { return deepSeaMode ? 0xff030f18 : 0xff0f0a05; }
@@ -530,7 +558,7 @@ public class GuiMainMenu extends GuiScreen {
 		this.drawCenteredString(this.fontRendererObj, this.splashText, 0, 0, cAccent());
 		GlStateManager.popMatrix();
 
-		this.drawString(this.fontRendererObj, "Treasure Client 1.1", 2, this.height - 20, cAccentDim());
+		this.drawString(this.fontRendererObj, brandLine(), 2, this.height - 20, cAccentDim());
 		this.drawString(this.fontRendererObj, "Eaglercraft 1.12.2",
 				2, this.height - 10, cAccentDim());
 
