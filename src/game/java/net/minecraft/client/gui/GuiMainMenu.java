@@ -97,14 +97,35 @@ public class GuiMainMenu extends GuiScreen {
 
 	// palette helpers, per theme/mode. Frost (selected in the Mod Menu Themes tab)
 	// uses the icy blue/cyan accent so the whole menu matches the theme.
-	private boolean frost()    { return TreasureTheme.isFrost(); }
-	private boolean tropical() { return TreasureTheme.isTropical(); }
+	private boolean frost()      { return TreasureTheme.isFrost(); }
+	private boolean tropical()   { return TreasureTheme.isTropical(); }
+	private boolean terracotta() { return TreasureTheme.isTerracotta(); }
+	private boolean forest()     { return TreasureTheme.isForest(); }
 	private int cBgTop()    { return deepSeaMode ? 0xff0a3350 : 0xff2a1b0d; }
 	private int cBgBottom() { return deepSeaMode ? 0xff030f18 : 0xff0f0a05; }
-	// Frost = icy blue; Tropical = turquoise accent + sand dim; else gold.
-	private int cAccent()   { return tropical() ? 0xff45e3c6 : (deepSeaMode || frost()) ? 0xff7fe9ff : 0xffffd76b; }
-	private int cAccentDim(){ return tropical() ? 0xffe0cd97 : (deepSeaMode || frost()) ? 0xff8fb9cc : 0xffc9b183; }
-	private int cParticle() { return tropical() ? 0x8045e3c6 : (deepSeaMode || frost()) ? 0x807fe9ff : 0x80ffd76b; }
+	// Per-theme accents: Frost=icy blue, Tropical=turquoise+sand, Terracotta=burnt
+	// orange, Forest=green, else the default gold.
+	private int cAccent() {
+		if (frost()) return 0xff7fe9ff;
+		if (tropical()) return 0xff45e3c6;
+		if (terracotta()) return 0xffdb7a3c;
+		if (forest()) return 0xff6fcb5b;
+		return 0xffffd76b;
+	}
+	private int cAccentDim() {
+		if (frost()) return 0xff8fb9cc;
+		if (tropical()) return 0xffe0cd97;
+		if (terracotta()) return 0xffe8b98a;
+		if (forest()) return 0xffbfe0a0;
+		return 0xffc9b183;
+	}
+	private int cParticle() {
+		if (frost()) return 0x807fe9ff;
+		if (tropical()) return 0x8045e3c6;
+		if (terracotta()) return 0x80e89a5a;
+		if (forest()) return 0x80bfe88a;
+		return 0x80ffd76b;
+	}
 
 	/** Counts the number of screen updates. */
 	private final float updateCounter;
@@ -140,6 +161,9 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation TREASURE_BG = new ResourceLocation("textures/gui/title/treasure_bg.png");
 	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
 	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
+	private static final ResourceLocation TERRACOTTA_BG = new ResourceLocation("textures/gui/title/terracotta_bg.png");
+	private static final ResourceLocation FOREST_BG_1 = new ResourceLocation("textures/gui/title/forest_bg_1.png");
+	private static final ResourceLocation FOREST_BG_2 = new ResourceLocation("textures/gui/title/forest_bg_2.png");
 
 	/** An array of all the paths to the panorama pictures. */
 	private static final ResourceLocation[] TITLE_PANORAMA_PATHS = new ResourceLocation[] {
@@ -538,11 +562,19 @@ public class GuiMainMenu extends GuiScreen {
 
 		boolean frost = this.frost();
 		boolean tropical = this.tropical();
+		boolean terracotta = this.terracotta();
+		boolean forest = this.forest();
 
 		// ---- background ----
-		// Each theme uses a full-screen image background; only the accent/particles
-		// differ. Frost = snowy photo, Tropical = island photo, else the volcano.
-		this.drawBgTexture(frost ? FROST_BG : tropical ? TROPICAL_BG : TREASURE_BG);
+		// Each theme uses a full-screen image background. Forest has two images the
+		// user switches between in the theme settings (variant index from storage).
+		ResourceLocation bg;
+		if (frost) bg = FROST_BG;
+		else if (tropical) bg = TROPICAL_BG;
+		else if (terracotta) bg = TERRACOTTA_BG;
+		else if (forest) bg = (TreasureTheme.bgVariant() == 1) ? FOREST_BG_2 : FOREST_BG_1;
+		else bg = TREASURE_BG;
+		this.drawBgTexture(bg);
 		// light darkening just for text legibility over the photo
 		this.drawGradientRect(0, 0, this.width, this.height, 0x11000000, 0x66000000);
 
@@ -550,7 +582,11 @@ public class GuiMainMenu extends GuiScreen {
 		// Deterministic pseudo-random field advanced by system time; no textures,
 		// just small drawn rects, so it's cheap and portable.
 		long t = Minecraft.getSystemTime();
-		int particleColor = frost ? 0x99EAF6FF : tropical ? 0x9945E3C6 : cParticle();
+		int particleColor = frost ? 0x99EAF6FF
+				: tropical ? 0x9945E3C6
+				: terracotta ? 0x99E89A5A
+				: forest ? 0x99C8E88A
+				: cParticle();
 		// Frost wind: two slow sine waves summed so the gust eases between calm and
 		// windy over time (never a constant gale). Value = horizontal push in px.
 		float gust = frost
@@ -572,8 +608,8 @@ public class GuiMainMenu extends GuiScreen {
 			}
 			float phase = (float) (((t / 2200.0) * speed + (i * 0.137F)) % 1.0);
 			int y;
-			if (!frost && (tropical || deepSeaMode)) {
-				// tropical / deep-sea bubbles rise
+			if (!frost && (tropical || forest || deepSeaMode)) {
+				// tropical / forest / deep-sea particles rise
 				y = (int) (this.height - phase * this.height);
 			} else {
 				// snow / gold flecks fall
