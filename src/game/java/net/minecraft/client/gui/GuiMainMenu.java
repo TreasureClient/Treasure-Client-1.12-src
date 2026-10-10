@@ -133,8 +133,9 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation MINECRAFT_TITLE_TEXTURES = new ResourceLocation(
 			"textures/gui/title/minecraft.png");
 	private static final ResourceLocation field_194400_H = new ResourceLocation("textures/gui/title/edition.png");
-	// Treasure Client: Frost theme main-menu background. Packed into assets.epk from
-	// desktopRuntime/resources/assets/minecraft/textures/gui/title/frost_bg.png.
+	// Treasure Client: main-menu background images (packed into assets.epk from
+	// desktopRuntime/resources/assets/minecraft/textures/gui/title/*.png).
+	private static final ResourceLocation TREASURE_BG = new ResourceLocation("textures/gui/title/treasure_bg.png");
 	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
 
 	/** An array of all the paths to the panorama pictures. */
@@ -501,16 +502,16 @@ public class GuiMainMenu extends GuiScreen {
 	}
 
 	/**
-	 * Treasure Client: draw the Frost theme background image stretched to fill the
+	 * Treasure Client: draw a main-menu background image stretched to fill the
 	 * whole screen (behind the buttons), the same way the panorama blit does.
 	 */
-	private void drawFrostBackground() {
+	private void drawBgTexture(ResourceLocation tex) {
 		GlStateManager.disableDepth();
 		GlStateManager.depthMask(false);
 		GlStateManager.enableTexture2D();
 		GlStateManager.disableBlend();
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		this.mc.getTextureManager().bindTexture(FROST_BG);
+		this.mc.getTextureManager().bindTexture(tex);
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
 		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
@@ -535,16 +536,11 @@ public class GuiMainMenu extends GuiScreen {
 		boolean frost = this.frost();
 
 		// ---- background ----
-		if (frost) {
-			// Frost theme: the uploaded image IS the real main menu background.
-			this.drawFrostBackground();
-			// light darkening just for text legibility over the photo
-			this.drawGradientRect(0, 0, this.width, this.height, 0x11000000, 0x66000000);
-		} else {
-			// themed background gradient (mode-based)
-			this.drawGradientRect(0, 0, this.width, this.height, cBgTop(), cBgBottom());
-			this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x88000000);
-		}
+		// Both themes use a full-screen image background; only the accent/particles
+		// differ. Frost gets the snowy photo, the default Treasure theme the volcano.
+		this.drawBgTexture(frost ? FROST_BG : TREASURE_BG);
+		// light darkening just for text legibility over the photo
+		this.drawGradientRect(0, 0, this.width, this.height, 0x11000000, 0x66000000);
 
 		// ---- animated particle field (snow on wind / gold flecks fall / bubbles rise) ----
 		// Deterministic pseudo-random field advanced by system time; no textures,
