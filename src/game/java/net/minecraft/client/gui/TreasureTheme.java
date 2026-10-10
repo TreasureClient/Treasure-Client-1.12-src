@@ -48,4 +48,9 @@ public final class TreasureTheme {
 	public static boolean isFrost() {
 		return "frost".equals(current());
 	}
+
+	/** True when the Tropical theme is selected (turquoise + sand palette). */
+	public static boolean isTropical() {
+		return "tropical".equals(current());
+	}
 }

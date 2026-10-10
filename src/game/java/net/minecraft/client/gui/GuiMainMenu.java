@@ -97,12 +97,14 @@ public class GuiMainMenu extends GuiScreen {
 
 	// palette helpers, per theme/mode. Frost (selected in the Mod Menu Themes tab)
 	// uses the icy blue/cyan accent so the whole menu matches the theme.
-	private boolean frost()  { return TreasureTheme.isFrost(); }
+	private boolean frost()    { return TreasureTheme.isFrost(); }
+	private boolean tropical() { return TreasureTheme.isTropical(); }
 	private int cBgTop()    { return deepSeaMode ? 0xff0a3350 : 0xff2a1b0d; }
 	private int cBgBottom() { return deepSeaMode ? 0xff030f18 : 0xff0f0a05; }
-	private int cAccent()   { return (deepSeaMode || frost()) ? 0xff7fe9ff : 0xffffd76b; }
-	private int cAccentDim(){ return (deepSeaMode || frost()) ? 0xff8fb9cc : 0xffc9b183; }
-	private int cParticle() { return (deepSeaMode || frost()) ? 0x807fe9ff : 0x80ffd76b; }
+	// Frost = icy blue; Tropical = turquoise accent + sand dim; else gold.
+	private int cAccent()   { return tropical() ? 0xff45e3c6 : (deepSeaMode || frost()) ? 0xff7fe9ff : 0xffffd76b; }
+	private int cAccentDim(){ return tropical() ? 0xffe0cd97 : (deepSeaMode || frost()) ? 0xff8fb9cc : 0xffc9b183; }
+	private int cParticle() { return tropical() ? 0x8045e3c6 : (deepSeaMode || frost()) ? 0x807fe9ff : 0x80ffd76b; }
 
 	/** Counts the number of screen updates. */
 	private final float updateCounter;
@@ -137,6 +139,7 @@ public class GuiMainMenu extends GuiScreen {
 	// desktopRuntime/resources/assets/minecraft/textures/gui/title/*.png).
 	private static final ResourceLocation TREASURE_BG = new ResourceLocation("textures/gui/title/treasure_bg.png");
 	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
+	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
 
 	/** An array of all the paths to the panorama pictures. */
 	private static final ResourceLocation[] TITLE_PANORAMA_PATHS = new ResourceLocation[] {
@@ -534,11 +537,12 @@ public class GuiMainMenu extends GuiScreen {
 		this.panoramaTimer += partialTicks;
 
 		boolean frost = this.frost();
+		boolean tropical = this.tropical();
 
 		// ---- background ----
-		// Both themes use a full-screen image background; only the accent/particles
-		// differ. Frost gets the snowy photo, the default Treasure theme the volcano.
-		this.drawBgTexture(frost ? FROST_BG : TREASURE_BG);
+		// Each theme uses a full-screen image background; only the accent/particles
+		// differ. Frost = snowy photo, Tropical = island photo, else the volcano.
+		this.drawBgTexture(frost ? FROST_BG : tropical ? TROPICAL_BG : TREASURE_BG);
 		// light darkening just for text legibility over the photo
 		this.drawGradientRect(0, 0, this.width, this.height, 0x11000000, 0x66000000);
 
@@ -546,7 +550,7 @@ public class GuiMainMenu extends GuiScreen {
 		// Deterministic pseudo-random field advanced by system time; no textures,
 		// just small drawn rects, so it's cheap and portable.
 		long t = Minecraft.getSystemTime();
-		int particleColor = frost ? 0x99EAF6FF : cParticle();
+		int particleColor = frost ? 0x99EAF6FF : tropical ? 0x9945E3C6 : cParticle();
 		// Frost wind: two slow sine waves summed so the gust eases between calm and
 		// windy over time (never a constant gale). Value = horizontal push in px.
 		float gust = frost
@@ -568,8 +572,8 @@ public class GuiMainMenu extends GuiScreen {
 			}
 			float phase = (float) (((t / 2200.0) * speed + (i * 0.137F)) % 1.0);
 			int y;
-			if (!frost && deepSeaMode) {
-				// bubbles rise
+			if (!frost && (tropical || deepSeaMode)) {
+				// tropical / deep-sea bubbles rise
 				y = (int) (this.height - phase * this.height);
 			} else {
 				// snow / gold flecks fall
