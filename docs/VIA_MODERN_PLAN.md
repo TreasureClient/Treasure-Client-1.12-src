@@ -32,14 +32,16 @@ build it ourselves. This doc tracks the plan grounded in *this* codebase.
      blocks (deepslate family, tuff family, blackstone family, copper weathering
      stages, dripstone/moss/mud…), and fixed the lang file so names localize in
      the build (see note below).
-   - **4b — non-cube models (🚧 pillars done):** added axis-rotated pillars via
-     `BlockRotatedPillar` (end + side textures through `block/cube_column`):
-     basalt, polished_basalt, bamboo_block, muddy_mangrove_roots. The registrar
-     (`Block.registerViaBlocks`) now branches on `ViaBlocks.isPillar(name)`, so
-     the block "kind" is data-driven and new shapes slot in the same way.
-     *Next in 4b:* slabs (`BlockSlab` — true half-block geometry, needs a
-     concrete subclass + single/double pairing + `ItemSlab`), then walls
-     (multipart blockstates).
+   - **4b — non-cube models (✅ done):**
+     - **pillars** via `BlockRotatedPillar` (end + side through `block/cube_column`):
+       basalt, polished_basalt, bamboo_block, muddy_mangrove_roots.
+     - **slabs** via a generic `BlockViaSlab` (Half/Double pair, single `default`
+       variant, `ItemSlab`): 8 types (ids 1100+), reusing the base block textures.
+     - **walls** via a standalone `BlockViaWall` (trimmed `BlockWall`, no
+       cobblestone/mossy variant; multipart blockstate + wall_post/side/inventory
+       models): 6 types (ids 1200+).
+     The registrar (`Block.registerViaBlocks`) now builds cubes, pillars, slab
+     pairs and walls; `ViaItems`/`RenderItem` register the matching items/models.
    - **4c — items (🚧 weapons + materials done):** added modern items via a new
      `net.minecraft.item.ViaItems` registry (ids from 3000), mirroring ViaBlocks.
      Weapons (mace, spear, trident) register as `ItemSword` (item/handheld model,

@@ -118,4 +118,41 @@ public final class ViaBlocks {
 	/** Registered slab instances (half + double), filled in by Block.registerViaBlocks(). */
 	public static final BlockSlab[] SLAB_HALF = new BlockSlab[SLAB_NAMES.length];
 	public static final BlockSlab[] SLAB_DOUBLE = new BlockSlab[SLAB_NAMES.length];
+
+	// ---- Phase 4b: walls (non-cube geometry) --------------------------------
+	/** First numeric id for ViaBlocks walls. */
+	public static final int WALL_FIRST_ID = 1200;
+
+	/** Wall registry names. */
+	public static final String[] WALL_NAMES = {
+		"cobbled_deepslate_wall",
+		"deepslate_brick_wall",
+		"blackstone_wall",
+		"polished_blackstone_wall",
+		"polished_blackstone_brick_wall",
+		"mud_brick_wall"
+	};
+
+	/** The base cube (name in {@link #NAMES}) each wall is modelled on + textured from. */
+	public static final String[] WALL_BASE = {
+		"cobbled_deepslate",
+		"deepslate_bricks",
+		"blackstone",
+		"polished_blackstone",
+		"polished_blackstone_bricks",
+		"mud_bricks"
+	};
+
+	/** Registered wall instances, filled in by Block.registerViaBlocks(). */
+	public static final Block[] WALLS = new Block[WALL_NAMES.length];
+
+	/** Look up a registered ViaBlocks full-cube block by its name in {@link #NAMES}. */
+	public static Block blockByName(String name) {
+		for (int i = 0; i < NAMES.length; i++) {
+			if (NAMES[i].equals(name)) {
+				return BLOCKS[i];
+			}
+		}
+		return null;
+	}
 }

@@ -4191,3 +4191,10 @@ tile.polished_tuff_slab.name=Polished Tuff Slab
 tile.tuff_brick_slab.name=Tuff Brick Slab
 tile.polished_blackstone_slab.name=Polished Blackstone Slab
 tile.cut_copper_slab.name=Cut Copper Slab
+# Treasure Client — ViaBlocks walls
+tile.cobbled_deepslate_wall.name=Cobbled Deepslate Wall
+tile.deepslate_brick_wall.name=Deepslate Brick Wall
+tile.blackstone_wall.name=Blackstone Wall
+tile.polished_blackstone_wall.name=Polished Blackstone Wall
+tile.polished_blackstone_brick_wall.name=Polished Blackstone Brick Wall
+tile.mud_brick_wall.name=Mud Brick Wall

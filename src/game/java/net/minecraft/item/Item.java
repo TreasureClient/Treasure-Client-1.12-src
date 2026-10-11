@@ -531,6 +531,12 @@ public class Item {
 				registerItemBlock(half, new ItemSlab(half, half, dbl));
 			}
 		}
+		// Treasure Client — ViaBlocks walls: a plain ItemBlock each.
+		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
+			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.WALLS[viaW]);
+			}
+		}
 		registerItemBlock(Blocks.STONE,
 				(new ItemMultiTexture(Blocks.STONE, Blocks.STONE, new ItemMultiTexture.Mapper() {
 					public String apply(ItemStack p_apply_1_) {

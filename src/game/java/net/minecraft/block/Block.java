@@ -1657,6 +1657,16 @@ public class Block {
 			ViaBlocks.SLAB_HALF[i] = half;
 			ViaBlocks.SLAB_DOUBLE[i] = dbl;
 		}
+		// Phase 4b walls: single-variant walls modelled on a base ViaBlock cube.
+		for (int i = 0; i < ViaBlocks.WALL_NAMES.length; i++) {
+			Block model = ViaBlocks.blockByName(ViaBlocks.WALL_BASE[i]);
+			if (model == null) {
+				model = new Block(Material.ROCK);
+			}
+			Block wall = (new BlockViaWall(model)).setUnlocalizedName(ViaBlocks.WALL_NAMES[i]);
+			registerBlock(ViaBlocks.WALL_FIRST_ID + i, ViaBlocks.WALL_NAMES[i], wall);
+			ViaBlocks.WALLS[i] = wall;
+		}
 	}
 
 	private static void registerBlock(int id, ResourceLocation textualID, Block block_) {
