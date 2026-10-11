@@ -4200,3 +4200,12 @@ tile.polished_blackstone_brick_wall.name=Polished Blackstone Brick Wall
 tile.mud_brick_wall.name=Mud Brick Wall
 # Treasure Client — ViaEntities
 entity.CopperGolem.name=Copper Golem
+# Treasure Client — ViaBlocks deepslate ores
+tile.deepslate_coal_ore.name=Deepslate Coal Ore
+tile.deepslate_iron_ore.name=Deepslate Iron Ore
+tile.deepslate_copper_ore.name=Deepslate Copper Ore
+tile.deepslate_gold_ore.name=Deepslate Gold Ore
+tile.deepslate_redstone_ore.name=Deepslate Redstone Ore
+tile.deepslate_emerald_ore.name=Deepslate Emerald Ore
+tile.deepslate_lapis_ore.name=Deepslate Lapis Lazuli Ore
+tile.deepslate_diamond_ore.name=Deepslate Diamond Ore

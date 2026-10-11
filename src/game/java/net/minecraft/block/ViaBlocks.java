@@ -57,6 +57,15 @@ public final class ViaBlocks {
 		"moss_block",
 		"packed_mud",
 		"mud_bricks",
+		// Deepslate ores (full cubes).
+		"deepslate_coal_ore",
+		"deepslate_iron_ore",
+		"deepslate_copper_ore",
+		"deepslate_gold_ore",
+		"deepslate_redstone_ore",
+		"deepslate_emerald_ore",
+		"deepslate_lapis_ore",
+		"deepslate_diamond_ore",
 		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
 		// rendered via block/cube_column). Listed in PILLARS below so the
 		// registrar builds them as BlockRotatedPillar instead of a plain cube.
