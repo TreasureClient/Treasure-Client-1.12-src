@@ -66,6 +66,23 @@ public final class ViaBlocks {
 		"deepslate_emerald_ore",
 		"deepslate_lapis_ore",
 		"deepslate_diamond_ore",
+		// Raw metal storage blocks (full cubes).
+		"raw_iron_block",
+		"raw_copper_block",
+		"raw_gold_block",
+		// 1.13 ocean blocks — full cubes (coral blocks, dried kelp, blue ice).
+		"blue_ice",
+		"tube_coral_block",
+		"brain_coral_block",
+		"bubble_coral_block",
+		"fire_coral_block",
+		"horn_coral_block",
+		"dead_tube_coral_block",
+		"dead_brain_coral_block",
+		"dead_bubble_coral_block",
+		"dead_fire_coral_block",
+		"dead_horn_coral_block",
+		"dried_kelp_block",
 		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
 		// rendered via block/cube_column). Listed in PILLARS below so the
 		// registrar builds them as BlockRotatedPillar instead of a plain cube.
