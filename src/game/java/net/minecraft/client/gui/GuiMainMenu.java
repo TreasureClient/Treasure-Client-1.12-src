@@ -575,8 +575,8 @@ public class GuiMainMenu extends GuiScreen {
 		else if (forest) bg = (TreasureTheme.bgVariant() == 1) ? FOREST_BG_2 : FOREST_BG_1;
 		else bg = TREASURE_BG;
 		this.drawBgTexture(bg);
-		// light darkening just for text legibility over the photo
-		this.drawGradientRect(0, 0, this.width, this.height, 0x11000000, 0x66000000);
+		// very light darkening only near the bottom, so the background stays clearly visible
+		this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x33000000);
 
 		// ---- animated particle field (snow on wind / gold flecks fall / bubbles rise) ----
 		// Deterministic pseudo-random field advanced by system time; no textures,
@@ -592,12 +592,12 @@ public class GuiMainMenu extends GuiScreen {
 		float gust = frost
 				? (MathHelper.sin((float) (t / 7000.0)) * 0.5F + MathHelper.sin((float) (t / 2300.0)) * 0.5F) * 34.0F
 				: 0.0F;
-		int count = frost ? 70 : 48;
+		int count = frost ? 50 : 30;
 		for (int i = 0; i < count; i++) {
 			// stable per-particle pseudo-random seeds
 			float sx = ((i * 73 + 11) % 100) / 100.0F;
 			float speed = 0.25F + (((i * 37 + 7) % 100) / 100.0F) * 0.55F;
-			float size = frost ? (1.0F + ((i * 29 + 5) % 3)) : (1.0F + ((i * 53 + 3) % 3));
+			float size = frost ? (1.0F + ((i * 29 + 5) % 2)) : (1.0F + ((i * 53 + 3) % 2));
 			float sway = MathHelper.sin((float) ((t / 1600.0) + i)) * (frost ? 7.0F : 12.0F);
 			float lane = 0.4F + ((i * 17 + 9) % 100) / 100.0F; // how strongly this flake catches the wind
 			int x = (int) (sx * this.width + sway + (frost ? gust * lane : 0.0F));

@@ -95,7 +95,7 @@ ${classes_js}
 <style>
 /* ===== TREASURE CLIENT overlay — scoped under #tc-root, never touches the game canvas ===== */
 #tc-root {
-  --tc-gui: 0.92;
+  --tc-gui: 0.80;
   --tc-fast: 140ms; --tc-med: 320ms;
   --tc-ease: cubic-bezier(.19,1,.22,1);
   position: fixed; inset: 0; z-index: 2147483000;
@@ -195,7 +195,7 @@ ${classes_js}
 #tc-gui-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
 #tc-gui-panel {
   position: relative; z-index: 1;
-  width: min(1040px, 95vw); max-height: 88vh; display: flex; flex-direction: column;
+  width: min(880px, 92vw); max-height: 88vh; display: flex; flex-direction: column;
   background: var(--panel); border: 1px solid var(--bord); border-radius: 16px;
   box-shadow: 0 30px 90px -30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.05);
   transform: scale(0.96) translateY(8px); transition: transform var(--tc-med) var(--tc-ease);
@@ -759,7 +759,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
   var TC_ROOT_CSS = `
 /* ===== TREASURE CLIENT overlay — scoped under #tc-root, never touches the game canvas ===== */
 #tc-root {
-  --tc-gui: 0.92;
+  --tc-gui: 0.80;
   --tc-fast: 140ms; --tc-med: 320ms;
   --tc-ease: cubic-bezier(.19,1,.22,1);
   position: fixed; inset: 0; z-index: 2147483000;
@@ -859,7 +859,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-gui-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
 #tc-gui-panel {
   position: relative; z-index: 1;
-  width: min(1040px, 95vw); max-height: 88vh; display: flex; flex-direction: column;
+  width: min(880px, 92vw); max-height: 88vh; display: flex; flex-direction: column;
   background: var(--panel); border: 1px solid var(--bord); border-radius: 16px;
   box-shadow: 0 30px 90px -30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.05);
   transform: scale(0.96) translateY(8px); transition: transform var(--tc-med) var(--tc-ease);
@@ -2451,8 +2451,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       // it drifts between calm snowfall and gusty wind (never both at full tilt).
       var wind = 0, windTarget = 0, snow = 1, snowTarget = 1, nextShift = 0;
       function size() { W = cv.clientWidth || cv.offsetWidth || window.innerWidth; H = cv.clientHeight || cv.offsetHeight || window.innerHeight; cv.width = W; cv.height = H; }
-      function coin(any) { return { x: Math.random()*W, y: any?Math.random()*H:-20, r: 3+Math.random()*5, vy: 22+Math.random()*40, vx: -6+Math.random()*12, sp: Math.random()*Math.PI, vs: (-1+Math.random()*2)*1.1 }; }
-      function flake(any) { return { x: Math.random()*W, y: any?Math.random()*H:-10, r: 0.8+Math.random()*2.4, vy: 14+Math.random()*34, ph: Math.random()*Math.PI*2, sw: 0.4+Math.random()*1.0, o: 0.35+Math.random()*0.5 }; }
+      function coin(any) { return { x: Math.random()*W, y: any?Math.random()*H:-20, r: 2+Math.random()*3, vy: 22+Math.random()*40, vx: -6+Math.random()*12, sp: Math.random()*Math.PI, vs: (-1+Math.random()*2)*1.1 }; }
+      function flake(any) { return { x: Math.random()*W, y: any?Math.random()*H:-10, r: 0.6+Math.random()*1.5, vy: 14+Math.random()*34, ph: Math.random()*Math.PI*2, sw: 0.4+Math.random()*1.0, o: 0.35+Math.random()*0.5 }; }
       function bubble(any) { return { x: Math.random()*W, y: any?Math.random()*H:H+8, r: 1.5+Math.random()*3.0, vy: 10+Math.random()*20, w: Math.random()*Math.PI*2, vw: 0.4+Math.random()*0.7, a: 6+Math.random()*12 }; }
       function pickWeather() {
         if (Math.random() < 0.5) { windTarget = (Math.random()<0.5?-1:1) * (0.55+Math.random()*0.45); snowTarget = 0.35+Math.random()*0.3; }
@@ -2461,7 +2461,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       }
       function seed() {
         parts = [];
-        if (state.theme === 'frost') { for (var i = 0; i < 150; i++) parts.push(flake(true)); pickWeather(); wind = windTarget; snow = snowTarget; }
+        if (state.theme === 'frost') { for (var i = 0; i < 90; i++) parts.push(flake(true)); pickWeather(); wind = windTarget; snow = snowTarget; }
         else if (state.theme === 'tropical') { for (var tb = 0; tb < 42; tb++) parts.push(bubble(true)); }
         else if (state.theme === 'terracotta') { for (var tt = 0; tt < 44; tt++) parts.push(bubble(true)); }
         else if (state.theme === 'forest') { for (var fo = 0; fo < 44; fo++) parts.push(bubble(true)); }
