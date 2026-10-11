@@ -472,6 +472,12 @@ public class RenderItem implements IResourceManagerReloadListener {
 				this.registerBlock(net.minecraft.block.ViaBlocks.BLOCKS[viaI], net.minecraft.block.ViaBlocks.NAMES[viaI]);
 			}
 		}
+		// Treasure Client — item models for the modern ViaItems.
+		for (int viaItemI = 0; viaItemI < net.minecraft.item.ViaItems.ITEMS.length; viaItemI++) {
+			if (net.minecraft.item.ViaItems.ITEMS[viaItemI] != null) {
+				this.registerItem(net.minecraft.item.ViaItems.ITEMS[viaItemI], net.minecraft.item.ViaItems.NAMES[viaItemI]);
+			}
+		}
 		this.registerBlock(Blocks.ANVIL, "anvil_intact");
 		this.registerBlock(Blocks.ANVIL, 1, "anvil_slightly_damaged");
 		this.registerBlock(Blocks.ANVIL, 2, "anvil_very_damaged");

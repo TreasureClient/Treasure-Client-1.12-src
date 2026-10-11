@@ -4161,3 +4161,9 @@ tile.basalt.name=Basalt
 tile.polished_basalt.name=Polished Basalt
 tile.bamboo_block.name=Block of Bamboo
 tile.muddy_mangrove_roots.name=Muddy Mangrove Roots
+# Treasure Client — ViaItems (modern item names)
+item.mace.name=Mace
+item.spear.name=Spear
+item.trident.name=Trident
+item.amethyst_shard.name=Amethyst Shard
+item.copper_ingot.name=Copper Ingot

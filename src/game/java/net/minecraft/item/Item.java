@@ -1140,6 +1140,19 @@ public class Item {
 		registerItem(2266, "record_11", (new ItemRecord("11", SoundEvents.RECORD_11)).setUnlocalizedName("record"));
 		registerItem(2267, "record_wait",
 				(new ItemRecord("wait", SoundEvents.RECORD_WAIT)).setUnlocalizedName("record"));
+		// Treasure Client — modern ViaItems. Weapons register as ItemSword (handheld
+		// model + melee damage + Combat tab); everything else as a plain material.
+		for (int viaI = 0; viaI < net.minecraft.item.ViaItems.NAMES.length; viaI++) {
+			String viaName = net.minecraft.item.ViaItems.NAMES[viaI];
+			Item viaItem;
+			if (net.minecraft.item.ViaItems.isWeapon(viaName)) {
+				viaItem = (new ItemSword(Item.ToolMaterial.DIAMOND)).setUnlocalizedName(viaName);
+			} else {
+				viaItem = (new Item()).setUnlocalizedName(viaName).setCreativeTab(CreativeTabs.MATERIALS);
+			}
+			registerItem(net.minecraft.item.ViaItems.FIRST_ID + viaI, viaName, viaItem);
+			net.minecraft.item.ViaItems.ITEMS[viaI] = viaItem;
+		}
 	}
 
 	/**

@@ -40,9 +40,18 @@ build it ourselves. This doc tracks the plan grounded in *this* codebase.
      *Next in 4b:* slabs (`BlockSlab` — true half-block geometry, needs a
      concrete subclass + single/double pairing + `ItemSlab`), then walls
      (multipart blockstates).
-   - **Then:** items, then entities; then wire to a data source (client-side Via
-     decode, or a server plugin) so they show up from real servers, not just
-     creative. Long tail.
+   - **4c — items (🚧 weapons + materials done):** added modern items via a new
+     `net.minecraft.item.ViaItems` registry (ids from 3000), mirroring ViaBlocks.
+     Weapons (mace, spear, trident) register as `ItemSword` (item/handheld model,
+     real melee damage, Combat tab); materials (amethyst_shard, copper_ingot)
+     register as plain items (item/generated model, Materials tab). Item models
+     are wired in `RenderItem.registerItems()`.
+     *Next in 4c:* more items (tools, foods, dyes) as desired — same pattern.
+   - **Then entities (mobs/projectiles):** the heavy step — an entity needs
+     registry + a client `Render` + model + spawn/AI/physics. Much larger than
+     blocks/items; tackle after items settle.
+   - **Then:** wire to a data source (client-side Via decode, or a server plugin)
+     so modern content shows up from real servers, not just creative. Long tail.
 
 ## Phase 3/4 — what's implemented here
 - `net.minecraft.block.ViaBlocks` — registry of modern block names + instances
