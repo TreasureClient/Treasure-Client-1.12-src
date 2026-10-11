@@ -63,32 +63,4 @@ public final class TreasureTheme {
 	public static boolean isForest() {
 		return "forest".equals(current());
 	}
-
-	// Selected background variant for themes with more than one background (e.g.
-	// Forest). The Mod Menu's theme settings write the chosen index to storage
-	// key "tcbg"; the main menu reads it to pick which image to draw.
-	private static int bgVariant = 0;
-	private static long bgRead = 0L;
-
-	public static int bgVariant() {
-		try {
-			long now = EagRuntime.steadyTimeMillis();
-			if (now - bgRead > 250L) {
-				bgRead = now;
-				byte[] b = EagRuntime.getStorage("tcbg");
-				if (b != null && b.length > 0) {
-					try {
-						bgVariant = Integer.parseInt(new String(b, StandardCharsets.UTF_8).trim());
-					} catch (Throwable t) {
-						bgVariant = 0;
-					}
-				} else {
-					bgVariant = 0;
-				}
-			}
-		} catch (Throwable t) {
-			bgVariant = 0;
-		}
-		return bgVariant;
-	}
 }

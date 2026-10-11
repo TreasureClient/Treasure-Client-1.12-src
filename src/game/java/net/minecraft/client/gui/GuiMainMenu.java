@@ -162,8 +162,7 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
 	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
 	private static final ResourceLocation TERRACOTTA_BG = new ResourceLocation("textures/gui/title/terracotta_bg.png");
-	private static final ResourceLocation FOREST_BG_1 = new ResourceLocation("textures/gui/title/forest_bg_1.png");
-	private static final ResourceLocation FOREST_BG_2 = new ResourceLocation("textures/gui/title/forest_bg_2.png");
+	private static final ResourceLocation FOREST_BG = new ResourceLocation("textures/gui/title/forest_bg.png");
 
 	/** An array of all the paths to the panorama pictures. */
 	private static final ResourceLocation[] TITLE_PANORAMA_PATHS = new ResourceLocation[] {
@@ -571,13 +570,12 @@ public class GuiMainMenu extends GuiScreen {
 		boolean forest = this.forest();
 
 		// ---- background ----
-		// Each theme uses a full-screen image background. Forest has two images the
-		// user switches between in the theme settings (variant index from storage).
+		// Each theme uses a full-screen image background.
 		ResourceLocation bg;
 		if (frost) bg = FROST_BG;
 		else if (tropical) bg = TROPICAL_BG;
 		else if (terracotta) bg = TERRACOTTA_BG;
-		else if (forest) bg = (TreasureTheme.bgVariant() == 1) ? FOREST_BG_2 : FOREST_BG_1;
+		else if (forest) bg = FOREST_BG;
 		else bg = TREASURE_BG;
 		this.drawBgTexture(bg);
 		// very light darkening only near the bottom, so the background stays clearly visible
