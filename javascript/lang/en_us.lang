@@ -4225,3 +4225,7 @@ tile.dead_bubble_coral_block.name=Dead Bubble Coral Block
 tile.dead_fire_coral_block.name=Dead Fire Coral Block
 tile.dead_horn_coral_block.name=Dead Horn Coral Block
 tile.dried_kelp_block.name=Dried Kelp Block
+# Treasure Client — ViaBlocks nether + overworld ores
+tile.nether_gold_ore.name=Nether Gold Ore
+tile.copper_ore.name=Copper Ore
+tile.ancient_debris.name=Ancient Debris

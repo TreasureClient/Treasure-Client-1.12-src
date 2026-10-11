@@ -83,6 +83,10 @@ public final class ViaBlocks {
 		"dead_fire_coral_block",
 		"dead_horn_coral_block",
 		"dried_kelp_block",
+		// Nether + overworld ores (full cubes).
+		"nether_gold_ore",
+		"ancient_debris",
+		"copper_ore",
 		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
 		// rendered via block/cube_column). Listed in PILLARS below so the
 		// registrar builds them as BlockRotatedPillar instead of a plain cube.

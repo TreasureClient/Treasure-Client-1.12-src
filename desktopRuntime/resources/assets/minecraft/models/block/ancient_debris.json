@@ -1,0 +1,8 @@
+{
+    "parent": "block/cube_bottom_top",
+    "textures": {
+        "top": "blocks/ancient_debris_top",
+        "bottom": "blocks/ancient_debris_top",
+        "side": "blocks/ancient_debris_side"
+    }
+}
