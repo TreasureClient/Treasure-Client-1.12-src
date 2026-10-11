@@ -515,6 +515,13 @@ public class Item {
 
 	public static void registerItems() {
 		registerItemBlock(Blocks.AIR, new ItemAir(Blocks.AIR));
+		// Treasure Client — item forms for the modern ViaBlocks (inherit the block's
+		// creative tab via ItemBlock.getCreativeTab()).
+		for (int viaI = 0; viaI < net.minecraft.block.ViaBlocks.BLOCKS.length; viaI++) {
+			if (net.minecraft.block.ViaBlocks.BLOCKS[viaI] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.BLOCKS[viaI]);
+			}
+		}
 		registerItemBlock(Blocks.STONE,
 				(new ItemMultiTexture(Blocks.STONE, Blocks.STONE, new ItemMultiTexture.Mapper() {
 					public String apply(ItemStack p_apply_1_) {
