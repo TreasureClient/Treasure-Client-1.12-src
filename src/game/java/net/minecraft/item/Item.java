@@ -537,6 +537,12 @@ public class Item {
 				registerItemBlock(net.minecraft.block.ViaBlocks.WALLS[viaW]);
 			}
 		}
+		// Treasure Client — ViaBlocks cross-model plants: a plain ItemBlock each.
+		for (int viaC = 0; viaC < net.minecraft.block.ViaBlocks.CROSS.length; viaC++) {
+			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.CROSS[viaC]);
+			}
+		}
 		registerItemBlock(Blocks.STONE,
 				(new ItemMultiTexture(Blocks.STONE, Blocks.STONE, new ItemMultiTexture.Mapper() {
 					public String apply(ItemStack p_apply_1_) {

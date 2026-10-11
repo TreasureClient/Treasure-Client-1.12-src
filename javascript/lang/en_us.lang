@@ -4229,3 +4229,17 @@ tile.dried_kelp_block.name=Dried Kelp Block
 tile.nether_gold_ore.name=Nether Gold Ore
 tile.copper_ore.name=Copper Ore
 tile.ancient_debris.name=Ancient Debris
+# Treasure Client — ViaBlocks cross plants
+tile.tube_coral.name=Tube Coral
+tile.brain_coral.name=Brain Coral
+tile.bubble_coral.name=Bubble Coral
+tile.fire_coral.name=Fire Coral
+tile.horn_coral.name=Horn Coral
+tile.dead_tube_coral.name=Dead Tube Coral
+tile.dead_brain_coral.name=Dead Brain Coral
+tile.dead_bubble_coral.name=Dead Bubble Coral
+tile.dead_fire_coral.name=Dead Fire Coral
+tile.dead_horn_coral.name=Dead Horn Coral
+tile.kelp.name=Kelp
+tile.seagrass.name=Seagrass
+tile.sweet_berry_bush.name=Sweet Berry Bush

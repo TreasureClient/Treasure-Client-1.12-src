@@ -176,6 +176,47 @@ public final class ViaBlocks {
 	/** Registered wall instances, filled in by Block.registerViaBlocks(). */
 	public static final Block[] WALLS = new Block[WALL_NAMES.length];
 
+	// ---- Cross-model plants (coral plants, kelp, seagrass, berry bush) ------
+	/** First numeric id for ViaBlocks cross-model plants. */
+	public static final int CROSS_FIRST_ID = 1300;
+
+	/** Cross-plant registry names. */
+	public static final String[] CROSS_NAMES = {
+		"tube_coral",
+		"brain_coral",
+		"bubble_coral",
+		"fire_coral",
+		"horn_coral",
+		"dead_tube_coral",
+		"dead_brain_coral",
+		"dead_bubble_coral",
+		"dead_fire_coral",
+		"dead_horn_coral",
+		"kelp",
+		"seagrass",
+		"sweet_berry_bush"
+	};
+
+	/** The texture each cross plant uses (parallel to {@link #CROSS_NAMES}). */
+	public static final String[] CROSS_TEX = {
+		"tube_coral",
+		"brain_coral",
+		"bubble_coral",
+		"fire_coral",
+		"horn_coral",
+		"dead_tube_coral",
+		"dead_brain_coral",
+		"dead_bubble_coral",
+		"dead_fire_coral",
+		"dead_horn_coral",
+		"kelp",
+		"seagrass",
+		"sweet_berry_bush_stage3"
+	};
+
+	/** Registered cross-plant instances, filled in by Block.registerViaBlocks(). */
+	public static final Block[] CROSS = new Block[CROSS_NAMES.length];
+
 	/** Look up a registered ViaBlocks full-cube block by its name in {@link #NAMES}. */
 	public static Block blockByName(String name) {
 		for (int i = 0; i < NAMES.length; i++) {

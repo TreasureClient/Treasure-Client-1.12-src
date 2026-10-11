@@ -1667,6 +1667,12 @@ public class Block {
 			registerBlock(ViaBlocks.WALL_FIRST_ID + i, ViaBlocks.WALL_NAMES[i], wall);
 			ViaBlocks.WALLS[i] = wall;
 		}
+		// Cross-model plants (coral plants, kelp, seagrass, berry bush).
+		for (int i = 0; i < ViaBlocks.CROSS_NAMES.length; i++) {
+			Block cross = (new BlockViaCross()).setHardness(0.0F).setUnlocalizedName(ViaBlocks.CROSS_NAMES[i]);
+			registerBlock(ViaBlocks.CROSS_FIRST_ID + i, ViaBlocks.CROSS_NAMES[i], cross);
+			ViaBlocks.CROSS[i] = cross;
+		}
 	}
 
 	private static void registerBlock(int id, ResourceLocation textualID, Block block_) {
