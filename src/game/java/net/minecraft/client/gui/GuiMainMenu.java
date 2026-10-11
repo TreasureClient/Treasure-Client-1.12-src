@@ -627,8 +627,8 @@ public class GuiMainMenu extends GuiScreen {
 
 		// ---- wordmark: big, layered shadow + themed accent + subtle pulse ----
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 46.0F, 0.0F);
-		GlStateManager.scale(3.4F, 3.4F, 3.4F);
+		GlStateManager.translate((float) j, 40.0F, 0.0F);
+		GlStateManager.scale(2.5F, 2.5F, 2.5F);
 		// drop shadow
 		this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
 		// main
@@ -636,15 +636,15 @@ public class GuiMainMenu extends GuiScreen {
 		GlStateManager.popMatrix();
 
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 82.0F, 0.0F);
-		GlStateManager.scale(1.9F, 1.9F, 1.9F);
+		GlStateManager.translate((float) j, 66.0F, 0.0F);
+		GlStateManager.scale(1.4F, 1.4F, 1.4F);
 		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
 		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
 		GlStateManager.popMatrix();
 
 		// splash with gentle pulse
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 108.0F, 0.0F);
+		GlStateManager.translate((float) j, 90.0F, 0.0F);
 		float f = 1.0F - 0.08F * MathHelper
 				.abs(MathHelper.sin((float) (t % 1000L) / 1000.0F * ((float) Math.PI * 2F)));
 		GlStateManager.scale(f, f, f);
