@@ -4198,3 +4198,5 @@ tile.blackstone_wall.name=Blackstone Wall
 tile.polished_blackstone_wall.name=Polished Blackstone Wall
 tile.polished_blackstone_brick_wall.name=Polished Blackstone Brick Wall
 tile.mud_brick_wall.name=Mud Brick Wall
+# Treasure Client — ViaEntities
+entity.CopperGolem.name=Copper Golem

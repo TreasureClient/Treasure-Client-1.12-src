@@ -49,9 +49,12 @@ build it ourselves. This doc tracks the plan grounded in *this* codebase.
      register as plain items (item/generated model, Materials tab). Item models
      are wired in `RenderItem.registerItems()`.
      *Next in 4c:* more items (tools, foods, dyes) as desired — same pattern.
-   - **Then entities (mobs/projectiles):** the heavy step — an entity needs
-     registry + a client `Render` + model + spawn/AI/physics. Much larger than
-     blocks/items; tackle after items settle.
+   - **Entities (🚧 proof of concept):** first modern mob — the **Copper Golem**
+     (`EntityCopperGolem`, a passive ground mob). Full stack proven end to end:
+     `EntityList` registration + spawn egg, `RenderManager` → `RenderCopperGolem`
+     → `ModelCopperGolem` (standard biped UV layout) → `textures/entity/
+     copper_golem.png`. Spawn it from its creative spawn egg. More mobs follow the
+     same pattern (new Entity + Model + Render + 2 registration lines + texture).
    - **Then:** wire to a data source (client-side Via decode, or a server plugin)
      so modern content shows up from real servers, not just creative. Long tail.
 

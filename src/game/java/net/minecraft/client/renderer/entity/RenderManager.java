@@ -164,6 +164,8 @@ public class RenderManager {
 		this.entityRenderMap.put(EntityRabbit.class, new RenderRabbit(this));
 		this.entityRenderMap.put(EntityParrot.class, new RenderParrot(this));
 		this.entityRenderMap.put(EntitySilverfish.class, new RenderSilverfish(this));
+		// Treasure Client — modern ViaEntities.
+		this.entityRenderMap.put(net.minecraft.entity.passive.EntityCopperGolem.class, new RenderCopperGolem(this));
 		this.entityRenderMap.put(EntityEndermite.class, new RenderEndermite(this));
 		this.entityRenderMap.put(EntityCreeper.class, new RenderCreeper(this));
 		this.entityRenderMap.put(EntityEnderman.class, new RenderEnderman(this));
