@@ -4182,3 +4182,12 @@ item.netherite_boots.name=Netherite Boots
 item.amethyst_shard.name=Amethyst Shard
 item.copper_ingot.name=Copper Ingot
 item.netherite_ingot.name=Netherite Ingot
+# Treasure Client — ViaBlocks slabs
+tile.cobbled_deepslate_slab.name=Cobbled Deepslate Slab
+tile.polished_deepslate_slab.name=Polished Deepslate Slab
+tile.deepslate_brick_slab.name=Deepslate Brick Slab
+tile.deepslate_tile_slab.name=Deepslate Tile Slab
+tile.polished_tuff_slab.name=Polished Tuff Slab
+tile.tuff_brick_slab.name=Tuff Brick Slab
+tile.polished_blackstone_slab.name=Polished Blackstone Slab
+tile.cut_copper_slab.name=Cut Copper Slab

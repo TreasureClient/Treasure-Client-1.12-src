@@ -522,6 +522,15 @@ public class Item {
 				registerItemBlock(net.minecraft.block.ViaBlocks.BLOCKS[viaI]);
 			}
 		}
+		// Treasure Client — ViaBlocks slabs: only the half form gets an item
+		// (ItemSlab maps it to the double form when stacked).
+		for (int viaS = 0; viaS < net.minecraft.block.ViaBlocks.SLAB_HALF.length; viaS++) {
+			net.minecraft.block.BlockSlab half = net.minecraft.block.ViaBlocks.SLAB_HALF[viaS];
+			net.minecraft.block.BlockSlab dbl = net.minecraft.block.ViaBlocks.SLAB_DOUBLE[viaS];
+			if (half != null && dbl != null) {
+				registerItemBlock(half, new ItemSlab(half, half, dbl));
+			}
+		}
 		registerItemBlock(Blocks.STONE,
 				(new ItemMultiTexture(Blocks.STONE, Blocks.STONE, new ItemMultiTexture.Mapper() {
 					public String apply(ItemStack p_apply_1_) {

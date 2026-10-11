@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "half=bottom,variant=default": {
+            "model": "half_slab_tuff_brick"
+        },
+        "half=top,variant=default": {
+            "model": "upper_slab_tuff_brick"
+        }
+    }
+}

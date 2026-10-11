@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "variant=default": {
+            "model": "cut_copper_double_slab"
+        }
+    }
+}

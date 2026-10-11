@@ -86,4 +86,36 @@ public final class ViaBlocks {
 
 	/** Registered block instances, filled in by Block.registerViaBlocks(). */
 	public static final Block[] BLOCKS = new Block[NAMES.length];
+
+	// ---- Phase 4b: slabs (non-cube geometry) --------------------------------
+	/** First numeric id for ViaBlocks slabs (double + half take two ids each). */
+	public static final int SLAB_FIRST_ID = 1100;
+
+	/** Slab registry base names (each registers &lt;name&gt; + &lt;name without _slab&gt;_double_slab). */
+	public static final String[] SLAB_NAMES = {
+		"cobbled_deepslate_slab",
+		"polished_deepslate_slab",
+		"deepslate_brick_slab",
+		"deepslate_tile_slab",
+		"polished_tuff_slab",
+		"tuff_brick_slab",
+		"polished_blackstone_slab",
+		"cut_copper_slab"
+	};
+
+	/** Base block texture each slab is made of (parallel to {@link #SLAB_NAMES}). */
+	public static final String[] SLAB_TEX = {
+		"cobbled_deepslate",
+		"polished_deepslate",
+		"deepslate_bricks",
+		"deepslate_tiles",
+		"polished_tuff",
+		"tuff_bricks",
+		"polished_blackstone",
+		"cut_copper"
+	};
+
+	/** Registered slab instances (half + double), filled in by Block.registerViaBlocks(). */
+	public static final BlockSlab[] SLAB_HALF = new BlockSlab[SLAB_NAMES.length];
+	public static final BlockSlab[] SLAB_DOUBLE = new BlockSlab[SLAB_NAMES.length];
 }

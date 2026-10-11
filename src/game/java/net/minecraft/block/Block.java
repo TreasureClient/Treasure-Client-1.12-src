@@ -1642,6 +1642,21 @@ public class Block {
 			registerBlock(ViaBlocks.FIRST_ID + i, ViaBlocks.NAMES[i], viaBlock);
 			ViaBlocks.BLOCKS[i] = viaBlock;
 		}
+		// Phase 4b slabs: each type is a double + half pair (single "default" variant).
+		for (int i = 0; i < ViaBlocks.SLAB_NAMES.length; i++) {
+			String slabName = ViaBlocks.SLAB_NAMES[i];
+			String doubleName = slabName.substring(0, slabName.length() - "_slab".length()) + "_double_slab";
+			BlockViaSlab dbl = (BlockViaSlab) (new BlockViaSlab.Double()).setHardness(2.0F).setResistance(10.0F)
+					.setSoundType(SoundType.STONE).setUnlocalizedName(slabName);
+			BlockViaSlab half = (BlockViaSlab) (new BlockViaSlab.Half()).setHardness(2.0F).setResistance(10.0F)
+					.setSoundType(SoundType.STONE).setUnlocalizedName(slabName);
+			half.halfSource = half;
+			dbl.halfSource = half;
+			registerBlock(ViaBlocks.SLAB_FIRST_ID + 2 * i, doubleName, dbl);
+			registerBlock(ViaBlocks.SLAB_FIRST_ID + 2 * i + 1, slabName, half);
+			ViaBlocks.SLAB_HALF[i] = half;
+			ViaBlocks.SLAB_DOUBLE[i] = dbl;
+		}
 	}
 
 	private static void registerBlock(int id, ResourceLocation textualID, Block block_) {
