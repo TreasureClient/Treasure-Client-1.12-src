@@ -466,6 +466,12 @@ public class RenderItem implements IResourceManagerReloadListener {
 	}
 
 	private void registerItems() {
+		// Treasure Client — item models for the modern ViaBlocks (item model = block model).
+		for (int viaI = 0; viaI < net.minecraft.block.ViaBlocks.BLOCKS.length; viaI++) {
+			if (net.minecraft.block.ViaBlocks.BLOCKS[viaI] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.BLOCKS[viaI], net.minecraft.block.ViaBlocks.NAMES[viaI]);
+			}
+		}
 		this.registerBlock(Blocks.ANVIL, "anvil_intact");
 		this.registerBlock(Blocks.ANVIL, 1, "anvil_slightly_damaged");
 		this.registerBlock(Blocks.ANVIL, 2, "anvil_very_damaged");

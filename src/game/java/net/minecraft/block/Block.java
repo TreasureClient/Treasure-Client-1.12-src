@@ -1580,6 +1580,7 @@ public class Block {
 				.setUnlocalizedName("concretePowder"));
 		registerBlock(255, "structure_block", (new BlockStructure()).setBlockUnbreakable().setResistance(6000000.0F)
 				.setUnlocalizedName("structureBlock"));
+		registerViaBlocks();
 		REGISTRY.validateKey();
 
 		for (Block block15 : REGISTRY) {
@@ -1618,6 +1619,22 @@ public class Block {
 					BLOCK_STATE_IDS.put(iblockstate, k);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Treasure Client — register the modern "ViaBlocks" (see {@link ViaBlocks}).
+	 * Called from registerBlocks() before the block-state-id loop so these blocks
+	 * get normal block-state ids and flow through the chunk palette like any other.
+	 * Full-cube rock blocks for the phase-3 proof of concept.
+	 */
+	private static void registerViaBlocks() {
+		for (int i = 0; i < ViaBlocks.NAMES.length; i++) {
+			Block viaBlock = (new Block(Material.ROCK)).setHardness(2.0F).setResistance(10.0F)
+					.setSoundType(SoundType.STONE).setUnlocalizedName(ViaBlocks.NAMES[i])
+					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
+			registerBlock(ViaBlocks.FIRST_ID + i, ViaBlocks.NAMES[i], viaBlock);
+			ViaBlocks.BLOCKS[i] = viaBlock;
 		}
 	}
 
