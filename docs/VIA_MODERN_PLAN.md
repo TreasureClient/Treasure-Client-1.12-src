@@ -27,18 +27,30 @@ build it ourselves. This doc tracks the plan grounded in *this* codebase.
    full-cube blocks registered + rendered with real textures, placeable in
    creative (Building Blocks). Proves registry → state-id → palette → model →
    atlas → render end to end.
-4. **Expand** — more blocks (non-cube models: slabs, walls, dripstone…), then
-   items, then entities; then wire to a data source (client-side Via decode, or a
-   server plugin) so they show up from real servers, not just creative. Long tail.
+4. **Expand** — 🚧 *in progress*. Step 4a (done): grew the full-cube set from 6
+   to 25 recognizable modern blocks (deepslate family, tuff family, blackstone
+   family, copper weathering stages, dripstone/moss/mud…), and fixed the lang
+   file so names localize in the build (see note below). Remaining: non-cube
+   models (pillars/slabs/walls), then items, then entities; then wire to a data
+   source (client-side Via decode, or a server plugin) so they show up from real
+   servers, not just creative. Long tail.
 
-## Phase 3 — what's implemented here
-- `net.minecraft.block.ViaBlocks` — registry of modern block names + instances.
+## Phase 3/4 — what's implemented here
+- `net.minecraft.block.ViaBlocks` — registry of modern block names + instances
+  (`NAMES`, 25 entries as of Phase 4a).
 - `Block.registerViaBlocks()` (called from `registerBlocks()` before the
   block-state-id loop) registers each as a full-cube rock block, ids from 1000.
 - `Item.registerItems()` + `RenderItem.registerItems()` register item form + model.
-- Assets for: deepslate, calcite, tuff, amethyst_block, copper_block, smooth_basalt.
-  Textures are **placeholder** solid-colour 16×16 PNGs — swap in real Mojang
-  textures later (same filenames, no code change).
+- Assets (blockstate + `cube_all` model + item model + 16×16 texture) for all 25
+  names. Textures are **structured procedural** stand-ins (brick/tile/speckle/
+  patina patterns, generated deterministically) — swap in real Mojang textures
+  later (same filenames, no code change).
+
+> ⚠️ Lang note: the WASM build packs `desktopRuntime/resources` into `assets.epk`,
+> so block display names MUST live in
+> `desktopRuntime/resources/assets/minecraft/lang/en_us.lang`. (The separate
+> `javascript/lang/en_us.lang` is not packed by `CompileEPK.sh`; keep both in
+> sync to avoid confusion.)
 
 ### How to test (this branch)
 Build it (your normal flow), then: Singleplayer → Creative → **Building Blocks**

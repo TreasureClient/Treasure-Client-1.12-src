@@ -30,12 +30,33 @@ public final class ViaBlocks {
 
 	/** Registry names (also the asset base names). Full-cube blocks only for now. */
 	public static final String[] NAMES = {
+		// Phase 3 proof-of-concept set.
 		"deepslate",
 		"calcite",
 		"tuff",
 		"amethyst_block",
 		"copper_block",
-		"smooth_basalt"
+		"smooth_basalt",
+		// Phase 4 expansion — more modern full-cube blocks.
+		"cobbled_deepslate",
+		"polished_deepslate",
+		"deepslate_bricks",
+		"deepslate_tiles",
+		"chiseled_deepslate",
+		"polished_tuff",
+		"tuff_bricks",
+		"blackstone",
+		"polished_blackstone",
+		"polished_blackstone_bricks",
+		"gilded_blackstone",
+		"exposed_copper",
+		"weathered_copper",
+		"oxidized_copper",
+		"cut_copper",
+		"dripstone_block",
+		"moss_block",
+		"packed_mud",
+		"mud_bricks"
 	};
 
 	/** Registered block instances, filled in by Block.registerViaBlocks(). */
