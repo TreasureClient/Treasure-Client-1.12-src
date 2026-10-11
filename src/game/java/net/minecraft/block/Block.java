@@ -1630,7 +1630,13 @@ public class Block {
 	 */
 	private static void registerViaBlocks() {
 		for (int i = 0; i < ViaBlocks.NAMES.length; i++) {
-			Block viaBlock = (new Block(Material.ROCK)).setHardness(2.0F).setResistance(10.0F)
+			// Phase 4b: pillars render through an axis-rotated model; everything else
+			// stays a plain full cube. Both share the same rock material / sounds and
+			// flow through the identical registry + item pipeline.
+			Block base = ViaBlocks.isPillar(ViaBlocks.NAMES[i])
+					? new BlockRotatedPillar(Material.ROCK)
+					: new Block(Material.ROCK);
+			Block viaBlock = base.setHardness(2.0F).setResistance(10.0F)
 					.setSoundType(SoundType.STONE).setUnlocalizedName(ViaBlocks.NAMES[i])
 					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
 			registerBlock(ViaBlocks.FIRST_ID + i, ViaBlocks.NAMES[i], viaBlock);

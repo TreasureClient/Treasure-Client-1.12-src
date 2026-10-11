@@ -4157,3 +4157,7 @@ tile.dripstone_block.name=Dripstone Block
 tile.moss_block.name=Moss Block
 tile.packed_mud.name=Packed Mud
 tile.mud_bricks.name=Mud Bricks
+tile.basalt.name=Basalt
+tile.polished_basalt.name=Polished Basalt
+tile.bamboo_block.name=Block of Bamboo
+tile.muddy_mangrove_roots.name=Muddy Mangrove Roots

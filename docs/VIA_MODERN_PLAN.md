@@ -27,13 +27,22 @@ build it ourselves. This doc tracks the plan grounded in *this* codebase.
    full-cube blocks registered + rendered with real textures, placeable in
    creative (Building Blocks). Proves registry → state-id → palette → model →
    atlas → render end to end.
-4. **Expand** — 🚧 *in progress*. Step 4a (done): grew the full-cube set from 6
-   to 25 recognizable modern blocks (deepslate family, tuff family, blackstone
-   family, copper weathering stages, dripstone/moss/mud…), and fixed the lang
-   file so names localize in the build (see note below). Remaining: non-cube
-   models (pillars/slabs/walls), then items, then entities; then wire to a data
-   source (client-side Via decode, or a server plugin) so they show up from real
-   servers, not just creative. Long tail.
+4. **Expand** — 🚧 *in progress*.
+   - **4a (done):** grew the full-cube set from 6 to 25 recognizable modern
+     blocks (deepslate family, tuff family, blackstone family, copper weathering
+     stages, dripstone/moss/mud…), and fixed the lang file so names localize in
+     the build (see note below).
+   - **4b — non-cube models (🚧 pillars done):** added axis-rotated pillars via
+     `BlockRotatedPillar` (end + side textures through `block/cube_column`):
+     basalt, polished_basalt, bamboo_block, muddy_mangrove_roots. The registrar
+     (`Block.registerViaBlocks`) now branches on `ViaBlocks.isPillar(name)`, so
+     the block "kind" is data-driven and new shapes slot in the same way.
+     *Next in 4b:* slabs (`BlockSlab` — true half-block geometry, needs a
+     concrete subclass + single/double pairing + `ItemSlab`), then walls
+     (multipart blockstates).
+   - **Then:** items, then entities; then wire to a data source (client-side Via
+     decode, or a server plugin) so they show up from real servers, not just
+     creative. Long tail.
 
 ## Phase 3/4 — what's implemented here
 - `net.minecraft.block.ViaBlocks` — registry of modern block names + instances

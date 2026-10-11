@@ -56,8 +56,33 @@ public final class ViaBlocks {
 		"dripstone_block",
 		"moss_block",
 		"packed_mud",
-		"mud_bricks"
+		"mud_bricks",
+		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
+		// rendered via block/cube_column). Listed in PILLARS below so the
+		// registrar builds them as BlockRotatedPillar instead of a plain cube.
+		"basalt",
+		"polished_basalt",
+		"bamboo_block",
+		"muddy_mangrove_roots"
 	};
+
+	/**
+	 * Names from {@link #NAMES} that register as axis-rotated pillars
+	 * ({@link BlockRotatedPillar}) rather than plain full cubes. Each needs a
+	 * cube_column block model with &lt;name&gt; (side) + &lt;name&gt;_top (end) textures
+	 * and an axis-variant blockstate.
+	 */
+	public static final java.util.Set<String> PILLARS = new java.util.HashSet<String>(java.util.Arrays.asList(
+		"basalt",
+		"polished_basalt",
+		"bamboo_block",
+		"muddy_mangrove_roots"
+	));
+
+	/** True when the given ViaBlock name should be built as a rotated pillar. */
+	public static boolean isPillar(String name) {
+		return PILLARS.contains(name);
+	}
 
 	/** Registered block instances, filled in by Block.registerViaBlocks(). */
 	public static final Block[] BLOCKS = new Block[NAMES.length];
