@@ -87,6 +87,15 @@ public final class ViaBlocks {
 		"nether_gold_ore",
 		"ancient_debris",
 		"copper_ore",
+		// 1.14 villager workstations — full cubes (furnaces/tables render a fixed
+		// front; composter is a simplified closed box).
+		"barrel",
+		"blast_furnace",
+		"smoker",
+		"composter",
+		"cartography_table",
+		"fletching_table",
+		"smithing_table",
 		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
 		// rendered via block/cube_column). Listed in PILLARS below so the
 		// registrar builds them as BlockRotatedPillar instead of a plain cube.
@@ -194,10 +203,14 @@ public final class ViaBlocks {
 		"dead_horn_coral",
 		"kelp",
 		"seagrass",
-		"sweet_berry_bush"
+		"sweet_berry_bush",
+		// Non-solid decorations (custom box/podium models, not the cross model).
+		"lantern",
+		"soul_lantern",
+		"lectern"
 	};
 
-	/** The texture each cross plant uses (parallel to {@link #CROSS_NAMES}). */
+	/** The texture each cross/non-solid block uses (parallel to {@link #CROSS_NAMES}). */
 	public static final String[] CROSS_TEX = {
 		"tube_coral",
 		"brain_coral",
@@ -211,7 +224,10 @@ public final class ViaBlocks {
 		"dead_horn_coral",
 		"kelp",
 		"seagrass",
-		"sweet_berry_bush_stage3"
+		"sweet_berry_bush_stage3",
+		"lantern",
+		"soul_lantern",
+		"lectern"
 	};
 
 	/** Registered cross-plant instances, filled in by Block.registerViaBlocks(). */

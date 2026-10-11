@@ -4243,3 +4243,14 @@ tile.dead_horn_coral.name=Dead Horn Coral
 tile.kelp.name=Kelp
 tile.seagrass.name=Seagrass
 tile.sweet_berry_bush.name=Sweet Berry Bush
+# Treasure Client — ViaBlocks 1.14 blocks
+tile.barrel.name=Barrel
+tile.blast_furnace.name=Blast Furnace
+tile.smoker.name=Smoker
+tile.composter.name=Composter
+tile.cartography_table.name=Cartography Table
+tile.fletching_table.name=Fletching Table
+tile.smithing_table.name=Smithing Table
+tile.lantern.name=Lantern
+tile.soul_lantern.name=Soul Lantern
+tile.lectern.name=Lectern
