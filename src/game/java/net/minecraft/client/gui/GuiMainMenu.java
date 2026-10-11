@@ -539,6 +539,11 @@ public class GuiMainMenu extends GuiScreen {
 		GlStateManager.disableBlend();
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 		this.mc.getTextureManager().bindTexture(tex);
+		// Linear filtering so the photo background isn't nearest-neighbor pixelated
+		// when stretched to the screen (3553=GL_TEXTURE_2D, 10241/10240=MIN/MAG,
+		// 9729=GL_LINEAR), matching how the panorama skybox is sampled.
+		EaglercraftGPU.glTexParameteri(3553, 10241, 9729);
+		EaglercraftGPU.glTexParameteri(3553, 10240, 9729);
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
 		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
