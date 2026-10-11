@@ -1140,16 +1140,11 @@ public class Item {
 		registerItem(2266, "record_11", (new ItemRecord("11", SoundEvents.RECORD_11)).setUnlocalizedName("record"));
 		registerItem(2267, "record_wait",
 				(new ItemRecord("wait", SoundEvents.RECORD_WAIT)).setUnlocalizedName("record"));
-		// Treasure Client — modern ViaItems. Weapons register as ItemSword (handheld
-		// model + melee damage + Combat tab); everything else as a plain material.
+		// Treasure Client — modern ViaItems (spears, netherite tools + armor,
+		// materials). Each item's kind is decided by ViaItems.createItem(name).
 		for (int viaI = 0; viaI < net.minecraft.item.ViaItems.NAMES.length; viaI++) {
 			String viaName = net.minecraft.item.ViaItems.NAMES[viaI];
-			Item viaItem;
-			if (net.minecraft.item.ViaItems.isWeapon(viaName)) {
-				viaItem = (new ItemSword(Item.ToolMaterial.DIAMOND)).setUnlocalizedName(viaName);
-			} else {
-				viaItem = (new Item()).setUnlocalizedName(viaName).setCreativeTab(CreativeTabs.MATERIALS);
-			}
+			Item viaItem = net.minecraft.item.ViaItems.createItem(viaName);
 			registerItem(net.minecraft.item.ViaItems.FIRST_ID + viaI, viaName, viaItem);
 			net.minecraft.item.ViaItems.ITEMS[viaI] = viaItem;
 		}
@@ -1184,7 +1179,9 @@ public class Item {
 
 	public static enum ToolMaterial {
 		WOOD(0, 59, 2.0F, 0.0F, 15), STONE(1, 131, 4.0F, 1.0F, 5), IRON(2, 250, 6.0F, 2.0F, 14),
-		DIAMOND(3, 1561, 8.0F, 3.0F, 10), GOLD(0, 32, 12.0F, 0.0F, 22);
+		DIAMOND(3, 1561, 8.0F, 3.0F, 10), GOLD(0, 32, 12.0F, 0.0F, 22),
+		// Treasure Client (ViaItems) — modern netherite tier.
+		NETHERITE(4, 2031, 9.0F, 4.0F, 15);
 
 		private final int harvestLevel;
 		private final int maxUses;
