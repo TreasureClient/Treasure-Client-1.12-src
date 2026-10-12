@@ -79,10 +79,14 @@ a handshake plugin-channel so it only sends our ids to *our* client.
   bee=202) in the spawn-entity rewriter.
 
 ## Build order (once the stack is known)
-1. Lock the deployment path (A1 or A2) from the server stack.
-2. (A2) Add the client channel handler in this repo: register
-   `viablocks:handshake`/`viablocks:data`, announce support on join, apply data.
-3. Build the server/proxy component against the mapping table.
+1. ✅ **Client capability handshake** — done. `TreasureViaHandshake`
+   (`net.minecraft.client.network`) sends a plugin-channel handshake
+   (`TC|ViaBlocks`) on join advertising the id scheme, and handles the server's
+   reply (`serverSupports`). An Option-A server/proxy uses it to detect our
+   client and start sending our state ids. Fully defensive — a normal server
+   ignores the channel and nothing breaks.
+2. Lock the deployment path (A1 or A2) from the server stack.
+3. Build the server/proxy component against the mapping table + handshake.
 4. Test with one block (deepslate) end to end, then expand to the full table.
 5. Add item + entity rewriters.
 

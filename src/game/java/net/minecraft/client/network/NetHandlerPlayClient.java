@@ -406,6 +406,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.gameSettings.sendSettingsToServer();
 		this.netManager.sendPacket(new CPacketCustomPayload("MC|Brand",
 				(new PacketBuffer(Unpooled.buffer())).writeString(ClientBrandRetriever.getClientModName())));
+		// Treasure Client — announce ViaBlocks support so an Option-A server/proxy
+		// can send our modern block-state ids (data source).
+		TreasureViaHandshake.sendHandshake(this.netManager);
 		WebViewOverlayController.setPacketSendCallback(this::webViewSendHandler);
 	}
 
@@ -1797,6 +1800,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			String s = packetbuffer3.readStringFromBuffer(32767);
 			String s1 = packetbuffer3.readStringFromBuffer(256);
 			this.gameController.getSoundHandler().stop(s1, SoundCategory.getByName(s));
+		} else if (TreasureViaHandshake.CHANNEL.equals(packetIn.getChannelName())) {
+			// Treasure Client — server acknowledged ViaBlocks support (data source).
+			TreasureViaHandshake.handleServer(packetIn.getBufferData());
 		} else {
 			try {
 				eaglerMessageController.handlePacket(packetIn.getChannelName(), packetIn.getBufferData());
