@@ -85,10 +85,19 @@ a handshake plugin-channel so it only sends our ids to *our* client.
    reply (`serverSupports`). An Option-A server/proxy uses it to detect our
    client and start sending our state ids. Fully defensive — a normal server
    ignores the channel and nothing breaks.
-2. Lock the deployment path (A1 or A2) from the server stack.
-3. Build the server/proxy component against the mapping table + handshake.
-4. Test with one block (deepslate) end to end, then expand to the full table.
-5. Add item + entity rewriters.
+2. ✅ **Server plugin + modern block streaming** — done (`server-plugin/`,
+   `TreasureViaServer`, a Paper/Spigot 1.12.2 plugin). It completes the
+   handshake and streams modern blocks to Treasure Clients over `TC|ViaBlocks`
+   (`OP_SET_BLOCK` / `OP_SET_BLOCKS`); the **client** applies them from its
+   ViaBlocks registry (`TreasureViaHandshake.applyBlock`). This sidesteps raw
+   NMS/ProtocolLib packet rewriting (the server can't natively hold our
+   non-vanilla state ids). Commands: `/viablock`, `/viablocks`, `/viatest`.
+   Blocks are client-side/visual (not stored in the 1.12 server world) — good
+   for the end-to-end proof. *Build + test on a live stack to iterate.*
+3. **Phase 3 (persistence + scale):** store modern blocks server-side (per
+   chunk) and re-send on chunk load / block update so they stick; add item +
+   entity streaming the same way; optional `A1` ViaBackwards path for a modern
+   backend.
 
 ## What I need from you to build the server half
 The server component depends entirely on your stack. Which is it?

@@ -6,14 +6,30 @@ EaglerXBungee stack like QuizzityMC/EaglerServer-1.12. The EaglerXBungee proxy
 forwards game packets transparently, so the plugin on the backend does the work.
 
 ## Status
-- **Phase 1 (this code): handshake.** Detects Treasure Clients via the
-  `TC|ViaBlocks` plugin channel (the client sends it on join) and replies so the
-  client's `serverSupports` flag flips true. No block injection yet — this just
-  proves the client↔server capability handshake end to end.
-- **Phase 2 (next, needs ProtocolLib): block/item/entity injection.** Intercept
-  outgoing chunk / block-change packets for Treasure Clients and rewrite block
-  ids → our modern state ids from `viablocks_mapping.json`. This is the part that
-  can't be tested without a live server, so we iterate it against your stack.
+- **Phase 1: handshake.** Detects Treasure Clients via the `TC|ViaBlocks`
+  channel and replies so the client's `serverSupports` flag flips true.
+- **Phase 2: modern block streaming (this version).** The server sends modern
+  blocks to Treasure Clients over the same channel; the **client applies them
+  from its own ViaBlocks registry** (`TreasureViaHandshake.applyBlock`). No
+  ProtocolLib / NMS packet rewriting — the client already knows how to render
+  our state ids, so the server just names positions + state ids.
+  - Blocks are **client-side/visual** (the 1.12 server world doesn't hold them),
+    so a later server chunk/block update for that position can overwrite them.
+    That's fine for the proof; a persistent store is phase 3.
+
+### Try it (ops, as a Treasure Client)
+- `/viablocks` — list the modern block names.
+- `/viablock deepslate` — turn the block you're looking at into deepslate
+  (for your client only).
+- `/viatest` — drop a sampler row of modern blocks ~2 blocks in front of you.
+
+### Wire protocol (TC|ViaBlocks)
+Client → server (join): `[proto][varint ViaBlocks.FIRST_ID][varint ViaItems.FIRST_ID]`.
+Server → client:
+- `[1]` — ACK (OP_ACK) → client `serverSupports = true`.
+- `[16][int x][int y][int z][int stateId]` — OP_SET_BLOCK.
+- `[17][int count]{[int x][int y][int z][int stateId]}×count` — OP_SET_BLOCKS.
+State id = `blockId << 4 | meta` (see `viablocks_mapping.json`, `baseStateId`).
 
 ## Build
 ```sh
