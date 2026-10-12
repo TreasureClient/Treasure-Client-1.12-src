@@ -1,0 +1,8 @@
+name: TreasureViaServer
+version: 0.1
+main: com.treasureclient.via.TreasureViaServer
+author: Treasure Client
+description: >
+  Option A data source (server side). Detects Treasure Clients via the
+  TC|ViaBlocks plugin-channel handshake. Block/item injection is phase 2.
+# 1.12 uses legacy plugin-channel names, so no api-version line here.
