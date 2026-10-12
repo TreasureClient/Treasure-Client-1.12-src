@@ -87,6 +87,55 @@ public class TreasureMods {
 	private static long lastForwardTapTime = 0L;
 	private static boolean doubleTapLatched = false;
 
+	// ---- F6 item-NBT dump (diagnostic for building ViaItems) ----
+	// Press F6 to print the item you're hovering (in a container), holding on the
+	// cursor, or in your main hand — registry name + display name + full NBT — to
+	// chat and the console. This reveals whether a server's down-mapped modern
+	// item (e.g. a mace shown as an axe) still carries its modern identity in NBT.
+	private static boolean f6WasDown = false;
+
+	private static void dumpHeldItemOnKey(Minecraft mc) {
+		try {
+			boolean down = net.lax1dude.eaglercraft.Keyboard.isKeyDown(net.lax1dude.eaglercraft.Keyboard.KEY_F6);
+			if (down && !f6WasDown) {
+				net.minecraft.item.ItemStack st = null;
+				if (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer) {
+					net.minecraft.inventory.Slot slot =
+							((net.minecraft.client.gui.inventory.GuiContainer) mc.currentScreen).tcHoveredSlot();
+					if (slot != null && slot.getHasStack()) {
+						st = slot.getStack();
+					}
+					if (st == null && mc.player != null) {
+						net.minecraft.item.ItemStack cur = mc.player.inventory.getItemStack();
+						if (cur != null && !cur.func_190926_b()) {
+							st = cur;
+						}
+					}
+				}
+				if (st == null && mc.player != null) {
+					st = mc.player.getHeldItemMainhand();
+				}
+
+				String msg;
+				if (st == null || st.func_190926_b()) {
+					msg = "[ViaItems] item: (empty) — hover a slot, hold on cursor, or hold in main hand, then F6";
+				} else {
+					net.minecraft.item.Item it = st.getItem();
+					String rn = (it != null && it.getRegistryName() != null) ? it.getRegistryName().toString() : "?";
+					String nbt = (st.getTagCompound() != null) ? st.getTagCompound().toString() : "(no NBT)";
+					msg = "[ViaItems] " + rn + " x" + st.func_190916_E()
+							+ " name='" + st.getDisplayName() + "' nbt=" + nbt;
+				}
+				System.out.println(msg);
+				try {
+					mc.ingameGUI.getChatGUI().printChatMessage(
+							new net.minecraft.util.text.TextComponentString(msg));
+				} catch (Throwable t) {}
+			}
+			f6WasDown = down;
+		} catch (Throwable t) {}
+	}
+
 	private static void reload() {
 		try {
 			byte[] data = EagRuntime.getStorage("tcmods");
@@ -130,6 +179,11 @@ public class TreasureMods {
 			// re-read settings ~4x/second so overlay changes apply live
 			long now = EagRuntime.steadyTimeMillis();
 			if (now - lastLoad > 250L) { reload(); lastLoad = now; }
+
+			// Treasure Client — apply any pending TuffX+ ViaBlocks overrides (modern
+			// blocks streamed by real servers) + the F6 item-NBT dump diagnostic.
+			try { net.minecraft.client.network.TuffViaBlocks.tick(); } catch (Throwable t) {}
+			dumpHeldItemOnKey(mc);
 
 			// No Particles: force the game's particle setting to minimal while the
 			// toggle is on (keeps applying each reload since the user could change it).
