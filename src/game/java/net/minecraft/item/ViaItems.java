@@ -59,14 +59,18 @@ public final class ViaItems {
 		// materials — generated, Materials tab
 		"amethyst_shard",
 		"copper_ingot",
-		"netherite_ingot"
+		"netherite_ingot",
+		// 1.15 bees
+		"honeycomb",
+		"honey_bottle"
 	};
 
 	/** Registered item instances, filled in by Item.registerItems(). */
 	public static final Item[] ITEMS = new Item[NAMES.length];
 
 	private static boolean isMaterial(String name) {
-		return name.equals("amethyst_shard") || name.equals("copper_ingot") || name.equals("netherite_ingot");
+		return name.equals("amethyst_shard") || name.equals("copper_ingot") || name.equals("netherite_ingot")
+				|| name.equals("honeycomb") || name.equals("honey_bottle");
 	}
 
 	/** Tool material for the sword-like items (swords + spears), by name. */

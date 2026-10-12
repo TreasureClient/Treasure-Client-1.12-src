@@ -96,6 +96,11 @@ public final class ViaBlocks {
 		"cartography_table",
 		"fletching_table",
 		"smithing_table",
+		// 1.15 bees — full cubes (honey_block simplified opaque; nest/hive fixed front).
+		"honeycomb_block",
+		"honey_block",
+		"bee_nest",
+		"beehive",
 		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
 		// rendered via block/cube_column). Listed in PILLARS below so the
 		// registrar builds them as BlockRotatedPillar instead of a plain cube.
