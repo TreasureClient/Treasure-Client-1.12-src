@@ -338,6 +338,12 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 	 * Sends a chat message from the player.
 	 */
 	public void sendChatMessage(String message) {
+		// Treasure Client — local diagnostic: dump the held item's NBT (for ViaItems).
+		// Handled client-side and never sent to the server.
+		if (message != null && message.equalsIgnoreCase(".viadump")) {
+			net.minecraft.client.gui.TreasureMods.dumpHeldItem(this.mc);
+			return;
+		}
 		if (this.connection.getNetworkManager() instanceof SingleplayerNetworkManager && message.startsWith("/eagskull")) {
 			this.mc.eagskullCommand.openFileChooser();
 		} else {

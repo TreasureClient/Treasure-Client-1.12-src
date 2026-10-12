@@ -92,47 +92,62 @@ public class TreasureMods {
 	// cursor, or in your main hand — registry name + display name + full NBT — to
 	// chat and the console. This reveals whether a server's down-mapped modern
 	// item (e.g. a mace shown as an axe) still carries its modern identity in NBT.
-	private static boolean f6WasDown = false;
+	private static boolean dumpKeyWasDown = false;
 
+	/** Key-triggered dump (backslash "\"). Chat command ".viadump" is the reliable path. */
 	private static void dumpHeldItemOnKey(Minecraft mc) {
 		try {
-			boolean down = net.lax1dude.eaglercraft.Keyboard.isKeyDown(net.lax1dude.eaglercraft.Keyboard.KEY_F6);
-			if (down && !f6WasDown) {
-				net.minecraft.item.ItemStack st = null;
-				if (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer) {
-					net.minecraft.inventory.Slot slot =
-							((net.minecraft.client.gui.inventory.GuiContainer) mc.currentScreen).tcHoveredSlot();
-					if (slot != null && slot.getHasStack()) {
-						st = slot.getStack();
-					}
-					if (st == null && mc.player != null) {
-						net.minecraft.item.ItemStack cur = mc.player.inventory.getItemStack();
-						if (cur != null && !cur.func_190926_b()) {
-							st = cur;
-						}
-					}
+			boolean down = net.lax1dude.eaglercraft.Keyboard.isKeyDown(net.lax1dude.eaglercraft.Keyboard.KEY_BACKSLASH);
+			if (down && !dumpKeyWasDown) {
+				dumpHeldItem(mc);
+			}
+			dumpKeyWasDown = down;
+		} catch (Throwable t) {}
+	}
+
+	/**
+	 * Print the item you're hovering (in a container), holding on the cursor, or
+	 * in your main hand — registry name + display name + full NBT — to chat and
+	 * the console. Triggered by the chat command ".viadump" or the "\" key.
+	 */
+	public static void dumpHeldItem(Minecraft mc) {
+		try {
+			if (mc == null) {
+				return;
+			}
+			net.minecraft.item.ItemStack st = null;
+			if (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer) {
+				net.minecraft.inventory.Slot slot =
+						((net.minecraft.client.gui.inventory.GuiContainer) mc.currentScreen).tcHoveredSlot();
+				if (slot != null && slot.getHasStack()) {
+					st = slot.getStack();
 				}
 				if (st == null && mc.player != null) {
-					st = mc.player.getHeldItemMainhand();
+					net.minecraft.item.ItemStack cur = mc.player.inventory.getItemStack();
+					if (cur != null && !cur.func_190926_b()) {
+						st = cur;
+					}
 				}
-
-				String msg;
-				if (st == null || st.func_190926_b()) {
-					msg = "[ViaItems] item: (empty) — hover a slot, hold on cursor, or hold in main hand, then F6";
-				} else {
-					net.minecraft.item.Item it = st.getItem();
-					String rn = (it != null && it.getRegistryName() != null) ? it.getRegistryName().toString() : "?";
-					String nbt = (st.getTagCompound() != null) ? st.getTagCompound().toString() : "(no NBT)";
-					msg = "[ViaItems] " + rn + " x" + st.func_190916_E()
-							+ " name='" + st.getDisplayName() + "' nbt=" + nbt;
-				}
-				System.out.println(msg);
-				try {
-					mc.ingameGUI.getChatGUI().printChatMessage(
-							new net.minecraft.util.text.TextComponentString(msg));
-				} catch (Throwable t) {}
 			}
-			f6WasDown = down;
+			if (st == null && mc.player != null) {
+				st = mc.player.getHeldItemMainhand();
+			}
+
+			String msg;
+			if (st == null || st.func_190926_b()) {
+				msg = "[ViaItems] item: (empty) — hold the item in your main hand, then type .viadump";
+			} else {
+				net.minecraft.item.Item it = st.getItem();
+				String rn = (it != null && it.getRegistryName() != null) ? it.getRegistryName().toString() : "?";
+				String nbt = (st.getTagCompound() != null) ? st.getTagCompound().toString() : "(no NBT)";
+				msg = "[ViaItems] " + rn + " x" + st.func_190916_E()
+						+ " name='" + st.getDisplayName() + "' nbt=" + nbt;
+			}
+			System.out.println(msg);
+			try {
+				mc.ingameGUI.getChatGUI().printChatMessage(
+						new net.minecraft.util.text.TextComponentString(msg));
+			} catch (Throwable t) {}
 		} catch (Throwable t) {}
 	}
 
