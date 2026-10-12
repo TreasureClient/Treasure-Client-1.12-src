@@ -681,6 +681,9 @@ ${classes_js}
           <!-- interface -->
           <div class="tc-panel" data-panel="interface" data-group="misc">
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>ViaVersion</b><i>Show modern 1.13+ blocks, items &amp; entities sent by servers</i></div><div class="tc-sw on" data-mod="via"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Zoom</b><i>Hold a key to zoom in</i></div><button class="tc-gear" data-gear="zoomcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="zoom"><i></i></div></div>
               <div class="tc-cfg" data-cfg="zoomcfg">
                 <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" data-mod="zoomLevel"><span class="tc-val">30</span></div></div>
@@ -1322,6 +1325,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           <!-- interface -->
           <div class="tc-panel" data-panel="interface" data-group="misc">
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>ViaVersion</b><i>Show modern 1.13+ blocks, items &amp; entities sent by servers</i></div><div class="tc-sw on" data-mod="via"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Zoom</b><i>Hold a key to zoom in</i></div><button class="tc-gear" data-gear="zoomcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="zoom"><i></i></div></div>
               <div class="tc-cfg" data-cfg="zoomcfg">
                 <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" data-mod="zoomLevel"><span class="tc-val">30</span></div></div>
@@ -1565,7 +1571,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'zoomSpeed=' + (state.zoomSpeed || 8),
           'noParticles=' + (state.noParticles ? 1 : 0),
           'noHurtCam=' + (state.noHurtCam ? 1 : 0),
-          'tntTimer=' + (state.tntTimer ? 1 : 0)
+          'tntTimer=' + (state.tntTimer ? 1 : 0),
+          'via=' + (state.via === false ? 0 : 1)
         ];
         localStorage.setItem('_eaglercraft_1.12.tcmods', btoa(parts.join(',')));
       } catch (e) {}
@@ -1626,6 +1633,24 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (typeof window.__tcRefocusGame === 'function') window.__tcRefocusGame();
     }
     function toggleGui() { gui.classList.contains('open') ? closeGui() : openGui(); }
+    // Treasure Client: persistent bottom-right watermark (all screens), and push
+    // the current mod flags (incl. ViaVersion default-on) to the Java bridge now.
+    (function () {
+      try {
+        var wm = document.getElementById('tc-watermark');
+        if (!wm) {
+          wm = document.createElement('div');
+          wm.id = 'tc-watermark';
+          wm.textContent = 'Treasure Client 1.2';
+          wm.style.cssText = 'position:fixed;right:6px;bottom:4px;z-index:2147483647;'
+            + 'pointer-events:none;font:600 11px/1.2 system-ui,Arial,sans-serif;'
+            + 'color:rgba(255,255,255,0.72);text-shadow:0 1px 2px rgba(0,0,0,0.9);'
+            + 'letter-spacing:.3px;-webkit-user-select:none;user-select:none;';
+          (document.body || document.documentElement).appendChild(wm);
+        }
+      } catch (e) {}
+      try { writeModsToEngine(); } catch (e) {}
+    })();
     $('#tc-close').addEventListener('click', closeGui);
     $('#tc-done').addEventListener('click', closeGui);
     gui.addEventListener('mousedown', function (e) { if (e.target === gui) closeGui(); });
@@ -1653,7 +1678,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         sw.classList.toggle('on', on);
         state[key] = on; save();
         if (key === 'fullbright') { applyFullbrightToEngine(); showModFlash('Fullbright ' + (state.fullbright ? 'ON' : 'OFF') + ' — reload to apply'); }
-        else if (key === 'toggleSprint' || key === 'toggleSneak' || key.indexOf('hitbox') === 0 || key === 'pauseUnfocused' || key === 'zoom' || key === 'noParticles' || key === 'noHurtCam' || key === 'tntTimer' || key === 'smoothZoom') { writeModsToEngine(); }
+        else if (key === 'toggleSprint' || key === 'toggleSneak' || key.indexOf('hitbox') === 0 || key === 'pauseUnfocused' || key === 'zoom' || key === 'noParticles' || key === 'noHurtCam' || key === 'tntTimer' || key === 'smoothZoom' || key === 'via') { writeModsToEngine(); }
         else applyHud();
       });
     });

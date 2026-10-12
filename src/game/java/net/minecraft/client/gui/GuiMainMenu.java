@@ -73,7 +73,7 @@ public class GuiMainMenu extends GuiScreen {
 	// main-menu brand line shows whatever the user renamed the client to
 	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
 	// renaming in the overlay shows up live without a per-frame storage read.
-	private static String brandTitle = "Treasure Client 1.1";
+	private static String brandTitle = "Treasure Client 1.2";
 	private static long brandRead = 0L;
 
 	private static String brandLine() {
@@ -84,13 +84,13 @@ public class GuiMainMenu extends GuiScreen {
 				byte[] b = EagRuntime.getStorage("tctitle");
 				if (b != null && b.length > 0) {
 					String s = new String(b, StandardCharsets.UTF_8).trim();
-					brandTitle = s.isEmpty() ? "Treasure Client 1.1" : s;
+					brandTitle = s.isEmpty() ? "Treasure Client 1.2" : s;
 				} else {
-					brandTitle = "Treasure Client 1.1";
+					brandTitle = "Treasure Client 1.2";
 				}
 			}
 		} catch (Throwable t) {
-			brandTitle = "Treasure Client 1.1";
+			brandTitle = "Treasure Client 1.2";
 		}
 		return brandTitle;
 	}

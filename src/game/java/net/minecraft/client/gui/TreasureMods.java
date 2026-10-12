@@ -64,6 +64,12 @@ public class TreasureMods {
 	public static boolean tntTimer() { return tntTimer; }
 	public static boolean noParticles() { return noParticles; }
 
+	// ViaVersion: master toggle for the Option A modern-content data path
+	// (handshake + applying modern blocks/items/entities streamed by servers).
+	// Default ON; the overlay writes via=0 when the user turns it off.
+	private static boolean via = true;
+	public static boolean viaEnabled() { return via; }
+
 	// toggle-via-sprint-key state + status display
 	private static boolean sprintToggledOn = false;
 	private static boolean sprintKeyWasDown = false;
@@ -87,6 +93,7 @@ public class TreasureMods {
 			sprint = false; sprintMode = 0; sneak = false;
 			hitboxes = false; hitboxPlayers = true; hitboxMobs = true; hitboxAnimals = true; hitboxOther = false;
 			pauseUnfocused = false;
+			via = true; // default ON unless the overlay explicitly says via=0
 			if (data != null && data.length > 0) {
 				String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
 				String[] parts = s.split(",");
@@ -108,6 +115,7 @@ public class TreasureMods {
 				else if (k.equals("noParticles")) noParticles = v.equals("1");
 				else if (k.equals("noHurtCam")) noHurtCam = v.equals("1");
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
+				else if (k.equals("via")) via = v.equals("1");
 				}
 			}
 		} catch (Throwable t) {

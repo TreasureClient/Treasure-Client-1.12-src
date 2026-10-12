@@ -61,6 +61,11 @@ public final class TreasureViaHandshake {
 	/** Announce ViaBlocks support to the server (called on join). */
 	public static void sendHandshake(NetworkManager nm) {
 		try {
+			// Respect the ViaVersion Mod Menu toggle: if the user turned it off,
+			// don't advertise support, so no server streams modern content to us.
+			if (!net.minecraft.client.gui.TreasureMods.viaEnabled()) {
+				return;
+			}
 			PacketBuffer buf = new PacketBuffer(Unpooled.buffer());
 			buf.writeByte(PROTOCOL);
 			buf.writeVarIntToBuffer(ViaBlocks.FIRST_ID);
@@ -74,6 +79,12 @@ public final class TreasureViaHandshake {
 	/** Handle a server message on {@link #CHANNEL} (dispatch by opcode). */
 	public static void handleServer(PacketBuffer buf) {
 		try {
+			// If ViaVersion is toggled off in the Mod Menu, ignore all modern
+			// content the server sends (handshake included).
+			if (!net.minecraft.client.gui.TreasureMods.viaEnabled()) {
+				serverSupports = false;
+				return;
+			}
 			int op = buf.readUnsignedByte();
 			switch (op) {
 			case OP_ACK:
