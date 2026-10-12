@@ -4261,3 +4261,4 @@ tile.bee_nest.name=Bee Nest
 tile.beehive.name=Beehive
 item.honeycomb.name=Honeycomb
 item.honey_bottle.name=Honey Bottle
+entity.Bee.name=Bee
