@@ -62,15 +62,64 @@ public final class ViaItems {
 		"netherite_ingot",
 		// 1.15 bees
 		"honeycomb",
-		"honey_bottle"
+		"honey_bottle",
+		// 1.19 Wild Update + 1.20 Trails & Tales items
+		"recovery_compass",
+		"echo_shard",
+		"goat_horn",
+		"disc_fragment_5",
+		"music_disc_5",
+		"music_disc_otherside",
+		"brush",
+		"music_disc_relic",
+		"torchflower_seeds",
+		"pitcher_pod",
+		"netherite_upgrade_smithing_template",
+		"angler_pottery_sherd",
+		"archer_pottery_sherd",
+		"arms_up_pottery_sherd",
+		"blade_pottery_sherd",
+		"brewer_pottery_sherd",
+		"burn_pottery_sherd",
+		"danger_pottery_sherd",
+		"explorer_pottery_sherd",
+		"friend_pottery_sherd",
+		"heart_pottery_sherd",
+		"heartbreak_pottery_sherd",
+		"howl_pottery_sherd",
+		"miner_pottery_sherd",
+		"mourner_pottery_sherd",
+		"plenty_pottery_sherd",
+		"prize_pottery_sherd",
+		"sheaf_pottery_sherd",
+		"shelter_pottery_sherd",
+		"skull_pottery_sherd",
+		"snort_pottery_sherd",
+		"coast_armor_trim_smithing_template",
+		"dune_armor_trim_smithing_template",
+		"eye_armor_trim_smithing_template",
+		"host_armor_trim_smithing_template",
+		"raiser_armor_trim_smithing_template",
+		"rib_armor_trim_smithing_template",
+		"sentry_armor_trim_smithing_template",
+		"shaper_armor_trim_smithing_template",
+		"silence_armor_trim_smithing_template",
+		"snout_armor_trim_smithing_template",
+		"spire_armor_trim_smithing_template",
+		"tide_armor_trim_smithing_template",
+		"vex_armor_trim_smithing_template",
+		"ward_armor_trim_smithing_template",
+		"wayfinder_armor_trim_smithing_template",
+		"wild_armor_trim_smithing_template"
 	};
 
 	/** Registered item instances, filled in by Item.registerItems(). */
 	public static final Item[] ITEMS = new Item[NAMES.length];
 
-	private static boolean isMaterial(String name) {
-		return name.equals("amethyst_shard") || name.equals("copper_ingot") || name.equals("netherite_ingot")
-				|| name.equals("honeycomb") || name.equals("honey_bottle");
+	/** Sword-like melee weapons (mace, trident, netherite sword, and every spear). */
+	private static boolean isWeapon(String name) {
+		return name.endsWith("_spear") || name.equals("mace") || name.equals("trident")
+				|| name.equals("netherite_sword");
 	}
 
 	/** Tool material for the sword-like items (swords + spears), by name. */
@@ -103,11 +152,12 @@ public final class ViaItems {
 			it = new ItemSpade(Item.ToolMaterial.NETHERITE);
 		} else if (name.equals("netherite_hoe")) {
 			it = new ItemHoe(Item.ToolMaterial.NETHERITE);
-		} else if (isMaterial(name)) {
-			it = (new Item()).setCreativeTab(CreativeTabs.MATERIALS);
-		} else {
+		} else if (isWeapon(name)) {
 			// mace, trident, and all spears: sword-like melee weapons
 			it = new ItemSword(swordMaterial(name));
+		} else {
+			// everything else is a plain material / misc item (Materials tab)
+			it = (new Item()).setCreativeTab(CreativeTabs.MATERIALS);
 		}
 		return it.setUnlocalizedName(name);
 	}

@@ -1,0 +1,6 @@
+{
+    "parent": "item/generated",
+    "textures": {
+        "layer0": "items/danger_pottery_sherd"
+    }
+}
