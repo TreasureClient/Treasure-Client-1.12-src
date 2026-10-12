@@ -101,6 +101,30 @@ public final class ViaBlocks {
 		"honey_block",
 		"bee_nest",
 		"beehive",
+		// 1.16 Nether Update — full cubes (cube_all).
+		"netherite_block",
+		"chiseled_polished_blackstone",
+		"cracked_polished_blackstone_bricks",
+		"chiseled_nether_bricks",
+		"cracked_nether_bricks",
+		"soul_soil",
+		"crying_obsidian",
+		"shroomlight",
+		"warped_wart_block",
+		"nether_wart_block",
+		"quartz_bricks",
+		"crimson_planks",
+		"warped_planks",
+		// 1.16 — cubes with a distinct top (custom models).
+		"crimson_nylium",
+		"warped_nylium",
+		"target",
+		"lodestone",
+		// 1.16 nether stems (pillars — listed in PILLARS below).
+		"crimson_stem",
+		"warped_stem",
+		"stripped_crimson_stem",
+		"stripped_warped_stem",
 		// Phase 4b — non-cube models: axis-rotated pillars (end + side textures,
 		// rendered via block/cube_column). Listed in PILLARS below so the
 		// registrar builds them as BlockRotatedPillar instead of a plain cube.
@@ -120,7 +144,11 @@ public final class ViaBlocks {
 		"basalt",
 		"polished_basalt",
 		"bamboo_block",
-		"muddy_mangrove_roots"
+		"muddy_mangrove_roots",
+		"crimson_stem",
+		"warped_stem",
+		"stripped_crimson_stem",
+		"stripped_warped_stem"
 	));
 
 	/** True when the given ViaBlock name should be built as a rotated pillar. */

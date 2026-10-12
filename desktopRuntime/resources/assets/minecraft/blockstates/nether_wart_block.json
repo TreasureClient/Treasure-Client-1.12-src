@@ -1,5 +1,7 @@
 {
     "variants": {
-        "normal": { "model": "nether_wart_block" }
+        "normal": {
+            "model": "nether_wart_block"
+        }
     }
 }
