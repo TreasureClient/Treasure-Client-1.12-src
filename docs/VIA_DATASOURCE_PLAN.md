@@ -94,10 +94,23 @@ a handshake plugin-channel so it only sends our ids to *our* client.
    non-vanilla state ids). Commands: `/viablock`, `/viablocks`, `/viatest`.
    Blocks are client-side/visual (not stored in the 1.12 server world) — good
    for the end-to-end proof. *Build + test on a live stack to iterate.*
-3. **Phase 3 (persistence + scale):** store modern blocks server-side (per
-   chunk) and re-send on chunk load / block update so they stick; add item +
-   entity streaming the same way; optional `A1` ViaBackwards path for a modern
-   backend.
+3. ✅ **Phase 3 (persistence + items + entities)** — done (`server-plugin/`
+   v0.3). The server now **persists** block overrides to disk
+   (`plugins/TreasureViaServer/blocks.yml`) and **re-asserts them every 3 s** to
+   each nearby Treasure Client, so modern blocks survive chunk reloads and
+   relogs (the plain 1.12 chunk re-send would otherwise revert them). Breaking
+   the real block at an override position drops the override; `/viaclear`
+   removes them. **Items** stream over `OP_GIVE_ITEM` (`/viagive`) and
+   **entities** over `OP_SPAWN_ENTITY` (`/viaentity`); the client applies both
+   from its ViaItems registry / `EntityList`. The mapping json gained an
+   `entities` section (`copper_golem`=201, `bee`=202). Still
+   client-side/visual: "persistence" means the server remembers and re-sends,
+   not that the 1.12 world stores modern blocks.
+4. **Phase 4 (optional, future):** the `A1` ViaBackwards mapping-override path
+   for a modern (1.13+) backend, so modern blocks placed by *players/worldgen on
+   the real server* down-map to our ids automatically (no manual commands);
+   and/or an `A2` proxy plugin that rewrites chunk sections with indirect
+   palettes so overrides have no flicker and need no resend.
 
 ## What I need from you to build the server half
 The server component depends entirely on your stack. Which is it?

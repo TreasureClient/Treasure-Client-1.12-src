@@ -1036,6 +1036,16 @@
       "itemId": 3068
     }
   },
+  "entities": {
+    "copper_golem": {
+      "modern": "minecraft:copper_golem",
+      "entityTypeId": 201
+    },
+    "bee": {
+      "modern": "minecraft:bee",
+      "entityTypeId": 202
+    }
+  },
   "summary": {
     "blockEntries": 117,
     "itemEntries": 69,
@@ -1047,6 +1057,7 @@
     "itemIdRange": [
       3000,
       3068
-    ]
+    ],
+    "entityEntries": 2
   }
 }

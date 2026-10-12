@@ -5,6 +5,10 @@ import net.minecraft.block.Block;
 import net.minecraft.block.ViaBlocks;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.ViaItems;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.PacketBuffer;
@@ -43,6 +47,13 @@ public final class TreasureViaHandshake {
 	public static final int OP_SET_BLOCK = 16;
 	/** Place many modern blocks: int count, then count × (x, y, z, stateId). */
 	public static final int OP_SET_BLOCKS = 17;
+	/** Give a modern item to the player's inventory: varint itemId, int count. */
+	public static final int OP_GIVE_ITEM = 32;
+	/**
+	 * Spawn a modern entity client-side: int entityId, int entityTypeId,
+	 * double x, double y, double z, float yaw, float pitch.
+	 */
+	public static final int OP_SPAWN_ENTITY = 48;
 
 	/** Set true once a server acknowledges it will send modern ViaBlocks content. */
 	public static boolean serverSupports = false;
@@ -77,6 +88,14 @@ public final class TreasureViaHandshake {
 					applyBlock(buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
 				}
 				break;
+			case OP_GIVE_ITEM:
+				applyGiveItem(buf.readVarIntFromBuffer(), buf.readInt());
+				break;
+			case OP_SPAWN_ENTITY:
+				applySpawnEntity(buf.readInt(), buf.readInt(),
+						buf.readDouble(), buf.readDouble(), buf.readDouble(),
+						buf.readFloat(), buf.readFloat());
+				break;
 			default:
 				// unknown opcode — ignore so a newer server can't break us
 				break;
@@ -105,6 +124,49 @@ public final class TreasureViaHandshake {
 			}
 		} catch (Throwable t) {
 			// ignore a single bad block
+		}
+	}
+
+	/**
+	 * Give a modern item to the local player's inventory, client-side. Like the
+	 * block path this is visual/client-authoritative: the item lives only in the
+	 * client's view of the inventory, so a server inventory update can clear it.
+	 */
+	private static void applyGiveItem(int itemId, int count) {
+		try {
+			Minecraft mc = Minecraft.getMinecraft();
+			if (mc == null || mc.player == null) {
+				return;
+			}
+			Item item = Item.getItemById(itemId);
+			if (item != null) {
+				mc.player.inventory.addItemStackToInventory(new ItemStack(item, count <= 0 ? 1 : count));
+			}
+		} catch (Throwable t) {
+			// ignore a single bad item
+		}
+	}
+
+	/**
+	 * Spawn a modern entity client-side from its entity-type id (see
+	 * {@link net.minecraft.entity.EntityList}). Visual/client-authoritative: the
+	 * 1.12 server does not track it, so it has no AI driven by the server and a
+	 * later server entity update for the same id can replace it.
+	 */
+	private static void applySpawnEntity(int entityId, int typeId,
+			double x, double y, double z, float yaw, float pitch) {
+		try {
+			Minecraft mc = Minecraft.getMinecraft();
+			if (mc == null || mc.world == null) {
+				return;
+			}
+			Entity entity = EntityList.createEntityByID(typeId, mc.world);
+			if (entity != null) {
+				entity.setLocationAndAngles(x, y, z, yaw, pitch);
+				mc.world.addEntityToWorld(entityId, entity);
+			}
+		} catch (Throwable t) {
+			// ignore a single bad entity
 		}
 	}
 }
