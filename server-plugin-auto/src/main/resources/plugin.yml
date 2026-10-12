@@ -1,0 +1,19 @@
+name: TreasureViaAuto
+version: 0.1
+main: com.treasureclient.via.TreasureViaAuto
+author: Treasure Client
+api-version: "1.13"
+description: >
+  Option A phase 4 (automatic). On a 1.13+ backend, detects modern blocks that
+  players/worldgen actually place and streams our ViaBlocks state ids to Treasure
+  Clients over the TC|ViaBlocks channel — no manual commands. Reuses the same
+  wire protocol as TreasureViaServer; no client change needed.
+commands:
+  viaauto:
+    description: Status / reload / scan-nearby for the auto mapper.
+    usage: /viaauto <status|reload|scan|clear>
+    permission: treasurevia.auto
+permissions:
+  treasurevia.auto:
+    description: Manage the Treasure Client auto mapper.
+    default: op

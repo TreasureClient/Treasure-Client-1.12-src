@@ -106,11 +106,27 @@ a handshake plugin-channel so it only sends our ids to *our* client.
    `entities` section (`copper_golem`=201, `bee`=202). Still
    client-side/visual: "persistence" means the server remembers and re-sends,
    not that the 1.12 world stores modern blocks.
-4. **Phase 4 (optional, future):** the `A1` ViaBackwards mapping-override path
-   for a modern (1.13+) backend, so modern blocks placed by *players/worldgen on
-   the real server* down-map to our ids automatically (no manual commands);
-   and/or an `A2` proxy plugin that rewrites chunk sections with indirect
-   palettes so overrides have no flicker and need no resend.
+4. ✅ **Phase 4 (automatic down-mapping)** — done (`server-plugin-auto/`,
+   `TreasureViaAuto`, a **1.13+** Spigot/Paper plugin). On a modern backend it
+   detects modern blocks that players/worldgen actually place (`BlockPlaceEvent`
+   + optional chunk scan) and streams our state ids to Treasure Clients over the
+   same `TC|ViaBlocks` protocol — **no manual commands, no client change**.
+   Matching is version-robust (`Material.name().toLowerCase()` → our short-name,
+   since we named blocks after the vanilla ids). It registers several candidate
+   channels and replies on whichever the handshake arrives on, to survive Via's
+   legacy→namespaced channel rewrite (the one thing that needs live confirmation
+   per stack). This is the plugin form of path **A2** (no NMS/Via-internals).
+5. **Phase 5 (optional, future):**
+   - *Flicker-free chunk rewrite:* a proxy-level `A2` that rewrites chunk
+     sections with indirect palettes (our ids 16000–21040 fit a section's local
+     palette), so overrides need no resend and never flicker. NMS/Via-internal,
+     best built against a live stack.
+   - *True `A1` ViaBackwards override:* hook ViaBackwards' 1.13→1.12 block
+     mapping so the down-map emits our ids directly. Least code on paper but
+     tied to Via mapping internals and version-locked.
+   - *Direct-palette hardening:* renumber ViaBlocks under state id 8192 so our
+     blocks also fit the 13-bit direct palette (offered; one-line-per-constant +
+     asset regen).
 
 ## What I need from you to build the server half
 The server component depends entirely on your stack. Which is it?
