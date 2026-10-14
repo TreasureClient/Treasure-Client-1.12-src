@@ -138,7 +138,9 @@ public class TreasureMods {
 				msg = "[ViaItems] item: (empty) — hold the item in your main hand, then type .viadump";
 			} else {
 				net.minecraft.item.Item it = st.getItem();
-				String rn = (it != null && it.getRegistryName() != null) ? it.getRegistryName().toString() : "?";
+				net.minecraft.util.ResourceLocation rl = (it != null)
+						? net.minecraft.item.Item.REGISTRY.getNameForObject(it) : null;
+				String rn = (rl != null) ? rl.toString() : "?";
 				String nbt = (st.getTagCompound() != null) ? st.getTagCompound().toString() : "(no NBT)";
 				msg = "[ViaItems] " + rn + " x" + st.func_190916_E()
 						+ " name='" + st.getDisplayName() + "' nbt=" + nbt;
