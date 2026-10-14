@@ -960,7 +960,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
     /* ---------- open / close ---------- */
     function openGui() {
-      gui.classList.add('open'); root.setAttribute('aria-hidden', 'false'); if (root.__tcBgStart) root.__tcBgStart();
+      gui.classList.add('open'); root.setAttribute('aria-hidden', 'false'); if (root.__tcBgStart) root.__tcBgStart(); tcRefreshMenuBg();
       // Ask the Java side to open the in-game menu so the world pauses (SP) and
       // the mouse is freed — no more needing to press Escape after the hotkey.
       try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(1))); } catch (e) {}
@@ -973,7 +973,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         $$('.tc-keybind.listening').forEach(function (o) { o.classList.remove('listening'); });
         if (typeof refreshBindButtons === 'function') refreshBindButtons();
       }
-      gui.classList.remove('open'); root.setAttribute('aria-hidden', 'true'); if (root.__tcBgStop) root.__tcBgStop();
+      gui.classList.remove('open'); root.setAttribute('aria-hidden', 'true'); if (root.__tcBgStop) root.__tcBgStop(); tcRefreshMenuBg();
       // Ask Java to close the in-game menu we opened (return to the world).
       try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(2))); } catch (e) {}
       if (typeof window.__tcRefocusGame === 'function') window.__tcRefocusGame();
@@ -1704,8 +1704,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     function applyTheme(id) {
       var t = tcTheme(id); state.theme = t.id;
       root.setAttribute('data-theme', t.id);
-      var img = $('#tc-gui-img');
-      if (img) img.style.backgroundImage = ''; // Frost bg lives on the real main menu, not the mod menu
+      tcRefreshMenuBg(); // out-of-game Mod Menu shows the active theme's background
       $$('.tc-theme').forEach(function (c) { c.classList.toggle('selected', c.dataset.themeId === t.id); });
       applyTitle();
       try { localStorage.setItem('_eaglercraft_1.12.tctheme', btoa(t.id)); } catch (e) {}
@@ -1714,6 +1713,30 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     function themeThumb(t) {
       if (t.bgs && t.bgs.length) { var i = (state.themeBg && state.themeBg[t.id]) || 0; return t.bgs[i] || t.bgs[0]; }
       return t.bg;
+    }
+    // Treasure Client: the Java side writes tcinworld=1 while in a world, so the
+    // Mod Menu paints the active theme's background ONLY from the main menu (never
+    // in-game, where the paused world shows through unchanged).
+    function tcInWorld() {
+      try {
+        var r = localStorage.getItem('_eaglercraft_1.12.tcinworld');
+        if (!r) return false;
+        var b = atob(r);
+        return b.length > 0 && b.charCodeAt(0) === 1;
+      } catch (e) { return false; }
+    }
+    function tcRefreshMenuBg() {
+      try {
+        var img = $('#tc-gui-img'); if (!img) return;
+        if (gui.classList.contains('open') && !tcInWorld()) {
+          var src = themeThumb(tcTheme(state.theme));
+          img.style.backgroundImage = src ? ('url(' + src + ')') : '';
+          img.style.opacity = src ? '1' : '';
+        } else {
+          img.style.backgroundImage = '';
+          img.style.opacity = '';
+        }
+      } catch (e) {}
     }
     function updateCardThumb(id) {
       var card = $('.tc-theme[data-theme-id="' + id + '"]'); if (!card) return;

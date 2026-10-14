@@ -424,7 +424,8 @@ public class GuiCreateWorld extends GuiScreen {
 	 * Draws the screen and all the components in it.
 	 */
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-		this.drawDefaultBackground();
+		// Treasure Client: themed backdrop on world creation, instead of dirt.
+		TreasureBackground.draw(this.width, this.height, this.zLevel);
 		this.drawCenteredString(this.fontRendererObj, I18n.format("selectWorld.create"), this.width / 2, 20, -1);
 
 		if (this.inMoreWorldOptionsDisplay) {

@@ -77,8 +77,12 @@ public class GuiScreenEditCape extends GuiScreen {
 	}
 
 	public void drawScreen(int mx, int my, float partialTicks) {
-		drawDefaultBackground();
-		drawCenteredString(fontRendererObj, screenTitle, width / 2, 15, 16777215);
+		// Treasure Client: themed backdrop instead of dirt.
+		net.minecraft.client.gui.TreasureBackground.draw(this.width, this.height, this.zLevel);
+		net.minecraft.client.gui.TreasureBackground.panel(width / 2 - 134, height / 6 - 2, width / 2 + 170,
+				height / 6 + 194);
+		drawCenteredString(fontRendererObj, screenTitle, width / 2, 15,
+				net.minecraft.client.gui.TreasureBackground.accent());
 		drawString(fontRendererObj, I18n.format("editCape.playerCape"), width / 2 - 20, height / 6 + 36, 10526880);
 		
 		mousex = mx;

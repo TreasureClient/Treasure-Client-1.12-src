@@ -16,7 +16,8 @@ public class GuiDownloadTerrain extends GuiScreen {
 	 * Draws the screen and all the components in it.
 	 */
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-		this.drawBackground(0);
+		// Treasure Client: themed backdrop while entering a world, instead of dirt.
+		TreasureBackground.draw(this.width, this.height, this.zLevel);
 		this.drawCenteredString(this.fontRendererObj, I18n.format("multiplayer.downloadingTerrain"), this.width / 2,
 				this.height / 2 - 50, 16777215);
 		super.drawScreen(mouseX, mouseY, partialTicks);

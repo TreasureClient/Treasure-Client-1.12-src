@@ -48,6 +48,7 @@ public class TreasureMods {
 	private static long zoomFrameTime = 0L;
 
 	private static long lastLoad = 0L;
+	private static long lastInWorldWrite = 0L;
 
 	// ---- Deep Sea performance mode ----
 	// Deep Sea is a real performance mode: on entering it we SAVE the player's
@@ -201,6 +202,17 @@ public class TreasureMods {
 			// blocks streamed by real servers) + the F6 item-NBT dump diagnostic.
 			try { net.minecraft.client.network.TuffViaBlocks.tick(); } catch (Throwable t) {}
 			dumpHeldItemOnKey(mc);
+
+			// Treasure Client — tell the overlay whether we're in a world, so the
+			// out-of-game Mod Menu can show the theme background (and the in-game Mod
+			// Menu is left untouched, showing the paused world behind it).
+			if (now - lastInWorldWrite > 250L) {
+				lastInWorldWrite = now;
+				try {
+					boolean inWorld = (mc.world != null && mc.player != null);
+					EagRuntime.setStorage("tcinworld", new byte[] { (byte) (inWorld ? 1 : 0) });
+				} catch (Throwable t) {}
+			}
 
 			// No Particles: force the game's particle setting to minimal while the
 			// toggle is on (keeps applying each reload since the user could change it).
