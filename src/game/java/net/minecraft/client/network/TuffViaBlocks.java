@@ -1,10 +1,10 @@
 package net.minecraft.client.network;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.block.Block;
@@ -56,11 +56,12 @@ public final class TuffViaBlocks {
 	/** palette index -> modern block-state string, e.g. "minecraft:deepslate". */
 	private static final List<String> palette = new ArrayList<String>();
 	/** packed pos -> palette id (active overrides, kept so they can be re-applied). */
-	private static final Map<Long, Integer> overrides = new ConcurrentHashMap<Long, Integer>();
-	/** positions whose chunk wasn't loaded yet, retried in {@link #tick()}. */
-	private static final ConcurrentLinkedQueue<Long> pending = new ConcurrentLinkedQueue<Long>();
+	private static final Map<Long, Integer> overrides = new HashMap<Long, Integer>();
+	/** positions whose chunk wasn't loaded yet, retried in {@link #tick()}.
+	 *  Single-threaded (plugin messages and ticks both run on the main thread). */
+	private static final LinkedList<Long> pending = new LinkedList<Long>();
 	/** cache: state string -> resolved client state (or null if unmappable). */
-	private static final Map<String, IBlockState> stateCache = new ConcurrentHashMap<String, IBlockState>();
+	private static final Map<String, IBlockState> stateCache = new HashMap<String, IBlockState>();
 
 	// ---- join / registration ------------------------------------------------
 	/** Register the data channel + opt in. Called once the client joins a world. */
