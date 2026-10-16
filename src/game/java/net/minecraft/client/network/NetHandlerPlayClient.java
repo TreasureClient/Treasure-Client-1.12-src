@@ -412,6 +412,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		// Treasure Client — TuffX+ ViaBlocks: register + opt in so a TuffX+ backend
 		// (e.g. arch.mc) streams modern blocks we render from our own registry.
 		TuffViaBlocks.onJoin(this.netManager);
+		ViaEntitiesClient.onJoin(this.netManager);
 		WebViewOverlayController.setPacketSendCallback(this::webViewSendHandler);
 	}
 
@@ -1815,6 +1816,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		} else if (TuffViaBlocks.DATA_CHANNEL.equals(packetIn.getChannelName())) {
 			// Treasure Client — TuffX+ ViaBlocks modern-block stream (real servers).
 			TuffViaBlocks.handleData(packetIn.getBufferData());
+		} else if (ViaEntitiesClient.DATA_CHANNEL.equals(packetIn.getChannelName())) {
+			// Treasure Client — TuffX+ ViaEntities modern-entity stream.
+			ViaEntitiesClient.handleData(packetIn.getBufferData());
 		} else {
 			try {
 				eaglerMessageController.handlePacket(packetIn.getChannelName(), packetIn.getBufferData());
