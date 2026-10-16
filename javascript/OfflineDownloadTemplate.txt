@@ -242,6 +242,19 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 .tc-cat.active::before { transform: scaleY(0.7); }
 .tc-panel { display: none; }
 .tc-panel.active { display: block; animation: tcFade var(--tc-med) var(--tc-ease); }
+.tc-view { position:relative; width:100%; font:600 13px 'Outfit',sans-serif; text-align:left; color:var(--dim); background:transparent; border:1px solid transparent; border-radius:10px; padding:11px 14px; cursor:pointer; transition:all var(--tc-fast); }
+.tc-view:hover { color:var(--txt); background:var(--panel2); }
+.tc-view.active { color:var(--txt); background:var(--panel2); border-color:var(--bord); }
+#tc-catbar { display:flex; flex-direction:row; flex-wrap:wrap; gap:6px; margin:0 2px 14px; }
+#tc-catbar .tc-cat { text-align:center; padding:7px 14px; border-radius:999px; border:1px solid var(--bord); background:var(--panel2); }
+#tc-catbar .tc-cat::before { display:none !important; }
+#tc-catbar .tc-cat.active { background:linear-gradient(180deg,var(--a-1),var(--a-2)); color:var(--bg0); border-color:transparent; }
+#tc-body.tcv-modules .tc-panel[data-group="themes"] { display:none !important; }
+#tc-body.tcv-themes .tc-panel { display:none !important; }
+#tc-body.tcv-themes .tc-panel[data-group="themes"] { display:block !important; }
+#tc-body.tcv-themes #tc-catbar { display:none !important; }
+#tc-body.tcv-hud .tc-panels { display:none !important; }
+.tc-body.searching #tc-catbar { display:none !important; }
 @keyframes tcFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .tc-row { display: flex; align-items: center; gap: 14px; padding: 11px 8px; margin: 0 -4px; border-radius: 9px;
@@ -517,13 +530,17 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       </div>
       <div class="tc-body" id="tc-body">
         <div class="tc-cats" id="tc-cats">
-          <button class="tc-cat active" data-cat="all">All</button>
-          <button class="tc-cat" data-cat="render">Render</button>
-          <button class="tc-cat" data-cat="hud">HUD</button>
-          <button class="tc-cat" data-cat="misc">Misc</button>
-          <button class="tc-cat" data-cat="themes">Themes</button>
+          <button class="tc-view active" data-view="modules">Modules</button>
+          <button class="tc-view" data-view="hud">HUD Editor</button>
+          <button class="tc-view" data-view="themes">Themes</button>
         </div>
         <div class="tc-panels">
+          <div class="tc-catbar" id="tc-catbar">
+            <button class="tc-cat active" data-cat="all">All</button>
+            <button class="tc-cat" data-cat="render">Render</button>
+            <button class="tc-cat" data-cat="hud">HUD</button>
+            <button class="tc-cat" data-cat="misc">Misc</button>
+          </div>
           <!-- hud -->
           <div class="tc-panel active" data-panel="hud" data-group="hud">
             <div class="tc-mod">
@@ -989,6 +1006,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     /* ---------- open / close ---------- */
     function openGui() {
       gui.classList.add('open'); root.setAttribute('aria-hidden', 'false'); if (root.__tcBgStart) root.__tcBgStart(); tcRefreshMenuBg();
+      try { if (typeof tcSetView === 'function') tcSetView('modules'); } catch (e) {}
       // Ask the Java side to open the in-game menu so the world pauses (SP) and
       // the mouse is freed — no more needing to press Escape after the hotkey.
       try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(1))); } catch (e) {}
@@ -1042,6 +1060,23 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       });
     });
     (function () { var allBtn = $('.tc-cat[data-cat="all"]'); if (allBtn) allBtn.click(); })();
+
+    /* ---------- side view tabs: Modules / HUD Editor / Themes ---------- */
+    function tcSetView(view) {
+      try {
+        var body = $('#tc-body');
+        if (body) { body.classList.remove('tcv-modules', 'tcv-hud', 'tcv-themes'); body.classList.add('tcv-' + view); }
+        $$('.tc-view').forEach(function (b) { b.classList.toggle('active', b.dataset.view === view); });
+        if (view === 'hud') {
+          var eb = $('#tc-hud-edit'); if (eb) eb.click(); // open the HUD drag editor (closes the menu)
+        } else if (view === 'modules') {
+          var a = $('#tc-catbar .tc-cat.active') || $('#tc-catbar .tc-cat[data-cat="all"]');
+          if (a) a.click();
+        }
+      } catch (e) {}
+    }
+    $$('.tc-view').forEach(function (b) { b.addEventListener('click', function () { tcSetView(b.dataset.view); }); });
+    tcSetView('modules');
 
     /* ---------- toggles / selects / sliders ---------- */
     $$('.tc-sw[data-mod]').forEach(function (sw) {
