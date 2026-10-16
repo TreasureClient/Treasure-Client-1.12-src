@@ -674,6 +674,27 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>ViaVersion</b><i>Show modern 1.13+ blocks, items &amp; entities sent by servers</i></div><div class="tc-sw on" data-mod="via"><i></i></div></div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Password Hider</b><i>Hide your password when typing /login, /register, etc.</i></div><div class="tc-sw" data-mod="pwHide"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Low Fire</b><i>Shorter fire overlay so it blocks less of your view</i></div><button class="tc-gear" data-gear="lowfirecfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="lowFire"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="lowfirecfg">
+                <div class="tc-cfg-row"><span>Fire height</span><div class="tc-slider"><input type="range" min="5" max="100" step="5" value="40" data-mod="lowFireH"><span class="tc-val">40</span></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Low Shield</b><i>Lower the blocking shield so it covers less view</i></div><button class="tc-gear" data-gear="lowshieldcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="lowShield"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="lowshieldcfg">
+                <div class="tc-cfg-row"><span>Shield drop</span><div class="tc-slider"><input type="range" min="0" max="60" step="5" value="30" data-mod="lowShieldA"><span class="tc-val">30</span></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Small Totem</b><i>Shrink the totem-pop effect on your screen</i></div><button class="tc-gear" data-gear="totemcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="smallTotem"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="totemcfg">
+                <div class="tc-cfg-row"><span>Totem size</span><div class="tc-slider"><input type="range" min="10" max="100" step="5" value="40" data-mod="totemScale"><span class="tc-val">40</span></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Zoom</b><i>Hold a key to zoom in</i></div><button class="tc-gear" data-gear="zoomcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="zoom"><i></i></div></div>
               <div class="tc-cfg" data-cfg="zoomcfg">
                 <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" data-mod="zoomLevel"><span class="tc-val">30</span></div></div>
@@ -918,7 +939,14 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'noParticles=' + (state.noParticles ? 1 : 0),
           'noHurtCam=' + (state.noHurtCam ? 1 : 0),
           'tntTimer=' + (state.tntTimer ? 1 : 0),
-          'via=' + (state.via === false ? 0 : 1)
+          'via=' + (state.via === false ? 0 : 1),
+          'pwHide=' + (state.pwHide ? 1 : 0),
+          'lowFire=' + (state.lowFire ? 1 : 0),
+          'lowFireH=' + (state.lowFireH || 40),
+          'lowShield=' + (state.lowShield ? 1 : 0),
+          'lowShieldA=' + (state.lowShieldA || 30),
+          'smallTotem=' + (state.smallTotem ? 1 : 0),
+          'totemScale=' + (state.totemScale || 40)
         ];
         localStorage.setItem('_eaglercraft_1.12.tcmods', btoa(parts.join(',')));
       } catch (e) {}
@@ -1024,7 +1052,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         sw.classList.toggle('on', on);
         state[key] = on; save();
         if (key === 'fullbright') { applyFullbrightToEngine(); showModFlash('Fullbright ' + (state.fullbright ? 'ON' : 'OFF') + ' — reload to apply'); }
-        else if (key === 'toggleSprint' || key === 'toggleSneak' || key.indexOf('hitbox') === 0 || key === 'pauseUnfocused' || key === 'zoom' || key === 'noParticles' || key === 'noHurtCam' || key === 'tntTimer' || key === 'smoothZoom' || key === 'via') { writeModsToEngine(); }
+        else if (key === 'toggleSprint' || key === 'toggleSneak' || key.indexOf('hitbox') === 0 || key === 'pauseUnfocused' || key === 'zoom' || key === 'noParticles' || key === 'noHurtCam' || key === 'tntTimer' || key === 'smoothZoom' || key === 'via' || key === 'pwHide' || key === 'lowFire' || key === 'lowShield' || key === 'smallTotem') { writeModsToEngine(); }
         else applyHud();
       });
     });
@@ -1042,7 +1070,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       sl.addEventListener('input', function () {
         if (out) out.textContent = sl.value;
         state[key] = parseInt(sl.value, 10); save();
-        if (key === 'zoomLevel' || key === 'zoomSpeed') writeModsToEngine(); // zoom tuning lives in the Java bridge
+        if (key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
         else if (key === 'resolutionScale') applyResolutionScale();
         else applyHud();
       });
