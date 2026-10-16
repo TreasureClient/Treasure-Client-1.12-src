@@ -1163,7 +1163,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleSetSlot(SPacketSetSlot packetIn) {
 		EntityPlayer entityplayer = this.gameController.player;
-		ItemStack itemstack = packetIn.getStack();
+		// Treasure Client — ViaItems: render modern items (mace, trident, …) the
+		// server down-mapped, by their preserved modern name.
+		ItemStack itemstack = net.minecraft.item.ViaItemRemap.remap(packetIn.getStack());
 		int i = packetIn.getSlot();
 		this.gameController.func_193032_ao().func_193301_a(itemstack);
 
@@ -1221,6 +1223,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleWindowItems(SPacketWindowItems packetIn) {
 		EntityPlayer entityplayer = this.gameController.player;
+		// Treasure Client — ViaItems: remap modern items across the whole window.
+		net.minecraft.item.ViaItemRemap.remapList(packetIn.getItemStacks());
 
 		if (packetIn.getWindowId() == 0) {
 			entityplayer.inventoryContainer.func_190896_a(packetIn.getItemStacks());
@@ -1289,7 +1293,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		Entity entity = this.clientWorldController.getEntityByID(packetIn.getEntityID());
 
 		if (entity != null) {
-			entity.setItemStackToSlot(packetIn.getEquipmentSlot(), packetIn.getItemStack());
+			// Treasure Client — ViaItems: other players' modern held items / armor.
+			entity.setItemStackToSlot(packetIn.getEquipmentSlot(),
+					net.minecraft.item.ViaItemRemap.remap(packetIn.getItemStack()));
 		}
 	}
 
