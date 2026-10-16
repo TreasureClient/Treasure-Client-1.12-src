@@ -103,6 +103,8 @@ public class GuiWorldSelection extends GuiScreen {
 	 * Draws the screen and all the components in it.
 	 */
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+		// Treasure Client: themed backdrop behind the single-player world list.
+		TreasureBackground.draw(this.width, this.height, this.zLevel);
 		this.worldVersTooltip = null;
 		this.selectionList.drawScreen(mouseX, mouseY, partialTicks);
 		this.drawCenteredString(this.fontRendererObj, this.title, this.width / 2, 20, 16777215);

@@ -95,12 +95,8 @@ public class GuiScreenEditProfile extends GuiScreen {
 	}
 
 	public void drawScreen(int mx, int my, float partialTicks) {
-		// Treasure Client: themed backdrop + a polished panel behind the controls,
-		// instead of the default dirt. Widgets keep their positions so all the
-		// skin/profile hit-testing stays intact.
+		// Treasure Client: themed backdrop instead of the default dirt. No panel box.
 		net.minecraft.client.gui.TreasureBackground.draw(this.width, this.height, this.zLevel);
-		net.minecraft.client.gui.TreasureBackground.panel(width / 2 - 134, height / 6 - 2, width / 2 + 170,
-				height / 6 + 194);
 		int tcAccent = net.minecraft.client.gui.TreasureBackground.accent();
 		drawCenteredString(fontRendererObj, screenTitle, width / 2, 15, tcAccent);
 		drawString(fontRendererObj, I18n.format("editProfile.username"), width / 2 - 20, height / 6 + 8, 10526880);

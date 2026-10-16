@@ -213,27 +213,9 @@ public abstract class GuiSlot {
 			GlStateManager.disableFog();
 			Tessellator tessellator = Tessellator.getInstance();
 			WorldRenderer bufferbuilder = tessellator.getBuffer();
-			this.mc.getTextureManager().bindTexture(Gui.OPTIONS_BACKGROUND);
-			GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-			float f = 32.0F;
-			bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
-			bufferbuilder.pos((double) this.left, (double) this.bottom, 0.0D)
-					.tex((double) ((float) this.left / 32.0F),
-							(double) ((float) (this.bottom + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			bufferbuilder.pos((double) this.right, (double) this.bottom, 0.0D)
-					.tex((double) ((float) this.right / 32.0F),
-							(double) ((float) (this.bottom + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			bufferbuilder.pos((double) this.right, (double) this.top, 0.0D)
-					.tex((double) ((float) this.right / 32.0F),
-							(double) ((float) (this.top + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			bufferbuilder.pos((double) this.left, (double) this.top, 0.0D)
-					.tex((double) ((float) this.left / 32.0F),
-							(double) ((float) (this.top + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			tessellator.draw();
+			// Treasure Client: the list panel is a translucent dark overlay over the
+			// themed background (drawn by the screen) instead of a tiled dirt texture.
+			Gui.drawRect(this.left, this.top, this.right, this.bottom, 0x73000000);
 			int k = this.left + this.width / 2 - this.getListWidth() / 2 + 2;
 			int l = this.top + 4 - (int) this.amountScrolled;
 

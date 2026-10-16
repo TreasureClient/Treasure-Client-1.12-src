@@ -558,23 +558,11 @@ public abstract class GuiScreen extends Gui implements GuiYesNoCallback {
 	 * Draws the background (i is always 0 as of 1.2.2)
 	 */
 	public void drawBackground(int tint) {
-		GlStateManager.disableLighting();
-		GlStateManager.disableFog();
-		Tessellator tessellator = Tessellator.getInstance();
-		WorldRenderer bufferbuilder = tessellator.getBuffer();
-		this.mc.getTextureManager().bindTexture(OPTIONS_BACKGROUND);
-		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		float f = 32.0F;
-		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
-		bufferbuilder.pos(0.0D, (double) this.height, 0.0D)
-				.tex(0.0D, (double) ((float) this.height / 32.0F + (float) tint)).color(64, 64, 64, 255).endVertex();
-		bufferbuilder.pos((double) this.width, (double) this.height, 0.0D)
-				.tex((double) ((float) this.width / 32.0F), (double) ((float) this.height / 32.0F + (float) tint))
-				.color(64, 64, 64, 255).endVertex();
-		bufferbuilder.pos((double) this.width, 0.0D, 0.0D).tex((double) ((float) this.width / 32.0F), (double) tint)
-				.color(64, 64, 64, 255).endVertex();
-		bufferbuilder.pos(0.0D, 0.0D, 0.0D).tex(0.0D, (double) tint).color(64, 64, 64, 255).endVertex();
-		tessellator.draw();
+		// Treasure Client: replace the dirt background with the active theme's
+		// background (the main-menu look) everywhere a screen falls back to it —
+		// multiplayer, world loading/connecting, options, etc. In-world screens use
+		// drawWorldBackground's world path above and are unaffected.
+		TreasureBackground.draw(this.width, this.height, this.zLevel);
 	}
 
 	/**
