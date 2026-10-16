@@ -222,6 +222,24 @@ public class GuiChat extends GuiScreenVisualViewport implements ITabCompleter {
 	 */
 	public void drawScreen0(int mouseX, int mouseY, float partialTicks) {
 		drawRect(2, this.height - 14, this.width - 2, this.height - 2, Integer.MIN_VALUE);
+		// Treasure Client — Password Hider: mask the argument of login commands.
+		try {
+			int maskFrom = -1;
+			if (TreasureMods.passwordHider()) {
+				String t = this.inputField.getText();
+				int sp = (t != null) ? t.indexOf(' ') : -1;
+				if (sp > 0) {
+					String cmd = t.substring(0, sp).toLowerCase();
+					if (cmd.equals("/login") || cmd.equals("/l") || cmd.equals("/register") || cmd.equals("/reg")
+							|| cmd.equals("/auth") || cmd.equals("/password") || cmd.equals("/pass")
+							|| cmd.equals("/changepassword") || cmd.equals("/changepass")) {
+						maskFrom = sp + 1;
+					}
+				}
+			}
+			this.inputField.tcSetMask(maskFrom);
+		} catch (Throwable e) {
+		}
 		this.inputField.drawTextBox();
 		ITextComponent itextcomponent = this.mc.ingameGUI.getChatGUI().getChatComponent(Mouse.getX(), Mouse.getY());
 

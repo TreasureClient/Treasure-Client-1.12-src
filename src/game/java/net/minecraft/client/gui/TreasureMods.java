@@ -71,6 +71,30 @@ public class TreasureMods {
 	private static boolean via = true;
 	public static boolean viaEnabled() { return via; }
 
+	private static float clamp01(float v, float lo, float hi) {
+		return v < lo ? lo : (v > hi ? hi : v);
+	}
+
+	// ---- new 1.2 mods ----
+	// Password hider: mask the password when typing /login, /register, etc.
+	private static boolean passwordHider = false;
+	public static boolean passwordHider() { return passwordHider; }
+	// Low fire: shorter first-person fire overlay. Height 0.05..1.0 (default 0.40).
+	private static boolean lowFire = false;
+	private static float lowFireH = 0.40f;
+	public static boolean lowFire() { return lowFire; }
+	public static float lowFireHeight() { return lowFireH; }
+	// Low shield: push the blocking shield down so it covers less view. 0..0.6 (default 0.30).
+	private static boolean lowShield = false;
+	private static float lowShieldAmt = 0.30f;
+	public static boolean lowShield() { return lowShield; }
+	public static float lowShieldAmount() { return lowShieldAmt; }
+	// Small totem: scale the totem particle pop. 0.1..1.0 (default 0.40).
+	private static boolean smallTotem = false;
+	private static float totemScaleV = 0.40f;
+	public static boolean smallTotem() { return smallTotem; }
+	public static float totemScale() { return totemScaleV; }
+
 	// toggle-via-sprint-key state + status display
 	private static boolean sprintToggledOn = false;
 	private static boolean sprintKeyWasDown = false;
@@ -161,6 +185,10 @@ public class TreasureMods {
 			hitboxes = false; hitboxPlayers = true; hitboxMobs = true; hitboxAnimals = true; hitboxOther = false;
 			pauseUnfocused = false;
 			via = true; // default ON unless the overlay explicitly says via=0
+			passwordHider = false;
+			lowFire = false; lowFireH = 0.40f;
+			lowShield = false; lowShieldAmt = 0.30f;
+			smallTotem = false; totemScaleV = 0.40f;
 			if (data != null && data.length > 0) {
 				String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
 				String[] parts = s.split(",");
@@ -183,6 +211,13 @@ public class TreasureMods {
 				else if (k.equals("noHurtCam")) noHurtCam = v.equals("1");
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
 				else if (k.equals("via")) via = v.equals("1");
+				else if (k.equals("pwHide")) passwordHider = v.equals("1");
+				else if (k.equals("lowFire")) lowFire = v.equals("1");
+				else if (k.equals("lowFireH")) { try { lowFireH = clamp01(Integer.parseInt(v) / 100.0f, 0.05f, 1.0f); } catch (Throwable t) {} }
+				else if (k.equals("lowShield")) lowShield = v.equals("1");
+				else if (k.equals("lowShieldA")) { try { lowShieldAmt = clamp01(Integer.parseInt(v) / 100.0f, 0.0f, 0.6f); } catch (Throwable t) {} }
+				else if (k.equals("smallTotem")) smallTotem = v.equals("1");
+				else if (k.equals("totemScale")) { try { totemScaleV = clamp01(Integer.parseInt(v) / 100.0f, 0.1f, 1.0f); } catch (Throwable t) {} }
 				}
 			}
 		} catch (Throwable t) {

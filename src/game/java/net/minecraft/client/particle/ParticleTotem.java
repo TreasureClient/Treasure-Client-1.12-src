@@ -10,6 +10,10 @@ public class ParticleTotem extends ParticleSimpleAnimated {
 		this.motionY = p_i47220_10_;
 		this.motionZ = p_i47220_12_;
 		this.particleScale *= 0.75F;
+		// Treasure Client — Small Totem: shrink the totem-pop particles.
+		if (net.minecraft.client.gui.TreasureMods.smallTotem()) {
+			this.particleScale *= net.minecraft.client.gui.TreasureMods.totemScale();
+		}
 		this.particleMaxAge = 60 + this.rand.nextInt(12);
 
 		if (this.rand.nextInt(4) == 0) {

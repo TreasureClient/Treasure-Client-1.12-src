@@ -373,6 +373,10 @@ public class ItemRenderer {
 
 				case BLOCK:
 					this.transformSideFirstPerson(enumhandside, p_187457_7_);
+					// Treasure Client — Low Shield: drop the shield down so it covers less view.
+					if (net.minecraft.client.gui.TreasureMods.lowShield()) {
+						GlStateManager.translate(0.0F, -net.minecraft.client.gui.TreasureMods.lowShieldAmount(), 0.0F);
+					}
 					break;
 
 				case BOW:
@@ -554,6 +558,12 @@ public class ItemRenderer {
 			float f9 = -0.5F;
 			GlStateManager.translate((float) (-(i * 2 - 1)) * 0.24F, -0.3F, 0.0F);
 			GlStateManager.rotate((float) (i * 2 - 1) * 10.0F, 0.0F, 1.0F, 0.0F);
+			// Treasure Client — Low Fire: shrink the overlay's height so it blocks less view.
+			if (net.minecraft.client.gui.TreasureMods.lowFire()) {
+				float fh = net.minecraft.client.gui.TreasureMods.lowFireHeight();
+				GlStateManager.translate(0.0F, -0.5F + 0.5F * fh, 0.0F); // keep anchored at the bottom
+				GlStateManager.scale(1.0F, fh, 1.0F);
+			}
 			bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
 			bufferbuilder.pos(-0.5D, -0.5D, -0.5D).tex((double) f2, (double) f4).endVertex();
 			bufferbuilder.pos(0.5D, -0.5D, -0.5D).tex((double) f1, (double) f4).endVertex();
