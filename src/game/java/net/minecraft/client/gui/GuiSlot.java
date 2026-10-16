@@ -225,8 +225,10 @@ public abstract class GuiSlot {
 
 			this.func_192638_a(k, l, mouseXIn, mouseYIn, partialTicks);
 			GlStateManager.disableDepth();
-			this.overlayBackground(0, this.top, 255, 255);
-			this.overlayBackground(this.bottom, this.height, 255, 255);
+			// Treasure Client: the header/footer strips used to be tiled with the dirt
+			// texture (Gui.OPTIONS_BACKGROUND). Drop them so the themed screen
+			// background (drawn by GuiScreen.drawBackground) fills the whole screen.
+			// The soft top/bottom gradient below still provides the fade over the list.
 			GlStateManager.enableBlend();
 			GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
 					RealOpenGLEnums.GL_ZERO, RealOpenGLEnums.GL_ONE);

@@ -387,6 +387,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 }
 #tc-root.hud-editing .tc-hidden { display: none !important; } /* keep disabled HUD elements hidden in edit mode */
 #tc-root.hud-editing .tc-hud-drag-active { cursor: grabbing; outline-color: var(--a-hi); box-shadow: 0 0 0 3px var(--glow); }
+/* dim the frozen game behind the HUD editor and swallow stray clicks (the in-game menu is open underneath to pause the world) */
+#tc-root.hud-editing::before { content: ''; position: fixed; inset: 0; background: rgba(6,8,16,0.55); pointer-events: auto; }
 .tc-editbar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 2147483001;
   display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--bord); border-radius: 999px;
   padding: 9px 9px 9px 18px; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.6); pointer-events: auto; }
@@ -1692,11 +1694,19 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           if (k && state[k]) el.classList.remove('tc-hidden');
           else el.classList.add('tc-hidden');
         });
-        bar.classList.remove('tc-hidden'); closeGui();
+        bar.classList.remove('tc-hidden');
+        // close just the Mod Menu panel — keep the overlay up so HUD boxes stay draggable
+        gui.classList.remove('open'); root.setAttribute('aria-hidden', 'false'); if (root.__tcBgStop) root.__tcBgStop();
+        // pause the game completely while editing: open the in-game menu so the world
+        // freezes (singleplayer) and the mouse is released for dragging
+        try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(1))); } catch (e) {}
+        try { if (document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
       }
       function exit() {
         editing = false; root.classList.remove('hud-editing');
         bar.classList.add('tc-hidden'); applyHud();
+        // un-pause: close the in-game menu we opened for editing
+        try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(2))); } catch (e) {}
       }
       if (editBtn) editBtn.addEventListener('click', enter);
       if (doneBtn) doneBtn.addEventListener('click', exit);
