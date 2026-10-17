@@ -163,6 +163,13 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
 	private static final ResourceLocation TERRACOTTA_BG = new ResourceLocation("textures/gui/title/terracotta_bg.png");
 	private static final ResourceLocation FOREST_BG = new ResourceLocation("textures/gui/title/forest_bg.png");
+	// Treasure Client: per-theme recolored chest logo drawn above the wordmark.
+	private static final ResourceLocation LOGO_NORMAL = new ResourceLocation("textures/gui/title/treasure_logo_normal.png");
+	private static final ResourceLocation LOGO_FROST = new ResourceLocation("textures/gui/title/treasure_logo_frost.png");
+	private static final ResourceLocation LOGO_TROPICAL = new ResourceLocation("textures/gui/title/treasure_logo_tropical.png");
+	private static final ResourceLocation LOGO_TERRACOTTA = new ResourceLocation("textures/gui/title/treasure_logo_terracotta.png");
+	private static final ResourceLocation LOGO_FOREST = new ResourceLocation("textures/gui/title/treasure_logo_forest.png");
+	private static final float LOGO_ASPECT = 221.0F / 224.0F; // texture width / height
 
 	/** An array of all the paths to the panorama pictures. */
 	private static final ResourceLocation[] TITLE_PANORAMA_PATHS = new ResourceLocation[] {
@@ -583,6 +590,39 @@ public class GuiMainMenu extends GuiScreen {
 		tessellator.draw();
 	}
 
+	/** Treasure Client: the chest logo texture for the active theme. */
+	private ResourceLocation activeLogo() {
+		if (this.frost()) return LOGO_FROST;
+		if (this.tropical()) return LOGO_TROPICAL;
+		if (this.terracotta()) return LOGO_TERRACOTTA;
+		if (this.forest()) return LOGO_FOREST;
+		return LOGO_NORMAL;
+	}
+
+	/**
+	 * Treasure Client: draw the recolored chest logo centered at cx with its top
+	 * at topY and the given height (width follows the texture aspect ratio).
+	 */
+	private void drawLogo(int cx, int topY, int h) {
+		int w = Math.round(h * LOGO_ASPECT);
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(770, 771); // GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		this.mc.getTextureManager().bindTexture(this.activeLogo());
+		EaglercraftGPU.glTexParameteri(3553, 10241, 9729); // GL_LINEAR so it isn't pixelated
+		EaglercraftGPU.glTexParameteri(3553, 10240, 9729);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer bufferbuilder = tessellator.getBuffer();
+		double x0 = cx - w / 2.0, x1 = cx + w / 2.0, y0 = topY, y1 = topY + h, z = this.zLevel;
+		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		bufferbuilder.pos(x0, y1, z).tex(0.0D, 1.0D).color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos(x1, y1, z).tex(1.0D, 1.0D).color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos(x1, y0, z).tex(1.0D, 0.0D).color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos(x0, y0, z).tex(0.0D, 0.0D).color(255, 255, 255, 255).endVertex();
+		tessellator.draw();
+		GlStateManager.disableBlend();
+	}
+
 	/**
 	 * Draws the screen and all the components in it.
 	 */
@@ -648,9 +688,12 @@ public class GuiMainMenu extends GuiScreen {
 
 		int j = this.width / 2;
 
+		// ---- chest logo crest above the wordmark (recolored to the active theme) ----
+		this.drawLogo(j, 1, 36);
+
 		// ---- wordmark: big, layered shadow + themed accent + subtle pulse ----
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 40.0F, 0.0F);
+		GlStateManager.translate((float) j, 48.0F, 0.0F);
 		GlStateManager.scale(2.5F, 2.5F, 2.5F);
 		// drop shadow
 		this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
@@ -659,7 +702,7 @@ public class GuiMainMenu extends GuiScreen {
 		GlStateManager.popMatrix();
 
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 66.0F, 0.0F);
+		GlStateManager.translate((float) j, 72.0F, 0.0F);
 		GlStateManager.scale(1.4F, 1.4F, 1.4F);
 		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
 		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
