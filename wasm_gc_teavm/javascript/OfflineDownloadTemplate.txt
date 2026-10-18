@@ -1797,9 +1797,14 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var on = !sw.classList.contains('on');
         sw.classList.toggle('on', on);
         state[key] = on; save();
-        if (key === 'fullbright') { applyFullbrightToEngine(); showModFlash('Fullbright ' + (state.fullbright ? 'ON' : 'OFF') + ' — reload to apply'); }
-        else if (key === 'toggleSprint' || key === 'toggleSneak' || key.indexOf('hitbox') === 0 || key === 'pauseUnfocused' || key === 'zoom' || key === 'noParticles' || key === 'noHurtCam' || key === 'tntTimer' || key === 'smoothZoom' || key === 'via' || key === 'pwHide' || key === 'lowFire' || key === 'lowShield' || key === 'smallTotem') { writeModsToEngine(); }
-        else applyHud();
+        try {
+          if (key === 'fullbright') { applyFullbrightToEngine(); showModFlash('Fullbright ' + (state.fullbright ? 'ON' : 'OFF') + ' — reload to apply'); }
+          // Apply BOTH paths on every toggle — same as the config sub-page does.
+          // Engine mods ride the tcmods bridge (writeModsToEngine); HUD mods are
+          // DOM-side (applyHud). Doing both makes one toggle click fully apply.
+          writeModsToEngine();
+          applyHud();
+        } catch (e) {}
       });
     });
     $$('select[data-mod]').forEach(function (sel) {
