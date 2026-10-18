@@ -1088,6 +1088,30 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     $$('.tc-view').forEach(function (b) { b.addEventListener('click', function () { tcSetView(b.dataset.view); }); });
     tcSetView('modules');
 
+    /* ---------- reliable mouse-wheel scrolling ----------
+       The Eaglercraft game canvas also listens for wheel events, so native
+       scrolling of the Mod Menu can get eaten. Handle the wheel ourselves:
+       find the scrollable element under the cursor, scroll it, and stop the
+       event from reaching the game. */
+    (function () {
+      var panel = $('#tc-gui-panel');
+      if (!panel) return;
+      panel.addEventListener('wheel', function (e) {
+        var el = e.target, target = null;
+        while (el && el !== panel.parentNode) {
+          if (el.scrollHeight > el.clientHeight + 1) {
+            var oy = getComputedStyle(el).overflowY;
+            if (oy === 'auto' || oy === 'scroll') { target = el; break; }
+          }
+          el = el.parentElement;
+        }
+        if (!target) { target = panel.classList.contains('tc-showsub') ? ($('.tc-subpage') || $('#tc-subpage')) : $('#tc-body'); }
+        if (target) { target.scrollTop += e.deltaY; }
+        e.stopPropagation();
+        try { e.preventDefault(); } catch (x) {}
+      }, { passive: false });
+    })();
+
     /* ---------- toggles / selects / sliders ---------- */
     $$('.tc-sw[data-mod]').forEach(function (sw) {
       var key = sw.dataset.mod;
