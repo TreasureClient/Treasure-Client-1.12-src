@@ -1089,27 +1089,32 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     tcSetView('modules');
 
     /* ---------- reliable mouse-wheel scrolling ----------
-       The Eaglercraft game canvas also listens for wheel events, so native
-       scrolling of the Mod Menu can get eaten. Handle the wheel ourselves:
-       find the scrollable element under the cursor, scroll it, and stop the
-       event from reaching the game. */
+       The Eaglercraft game canvas also listens for wheel events and can eat the
+       scroll. Intercept the wheel on WINDOW in the CAPTURE phase (so we run
+       before the canvas handler no matter what the event targets), and while the
+       Mod Menu is open, scroll whatever scroll container is under the cursor. */
     (function () {
-      var panel = $('#tc-gui-panel');
-      if (!panel) return;
-      panel.addEventListener('wheel', function (e) {
-        var el = e.target, target = null;
-        while (el && el !== panel.parentNode) {
-          if (el.scrollHeight > el.clientHeight + 1) {
-            var oy = getComputedStyle(el).overflowY;
-            if (oy === 'auto' || oy === 'scroll') { target = el; break; }
+      function onWheel(e) {
+        try {
+          var gui = $('#tc-gui');
+          if (!gui || !gui.classList.contains('open')) return; // only when the menu is open
+          var panel = $('#tc-gui-panel');
+          var el = document.elementFromPoint(e.clientX, e.clientY), target = null;
+          while (el) {
+            if (el.scrollHeight > el.clientHeight + 1) {
+              var oy = getComputedStyle(el).overflowY;
+              if (oy === 'auto' || oy === 'scroll') { target = el; break; }
+            }
+            el = el.parentElement;
           }
-          el = el.parentElement;
-        }
-        if (!target) { target = panel.classList.contains('tc-showsub') ? ($('.tc-subpage') || $('#tc-subpage')) : $('#tc-body'); }
-        if (target) { target.scrollTop += e.deltaY; }
-        e.stopPropagation();
-        try { e.preventDefault(); } catch (x) {}
-      }, { passive: false });
+          if (!target) { target = (panel && panel.classList.contains('tc-showsub')) ? ($('.tc-subpage') || $('#tc-subpage')) : $('#tc-body'); }
+          if (target) { target.scrollTop += e.deltaY; }
+          e.preventDefault();
+          e.stopPropagation();
+        } catch (x) {}
+      }
+      window.addEventListener('wheel', onWheel, { passive: false, capture: true });
+      document.addEventListener('wheel', onWheel, { passive: false, capture: true });
     })();
 
     /* ---------- toggles / selects / sliders ---------- */
