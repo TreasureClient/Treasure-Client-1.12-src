@@ -175,6 +175,20 @@ public class TreasureMods {
 				mc.ingameGUI.getChatGUI().printChatMessage(
 						new net.minecraft.util.text.TextComponentString(msg));
 			} catch (Throwable t) {}
+			// Short, prominent verdict — printed LAST so it stays at the bottom of
+			// chat (the long NBT line above wraps and scrolls its start out of view).
+			try {
+				if (st != null && !st.func_190926_b()) {
+					net.minecraft.item.Item vit = st.getItem();
+					int vid = (vit != null) ? net.minecraft.item.Item.getIdFromItem(vit) : -1;
+					boolean ours = vid >= net.minecraft.item.ViaItems.FIRST_ID;
+					String verdict = ">> VERDICT: " + (ours ? ("OUR VIAITEM (id " + vid + ")")
+							: ("NOT remapped (vanilla id " + vid + ")"))
+							+ " | ViaVersion " + (viaEnabled() ? "ON" : "OFF");
+					mc.ingameGUI.getChatGUI().printChatMessage(
+							new net.minecraft.util.text.TextComponentString(verdict));
+				}
+			} catch (Throwable t) {}
 		} catch (Throwable t) {}
 	}
 
