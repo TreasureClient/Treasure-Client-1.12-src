@@ -182,9 +182,19 @@ public class TreasureMods {
 					net.minecraft.item.Item vit = st.getItem();
 					int vid = (vit != null) ? net.minecraft.item.Item.getIdFromItem(vit) : -1;
 					boolean ours = vid >= net.minecraft.item.ViaItems.FIRST_ID;
-					String verdict = ">> VERDICT: " + (ours ? ("OUR VIAITEM (id " + vid + ")")
-							: ("NOT remapped (vanilla id " + vid + ")"))
-							+ " | ViaVersion " + (viaEnabled() ? "ON" : "OFF");
+					// Is our mace item actually registered in this runtime?
+					net.minecraft.item.Item maceReg = net.minecraft.item.Item.getByNameOrId("mace");
+					String maceStr = (maceReg != null)
+							? ("YES id " + net.minecraft.item.Item.getIdFromItem(maceReg)) : "NO(null)";
+					// Would the remap change THIS stack right now (name is known-good here)?
+					boolean changes = false;
+					try {
+						net.minecraft.item.ItemStack rr = net.minecraft.item.ViaItemRemap.remap(st);
+						changes = (rr != null && rr.getItem() != st.getItem());
+					} catch (Throwable t2) {}
+					String verdict = ">> VERDICT: held=" + (ours ? ("OURS id " + vid) : ("vanilla id " + vid))
+							+ " | mace reg=" + maceStr + " | remap-now=" + (changes ? "SWAPS" : "no-op")
+							+ " | Via " + (viaEnabled() ? "ON" : "OFF");
 					mc.ingameGUI.getChatGUI().printChatMessage(
 							new net.minecraft.util.text.TextComponentString(verdict));
 				}
