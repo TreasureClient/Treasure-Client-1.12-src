@@ -116,6 +116,24 @@ public final class ViaItems {
 	/** Registered item instances, filled in by Item.registerItems(). */
 	public static final Item[] ITEMS = new Item[NAMES.length];
 
+	/**
+	 * Direct lookup of a registered ViaItem by its registry name, straight from
+	 * {@link #ITEMS}. We avoid {@link Item#getByNameOrId} here because the item
+	 * registry can fail to resolve our high ids (3000+) in some runtimes, which
+	 * silently breaks the name-based remap. This always sees what we registered.
+	 */
+	public static Item getByName(String name) {
+		if (name == null) {
+			return null;
+		}
+		for (int i = 0; i < NAMES.length; i++) {
+			if (NAMES[i].equals(name)) {
+				return ITEMS[i];
+			}
+		}
+		return null;
+	}
+
 	/** Sword-like melee weapons (mace, trident, netherite sword, and every spear). */
 	private static boolean isWeapon(String name) {
 		return name.endsWith("_spear") || name.equals("mace") || name.equals("trident")

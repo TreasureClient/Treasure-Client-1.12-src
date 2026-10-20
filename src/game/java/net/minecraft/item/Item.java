@@ -1164,10 +1164,14 @@ public class Item {
 		// Treasure Client — modern ViaItems (spears, netherite tools + armor,
 		// materials). Each item's kind is decided by ViaItems.createItem(name).
 		for (int viaI = 0; viaI < net.minecraft.item.ViaItems.NAMES.length; viaI++) {
-			String viaName = net.minecraft.item.ViaItems.NAMES[viaI];
-			Item viaItem = net.minecraft.item.ViaItems.createItem(viaName);
-			registerItem(net.minecraft.item.ViaItems.FIRST_ID + viaI, viaName, viaItem);
-			net.minecraft.item.ViaItems.ITEMS[viaI] = viaItem;
+			try {
+				String viaName = net.minecraft.item.ViaItems.NAMES[viaI];
+				Item viaItem = net.minecraft.item.ViaItems.createItem(viaName);
+				registerItem(net.minecraft.item.ViaItems.FIRST_ID + viaI, viaName, viaItem);
+				net.minecraft.item.ViaItems.ITEMS[viaI] = viaItem;
+			} catch (Throwable viaErr) {
+				// One bad ViaItem must not abort the loop — keep the rest (mace, …).
+			}
 		}
 	}
 

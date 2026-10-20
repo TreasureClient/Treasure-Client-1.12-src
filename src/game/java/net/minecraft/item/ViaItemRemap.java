@@ -68,9 +68,11 @@ public final class ViaItemRemap {
 			for (int i = 0; i < phrases.size(); i++) {
 				String[] pr = phrases.get(i);
 				if (pr[0].length() >= 3 && lower.contains(pr[0])) {
-					Item via = Item.getByNameOrId(pr[1]);
+					// Direct array lookup, not Item.getByNameOrId — the registry can
+					// fail to resolve our high ids in some runtimes.
+					Item via = ViaItems.getByName(pr[1]);
 					if (via == null || via == st.getItem()) {
-						return st; // unresolved, or already our item
+						continue; // not registered / already ours — try the next phrase
 					}
 					ItemStack r = new ItemStack(via, st.func_190916_E());
 					if (st.hasTagCompound()) {
