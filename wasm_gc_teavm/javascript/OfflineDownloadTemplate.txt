@@ -281,7 +281,7 @@ ${classes_js}
 .tc-mod { border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); }
 .tc-mod:last-child { border-bottom: 0; }
 .tc-mod .tc-row { border-bottom: 0; }
-.tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--bord); background: transparent; color: var(--dim);
+.tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--a-2); background: color-mix(in srgb, var(--a-2) 14%, transparent); color: var(--a-1);
   font-size: 13px; cursor: pointer; margin-left: auto; transition: color var(--tc-fast), border-color var(--tc-fast), transform var(--tc-med) var(--tc-ease); flex: 0 0 auto; }
 .tc-gear + .tc-sw { margin-left: 10px; }
 .tc-gear:hover { color: var(--a-1); border-color: var(--a-2); transform: rotate(60deg); }
@@ -489,6 +489,8 @@ ${classes_js}
 .tc-title-editor .tc-te-head b { color: var(--a-1); }
 .tc-title-editor input { width: 100%; font: 500 13px 'Outfit', sans-serif; color: var(--txt); background: var(--bg0); border: 1px solid var(--bord); border-radius: 8px; padding: 9px 11px; outline: none; margin-bottom: 10px; }
 .tc-title-editor input:focus { border-color: var(--a-1); }
+.tc-te-select { width: 100%; font: 500 13px 'Outfit', sans-serif; color: var(--txt); background: var(--bg0); border: 1px solid var(--bord); border-radius: 8px; padding: 9px 11px; outline: none; margin-bottom: 10px; cursor: pointer; }
+.tc-te-select:focus { border-color: var(--a-1); }
 .tc-title-editor .tc-te-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .tc-te-btns button { font: 600 12px 'Outfit', sans-serif; border: 1px solid var(--bord); border-radius: 8px; padding: 8px 14px; cursor: pointer; transition: filter var(--tc-fast); }
 .tc-te-btns button:hover { filter: brightness(1.12); }
@@ -762,6 +764,15 @@ ${classes_js}
               </div>
               <div class="tc-te-label">Client title</div>
               <input id="tc-te-input" type="text" maxlength="40" placeholder="Treasure Client" autocomplete="off" spellcheck="false">
+              <div class="tc-te-label">Title font <i style="font-weight:400;opacity:.7">(applies to a custom title)</i></div>
+              <select id="tc-te-font" class="tc-te-select">
+                <option value="'Outfit', system-ui, sans-serif">Outfit</option>
+                <option value="'Cinzel', 'Times New Roman', serif">Cinzel</option>
+                <option value="'JetBrains Mono', ui-monospace, monospace">Monospace</option>
+                <option value="Georgia, 'Times New Roman', serif">Serif</option>
+                <option value="Impact, Haettenschweiler, sans-serif">Impact</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+              </select>
               <div class="tc-te-btns">
                 <button class="tc-te-save" id="tc-te-save">Save</button>
                 <button class="tc-te-reset" id="tc-te-reset">Reset to default</button>
@@ -995,7 +1006,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 .tc-mod { border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); }
 .tc-mod:last-child { border-bottom: 0; }
 .tc-mod .tc-row { border-bottom: 0; }
-.tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--bord); background: transparent; color: var(--dim);
+.tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--a-2); background: color-mix(in srgb, var(--a-2) 14%, transparent); color: var(--a-1);
   font-size: 13px; cursor: pointer; margin-left: auto; transition: color var(--tc-fast), border-color var(--tc-fast), transform var(--tc-med) var(--tc-ease); flex: 0 0 auto; }
 .tc-gear + .tc-sw { margin-left: 10px; }
 .tc-gear:hover { color: var(--a-1); border-color: var(--a-2); transform: rotate(60deg); }
@@ -1173,6 +1184,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 .tc-title-editor .tc-te-head b { color: var(--a-1); }
 .tc-title-editor input { width: 100%; font: 500 13px 'Outfit', sans-serif; color: var(--txt); background: var(--bg0); border: 1px solid var(--bord); border-radius: 8px; padding: 9px 11px; outline: none; margin-bottom: 10px; }
 .tc-title-editor input:focus { border-color: var(--a-1); }
+.tc-te-select { width: 100%; font: 500 13px 'Outfit', sans-serif; color: var(--txt); background: var(--bg0); border: 1px solid var(--bord); border-radius: 8px; padding: 9px 11px; outline: none; margin-bottom: 10px; cursor: pointer; }
+.tc-te-select:focus { border-color: var(--a-1); }
 .tc-title-editor .tc-te-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .tc-te-btns button { font: 600 12px 'Outfit', sans-serif; border: 1px solid var(--bord); border-radius: 8px; padding: 8px 14px; cursor: pointer; transition: filter var(--tc-fast); }
 .tc-te-btns button:hover { filter: brightness(1.12); }
@@ -1453,6 +1466,15 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               </div>
               <div class="tc-te-label">Client title</div>
               <input id="tc-te-input" type="text" maxlength="40" placeholder="Treasure Client" autocomplete="off" spellcheck="false">
+              <div class="tc-te-label">Title font <i style="font-weight:400;opacity:.7">(applies to a custom title)</i></div>
+              <select id="tc-te-font" class="tc-te-select">
+                <option value="'Outfit', system-ui, sans-serif">Outfit</option>
+                <option value="'Cinzel', 'Times New Roman', serif">Cinzel</option>
+                <option value="'JetBrains Mono', ui-monospace, monospace">Monospace</option>
+                <option value="Georgia, 'Times New Roman', serif">Serif</option>
+                <option value="Impact, Haettenschweiler, sans-serif">Impact</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+              </select>
               <div class="tc-te-btns">
                 <button class="tc-te-save" id="tc-te-save">Save</button>
                 <button class="tc-te-reset" id="tc-te-reset">Reset to default</button>
@@ -1554,7 +1576,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
-      theme:'normal', themeTitles:{}, themeBg:{},
+      theme:'normal', themeTitles:{}, themeBg:{}, titleFont:"'Outfit', system-ui, sans-serif",
       hudPositions:{}
     };
     var state = load();
@@ -2512,7 +2534,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       // theme, show that text in its place instead.
       $$('.tc-brandwrap').forEach(function (w) {
         var img = w.querySelector('.tc-logo-word'), cu = w.querySelector('.tc-brand-custom');
-        if (ov) { if (img) img.style.display = 'none'; if (cu) { cu.style.display = ''; cu.textContent = ov; } }
+        if (ov) { if (img) img.style.display = 'none'; if (cu) { cu.style.display = ''; cu.textContent = ov; cu.style.fontFamily = state.titleFont || "'Outfit', system-ui, sans-serif"; } }
         else { if (img) img.style.display = ''; if (cu) { cu.style.display = 'none'; cu.textContent = ''; } }
       });
       // Publish a custom title for native/Java surfaces ONLY when the user set one;
@@ -2637,10 +2659,21 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           bgrow.style.display = '';
         } else { bgs.innerHTML = ''; bgrow.style.display = 'none'; }
       }
-      if (teWrap) teWrap.classList.add('open');
+      var teFont = $('#tc-te-font');
+      if (teFont) teFont.value = state.titleFont || "'Outfit', system-ui, sans-serif";
+      // Open the theme settings in the sub-page (same as mod settings), not inline.
+      if (teWrap && typeof subBody !== 'undefined' && subBody) {
+        subReturnCfg = { node: teWrap, parent: teWrap.parentNode, next: teWrap.nextSibling };
+        if (subTitle) subTitle.textContent = 'Theme — ' + t.name;
+        teWrap.classList.add('open');
+        subBody.appendChild(teWrap);
+        if (guiPanel) guiPanel.classList.add('tc-showsub');
+      } else if (teWrap) {
+        teWrap.classList.add('open');
+      }
       try { teInput.focus(); teInput.select(); } catch (e) {}
     }
-    function closeTitleEditor() { if (teWrap) teWrap.classList.remove('open'); teEditing = null; }
+    function closeTitleEditor() { teEditing = null; if (typeof closeSubPage === 'function') closeSubPage(); else if (teWrap) teWrap.classList.remove('open'); }
     function saveTitleEditor() {
       if (teEditing == null) return;
       var v = (teInput ? teInput.value : '').trim();
@@ -2652,6 +2685,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     }
     if ($('#tc-te-save')) $('#tc-te-save').addEventListener('click', saveTitleEditor);
     if ($('#tc-te-cancel')) $('#tc-te-cancel').addEventListener('click', closeTitleEditor);
+    if ($('#tc-te-font')) $('#tc-te-font').addEventListener('change', function () {
+      state.titleFont = this.value; save(); applyTitle();
+    });
     if ($('#tc-te-reset')) $('#tc-te-reset').addEventListener('click', function () {
       if (teEditing == null) return;
       if (state.themeTitles) delete state.themeTitles[teEditing];

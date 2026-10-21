@@ -116,12 +116,14 @@ public final class TreasureBackground {
 
 		GlStateManager.enableBlend();
 		GlStateManager.blendFunc(770, 771);
-		float r = Math.max(2.0F, width / 300.0F);
+		// Larger radius + two concentric rings (16 taps) for a smooth, soft blur.
+		float r = Math.max(3.0F, width / 150.0F);
 		blit(u0, v0, u1, v1, 0.0F, 0.0F, 255, width, height, zLevel);
 		float[][] ring = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
-				{ 1, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 } };
+				{ 0.7F, 0.7F }, { -0.7F, -0.7F }, { 0.7F, -0.7F }, { -0.7F, 0.7F } };
 		for (int i = 0; i < ring.length; i++) {
-			blit(u0, v0, u1, v1, ring[i][0] * r, ring[i][1] * r, 30, width, height, zLevel);
+			blit(u0, v0, u1, v1, ring[i][0] * r, ring[i][1] * r, 42, width, height, zLevel);
+			blit(u0, v0, u1, v1, ring[i][0] * r * 2.2F, ring[i][1] * r * 2.2F, 24, width, height, zLevel);
 		}
 		GlStateManager.disableBlend();
 

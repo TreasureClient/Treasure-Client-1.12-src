@@ -74,6 +74,7 @@ public class GuiMainMenu extends GuiScreen {
 	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
 	// renaming in the overlay shows up live without a per-frame storage read.
 	private static String brandTitle = "Treasure Client 1.2";
+	private static boolean customBrand = false; // true when the user set a custom title
 	private static long brandRead = 0L;
 
 	private static String brandLine() {
@@ -84,13 +85,14 @@ public class GuiMainMenu extends GuiScreen {
 				byte[] b = EagRuntime.getStorage("tctitle");
 				if (b != null && b.length > 0) {
 					String s = new String(b, StandardCharsets.UTF_8).trim();
-					brandTitle = s.isEmpty() ? "Treasure Client 1.2" : s;
+					if (s.isEmpty()) { brandTitle = "Treasure Client 1.2"; customBrand = false; }
+					else { brandTitle = s; customBrand = true; }
 				} else {
-					brandTitle = "Treasure Client 1.2";
+					brandTitle = "Treasure Client 1.2"; customBrand = false;
 				}
 			}
 		} catch (Throwable t) {
-			brandTitle = "Treasure Client 1.2";
+			brandTitle = "Treasure Client 1.2"; customBrand = false;
 		}
 		return brandTitle;
 	}
@@ -563,12 +565,16 @@ public class GuiMainMenu extends GuiScreen {
 		// screen-space offsets, so the background reads as soft/blurred — no shaders.
 		GlStateManager.enableBlend();
 		GlStateManager.blendFunc(770, 771); // GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
-		float r = Math.max(2.0F, this.width / 300.0F);
+		// Larger radius + two concentric rings of samples (16 taps) give a soft,
+		// smooth gaussian-like blur instead of the old blocky 8-tap pass.
+		float r = Math.max(3.0F, this.width / 150.0F);
 		blitBg(u0, v0, u1, v1, 0.0F, 0.0F, 255);
 		float[][] ring = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
-				{ 1, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 } };
+				{ 0.7F, 0.7F }, { -0.7F, -0.7F }, { 0.7F, -0.7F }, { -0.7F, 0.7F } };
 		for (int i = 0; i < ring.length; i++) {
-			blitBg(u0, v0, u1, v1, ring[i][0] * r, ring[i][1] * r, 30);
+			// inner ring (stronger) then a wider outer ring (fainter) for softness
+			blitBg(u0, v0, u1, v1, ring[i][0] * r, ring[i][1] * r, 42);
+			blitBg(u0, v0, u1, v1, ring[i][0] * r * 2.2F, ring[i][1] * r * 2.2F, 24);
 		}
 		GlStateManager.disableBlend();
 
@@ -691,22 +697,39 @@ public class GuiMainMenu extends GuiScreen {
 		// ---- chest logo crest above the wordmark (recolored to the active theme) ----
 		this.drawLogo(j, 1, 36);
 
-		// ---- wordmark: big, layered shadow + themed accent + subtle pulse ----
-		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 48.0F, 0.0F);
-		GlStateManager.scale(2.5F, 2.5F, 2.5F);
-		// drop shadow
-		this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
-		// main
-		this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 0, -4, cAccent());
-		GlStateManager.popMatrix();
+		// ---- wordmark: big, layered shadow + themed accent ----
+		brandLine(); // refresh brandTitle / customBrand from the overlay
+		if (customBrand) {
+			// The user renamed the client in the Mod Menu — show that title as the
+			// big wordmark, scaled to fit the screen width (one centered line).
+			String ct = brandTitle;
+			int cw = Math.max(1, this.fontRendererObj.getStringWidth(ct));
+			float sc = (this.width - 60.0F) / (float) cw;
+			if (sc > 2.5F) sc = 2.5F;
+			if (sc < 1.0F) sc = 1.0F;
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) j, 58.0F, 0.0F);
+			GlStateManager.scale(sc, sc, sc);
+			this.drawCenteredString(this.fontRendererObj, ct, 1, -3, 0xff000000);
+			this.drawCenteredString(this.fontRendererObj, ct, 0, -4, cAccent());
+			GlStateManager.popMatrix();
+		} else {
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) j, 48.0F, 0.0F);
+			GlStateManager.scale(2.5F, 2.5F, 2.5F);
+			// drop shadow
+			this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
+			// main
+			this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 0, -4, cAccent());
+			GlStateManager.popMatrix();
 
-		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 72.0F, 0.0F);
-		GlStateManager.scale(1.4F, 1.4F, 1.4F);
-		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
-		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
-		GlStateManager.popMatrix();
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) j, 72.0F, 0.0F);
+			GlStateManager.scale(1.4F, 1.4F, 1.4F);
+			this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
+			this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
+			GlStateManager.popMatrix();
+		}
 
 		// splash with gentle pulse
 		GlStateManager.pushMatrix();
