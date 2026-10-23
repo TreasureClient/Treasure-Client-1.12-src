@@ -138,10 +138,18 @@ public class Stitcher {
 			boolean flag4 = flag2 && l != j1;
 			boolean flag;
 
-			if (flag3 ^ flag4) {
-				flag = flag3;
+			// Treasure Client: grow the side whose power-of-two size stays the same,
+			// so the atlas fills its current size before doubling. Vanilla did the
+			// opposite and jumped from 1024x512 to 1024x1024 while the width was only
+			// ~half used (the bigger atlas froze the game on software rendering).
+			if (!flag1) {
+				flag = false;
+			} else if (!flag2) {
+				flag = true;
+			} else if (flag3 ^ flag4) {
+				flag = flag4;
 			} else {
-				flag = flag1 && k <= l;
+				flag = k <= l;
 			}
 
 			Stitcher.Slot stitcher$slot;
