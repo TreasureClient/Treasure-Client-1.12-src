@@ -21,6 +21,9 @@ echo "=============================================="
 # GitHub's ZIP download loses the executable bit, so set it back.
 chmod +x gradlew *.sh 2>/dev/null || true
 
+# Delete old builds first so only the fresh one is left.
+rm -f "$ROOT"/wasm_gc_teavm/javascript_dist/*.html "$ROOT"/javascript/Eaglercraft_1.12_Offline_*.html
+
 echo; echo ">>> [1/4] Packing assets (CompileEPK)"
 ./CompileEPK.sh
 
@@ -33,7 +36,10 @@ echo; echo ">>> [3/4] Building runtime JS (CompileEagRuntimeJS)"
 echo; echo ">>> [4/4] Bundling the offline download (MakeWASMClientBundle)"
 ./MakeWASMClientBundle.sh
 
-OUT="$ROOT/wasm_gc_teavm/javascript_dist/Eaglercraft_1.12.2_WASM_Offline_Download.html"
+# One output file, named the way the GitHub Pages site expects it.
+mv -f "$ROOT/wasm_gc_teavm/javascript_dist/Eaglercraft_1.12.2_WASM_Offline_Download.html" \
+      "$ROOT/wasm_gc_teavm/javascript_dist/Treasure-Client_WASM.html"
+OUT="$ROOT/wasm_gc_teavm/javascript_dist/Treasure-Client_WASM.html"
 echo
 echo "=============================================="
 echo " Build finished."
@@ -42,9 +48,9 @@ echo "=============================================="
 echo
 echo " Starting a local server. In Chrome, open:"
 echo
-echo "     http://penguin.linux.test:8000/Eaglercraft_1.12.2_WASM_Offline_Download.html"
+echo "     http://penguin.linux.test:8000/Treasure-Client_WASM.html"
 echo
-echo " (if that doesn't load, try  http://localhost:8000/Eaglercraft_1.12.2_WASM_Offline_Download.html )"
+echo " (if that doesn't load, try  http://localhost:8000/Treasure-Client_WASM.html )"
 echo
 echo " Press Ctrl+C here to stop the server when you're done."
 echo
