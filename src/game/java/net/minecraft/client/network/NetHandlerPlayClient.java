@@ -627,6 +627,19 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		Entity entity = this.clientWorldController.getEntityByID(packetIn.getEntityId());
 
 		if (entity != null && packetIn.getDataManagerEntries() != null) {
+			// Treasure Client — ViaItems: dropped items, item frames, fireworks etc.
+			// carry their stack in entity metadata; remap those too.
+			try {
+				for (net.minecraft.network.datasync.EntityDataManager.DataEntry<?> e : packetIn.getDataManagerEntries()) {
+					if (e.getValue() instanceof ItemStack) {
+						@SuppressWarnings("unchecked")
+						net.minecraft.network.datasync.EntityDataManager.DataEntry<ItemStack> ie =
+								(net.minecraft.network.datasync.EntityDataManager.DataEntry<ItemStack>) e;
+						ie.setValue(net.minecraft.item.ViaItemRemap.remap(ie.getValue()));
+					}
+				}
+			} catch (Throwable t) {
+			}
 			entity.getDataManager().setEntryValues(packetIn.getDataManagerEntries());
 		}
 	}

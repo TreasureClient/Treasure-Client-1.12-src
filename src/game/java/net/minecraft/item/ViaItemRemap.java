@@ -28,10 +28,24 @@ public final class ViaItemRemap {
 	/** [searchPhrase (lowercased, spaces), registry name], longest phrase first. */
 	private static List<String[]> phrases;
 
+	/** lowercased real display name -> registry name (from {@link ViaItemData}). */
+	private static java.util.Map<String, String> exactNames;
+
 	private static void ensure() {
 		if (phrases != null) {
 			return;
 		}
+		java.util.Map<String, String> ex = new java.util.HashMap<String, String>();
+		for (int i = 0; i < ViaItemData.DISPLAY.length; i++) {
+			ex.put(ViaItemData.DISPLAY[i][1].toLowerCase(), ViaItemData.DISPLAY[i][0]);
+		}
+		for (int i = 0; i < ViaItems.NAMES.length; i++) {
+			String phrase = ViaItems.NAMES[i].replace('_', ' ');
+			if (!ex.containsKey(phrase)) {
+				ex.put(phrase, ViaItems.NAMES[i]);
+			}
+		}
+		exactNames = ex;
 		List<String[]> p = new ArrayList<String[]>();
 		for (int i = 0; i < ViaItems.NAMES.length; i++) {
 			String name = ViaItems.NAMES[i];
@@ -63,20 +77,30 @@ public final class ViaItemRemap {
 			if (disp == null) {
 				return st;
 			}
-			String lower = disp.toLowerCase();
+			String lower = clean(disp);
 			ensure();
+			// 1) Exact name: ViaBackwards labels a down-mapped item "<version> <Name>",
+			//    e.g. "1.21 Wind Charge" — strip the version, look up the real name.
+			String bare = stripVersion(lower);
+			String exact = exactNames.get(bare);
+			if (exact == null && bare != lower) {
+				exact = exactNames.get(lower);
+			}
+			if (exact != null) {
+				ItemStack r = swap(st, exact);
+				if (r != null) {
+					return r;
+				}
+			}
+			// 2) Fallback: the name merely contains one of our item names.
 			for (int i = 0; i < phrases.size(); i++) {
 				String[] pr = phrases.get(i);
-				if (pr[0].length() >= 3 && lower.contains(pr[0])) {
+				if (pr[0].length() >= 4 && lower.contains(pr[0])) {
 					// Direct array lookup, not Item.getByNameOrId — the registry can
 					// fail to resolve our high ids in some runtimes.
-					Item via = ViaItems.getByName(pr[1]);
-					if (via == null || via == st.getItem()) {
+					ItemStack r = swap(st, pr[1]);
+					if (r == null) {
 						continue; // not registered / already ours — try the next phrase
-					}
-					ItemStack r = new ItemStack(via, st.func_190916_E());
-					if (st.hasTagCompound()) {
-						r.setTagCompound(st.getTagCompound().copy());
 					}
 					return r;
 				}
@@ -85,6 +109,58 @@ public final class ViaItemRemap {
 			// never let item remapping break the client
 		}
 		return st;
+	}
+
+	/** Our item in place of {@code st} (same count, NBT kept), or null if not applicable. */
+	private static ItemStack swap(ItemStack st, String name) {
+		// Direct array lookup, not Item.getByNameOrId — the registry can fail to
+		// resolve our high ids in some runtimes.
+		Item via = ViaItems.getByName(name);
+		if (via == null || via == st.getItem()) {
+			return null;
+		}
+		ItemStack r = new ItemStack(via, st.func_190916_E());
+		if (st.hasTagCompound()) {
+			r.setTagCompound(st.getTagCompound().copy());
+		}
+		return r;
+	}
+
+	/** Lowercase, without § formatting codes, trimmed. */
+	private static String clean(String s) {
+		StringBuilder b = new StringBuilder(s.length());
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c == '\u00a7' && i + 1 < s.length()) {
+				i++;
+				continue;
+			}
+			b.append(Character.toLowerCase(c));
+		}
+		return b.toString().trim();
+	}
+
+	/** "1.20.5 mace" -> "mace"; anything not starting with a version is returned as-is. */
+	private static String stripVersion(String s) {
+		int i = 0;
+		int n = s.length();
+		boolean digit = false;
+		boolean dot = false;
+		while (i < n) {
+			char c = s.charAt(i);
+			if (c >= '0' && c <= '9') {
+				digit = true;
+			} else if (c == '.') {
+				dot = true;
+			} else {
+				break;
+			}
+			i++;
+		}
+		if (digit && dot && i < n && s.charAt(i) == ' ') {
+			return s.substring(i + 1).trim();
+		}
+		return s;
 	}
 
 	/** Remap every stack in a window-items list in place. */

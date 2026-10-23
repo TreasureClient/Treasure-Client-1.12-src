@@ -88,6 +88,8 @@ public abstract class LayerArmorBase<T extends ModelBase> implements LayerRender
 				case GOLD:
 				case DIAMOND:
 				case NETHERITE:
+				case COPPER:
+				case TURTLE:
 					GlStateManager.color(this.colorR, this.colorG, this.colorB, this.alpha);
 					t.render(entityLivingBaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scale);
 
