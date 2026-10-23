@@ -220,8 +220,8 @@ ${classes_js}
   font-size: 16px; cursor: pointer; transition: all var(--tc-fast); }
 .tc-close:hover { color: var(--txt); border-color: #d4634a; transform: rotate(90deg); }
 
-.tc-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 16px 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
-.tc-cats { display: flex; flex-direction: column; gap: 5px; }
+.tc-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: start; gap: 16px; padding: 16px 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.tc-cats { display: flex; flex-direction: column; gap: 5px; position: sticky; top: 0; }
 .tc-cat { position: relative; font: 600 13px 'Outfit', sans-serif; text-align: left; color: var(--dim); background: transparent;
   border: 1px solid transparent; border-radius: 9px; padding: 11px 14px; cursor: pointer; overflow: hidden;
   transition: color var(--tc-fast), background var(--tc-fast), border-color var(--tc-fast), transform var(--tc-fast), padding-left var(--tc-fast); }
@@ -945,8 +945,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
   font-size: 16px; cursor: pointer; transition: all var(--tc-fast); }
 .tc-close:hover { color: var(--txt); border-color: #d4634a; transform: rotate(90deg); }
 
-.tc-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 16px 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
-.tc-cats { display: flex; flex-direction: column; gap: 5px; }
+.tc-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: start; gap: 16px; padding: 16px 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.tc-cats { display: flex; flex-direction: column; gap: 5px; position: sticky; top: 0; }
 .tc-cat { position: relative; font: 600 13px 'Outfit', sans-serif; text-align: left; color: var(--dim); background: transparent;
   border: 1px solid transparent; border-radius: 9px; padding: 11px 14px; cursor: pointer; overflow: hidden;
   transition: color var(--tc-fast), background var(--tc-fast), border-color var(--tc-fast), transform var(--tc-fast), padding-left var(--tc-fast); }
