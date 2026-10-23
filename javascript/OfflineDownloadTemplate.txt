@@ -5,82 +5,2182 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
     <meta name="description" content="Eaglercraft 1.12.2 Offline Download">
     <meta name="keywords" content="eaglercraft, minecraft">
-    <title>Eaglercraft 1.12.2</title>
+    <title>Treasure Client</title>
     <meta property="og:locale" content="en-US">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Eaglercraft 1.12.2 Offline">
     <meta property="og:description" content="this file is not a website, whoever uploaded it to this URL is a dumbass">
+
     <script type="text/javascript">
         "use strict";
-        var relayId = Math.floor(Math.random() * 3);
-
-        // %%%%%%%%% launch options %%%%%%%%%%%%
 
         window.eaglercraftXOpts = {
             container: "game_frame",
             worldsDB: "worlds"
         };
-
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     </script>
+
+    <script type="text/javascript">
+        "use strict";
+        /* Treasure Client: hidden EaglercraftML mod loader (ModAPI + ModLoader only,
+           no ModGUI so nothing is shown). Mods can be added via
+           eaglercraftXOpts.Mods or ?Mod= search params; with none configured this
+           simply sits idle and invisible. */
+        (function(){
+          try {
+            function initAPI(version) {
+  var ModAPI = {};
+  ModAPI.events = {};
+  ModAPI.events.types = ["event"];
+  ModAPI.events.listeners = { "event": [] };
+  ModAPI.globals = {};
+  ModAPI.version = version;
+
+  ModAPI.addEventListener = function AddEventListener(name, callback) {
+    if (!callback) {
+      throw new Error("Invalid callback!");
+    }
+    if (ModAPI.events.types.includes(name)) {
+      if (!Array.isArray(ModAPI.events.listeners[name])) {
+        ModAPI.events.listeners[name] = [];
+      }
+      ModAPI.events.listeners[name].push(callback);
+      console.log("Added new event listener.");
+    } else {
+      throw new Error("This event does not exist!");
+    }
+  };
+
+  ModAPI.removeEventListener = function removeEventListener(name, func, slow) {
+    if (!func) {
+      throw new Error("Invalid callback!");
+    }
+    if (!Array.isArray(ModAPI.events.listeners[name])) {
+      ModAPI.events.listeners[name] = [];
+    }
+    var targetArr = ModAPI.events.listeners[name];
+    if (!slow) {
+      if (targetArr.indexOf(func) !== -1) {
+        targetArr.splice(targetArr.indexOf(func), 1);
+        console.log("Removed event listener.");
+      }
+    } else {
+      var functionString = func.toString();
+      targetArr.forEach((f, i) => {
+        if (f.toString() === functionString) {
+          targetArr.splice(i, 1);
+          console.log("Removed event listener.");
+        }
+      });
+    }
+  };
+
+  ModAPI.events.newEvent = function newEvent(name) {
+    ModAPI.events.types.push(name);
+  };
+
+  ModAPI.events.callEvent = function callEvent(name, data) {
+    if (
+      !ModAPI.events.types.includes(name) ||
+      !Array.isArray(ModAPI.events.listeners[name])
+    ) {
+      if (!Array.isArray(ModAPI.events.listeners[name])) {
+        if (ModAPI.events.types.includes(name)) {
+          ModAPI.events.listeners.event.forEach((func) => {
+            func({ event: name, data: data });
+          });
+          return;
+        }
+        return;
+      }
+      console.error(
+        "The ModAPI has been called with an invalid event name: " + name
+      );
+      console.error("Please report this bug to the repo.");
+      return;
+    }
+    ModAPI.events.listeners[name].forEach((func) => {
+      func(data);
+    });
+    ModAPI.events.listeners.event.forEach((func) => {
+      func({ event: name, data: data });
+    });
+
+    ModAPI.globals._initUpdate();
+  };
+
+  ModAPI.updateComponent = function updateComponent(component) {
+    if (
+      typeof component !== "string" ||
+      ModAPI[component] === null ||
+      ModAPI[component] === undefined
+    ) {
+      return;
+    }
+    if (!ModAPI.globals || !ModAPI.globals.onGlobalsUpdate) {
+      return;
+    }
+    if (!ModAPI.globals.toUpdate) {
+      ModAPI.globals.toUpdate = [];
+    }
+    if (ModAPI.globals.toUpdate.indexOf(component) === -1) {
+      ModAPI.globals.toUpdate.push(component);
+    }
+  };
+
+  ModAPI.require = function require(component) {
+    if (typeof component !== "string") {
+      return;
+    }
+    if (!ModAPI.globals || !ModAPI.globals.onRequire) {
+      return;
+    }
+    ModAPI.globals.onRequire(component);
+  };
+
+  ModAPI.globals._initUpdate = function _initUpdate() {
+    if (!ModAPI.globals.toUpdate) {
+      ModAPI.globals.toUpdate = [];
+    }
+    ModAPI.globals.toUpdate.forEach((id) => {
+      ModAPI.globals.onGlobalsUpdate(id);
+    });
+    ModAPI.globals.toUpdate = [];
+  };
+  
+
+  window.ModAPI = ModAPI;
+}
+
+            function loadLoader() {
+  window.ModLoader = function ModLoader(ModsArr) {
+    if (!window.eaglerMLoaderMainRun) {
+      var searchParams = new URLSearchParams(location.search);
+      searchParams.getAll("Mod").forEach((ModToAdd) => {
+        console.log(
+          "EaglerML: Adding Mod to loadlist from search params: " + ModToAdd
+        );
+        ModsArr.push(ModToAdd);
+      });
+      if (
+        !!eaglercraftXOpts &&
+        !!eaglercraftXOpts.Mods &&
+        Array.isArray(eaglercraftXOpts.Mods)
+      ) {
+        eaglercraftXOpts.Mods.forEach((ModToAdd) => {
+          console.log(
+            "EaglerML: Adding Mod to loadlist from eaglercraftXOpts: " +
+              ModToAdd
+          );
+          ModsArr.push(ModToAdd);
+        });
+      }
+      window.eaglerMLoaderMainRun = true;
+    }
+    if (window.noLoadMods === true) {
+      ModsArr.splice(0, ModsArr.length);
+    }
+    function checkModsLoaded(totalLoaded, identifier) {
+      console.log(
+        "EaglerML: Checking if Mods are finished :: " +
+          totalLoaded +
+          "/" +
+          ModsArr.length
+      );
+      if (totalLoaded >= ModsArr.length) {
+        clearInterval(identifier);
+        window.ModGracePeriod = false;
+        if (
+          window.eaglerMLoaderMainRun &&
+          ModAPI &&
+          ModAPI.events &&
+          ModAPI.events.callEvent
+        ) {
+          ModAPI.events.callEvent("load", {});
+        }
+        console.log(
+          "EaglerML: Checking if Mods are finished :: All Mods loaded! Grace period off."
+        );
+      }
+    }
+    function methodB(currentMod) {
+      try {
+        console.log("EaglerML: Loading " + currentMod + " via method B.");
+        var script = document.createElement("script");
+        script.src = currentMod;
+        script.setAttribute("data-Mod", currentMod);
+        script.setAttribute("data-isMod", true);
+        script.onerror = () => {
+          console.log(
+            "EaglerML: Failed to load " + currentMod + " via method B!"
+          );
+          script.remove();
+          totalLoaded++;
+        };
+        script.onload = () => {
+          console.log(
+            "EaglerML: Successfully loaded " + currentMod + " via method B."
+          );
+          totalLoaded++;
+        };
+        document.body.appendChild(script);
+      } catch (error) {
+        console.log(
+          "EaglerML: Oh no! The Mod " + currentMod + " failed to load!"
+        );
+        totalLoaded++;
+      }
+    }
+    window.ModGracePeriod = true;
+    var totalLoaded = 0;
+    var loaderCheckInterval = null;
+    ModsArr.forEach((c) => {
+      let currentMod = c;
+      console.log("EaglerML: Starting " + currentMod);
+      try {
+        var req = new XMLHttpRequest();
+        req.open("GET", currentMod);
+        req.onload = function xhrLoadHandler() {
+          console.log("EaglerML: Loading " + currentMod + " via method A.");
+          var script = document.createElement("script");
+          try {
+            script.src =
+              "data:text/javascript," + encodeURIComponent(req.responseText);
+          } catch (error) {
+            methodB(currentMod);
+            return;
+          }
+          script.setAttribute("data-Mod", currentMod);
+          script.setAttribute("data-isMod", true);
+          script.onerror = () => {
+            console.log(
+              "EaglerML: Failed to load " + currentMod + " via method A!"
+            );
+            script.remove();
+            totalLoaded++;
+          };
+          script.onload = () => {
+            console.log(
+              "EaglerML: Successfully loaded " + currentMod + " via method A."
+            );
+            totalLoaded++;
+          };
+          document.body.appendChild(script);
+        };
+        req.onerror = function xhrErrorHandler() {
+          methodB(currentMod);
+        };
+        req.send();
+      } catch (error) {
+        methodB(currentMod);
+      }
+    });
+    loaderCheckInterval = setInterval(() => {
+      checkModsLoaded(totalLoaded, loaderCheckInterval);
+    }, 500);
+    console.log(
+      "EaglerML: Starting to load " + ModsArr.length + " Mods..."
+    );
+    window.returntotalloadedmods = function returntotalloadedmods(){
+      return totalLoaded
+    }
+  };
+}
+
+            if (typeof initAPI === "function") { try { initAPI("treasure-1.12"); } catch(e){ console.log("ModAPI init skipped:", e); } }
+            if (typeof loadLoader === "function") {
+              try {
+                loadLoader();
+                if (typeof window.ModLoader === "function") { window.ModLoader([]); }
+              } catch(e){ console.log("ModLoader init skipped:", e); }
+            }
+          } catch(e) { console.log("Hidden mod loader failed to initialize:", e); }
+        })();
+    </script>
+
     <script type="text/javascript">
         "use strict";
         if(typeof window !== "undefined") window.eaglercraftXClientScriptElement = document.currentScript;
         ${classes_js}
     </script>
+
     <script type="text/javascript">
         "use strict";
         (function(){
             window.eaglercraftXOpts.assetsURI = ${assets_epk};
 
-            var launchInterval = -1;
-            var launchCounter = 1;
-            var launchCountdownNumberElement = null;
-            var launchCountdownProgressElement = null;
-            var launchSkipCountdown = false;
-
-            var launchTick = function() {
-                launchCountdownNumberElement.innerText = "" + Math.floor(6.0 - launchCounter * 0.06);
-                launchCountdownProgressElement.style.width = "" + launchCounter + "%";
-                if(++launchCounter > 100 || launchSkipCountdown) {
-                    clearInterval(launchInterval);
-                    setTimeout(function() {
-                        document.body.removeChild(document.getElementById("launch_countdown_screen"));
-                        document.body.style.backgroundColor = "black";
-                        main();
-                    }, 50);
-                }
-            };
-
             window.addEventListener("load", function() {
-                launchCountdownNumberElement = document.getElementById("launchCountdownNumber");
-                launchCountdownProgressElement = document.getElementById("launchCountdownProgress");
-                launchInterval = setInterval(launchTick, 50);
-                document.getElementById("skipCountdown").addEventListener("click", function() {
-                    launchSkipCountdown = true;
-                });
-                document.getElementById("skipCountdown").focus();
-                /*
-                document.getElementById("bootMenu").addEventListener("click", function() {
-                    launchSkipCountdown = true;
-                    window.eaglercraftXOpts.showBootMenuOnLaunch = true;
-                });
-                */
+                document.body.style.backgroundColor = "black";
+                main();
             });
         })();
     </script>
+
     <link type="image/png" rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAR/SURBVEhLtZXZK3ZRFMYPcqXc+gv413DHxVuGIpIhkciQWaRccCNjSCkligwXSOZ5nmfv9zvn2e8+58V753sudmuvvdZ61l5r7XOc8H+GS/D19aUNkPz5+aktQH5/f//4+LBKZKuRkpUtQjCUYG5gD2T38vLy/PwsDfL9/f3Dw8PT05M0b29vnKLhCKCBT4L4gvBLBIei4//4+Hh1dUVEQutUuLu7E83FxQUGnKLBWKfQaA3S+AREVxaEOD8/Pzk50XpzcyMDcH19zdZG3N3d3dzc3Nvb01aX5pQUpQGGQJxcQpfNysoKhUIdHR1o1tbWbInYAgxIPDMzMy8vLzc3FxqOdMoRqwJK8G8ALUYIhHMiSEhIwI6CyIb0qQzC4eGhsXCc1tZWnZIEKzdQJQSXgKxfX18RCM3Z5eWlcfVAxKOjo+Pj49PTU88lTOk2NjbMsePc3t6SAfcgFdszOyMuAdeBg0CQi2lhYUHOeOLDCisN8FzcPFZXV3t7ezHY3t5GQ+6it+2xMASsKhEEWKsmRLRBBUpPvpJ/TpFKFBwKYAiITmicsbYhdHfJAltqhUCVsCQhwslmeXmZxiBQT9c0Ar9E2O3v72sYSE0N1yQArkKy0kBMXLqlZqIZHR3t6empqqqSDcBdhXEJSJ/bUc3q6uq+vj629GB9fR1WsLW1NTs7u7S0RN2locMjIyOEm5ubQ7+4uJienk4/+vv77Y1hwhLBEKhwWHitdVFfX9/Y2Gg2HuLi4owUAysrK8yCG97rh0+ApP5Q2ZycHFlPTExUVFRIBvn5+WhKSkp2dnaMKhptbW2426GgQ/rwuAQCZ1hwFayLiork9hMFBQV1dXVmE0BLS4vqw3QFB8kn4IAxoGPkYpxi4FeDmpqas7Mz4pClAgqGwD48rjY2NmacYqC0tJQ1KSlJWyE5OZkpUKkBAxZVIntAoZh04+Q48fHxPNGBgYHExMT29naj9cBodnZ2mo3jlJWVMeW2OGQck4B1amqqoaGhqamJjx2lGxwcpL0mUgR8fJhsWqJtSkoKU2SbHHUDpkhPBujd8xuQG6PJRM/Pz09PT7O1NNnZ2Tw3fgZkXVhYKCUlUhBATP+hCVyKZGky17RV0g04laayslJ6hlVeFHB4eFhKaogGd0LxtmTgE+hbhKDnPjMzgw8E3qGL2tpaBWpubjYqj2BoaEj6rq4uNATRZ0ZwCbiL6gXEzINk5vCBQJ9rMD4+rkA8QNK036uDg4Py8vLu7m680KjIBNR3zBDoWQM1g98snyB+VSoRW8C/UwR81/SvhgNj9JOTkwwVERUdRBEI0BAdLRVERkhLS8vIyEDQlrsTPTU1lVFhKxARvZgUlFLbegCf4BvIsbi4mIg4E5EogIHhiKCMtU0WUFiVy06j5fAJIDdSBDQw+PegDfBRcbOPwH4F9LuFWIIQdQNKwWqzIE0aoFUaBsw+SQuFw0uNtC9A+F4i3QNrbg3IDn+SAsHh+wYiEpeyBEMLv/cAO6KzAijxxB+Y4wisBhssJUhjEbPJf4Nw+B+JXqLW3bw+wQAAAABJRU5ErkJggg==">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+/* ===== TREASURE CLIENT overlay — scoped under #tc-root, never touches the game canvas ===== */
+#tc-root {
+  --tc-gui: 0.92;
+  --tc-fast: 140ms; --tc-med: 320ms;
+  --tc-ease: cubic-bezier(.19,1,.22,1);
+  position: fixed; inset: 0; z-index: 2147483000;
+  pointer-events: none;
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+#tc-root[data-theme="normal"] {
+  --a-hi:#fff3c4; --a-1:#ffd76b; --a-2:#d4a537; --a-3:#8a5a20;
+  --txt:#f6ecd2; --dim:#c9b183;
+  --panel:rgba(28,19,5,0.94); --panel2:rgba(40,28,10,0.94);
+  --bord:rgba(255,214,120,0.24); --glow:rgba(255,199,80,0.38);
+  --bg0:#0f0a05;
+  --tc-card-bg:rgba(60,42,16,0.78); --tc-card-bord:rgba(255,214,120,0.40); --tc-card-glow:rgba(255,199,80,0.28);
+}
+#tc-root[data-theme="deep"] {
+  --a-hi:#d6f7ff; --a-1:#7fe9ff; --a-2:#2ec4f1; --a-3:#145a7d;
+  --txt:#dff6ff; --dim:#8fb9cc;
+  --panel:rgba(3,16,26,0.90); --panel2:rgba(8,33,51,0.94);
+  --bord:rgba(120,220,255,0.24); --glow:rgba(90,210,255,0.38);
+  --bg0:#030f18;
+  --tc-card-bg:rgba(14,52,74,0.78); --tc-card-bord:rgba(120,220,255,0.40); --tc-card-glow:rgba(90,210,255,0.28);
+}
+#tc-root *, #tc-root *::before, #tc-root *::after { box-sizing: border-box; margin: 0; }
+
+/* ---------- HUD ---------- */
+#tc-hud { position: absolute; inset: 0; pointer-events: none; }
+.tc-hidden { display: none !important; }
+#tc-crosshair {
+  position: absolute; left: 50%; top: 50%; width: 22px; height: 22px;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(var(--a-1),var(--a-1)) 50% 0/2px 8px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 50% 100%/2px 8px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 0 50%/8px 2px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 100% 50%/8px 2px no-repeat;
+  filter: drop-shadow(0 0 3px var(--glow));
+}
+#tc-crosshair.dot { background: var(--a-1); width: 5px; height: 5px; border-radius: 50%; }
+#tc-crosshair.tshape { background:
+    linear-gradient(var(--a-1),var(--a-1)) 50% 100%/2px 10px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 0 50%/9px 2px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 100% 50%/9px 2px no-repeat; }
+
+/* mode-switch loading screen */
+#tc-mode-loader { position: fixed; inset: 0; z-index: 2147483020; display: flex; align-items: center; justify-content: center;
+  pointer-events: auto; opacity: 1; transition: opacity .3s ease;
+  background: radial-gradient(ellipse at center, rgba(10,14,20,0.92), rgba(4,6,10,0.97)); font-family: 'Outfit', sans-serif; }
+#tc-mode-loader.tc-ml-out { opacity: 0; }
+#tc-mode-loader.tc-ml-deep { background: radial-gradient(ellipse at center, rgba(6,26,38,0.94), rgba(2,10,16,0.98)); }
+.tc-ml-card { text-align: center; padding: 30px 40px; min-width: 340px; }
+.tc-ml-title { font: 700 30px 'Cinzel', serif; letter-spacing: .18em;
+  background: linear-gradient(180deg,#ffe9a8,#d4a537); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tc-ml-deep .tc-ml-title { background: linear-gradient(180deg,#bff0ff,#2ec4f1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tc-ml-sub { margin-top: 6px; font: 500 13px 'JetBrains Mono', monospace; color: #9fb0c0; letter-spacing: .05em; }
+.tc-ml-bar { margin: 22px auto 12px; width: 300px; height: 8px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+.tc-ml-fill { height: 100%; width: 0%; border-radius: 999px; transition: width .34s cubic-bezier(.4,0,.2,1);
+  background: linear-gradient(90deg,#d4a537,#ffe9a8); box-shadow: 0 0 12px rgba(255,215,107,0.5); }
+.tc-ml-deep .tc-ml-fill { background: linear-gradient(90deg,#2ec4f1,#bff0ff); box-shadow: 0 0 12px rgba(46,196,241,0.5); }
+.tc-ml-step { font: 500 13px 'JetBrains Mono', monospace; color: #cfe0ee; min-height: 18px; letter-spacing: .03em; }
+
+/* hide all in-game HUD overlays on the main menu / when not in a world */
+#tc-root.tc-nogame #tc-keystrokes, #tc-root.tc-nogame #tc-cps, #tc-root.tc-nogame #tc-fps,
+#tc-root.tc-nogame .tc-hud-box, #tc-root.tc-nogame #tc-potions, #tc-root.tc-nogame #tc-fpsgraph,
+#tc-root.tc-nogame #tc-perfmon { display: none !important; }
+
+#tc-keystrokes {
+  position: absolute; bottom: 66px; left: 18px;
+  display: flex; flex-direction: column; gap: 5px; align-items: center;
+}
+#tc-root.hud-right #tc-keystrokes { left: auto; right: 18px; }
+#tc-root.hud-right #tc-cps, #tc-root.hud-right #tc-fps { left: auto; right: 18px; }
+.tc-ks-row { display: flex; gap: 5px; justify-content: center; }
+.tc-ks-row span {
+  display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 7px;
+  font: 600 13px 'JetBrains Mono', monospace;
+  color: var(--dim); background: var(--panel); border: 1px solid var(--bord);
+  transition: all var(--tc-fast);
+}
+.tc-ks-row span.tc-wide { width: 52px; font-size: 11px; }
+.tc-ks-row span.tc-space { width: 111px; font-size: 11px; letter-spacing: 2px; }
+.tc-ks-row span.down { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border-color: transparent; box-shadow: 0 0 12px var(--glow); }
+#tc-cps, #tc-fps {
+  position: absolute; left: 18px; font: 600 13px 'JetBrains Mono', monospace;
+  color: var(--a-1); background: var(--panel); border: 1px solid var(--bord);
+  padding: 4px 10px; border-radius: 7px; white-space: nowrap;
+}
+#tc-cps { bottom: 34px; } #tc-fps { bottom: 6px; }
+
+/* ---------- ClickGUI ---------- */
+#tc-gui {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(0,0,0,0.42); backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none; transition: opacity var(--tc-med) var(--tc-ease);
+}
+#tc-gui.open { opacity: 1; pointer-events: auto; }
+#tc-gui-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+#tc-gui-panel {
+  position: relative; z-index: 1;
+  width: min(1040px, 95vw); max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--bord); border-radius: 16px;
+  box-shadow: 0 30px 90px -30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.05);
+  transform: scale(0.96) translateY(8px); transition: transform var(--tc-med) var(--tc-ease);
+  overflow: hidden; font-size: calc(1rem * var(--tc-gui));
+}
+#tc-gui.open #tc-gui-panel { transform: none; }
+
+.tc-head { display: flex; align-items: center; gap: 14px; padding: 15px 20px; border-bottom: 1px solid var(--bord);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--a-3) 20%, transparent), transparent); }
+.tc-title { font-family: 'Cinzel', 'Times New Roman', serif; font-weight: 700; font-size: 20px; letter-spacing: .14em;
+  background: linear-gradient(180deg, var(--a-hi) 10%, var(--a-1) 45%, var(--a-2) 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--a-1);
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.5)) drop-shadow(0 0 12px var(--glow)); }
+.tc-title .tc-mark { -webkit-text-fill-color: var(--a-1); filter: drop-shadow(0 0 6px var(--glow)); }
+.tc-title .tc-accent { -webkit-text-fill-color: transparent; }
+.tc-mode { margin-left: auto; display: flex; gap: 4px; background: var(--panel2); border: 1px solid var(--bord); border-radius: 999px; padding: 4px; }
+.tc-mode button { font: 600 12px 'Outfit', sans-serif; color: var(--dim); background: transparent; border: 0; cursor: pointer;
+  padding: 6px 13px; border-radius: 999px; display: flex; align-items: center; gap: 6px;
+  transition: color var(--tc-fast), background var(--tc-med) var(--tc-ease), transform var(--tc-fast); }
+.tc-mode button:hover { color: var(--txt); transform: translateY(-1px); }
+.tc-mode .tc-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+.tc-mode button.on { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); box-shadow: 0 4px 14px -6px var(--glow); }
+.tc-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--bord); background: transparent; color: var(--dim);
+  font-size: 16px; cursor: pointer; transition: all var(--tc-fast); }
+.tc-close:hover { color: var(--txt); border-color: #d4634a; transform: rotate(90deg); }
+
+.tc-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 16px; overflow-y: auto; }
+.tc-cats { display: flex; flex-direction: column; gap: 5px; }
+.tc-cat { position: relative; font: 600 13px 'Outfit', sans-serif; text-align: left; color: var(--dim); background: transparent;
+  border: 1px solid transparent; border-radius: 9px; padding: 11px 14px; cursor: pointer; overflow: hidden;
+  transition: color var(--tc-fast), background var(--tc-fast), border-color var(--tc-fast), transform var(--tc-fast), padding-left var(--tc-fast); }
+.tc-cat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--a-2);
+  transform: scaleY(0); transform-origin: center; transition: transform var(--tc-med) var(--tc-ease); }
+.tc-cat:hover { color: var(--txt); background: var(--panel2); padding-left: 17px; }
+.tc-cat:hover::before { transform: scaleY(0.5); }
+.tc-cat.active { color: var(--txt); background: var(--panel2); border-color: var(--bord); }
+.tc-cat.active::before { transform: scaleY(0.7); }
+.tc-panel { display: none; }
+.tc-panel.active { display: block; animation: tcFade var(--tc-med) var(--tc-ease); }
+@keyframes tcFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.tc-row { display: flex; align-items: center; gap: 14px; padding: 11px 8px; margin: 0 -4px; border-radius: 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent);
+  transition: background var(--tc-fast), transform var(--tc-fast); }
+.tc-row:last-child { border-bottom: 0; }
+.tc-row:hover { background: color-mix(in srgb, var(--a-3) 10%, transparent); }
+.tc-lab { display: flex; flex-direction: column; gap: 2px; }
+.tc-lab b { font: 600 13.5px 'Outfit', sans-serif; color: var(--txt); }
+.tc-lab i { font-style: normal; font-size: 11.5px; color: var(--dim); }
+.tc-row .tc-sw, .tc-row select, .tc-row .tc-slider { margin-left: auto; }
+.tc-pending { opacity: 0.6; }
+.tc-note { font-size: 11.5px; color: var(--dim); background: var(--panel2); border: 1px solid var(--bord); border-radius: 9px; padding: 10px 12px; margin-bottom: 6px; line-height: 1.5; }
+.tc-note.tc-dim { background: transparent; border-color: transparent; padding: 6px 4px; opacity: 0.75; }
+.tc-note b { color: var(--txt); font-weight: 600; }
+/* section divider + label */
+.tc-sep { height: 1px; background: color-mix(in srgb, var(--bord) 60%, transparent); margin: 12px -4px; }
+.tc-seclabel { font: 700 10.5px 'Outfit', sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--a-2); margin: 4px 4px 8px; }
+/* compact buttons used inline in rows/config */
+.tc-btn-sm { margin: 0 !important; padding: 9px 16px !important; }
+.tc-btn-xs { margin: 0 !important; padding: 6px 14px !important; font-size: 11.5px !important; }
+/* a static (always-open) config block, e.g. the Mod Menu keybind controls */
+.tc-cfg.tc-cfg-static { max-height: none; opacity: 1; overflow: visible; padding: 2px 8px 8px; }
+.tc-hint { margin-left: auto; font-size: 11px; color: var(--dim); font-style: italic; }
+
+.tc-sw { width: 44px; height: 25px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--bord); cursor: pointer; position: relative; transition: background var(--tc-med) var(--tc-ease), border-color var(--tc-fast), box-shadow var(--tc-fast); flex: 0 0 auto; }
+.tc-sw:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-2) 20%, transparent); }
+.tc-sw i { position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--dim); transition: transform var(--tc-med) var(--tc-ease), background var(--tc-fast); }
+.tc-sw.on { background: linear-gradient(180deg,var(--a-1),var(--a-2)); border-color: transparent; box-shadow: 0 3px 12px -4px var(--glow); }
+.tc-sw.on i { transform: translateX(19px); background: var(--bg0); }
+
+/* per-mod settings: gear + expandable config panel */
+.tc-mod { border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); }
+.tc-mod:last-child { border-bottom: 0; }
+.tc-mod .tc-row { border-bottom: 0; }
+.tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--bord); background: transparent; color: var(--dim);
+  font-size: 13px; cursor: pointer; margin-left: auto; transition: color var(--tc-fast), border-color var(--tc-fast), transform var(--tc-med) var(--tc-ease); flex: 0 0 auto; }
+.tc-gear + .tc-sw { margin-left: 10px; }
+.tc-gear:hover { color: var(--a-1); border-color: var(--a-2); transform: rotate(60deg); }
+.tc-gear.open { color: var(--bg0); background: var(--a-2); border-color: transparent; }
+.tc-cfg { max-height: 0; overflow: hidden; opacity: 0; transition: max-height var(--tc-med) var(--tc-ease), opacity var(--tc-med), padding var(--tc-med); padding: 0 8px; }
+.tc-cfg.open { max-height: 360px; opacity: 1; padding: 4px 8px 12px; }
+.tc-cfg-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 12.5px; color: var(--dim); }
+.tc-cfg-row > span { min-width: 74px; }
+.tc-seg { display: flex; gap: 4px; margin-left: auto; background: var(--panel2); border: 1px solid var(--bord); border-radius: 999px; padding: 3px; }
+.tc-seg button { font: 600 11.5px 'Outfit', sans-serif; color: var(--dim); background: transparent; border: 0; cursor: pointer; padding: 5px 12px; border-radius: 999px; transition: color var(--tc-fast), background var(--tc-fast); }
+.tc-seg button.on { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); }
+.tc-seg.tc-seg-sm { flex-wrap: wrap; justify-content: flex-end; max-width: 210px; }
+.tc-seg.tc-seg-sm button { padding: 4px 9px; font-size: 11px; }
+
+.tc-slider { display: flex; align-items: center; gap: 10px; }
+.tc-slider input[type="range"] { -webkit-appearance: none; appearance: none; width: 130px; height: 5px; border-radius: 999px; background: var(--panel2); }
+.tc-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--a-1); cursor: pointer; border: 2px solid var(--bg0); }
+.tc-slider input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%; background: var(--a-1); cursor: pointer; border: 2px solid var(--bg0); }
+.tc-val { font: 600 12px 'JetBrains Mono', monospace; color: var(--a-1); min-width: 26px; text-align: right; }
+.tc-row select { font: 500 12.5px 'Outfit', sans-serif; color: var(--txt); background: var(--panel2); border: 1px solid var(--bord); border-radius: 8px; padding: 7px 11px; cursor: pointer; outline: none; }
+
+.tc-perf { display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--bord); background: linear-gradient(120deg, color-mix(in srgb, var(--a-2) 16%, transparent), transparent); }
+.tc-perf-fps { font: 600 26px 'JetBrains Mono', monospace; color: var(--a-1); line-height: 1; }
+.tc-perf-txt b { display: block; font-size: 13.5px; color: var(--txt); }
+.tc-perf-txt i { font-style: normal; font-size: 11.5px; color: var(--dim); }
+.tc-badge { margin-left: auto; font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; color: var(--a-1); border: 1px solid var(--a-2); border-radius: 999px; padding: 4px 11px; text-transform: uppercase; }
+.tc-deep-only { display: none; }
+#tc-root[data-theme="deep"] .tc-deep-only { display: flex; }
+#tc-root[data-theme="deep"] .tc-deep-wrap.tc-deep-only { display: block; }
+.tc-normal-only { display: block; }
+#tc-root[data-theme="deep"] .tc-normal-only { display: none; }
+.tc-perf-note { font-size: 11.5px; color: var(--a-1); min-height: 15px; margin: 4px 2px 8px; }
+
+/* section label (used across Interface / Performance panels) */
+.tc-seclabel { font: 500 10.5px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.tc-apply { margin-top: 14px; width: 100%; font: 600 13px 'Outfit', sans-serif; color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border: 0; border-radius: 10px; padding: 11px; cursor: pointer; box-shadow: 0 8px 22px -10px var(--glow); transition: transform var(--tc-fast), filter var(--tc-fast), box-shadow var(--tc-fast); }
+.tc-apply:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 28px -10px var(--glow); }
+.tc-apply:active { transform: translateY(0); }
+
+.tc-foot { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--bord); }
+.tc-foot-label { font-size: 12.5px; color: var(--dim); }
+.tc-keybind { font: 600 12.5px 'JetBrains Mono', monospace; color: var(--a-1); background: var(--panel2); border: 1px solid var(--bord); border-radius: 8px; padding: 7px 13px; cursor: pointer; min-width: 92px; text-align: center; transition: all var(--tc-fast); }
+.tc-keybind:hover { border-color: var(--a-2); }
+.tc-keybind.listening { color: var(--bg0); background: var(--a-1); border-color: transparent; }
+.tc-foot-hint { font-size: 11px; color: var(--dim); }
+.tc-spacer { margin-left: auto; }
+.tc-done { font: 600 13px 'Outfit', sans-serif; color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border: 0; border-radius: 10px; padding: 10px 22px; cursor: pointer; box-shadow: 0 8px 22px -10px var(--glow); transition: transform var(--tc-fast), filter var(--tc-fast), box-shadow var(--tc-fast); }
+.tc-done:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 28px -10px var(--glow); }
+.tc-done:active { transform: translateY(0); }
+
+/* ---------- search ---------- */
+
+/* 1.1: mod settings sub-page (opened by the gear / right-click) */
+.tc-subpage { display: none; flex-direction: column; padding: 16px 20px 22px; overflow-y: auto; }
+#tc-gui-panel.tc-showsub .tc-body { display: none; }
+#tc-gui-panel.tc-showsub .tc-subpage { display: flex; }
+.tc-subpage-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.tc-subback { font: 600 14px 'Outfit', sans-serif; color: var(--a-1); background: var(--tc-card-bg);
+  border: 1px solid var(--tc-card-bord); border-radius: 10px; padding: 8px 16px; cursor: pointer;
+  box-shadow: 0 0 10px -2px var(--tc-card-glow); transition: border-color var(--tc-fast), box-shadow var(--tc-med); }
+.tc-subback:hover { border-color: var(--a-2); box-shadow: 0 0 16px -1px var(--tc-card-glow); }
+.tc-subpage-title { font: 700 22px 'Cinzel', serif; color: var(--a-1); letter-spacing: 1px;
+  filter: drop-shadow(0 0 10px var(--glow)); }
+.tc-subpage-body { max-width: 640px; margin: 0 auto; width: 100%; }
+.tc-subpage-body .tc-cfg { max-height: none !important; opacity: 1 !important; overflow: visible !important;
+  padding: 0 !important; display: block; }
+.tc-subpage-body .tc-cfg-row { padding: 12px 4px; border-bottom: 1px solid color-mix(in srgb, var(--bord) 40%, transparent); }
+/* 1.1: mods laid out as cards in a responsive grid (wide, not tall) */
+.tc-panel.active { display: block; }
+.tc-panels { width: 100%; min-width: 0; overflow: hidden; }
+.tc-panel { columns: 2; column-gap: 16px; }
+.tc-mod { border: 1px solid var(--tc-card-bord); border-radius: 12px;
+  background: var(--tc-card-bg); padding: 4px 14px; margin: 0 0 16px;
+  box-shadow: 0 0 10px -2px var(--tc-card-glow), inset 0 1px 0 rgba(255,235,170,0.06);
+  break-inside: avoid; -webkit-column-break-inside: avoid;
+  transition: box-shadow var(--tc-med) var(--tc-ease), border-color var(--tc-fast); }
+.tc-mod:hover { border-color: var(--a-2); box-shadow: 0 0 16px -1px var(--tc-card-glow), inset 0 1px 0 rgba(255,235,170,0.10); }
+.tc-mod .tc-row { padding: 10px 2px; }
+.tc-mod .tc-cfg { padding-left: 2px; padding-right: 2px; }
+.tc-seclabel { column-span: all; -webkit-column-span: all; }
+
+.tc-search-wrap { position: relative; margin: 2px 2px 12px; }
+.tc-search { width: 100%; font: 500 12.5px 'Outfit', sans-serif; color: var(--txt); background: var(--panel2);
+  border: 1px solid var(--bord); border-radius: 9px; padding: 9px 12px 9px 32px; outline: none; transition: border-color var(--tc-fast); }
+.tc-search:focus { border-color: var(--a-2); }
+.tc-search-ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 12px; pointer-events: none; }
+.tc-search-empty { font-size: 12px; color: var(--dim); padding: 20px 8px; text-align: center; }
+.tc-body.searching .tc-panel { display: none; }
+.tc-body.searching .tc-panel.tc-search-hit { display: block; }
+.tc-body.searching .tc-cats { display: none; }
+/* search mode: sidebar is hidden, so collapse its column and give panels full width */
+.tc-body.searching { grid-template-columns: 1fr; }
+.tc-body.searching .tc-panels { grid-column: 1 / -1; }
+[data-searchmiss] { display: none !important; }
+
+/* ---------- HUD data readouts (coords / direction / ping / armor / potions / held item) ---------- */
+.tc-hud-box { position: absolute; font: 600 12px 'JetBrains Mono', monospace; color: var(--a-1);
+  background: var(--panel); border: 1px solid var(--bord); border-radius: 7px; padding: 6px 10px; line-height: 1.5; }
+#tc-coords { top: 18px; left: 18px; }
+#tc-direction { top: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
+#tc-ping { top: 18px; right: 18px; }
+#tc-armor { top: 56px; right: 18px; display: flex; gap: 8px; padding: 8px 10px; }
+.tc-armor-slot { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 30px; }
+.tc-armor-slot b { font-size: 10px; color: var(--dim); font-weight: 600; }
+.tc-armor-slot i { font-style: normal; font-size: 11px; }
+.tc-armor-slot i.low { color: #e0715a; }
+#tc-potions { position: absolute; bottom: 130px; right: 18px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.tc-potion-row { display: flex; align-items: center; gap: 7px; background: var(--panel); border: 1px solid var(--bord); border-radius: 7px; padding: 5px 10px; font-size: 11.5px; }
+.tc-potion-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--a-1); box-shadow: 0 0 6px var(--glow); flex: 0 0 auto; }
+#tc-helditem { bottom: 128px; left: 50%; transform: translateX(-50%); text-align: center; }
+#tc-sprint { top: 56px; left: 18px; }
+#tc-root.hud-right #tc-sprint { left: auto; right: 18px; }
+#tc-sneak { top: 84px; left: 18px; }
+#tc-root.hud-right #tc-sneak { left: auto; right: 18px; }
+#tc-root.hud-right #tc-helditem { left: 50%; right: auto; }
+#tc-root.hud-right #tc-coords { left: auto; right: 18px; }
+#tc-root.hud-right #tc-armor { right: auto; left: 18px; }
+#tc-root.hud-right #tc-potions { right: auto; left: 18px; align-items: flex-start; }
+#tc-fpsgraph { bottom: 18px; left: 50%; transform: translateX(-50%); padding: 6px; }
+#tc-fpsgraph canvas { display: block; }
+#tc-perfmon { top: 60px; left: 18px; display: flex; flex-direction: column; gap: 2px; min-width: 108px; }
+#tc-perfmon .tc-pm-row { display: flex; justify-content: space-between; gap: 14px; }
+#tc-perfmon .tc-pm-row span:last-child { color: var(--txt); }
+
+/* ---------- HUD edit mode (drag to reposition) ---------- */
+#tc-root.hud-editing .tc-hud-box, #tc-root.hud-editing #tc-keystrokes,
+#tc-root.hud-editing #tc-cps, #tc-root.hud-editing #tc-fps, #tc-root.hud-editing #tc-potions {
+  outline: 1px dashed var(--a-1); outline-offset: 3px; cursor: grab; pointer-events: auto; user-select: none;
+}
+#tc-root.hud-editing .tc-hidden { display: none !important; } /* keep disabled HUD elements hidden in edit mode */
+#tc-root.hud-editing .tc-hud-drag-active { cursor: grabbing; outline-color: var(--a-hi); box-shadow: 0 0 0 3px var(--glow); }
+.tc-editbar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 2147483001;
+  display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--bord); border-radius: 999px;
+  padding: 9px 9px 9px 18px; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.6); pointer-events: auto; }
+.tc-editbar span { font: 600 12px 'Outfit', sans-serif; color: var(--txt); }
+.tc-editbar button { font: 600 12px 'Outfit', sans-serif; border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer; transition: filter var(--tc-fast); }
+.tc-editbar button:hover { filter: brightness(1.1); }
+.tc-editbar .tc-eb-reset { background: var(--panel2); color: var(--dim); border: 1px solid var(--bord); }
+.tc-editbar .tc-eb-done { background: linear-gradient(180deg,var(--a-1),var(--a-2)); color: var(--bg0); }
+
+/* ---------- keybind manager ---------- */
+.tc-kb-row { display: flex; align-items: center; gap: 14px; padding: 10px 8px; }
+.tc-kb-row .tc-lab { flex: 1; }
+.tc-kb-warn { font-size: 11px; color: #e0715a; margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { #tc-root * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+
+    </style>
 </head>
-<body style="margin:0px;width:100%;height:100%;overflow:hidden;background-color:#121212;" id="game_frame">
-    <div style="margin:0px;width:100%;height:100%;font-family:sans-serif;display:flex;align-items:center;user-select:none;" id="launch_countdown_screen">
-        <div style="margin:auto;text-align:center;color:#FFFFFF;">
-            <h1>This file is from <span style="color:#FF5555;">${date}</span></h1>
-            <h2>Game will launch in <span id="launchCountdownNumber">5</span>...</h2>
-            <div style="border:2px solid #FFFFFF;width:100%;height:15px;padding:1px;margin-bottom:20vh;">
-                <div id="launchCountdownProgress" style="background-color:#555555;width:0%;height:100%;"></div>
-            </div>
-            <button id="skipCountdown" autofocus style="padding:10px 20px;font-size:1rem;color:#FFFFFF;background-color:#333333;border:none;cursor:pointer;border-radius:5px;">Skip</button>
-        </div>
+<body style="margin:0px;width:100%;height:100%;overflow:hidden;background-color:black;" id="game_frame">
+<!-- ================= TREASURE CLIENT — in-game overlay (ClickGUI + skins + HUD) ================= -->
+<div id="tc-root" data-theme="normal" aria-hidden="true">
+  <!-- HUD layer (always-on, never captures input) -->
+  <div id="tc-hud">
+    <div id="tc-crosshair" class="tc-hidden"></div>
+    <div id="tc-keystrokes" class="tc-hidden">
+      <div class="tc-ks-row"><span data-key="KeyW">W</span></div>
+      <div class="tc-ks-row"><span data-key="KeyA">A</span><span data-key="KeyS">S</span><span data-key="KeyD">D</span></div>
+      <div class="tc-ks-row"><span data-key="MouseL" class="tc-wide">LMB</span><span data-key="MouseR" class="tc-wide">RMB</span></div>
+      <div class="tc-ks-row"><span data-key="Space" class="tc-space">SPACE</span></div>
     </div>
+    <div id="tc-cps" class="tc-hidden">0 CPS</div>
+    <div id="tc-fps" class="tc-hidden">0 FPS</div>
+    <div id="tc-coords" class="tc-hud-box tc-hidden">— , — , —</div>
+    <div id="tc-direction" class="tc-hud-box tc-hidden">—</div>
+    <div id="tc-ping" class="tc-hud-box tc-hidden">— ms</div>
+    <div id="tc-armor" class="tc-hud-box tc-hidden"></div>
+    <div id="tc-potions" class="tc-hidden"></div>
+    <div id="tc-helditem" class="tc-hud-box tc-hidden">—</div>
+    <div id="tc-sprint" class="tc-hud-box tc-hidden">Sprint [OFF]</div>
+    <div id="tc-sneak" class="tc-hud-box tc-hidden">Sneak [OFF]</div>
+    <div id="tc-fpsgraph" class="tc-hud-box tc-hidden"><canvas id="tc-fpsgraph-cv" width="140" height="34"></canvas></div>
+    <div id="tc-perfmon" class="tc-hud-box tc-hidden"></div>
+  </div>
+  <div class="tc-editbar tc-hidden" id="tc-editbar">
+    <span>Drag HUD elements to reposition</span>
+    <button class="tc-eb-reset" id="tc-eb-reset">Reset Positions</button>
+    <button class="tc-eb-done" id="tc-eb-done">Done</button>
+  </div>
+
+  <!-- ClickGUI (captures input only while open) -->
+  <div id="tc-gui">
+    <canvas id="tc-gui-bg"></canvas>
+    <div id="tc-gui-panel">
+      <div class="tc-head">
+        <div class="tc-title"><span class="tc-mark">✦</span> TREASURE <span class="tc-accent">CLIENT</span></div>
+        <button class="tc-close" id="tc-close" aria-label="Close">✕</button>
+      </div>
+      <div class="tc-search-wrap">
+        <span class="tc-search-ic">🔍</span>
+        <input class="tc-search" id="tc-search" type="text" placeholder="Search mods, settings, categories…" autocomplete="off">
+      </div>
+      <div class="tc-subpage" id="tc-subpage">
+        <div class="tc-subpage-head">
+          <button class="tc-subback" id="tc-subback">‹ Back</button>
+          <div class="tc-subpage-title" id="tc-subpage-title">Settings</div>
+        </div>
+        <div class="tc-subpage-body" id="tc-subpage-body"></div>
+      </div>
+      <div class="tc-body" id="tc-body">
+        <div class="tc-cats" id="tc-cats">
+          <button class="tc-cat active" data-cat="all">All</button>
+          <button class="tc-cat" data-cat="render">Render</button>
+          <button class="tc-cat" data-cat="hud">HUD</button>
+          <button class="tc-cat" data-cat="misc">Misc</button>
+        </div>
+        <div class="tc-panels">
+          <!-- hud -->
+          <div class="tc-panel active" data-panel="hud" data-group="hud">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Coordinates</b><i>Real X / Y / Z position</i></div><button class="tc-gear" data-gear="coordcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="coords"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="coordcfg">
+                <div class="tc-cfg-row"><span>Precision</span>
+                  <div class="tc-seg" data-seg="coordPrecision">
+                    <button data-val="0">Whole</button>
+                    <button data-val="1">1 decimal</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Direction</b><i>Compass heading</i></div><button class="tc-gear" data-gear="dircfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="direction"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="dircfg">
+                <div class="tc-cfg-row"><span>Mode</span>
+                  <div class="tc-seg" data-seg="dirMode">
+                    <button data-val="cardinal">Cardinal</button>
+                    <button data-val="detailed">Detailed</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Potion Effects</b><i>Active effects, level &amp; duration</i></div><div class="tc-sw" data-mod="potionEffects"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Held Item</b><i>Name, count &amp; durability</i></div><div class="tc-sw" data-mod="heldItem"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Keystrokes</b><i>On-screen WASD + mouse</i></div><button class="tc-gear" data-gear="kscfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="keystrokes"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="kscfg">
+                <div class="tc-cfg-row"><span>Show</span>
+                  <div class="tc-seg" data-seg="ksShowMouse">
+                    <button data-val="1">Mouse + Space</button>
+                    <button data-val="0">WASD only</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>CPS Counter</b><i>Live clicks per second</i></div><div class="tc-sw" data-mod="cps"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>HUD Editor</b><i>Drag any enabled HUD element to reposition it</i></div><button class="tc-apply tc-btn-sm" id="tc-hud-edit">Edit Layout</button></div>
+            </div>
+          </div>
+          <!-- visual -->
+          <div class="tc-panel" data-panel="visual" data-group="render">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>FPS Counter</b><i>Live framerate readout</i></div><div class="tc-sw" data-mod="fps"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Ping Display</b><i>Connection latency to the server</i></div><div class="tc-sw" data-mod="ping"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>FPS Graph</b><i>Recent framerate history</i></div><div class="tc-sw" data-mod="fpsGraph"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Performance Monitor</b><i>FPS, frame time &amp; ping together</i></div><div class="tc-sw" data-mod="perfMonitor"><i></i></div></div>
+            </div>
+            <div class="tc-sep"></div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Fullbright</b><i>Max brightness — see in caves &amp; at night</i></div><div class="tc-sw" data-mod="fullbright"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>No Hurt Cam</b><i>Stop the camera tilting when you take damage</i></div><div class="tc-sw" data-mod="noHurtCam"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>TNT Timer</b><i>Show the fuse countdown above primed TNT</i></div><div class="tc-sw" data-mod="tntTimer"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Custom Crosshair</b><i>Themed crosshair overlay</i></div><button class="tc-gear" data-gear="chcfg" aria-label="Settings">⚙</button><div class="tc-sw on" data-mod="crosshair"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="chcfg">
+                <div class="tc-cfg-row"><span>Style</span>
+                  <div class="tc-seg" data-seg="crosshairStyle">
+                    <button data-val="cross">Cross</button>
+                    <button data-val="dot">Dot</button>
+                    <button data-val="tshape">T-Shape</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Size</span><div class="tc-slider"><input type="range" min="12" max="40" step="1" data-mod="crosshairSize"><span class="tc-val">22</span></div></div>
+                <div class="tc-cfg-row"><span>Thickness</span><div class="tc-slider"><input type="range" min="1" max="5" step="1" data-mod="crosshairThickness"><span class="tc-val">2</span></div></div>
+                <div class="tc-cfg-row"><span>Gap</span><div class="tc-slider"><input type="range" min="0" max="8" step="1" data-mod="crosshairGap"><span class="tc-val">3</span></div></div>
+                <div class="tc-cfg-row"><span>Color</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="crosshairColor">
+                    <button data-val="theme">Theme</button>
+                    <button data-val="white">White</button>
+                    <button data-val="red">Red</button>
+                    <button data-val="green">Green</button>
+                    <button data-val="cyan">Cyan</button>
+                    <button data-val="black">Black</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Opacity</span><div class="tc-slider"><input type="range" min="20" max="100" step="5" data-mod="crosshairOpacity"><span class="tc-val">100</span></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Hitboxes</b><i>Visual-only entity bounding boxes — no reach or aim assist</i></div><button class="tc-gear" data-gear="hbcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="hitboxes"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="hbcfg">
+                <div class="tc-cfg-row"><span>Players</span><div class="tc-sw" data-mod="hitboxPlayers" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Mobs</span><div class="tc-sw" data-mod="hitboxMobs" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Animals</span><div class="tc-sw" data-mod="hitboxAnimals" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Other entities</span><div class="tc-sw" data-mod="hitboxOther" style="margin-left:auto;"><i></i></div></div>
+              </div>
+            </div>
+          </div>
+          <!-- movement / controls -->
+          <div class="tc-panel" data-panel="movement" data-group="misc">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Toggle Sprint</b><i>Sprint key flips ON (tap W to sprint) / OFF (vanilla)</i></div><button class="tc-gear" data-gear="sprintcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="toggleSprint"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="sprintcfg">
+                <div class="tc-cfg-row"><span>Show on HUD</span><div class="tc-sw" data-mod="sprintStatus" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Shows Sprint [ON] / [OFF] in-game</span></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Toggle Sneak</b><i>Sneak key flips ON (stay sneaking) / OFF (vanilla)</i></div><button class="tc-gear" data-gear="sneakcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="toggleSneak"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="sneakcfg">
+                <div class="tc-cfg-row"><span>Show on HUD</span><div class="tc-sw" data-mod="sneakStatus" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Shows Sneak [ON] / [OFF] in-game</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- perf -->
+          <div class="tc-panel" data-panel="perf" data-group="render">
+            <div class="tc-seclabel">Optimizations</div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>No Particles</b><i>Disable all particles for more FPS</i></div><div class="tc-sw" data-mod="noParticles"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Pause When Unfocused</b><i>Stop rendering when the tab loses focus</i></div><div class="tc-sw" data-mod="pauseUnfocused"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Render Resolution</b><i>Render the world at lower resolution for more FPS</i></div></div>
+              <div class="tc-cfg tc-cfg-static">
+                <div class="tc-cfg-row"><span>Scale</span><div class="tc-slider"><input type="range" min="30" max="100" step="5" data-mod="resolutionScale"><span class="tc-val">100</span></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower = higher FPS, softer image</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- interface -->
+          <div class="tc-panel" data-panel="interface" data-group="misc">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Zoom</b><i>Hold a key to zoom in</i></div><button class="tc-gear" data-gear="zoomcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="zoom"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="zoomcfg">
+                <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" data-mod="zoomLevel"><span class="tc-val">30</span></div></div>
+                <div class="tc-cfg-row"><span>Smooth Zoom</span><div class="tc-sw" data-mod="smoothZoom" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Zoom Speed</span><div class="tc-slider"><input type="range" min="1" max="20" step="1" data-mod="zoomSpeed"><span class="tc-val">8</span></div></div>
+                <div class="tc-cfg-row"><span>Hold key</span><button class="tc-keybind" data-bindkey="zoom">C</button></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower strength = closer zoom · higher speed = snappier</span></div>
+              </div>
+            </div>
+            <div class="tc-sep"></div>
+            <div class="tc-seclabel">Keybind Manager</div>
+            <div class="tc-note">Click a bind, then press a key. The Mod Menu key can be changed but not removed.</div>
+            <div class="tc-kb-row"><div class="tc-lab"><b>Mod Menu</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
+            <div class="tc-kb-warn" id="tc-kb-warn"></div>
+            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Mod Menu key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
+            <div class="tc-sep"></div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Menu Animations</b><i>Smooth open / close &amp; hover transitions</i></div><div class="tc-sw on" data-mod="guiAnim"><i></i></div></div>
+            </div>
+          </div>
+          <!-- profile / skins removed -->
+        </div>
+      </div>
+      <div class="tc-foot">
+        <span class="tc-foot-label">Open menu with</span>
+        <button class="tc-keybind" data-bindkey="menu">Right Shift</button>
+        <span class="tc-foot-hint">Rebindable · manage all keys in Other Mods ▸ Keybind Manager</span>
+        <span class="tc-spacer"></span>
+        <button class="tc-done" id="tc-done">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.__tcRefocusGame = function(){ try { var gf = document.getElementById("game_frame"); var cv = gf && gf.querySelector("canvas"); (cv||gf) && (cv||gf).focus && (cv||gf).focus(); } catch(e){} };
+/* ================= TREASURE CLIENT overlay logic =================
+   Fully self-contained and defensive: any failure in here is caught and
+   logged, and can never prevent the game itself from booting. The game
+   boots normally (engine's own main()); this only adds a HUD + ClickGUI
+   layer on top of the canvas.
+
+   CRITICAL: the engine, at boot, does `getElementById("game_frame")` (the
+   <body>) and REMOVES ALL of its children before inserting its canvas. Our
+   overlay starts life inside <body>, so it would get wiped. To survive, we
+   relocate #tc-root to be a direct child of <html> (documentElement), which
+   the engine never clears, and we keep a watchdog that re-attaches it if it
+   ever disappears. */
+(function () {
+  "use strict";
+
+  // Treasure Client: guarantee the overlay's CSS is present by injecting it from
+  // JS on boot. The <head> <style> can fail to apply once #tc-root is relocated
+  // to <html> (or if a bundler drops it), which left the menu unstyled/squished.
+  var TC_ROOT_CSS = `
+/* ===== TREASURE CLIENT overlay — scoped under #tc-root, never touches the game canvas ===== */
+#tc-root {
+  --tc-gui: 0.92;
+  --tc-fast: 140ms; --tc-med: 320ms;
+  --tc-ease: cubic-bezier(.19,1,.22,1);
+  position: fixed; inset: 0; z-index: 2147483000;
+  pointer-events: none;
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+#tc-root[data-theme="normal"] {
+  --a-hi:#fff3c4; --a-1:#ffd76b; --a-2:#d4a537; --a-3:#8a5a20;
+  --txt:#f6ecd2; --dim:#c9b183;
+  --panel:rgba(28,19,5,0.94); --panel2:rgba(40,28,10,0.94);
+  --bord:rgba(255,214,120,0.24); --glow:rgba(255,199,80,0.38);
+  --bg0:#0f0a05;
+  --tc-card-bg:rgba(60,42,16,0.78); --tc-card-bord:rgba(255,214,120,0.40); --tc-card-glow:rgba(255,199,80,0.28);
+}
+#tc-root[data-theme="deep"] {
+  --a-hi:#d6f7ff; --a-1:#7fe9ff; --a-2:#2ec4f1; --a-3:#145a7d;
+  --txt:#dff6ff; --dim:#8fb9cc;
+  --panel:rgba(3,16,26,0.90); --panel2:rgba(8,33,51,0.94);
+  --bord:rgba(120,220,255,0.24); --glow:rgba(90,210,255,0.38);
+  --bg0:#030f18;
+  --tc-card-bg:rgba(14,52,74,0.78); --tc-card-bord:rgba(120,220,255,0.40); --tc-card-glow:rgba(90,210,255,0.28);
+}
+#tc-root *, #tc-root *::before, #tc-root *::after { box-sizing: border-box; margin: 0; }
+
+/* ---------- HUD ---------- */
+#tc-hud { position: absolute; inset: 0; pointer-events: none; }
+.tc-hidden { display: none !important; }
+#tc-crosshair {
+  position: absolute; left: 50%; top: 50%; width: 22px; height: 22px;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(var(--a-1),var(--a-1)) 50% 0/2px 8px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 50% 100%/2px 8px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 0 50%/8px 2px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 100% 50%/8px 2px no-repeat;
+  filter: drop-shadow(0 0 3px var(--glow));
+}
+#tc-crosshair.dot { background: var(--a-1); width: 5px; height: 5px; border-radius: 50%; }
+#tc-crosshair.tshape { background:
+    linear-gradient(var(--a-1),var(--a-1)) 50% 100%/2px 10px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 0 50%/9px 2px no-repeat,
+    linear-gradient(var(--a-1),var(--a-1)) 100% 50%/9px 2px no-repeat; }
+
+/* mode-switch loading screen */
+#tc-mode-loader { position: fixed; inset: 0; z-index: 2147483020; display: flex; align-items: center; justify-content: center;
+  pointer-events: auto; opacity: 1; transition: opacity .3s ease;
+  background: radial-gradient(ellipse at center, rgba(10,14,20,0.92), rgba(4,6,10,0.97)); font-family: 'Outfit', sans-serif; }
+#tc-mode-loader.tc-ml-out { opacity: 0; }
+#tc-mode-loader.tc-ml-deep { background: radial-gradient(ellipse at center, rgba(6,26,38,0.94), rgba(2,10,16,0.98)); }
+.tc-ml-card { text-align: center; padding: 30px 40px; min-width: 340px; }
+.tc-ml-title { font: 700 30px 'Cinzel', serif; letter-spacing: .18em;
+  background: linear-gradient(180deg,#ffe9a8,#d4a537); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tc-ml-deep .tc-ml-title { background: linear-gradient(180deg,#bff0ff,#2ec4f1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tc-ml-sub { margin-top: 6px; font: 500 13px 'JetBrains Mono', monospace; color: #9fb0c0; letter-spacing: .05em; }
+.tc-ml-bar { margin: 22px auto 12px; width: 300px; height: 8px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+.tc-ml-fill { height: 100%; width: 0%; border-radius: 999px; transition: width .34s cubic-bezier(.4,0,.2,1);
+  background: linear-gradient(90deg,#d4a537,#ffe9a8); box-shadow: 0 0 12px rgba(255,215,107,0.5); }
+.tc-ml-deep .tc-ml-fill { background: linear-gradient(90deg,#2ec4f1,#bff0ff); box-shadow: 0 0 12px rgba(46,196,241,0.5); }
+.tc-ml-step { font: 500 13px 'JetBrains Mono', monospace; color: #cfe0ee; min-height: 18px; letter-spacing: .03em; }
+
+/* hide all in-game HUD overlays on the main menu / when not in a world */
+#tc-root.tc-nogame #tc-keystrokes, #tc-root.tc-nogame #tc-cps, #tc-root.tc-nogame #tc-fps,
+#tc-root.tc-nogame .tc-hud-box, #tc-root.tc-nogame #tc-potions, #tc-root.tc-nogame #tc-fpsgraph,
+#tc-root.tc-nogame #tc-perfmon { display: none !important; }
+
+#tc-keystrokes {
+  position: absolute; bottom: 66px; left: 18px;
+  display: flex; flex-direction: column; gap: 5px; align-items: center;
+}
+#tc-root.hud-right #tc-keystrokes { left: auto; right: 18px; }
+#tc-root.hud-right #tc-cps, #tc-root.hud-right #tc-fps { left: auto; right: 18px; }
+.tc-ks-row { display: flex; gap: 5px; justify-content: center; }
+.tc-ks-row span {
+  display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 7px;
+  font: 600 13px 'JetBrains Mono', monospace;
+  color: var(--dim); background: var(--panel); border: 1px solid var(--bord);
+  transition: all var(--tc-fast);
+}
+.tc-ks-row span.tc-wide { width: 52px; font-size: 11px; }
+.tc-ks-row span.tc-space { width: 111px; font-size: 11px; letter-spacing: 2px; }
+.tc-ks-row span.down { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border-color: transparent; box-shadow: 0 0 12px var(--glow); }
+#tc-cps, #tc-fps {
+  position: absolute; left: 18px; font: 600 13px 'JetBrains Mono', monospace;
+  color: var(--a-1); background: var(--panel); border: 1px solid var(--bord);
+  padding: 4px 10px; border-radius: 7px; white-space: nowrap;
+}
+#tc-cps { bottom: 34px; } #tc-fps { bottom: 6px; }
+
+/* ---------- ClickGUI ---------- */
+#tc-gui {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(0,0,0,0.42); backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none; transition: opacity var(--tc-med) var(--tc-ease);
+}
+#tc-gui.open { opacity: 1; pointer-events: auto; }
+#tc-gui-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+#tc-gui-panel {
+  position: relative; z-index: 1;
+  width: min(1040px, 95vw); max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--bord); border-radius: 16px;
+  box-shadow: 0 30px 90px -30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.05);
+  transform: scale(0.96) translateY(8px); transition: transform var(--tc-med) var(--tc-ease);
+  overflow: hidden; font-size: calc(1rem * var(--tc-gui));
+}
+#tc-gui.open #tc-gui-panel { transform: none; }
+
+.tc-head { display: flex; align-items: center; gap: 14px; padding: 15px 20px; border-bottom: 1px solid var(--bord);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--a-3) 20%, transparent), transparent); }
+.tc-title { font-family: 'Cinzel', 'Times New Roman', serif; font-weight: 700; font-size: 20px; letter-spacing: .14em;
+  background: linear-gradient(180deg, var(--a-hi) 10%, var(--a-1) 45%, var(--a-2) 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--a-1);
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.5)) drop-shadow(0 0 12px var(--glow)); }
+.tc-title .tc-mark { -webkit-text-fill-color: var(--a-1); filter: drop-shadow(0 0 6px var(--glow)); }
+.tc-title .tc-accent { -webkit-text-fill-color: transparent; }
+.tc-mode { margin-left: auto; display: flex; gap: 4px; background: var(--panel2); border: 1px solid var(--bord); border-radius: 999px; padding: 4px; }
+.tc-mode button { font: 600 12px 'Outfit', sans-serif; color: var(--dim); background: transparent; border: 0; cursor: pointer;
+  padding: 6px 13px; border-radius: 999px; display: flex; align-items: center; gap: 6px;
+  transition: color var(--tc-fast), background var(--tc-med) var(--tc-ease), transform var(--tc-fast); }
+.tc-mode button:hover { color: var(--txt); transform: translateY(-1px); }
+.tc-mode .tc-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+.tc-mode button.on { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); box-shadow: 0 4px 14px -6px var(--glow); }
+.tc-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--bord); background: transparent; color: var(--dim);
+  font-size: 16px; cursor: pointer; transition: all var(--tc-fast); }
+.tc-close:hover { color: var(--txt); border-color: #d4634a; transform: rotate(90deg); }
+
+.tc-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 16px; overflow-y: auto; }
+.tc-cats { display: flex; flex-direction: column; gap: 5px; }
+.tc-cat { position: relative; font: 600 13px 'Outfit', sans-serif; text-align: left; color: var(--dim); background: transparent;
+  border: 1px solid transparent; border-radius: 9px; padding: 11px 14px; cursor: pointer; overflow: hidden;
+  transition: color var(--tc-fast), background var(--tc-fast), border-color var(--tc-fast), transform var(--tc-fast), padding-left var(--tc-fast); }
+.tc-cat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--a-2);
+  transform: scaleY(0); transform-origin: center; transition: transform var(--tc-med) var(--tc-ease); }
+.tc-cat:hover { color: var(--txt); background: var(--panel2); padding-left: 17px; }
+.tc-cat:hover::before { transform: scaleY(0.5); }
+.tc-cat.active { color: var(--txt); background: var(--panel2); border-color: var(--bord); }
+.tc-cat.active::before { transform: scaleY(0.7); }
+.tc-panel { display: none; }
+.tc-panel.active { display: block; animation: tcFade var(--tc-med) var(--tc-ease); }
+@keyframes tcFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.tc-row { display: flex; align-items: center; gap: 14px; padding: 11px 8px; margin: 0 -4px; border-radius: 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent);
+  transition: background var(--tc-fast), transform var(--tc-fast); }
+.tc-row:last-child { border-bottom: 0; }
+.tc-row:hover { background: color-mix(in srgb, var(--a-3) 10%, transparent); }
+.tc-lab { display: flex; flex-direction: column; gap: 2px; }
+.tc-lab b { font: 600 13.5px 'Outfit', sans-serif; color: var(--txt); }
+.tc-lab i { font-style: normal; font-size: 11.5px; color: var(--dim); }
+.tc-row .tc-sw, .tc-row select, .tc-row .tc-slider { margin-left: auto; }
+.tc-pending { opacity: 0.6; }
+.tc-note { font-size: 11.5px; color: var(--dim); background: var(--panel2); border: 1px solid var(--bord); border-radius: 9px; padding: 10px 12px; margin-bottom: 6px; line-height: 1.5; }
+.tc-note.tc-dim { background: transparent; border-color: transparent; padding: 6px 4px; opacity: 0.75; }
+.tc-note b { color: var(--txt); font-weight: 600; }
+/* section divider + label */
+.tc-sep { height: 1px; background: color-mix(in srgb, var(--bord) 60%, transparent); margin: 12px -4px; }
+.tc-seclabel { font: 700 10.5px 'Outfit', sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--a-2); margin: 4px 4px 8px; }
+/* compact buttons used inline in rows/config */
+.tc-btn-sm { margin: 0 !important; padding: 9px 16px !important; }
+.tc-btn-xs { margin: 0 !important; padding: 6px 14px !important; font-size: 11.5px !important; }
+/* a static (always-open) config block, e.g. the Mod Menu keybind controls */
+.tc-cfg.tc-cfg-static { max-height: none; opacity: 1; overflow: visible; padding: 2px 8px 8px; }
+.tc-hint { margin-left: auto; font-size: 11px; color: var(--dim); font-style: italic; }
+
+.tc-sw { width: 44px; height: 25px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--bord); cursor: pointer; position: relative; transition: background var(--tc-med) var(--tc-ease), border-color var(--tc-fast), box-shadow var(--tc-fast); flex: 0 0 auto; }
+.tc-sw:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-2) 20%, transparent); }
+.tc-sw i { position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--dim); transition: transform var(--tc-med) var(--tc-ease), background var(--tc-fast); }
+.tc-sw.on { background: linear-gradient(180deg,var(--a-1),var(--a-2)); border-color: transparent; box-shadow: 0 3px 12px -4px var(--glow); }
+.tc-sw.on i { transform: translateX(19px); background: var(--bg0); }
+
+/* per-mod settings: gear + expandable config panel */
+.tc-mod { border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); }
+.tc-mod:last-child { border-bottom: 0; }
+.tc-mod .tc-row { border-bottom: 0; }
+.tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--bord); background: transparent; color: var(--dim);
+  font-size: 13px; cursor: pointer; margin-left: auto; transition: color var(--tc-fast), border-color var(--tc-fast), transform var(--tc-med) var(--tc-ease); flex: 0 0 auto; }
+.tc-gear + .tc-sw { margin-left: 10px; }
+.tc-gear:hover { color: var(--a-1); border-color: var(--a-2); transform: rotate(60deg); }
+.tc-gear.open { color: var(--bg0); background: var(--a-2); border-color: transparent; }
+.tc-cfg { max-height: 0; overflow: hidden; opacity: 0; transition: max-height var(--tc-med) var(--tc-ease), opacity var(--tc-med), padding var(--tc-med); padding: 0 8px; }
+.tc-cfg.open { max-height: 360px; opacity: 1; padding: 4px 8px 12px; }
+.tc-cfg-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 12.5px; color: var(--dim); }
+.tc-cfg-row > span { min-width: 74px; }
+.tc-seg { display: flex; gap: 4px; margin-left: auto; background: var(--panel2); border: 1px solid var(--bord); border-radius: 999px; padding: 3px; }
+.tc-seg button { font: 600 11.5px 'Outfit', sans-serif; color: var(--dim); background: transparent; border: 0; cursor: pointer; padding: 5px 12px; border-radius: 999px; transition: color var(--tc-fast), background var(--tc-fast); }
+.tc-seg button.on { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); }
+.tc-seg.tc-seg-sm { flex-wrap: wrap; justify-content: flex-end; max-width: 210px; }
+.tc-seg.tc-seg-sm button { padding: 4px 9px; font-size: 11px; }
+
+.tc-slider { display: flex; align-items: center; gap: 10px; }
+.tc-slider input[type="range"] { -webkit-appearance: none; appearance: none; width: 130px; height: 5px; border-radius: 999px; background: var(--panel2); }
+.tc-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--a-1); cursor: pointer; border: 2px solid var(--bg0); }
+.tc-slider input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%; background: var(--a-1); cursor: pointer; border: 2px solid var(--bg0); }
+.tc-val { font: 600 12px 'JetBrains Mono', monospace; color: var(--a-1); min-width: 26px; text-align: right; }
+.tc-row select { font: 500 12.5px 'Outfit', sans-serif; color: var(--txt); background: var(--panel2); border: 1px solid var(--bord); border-radius: 8px; padding: 7px 11px; cursor: pointer; outline: none; }
+
+.tc-perf { display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--bord); background: linear-gradient(120deg, color-mix(in srgb, var(--a-2) 16%, transparent), transparent); }
+.tc-perf-fps { font: 600 26px 'JetBrains Mono', monospace; color: var(--a-1); line-height: 1; }
+.tc-perf-txt b { display: block; font-size: 13.5px; color: var(--txt); }
+.tc-perf-txt i { font-style: normal; font-size: 11.5px; color: var(--dim); }
+.tc-badge { margin-left: auto; font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; color: var(--a-1); border: 1px solid var(--a-2); border-radius: 999px; padding: 4px 11px; text-transform: uppercase; }
+.tc-deep-only { display: none; }
+#tc-root[data-theme="deep"] .tc-deep-only { display: flex; }
+#tc-root[data-theme="deep"] .tc-deep-wrap.tc-deep-only { display: block; }
+.tc-normal-only { display: block; }
+#tc-root[data-theme="deep"] .tc-normal-only { display: none; }
+.tc-perf-note { font-size: 11.5px; color: var(--a-1); min-height: 15px; margin: 4px 2px 8px; }
+
+/* section label (used across Interface / Performance panels) */
+.tc-seclabel { font: 500 10.5px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.tc-apply { margin-top: 14px; width: 100%; font: 600 13px 'Outfit', sans-serif; color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border: 0; border-radius: 10px; padding: 11px; cursor: pointer; box-shadow: 0 8px 22px -10px var(--glow); transition: transform var(--tc-fast), filter var(--tc-fast), box-shadow var(--tc-fast); }
+.tc-apply:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 28px -10px var(--glow); }
+.tc-apply:active { transform: translateY(0); }
+
+.tc-foot { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--bord); }
+.tc-foot-label { font-size: 12.5px; color: var(--dim); }
+.tc-keybind { font: 600 12.5px 'JetBrains Mono', monospace; color: var(--a-1); background: var(--panel2); border: 1px solid var(--bord); border-radius: 8px; padding: 7px 13px; cursor: pointer; min-width: 92px; text-align: center; transition: all var(--tc-fast); }
+.tc-keybind:hover { border-color: var(--a-2); }
+.tc-keybind.listening { color: var(--bg0); background: var(--a-1); border-color: transparent; }
+.tc-foot-hint { font-size: 11px; color: var(--dim); }
+.tc-spacer { margin-left: auto; }
+.tc-done { font: 600 13px 'Outfit', sans-serif; color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border: 0; border-radius: 10px; padding: 10px 22px; cursor: pointer; box-shadow: 0 8px 22px -10px var(--glow); transition: transform var(--tc-fast), filter var(--tc-fast), box-shadow var(--tc-fast); }
+.tc-done:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 28px -10px var(--glow); }
+.tc-done:active { transform: translateY(0); }
+
+/* ---------- search ---------- */
+.tc-search-wrap { position: relative; margin: 2px 2px 12px; }
+.tc-search { width: 100%; font: 500 12.5px 'Outfit', sans-serif; color: var(--txt); background: var(--panel2);
+  border: 1px solid var(--bord); border-radius: 9px; padding: 9px 12px 9px 32px; outline: none; transition: border-color var(--tc-fast); }
+.tc-search:focus { border-color: var(--a-2); }
+.tc-search-ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 12px; pointer-events: none; }
+.tc-search-empty { font-size: 12px; color: var(--dim); padding: 20px 8px; text-align: center; }
+.tc-body.searching .tc-panel { display: none; }
+.tc-body.searching .tc-panel.tc-search-hit { display: block; }
+.tc-body.searching .tc-cats { display: none; }
+/* search mode: sidebar is hidden, so collapse its column and give panels full width */
+.tc-body.searching { grid-template-columns: 1fr; }
+.tc-body.searching .tc-panels { grid-column: 1 / -1; }
+[data-searchmiss] { display: none !important; }
+
+/* ---------- HUD data readouts (coords / direction / ping / armor / potions / held item) ---------- */
+.tc-hud-box { position: absolute; font: 600 12px 'JetBrains Mono', monospace; color: var(--a-1);
+  background: var(--panel); border: 1px solid var(--bord); border-radius: 7px; padding: 6px 10px; line-height: 1.5; }
+#tc-coords { top: 18px; left: 18px; }
+#tc-direction { top: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
+#tc-ping { top: 18px; right: 18px; }
+#tc-armor { top: 56px; right: 18px; display: flex; gap: 8px; padding: 8px 10px; }
+.tc-armor-slot { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 30px; }
+.tc-armor-slot b { font-size: 10px; color: var(--dim); font-weight: 600; }
+.tc-armor-slot i { font-style: normal; font-size: 11px; }
+.tc-armor-slot i.low { color: #e0715a; }
+#tc-potions { position: absolute; bottom: 130px; right: 18px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.tc-potion-row { display: flex; align-items: center; gap: 7px; background: var(--panel); border: 1px solid var(--bord); border-radius: 7px; padding: 5px 10px; font-size: 11.5px; }
+.tc-potion-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--a-1); box-shadow: 0 0 6px var(--glow); flex: 0 0 auto; }
+#tc-helditem { bottom: 128px; left: 50%; transform: translateX(-50%); text-align: center; }
+#tc-sprint { top: 56px; left: 18px; }
+#tc-root.hud-right #tc-sprint { left: auto; right: 18px; }
+#tc-sneak { top: 84px; left: 18px; }
+#tc-root.hud-right #tc-sneak { left: auto; right: 18px; }
+#tc-root.hud-right #tc-helditem { left: 50%; right: auto; }
+#tc-root.hud-right #tc-coords { left: auto; right: 18px; }
+#tc-root.hud-right #tc-armor { right: auto; left: 18px; }
+#tc-root.hud-right #tc-potions { right: auto; left: 18px; align-items: flex-start; }
+#tc-fpsgraph { bottom: 18px; left: 50%; transform: translateX(-50%); padding: 6px; }
+#tc-fpsgraph canvas { display: block; }
+#tc-perfmon { top: 60px; left: 18px; display: flex; flex-direction: column; gap: 2px; min-width: 108px; }
+#tc-perfmon .tc-pm-row { display: flex; justify-content: space-between; gap: 14px; }
+#tc-perfmon .tc-pm-row span:last-child { color: var(--txt); }
+
+/* ---------- HUD edit mode (drag to reposition) ---------- */
+#tc-root.hud-editing .tc-hud-box, #tc-root.hud-editing #tc-keystrokes,
+#tc-root.hud-editing #tc-cps, #tc-root.hud-editing #tc-fps, #tc-root.hud-editing #tc-potions {
+  outline: 1px dashed var(--a-1); outline-offset: 3px; cursor: grab; pointer-events: auto; user-select: none;
+}
+#tc-root.hud-editing .tc-hidden { display: none !important; } /* keep disabled HUD elements hidden in edit mode */
+#tc-root.hud-editing .tc-hud-drag-active { cursor: grabbing; outline-color: var(--a-hi); box-shadow: 0 0 0 3px var(--glow); }
+.tc-editbar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 2147483001;
+  display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--bord); border-radius: 999px;
+  padding: 9px 9px 9px 18px; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.6); pointer-events: auto; }
+.tc-editbar span { font: 600 12px 'Outfit', sans-serif; color: var(--txt); }
+.tc-editbar button { font: 600 12px 'Outfit', sans-serif; border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer; transition: filter var(--tc-fast); }
+.tc-editbar button:hover { filter: brightness(1.1); }
+.tc-editbar .tc-eb-reset { background: var(--panel2); color: var(--dim); border: 1px solid var(--bord); }
+.tc-editbar .tc-eb-done { background: linear-gradient(180deg,var(--a-1),var(--a-2)); color: var(--bg0); }
+
+/* ---------- keybind manager ---------- */
+.tc-kb-row { display: flex; align-items: center; gap: 14px; padding: 10px 8px; }
+.tc-kb-row .tc-lab { flex: 1; }
+.tc-kb-warn { font-size: 11px; color: #e0715a; margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { #tc-root * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+
+    `;
+  function ensureStyle() {
+    if (document.getElementById('tc-root-style')) return;
+    try {
+      var st = document.createElement('style');
+      st.id = 'tc-root-style';
+      st.textContent = TC_ROOT_CSS;
+      (document.head || document.documentElement).appendChild(st);
+    } catch (e) {}
+  }
+  function relocateAndBoot() {
+    ensureStyle();
+    try {
+      var el = document.getElementById('tc-root');
+      if (el && el.parentNode !== document.documentElement) {
+        document.documentElement.appendChild(el); // move out of <body> so the engine can't wipe it
+      }
+    } catch (e) {}
+    try { init(); } catch (e) { console.error('[TreasureClient] overlay init failed (game unaffected):', e); }
+    // Watchdog: if the engine (or anything) detaches our overlay, put it back.
+    try {
+      setInterval(function () {
+        var el = document.getElementById('tc-root');
+        if (el && !document.documentElement.contains(el)) {
+          try { document.documentElement.appendChild(el); } catch (e) {}
+        }
+      }, 1000);
+    } catch (e) {}
+  }
+
+  function boot() { relocateAndBoot(); }
+  if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(boot, 0);
+  else window.addEventListener('DOMContentLoaded', boot);
+  // Also try again after full load, since the engine boots on window 'load'
+  // and clears <body> then — this guarantees we end up on top afterward.
+  window.addEventListener('load', function () { setTimeout(relocateAndBoot, 1200); });
+
+  function init() {
+    var root = document.getElementById('tc-root');
+    if (!root) return;
+    if (root.__tcInited) return; // don't double-initialize when called again after load
+    root.__tcInited = true;
+
+    var LS = 'treasureClient.settings';
+    var defaults = {
+      mode:'normal', menuKeyCode:'ShiftRight', menuKeyLabel:'Right Shift',
+      crosshair:false, crosshairStyle:'cross', crosshairSize:22, crosshairThickness:2, crosshairGap:3, crosshairColor:'theme', crosshairOpacity:100, guiAnim:true,
+      keystrokes:false, ksShowMouse:'1', cps:false, fps:false, hudPos:'left', fullbright:false,
+      toggleSprint:false, toggleSneak:false, sprintMode:'always',
+      sprintToggleKeyCode:null, sprintToggleKeyLabel:'Unbound',
+      sneakToggleKeyCode:null, sneakToggleKeyLabel:'Unbound',
+      // new HUD mods — all backed by real, live game state (see TreasureHud.java bridge)
+      coords:false, coordPrecision:'1', direction:false, dirMode:'cardinal', ping:false,
+      armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
+      // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
+      hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
+      noParticles:false, noHurtCam:false, tntTimer:false,
+      pauseUnfocused:false,
+      zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
+      resolutionScale:100,
+      hudPositions:{}
+    };
+    var state = load();
+    function load() {
+      try { var s = JSON.parse(localStorage.getItem(LS)); s = Object.assign({}, defaults, s || {}); }
+      catch (e) { var s = Object.assign({}, defaults); }
+      // Sync mode with the Java main menu, which stores it at
+      // localStorage["_eaglercraft_1.12.tcmode"] (Base64 of one byte: 1=deep sea).
+      try {
+        var raw = localStorage.getItem('_eaglercraft_1.12.tcmode');
+        if (raw) { var by = atob(raw); if (by.length > 0) s.mode = (by.charCodeAt(0) === 1) ? 'deep' : 'normal'; }
+      } catch (e) {}
+      return s;
+    }
+    // Write our mode back to the shared key so the Java menu agrees.
+    function syncModeToEngine() { /* Deep Sea mode removed — no-op */ }
+
+    // FPS Booster toggle: write the tcfps flag the Java side reads (it applies the
+    // lean video settings + restores them when off), and show a brief loading
+    // screen while the world rebuilds.
+    function save() { try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {} }
+
+    /* ============================================================
+       REAL performance control.
+       The engine reads its graphics options from
+       localStorage["_eaglercraft_1.12.g"] — a Base64'd plain-text
+       options file (renderDistance:N, particles:N, fancyGraphics:
+       true/false, ao:0|2, renderClouds:true/false/fast, maxFps:N,
+       fov:F ...). We merge our performance profile into whatever
+       options already exist, so switching modes genuinely changes
+       how the game renders on the NEXT world load — same mechanism
+       the in-game Video Settings screen uses, just driven by us.
+       ============================================================ */
+    var OPT_KEY = '_eaglercraft_1.12.g';
+    // per-mode + experimental performance profiles (only keys we set are touched)
+    function perfProfile() {
+      var deep = state.mode === 'deep';
+      var prof;
+      if (!deep) {
+        // Normal: balanced, good-looking. Never forced laggy.
+        prof = { renderDistance: 8, particles: 0, fancyGraphics: 'true', ao: '2', renderClouds: 'true', maxFps: '260', bobView: 'true', entityShadows: 'true', mipmapLevels: '4' };
+      } else {
+        // Deep Sea: experimental performance path. Aggressive but playable.
+        prof = { renderDistance: 5, particles: 1, fancyGraphics: 'false', ao: '0', renderClouds: 'false', maxFps: '260', bobView: 'true', entityShadows: 'false', mipmapLevels: '0' };
+        if (state.expChunks)   prof.renderDistance = 3;         // ultra-short render distance
+        if (state.expNoParticles) prof.particles = 2;           // particles: minimal
+        if (state.expNoClouds) prof.renderClouds = 'false';
+        if (state.expNoBob)    prof.bobView = 'false';
+        if (state.expFov)      prof.fov = '0.75';               // wider FOV, feels faster (0..1 -> 70..110)
+      }
+      // Fullbright: drive the engine's gamma very high (works in both modes).
+      if (state.fullbright) prof.gamma = '1000.0';
+      else prof.gamma = '1.0';
+      return prof;
+    }
+    function b64encodeStr(str) {
+      var bytes = new TextEncoder().encode(str), bin = '';
+      for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return btoa(bin);
+    }
+    function b64decodeStr(b64) {
+      try { var bin = atob(b64); var bytes = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
+      catch (e) { return ''; }
+    }
+    // Treasure Client no longer overrides the game's video options (render
+    // distance, particles, graphics, clouds, FOV, framerate cap…) — those are
+    // the game's own Video Settings and it was wrong to silently rewrite them.
+    // The ONLY engine option we still drive is Fullbright, which has no in-game
+    // equivalent: it pushes gamma very high (and restores it to normal when off).
+    function applyFullbrightToEngine() {
+      try {
+        var existing = localStorage.getItem(OPT_KEY);
+        var lines = existing ? b64decodeStr(existing).split('\n') : [];
+        var map = {};
+        lines.forEach(function (ln) { var i = ln.indexOf(':'); if (i > 0) map[ln.substring(0, i)] = ln.substring(i + 1); });
+        if (!map['version']) map['version'] = '1343';
+        map['gamma'] = state.fullbright ? '1000.0' : '1.0';
+        var out = Object.keys(map).map(function (k) { return k + ':' + map[k]; }).join('\n') + '\n';
+        localStorage.setItem(OPT_KEY, b64encodeStr(out));
+        return true;
+      } catch (e) { return false; }
+    }
+    // kept as an alias so existing call sites keep working, but it now ONLY
+    // applies Fullbright — nothing else.
+    function applyPerfToEngine() { return applyFullbrightToEngine(); }
+
+    /* ============================================================
+       Toggle Sprint / Toggle Sneak are now handled by the NATIVE
+       Java module (TreasureMods.java) which sets the real keybind
+       state each tick — reliable, and can't trip our own hotkey.
+       Here we just persist the flags to the storage key the Java
+       side reads: localStorage["_eaglercraft_1.12.tcmods"], a plain
+       "k=v,k=v" string.
+       ============================================================ */
+    function writeModsToEngine() {
+      try {
+        var parts = [
+          'sprint=' + (state.toggleSprint ? 1 : 0),
+          'sprintMode=' + (state.sprintMode === 'doubletap' ? 1 : 0),
+          'sneak=' + (state.toggleSneak ? 1 : 0),
+          'hitbox=' + (state.hitboxes ? 1 : 0),
+          'hbPlayers=' + (state.hitboxPlayers ? 1 : 0),
+          'hbMobs=' + (state.hitboxMobs ? 1 : 0),
+          'hbAnimals=' + (state.hitboxAnimals ? 1 : 0),
+          'hbOther=' + (state.hitboxOther ? 1 : 0),
+          'pauseUnfocused=' + (state.pauseUnfocused ? 1 : 0),
+          'zoomLevel=' + (state.zoomLevel || 30),
+          'smoothZoom=' + (state.smoothZoom ? 1 : 0),
+          'zoomSpeed=' + (state.zoomSpeed || 8),
+          'noParticles=' + (state.noParticles ? 1 : 0),
+          'noHurtCam=' + (state.noHurtCam ? 1 : 0),
+          'tntTimer=' + (state.tntTimer ? 1 : 0)
+        ];
+        localStorage.setItem('_eaglercraft_1.12.tcmods', btoa(parts.join(',')));
+      } catch (e) {}
+    }
+
+
+    /* ---------- element refs ---------- */
+    var gui = document.getElementById('tc-gui');
+    var $ = function (s, r) { return (r || root).querySelector(s); };
+    var $$ = function (s, r) { return Array.prototype.slice.call((r || root).querySelectorAll(s)); };
+
+    /* ---------- theme / mode ---------- */
+    function applyMode() {
+      // Deep Sea mode removed — the client is single-theme (Normal / gold).
+      root.setAttribute('data-theme', 'normal');
+    }
+    // (mode toggle buttons removed — no click handlers needed)
+
+    /* ---------- external open request ----------
+       The Java main menu "Mod Menu" button sets tcopen=1 to ask us to open. */
+    function pollSharedMode() {
+      // Java main menu "Mod Menu" button sets tcopen=1 to ask us to open. This is
+      // the always-available way in, so an unbound hotkey can never lock you out.
+      try {
+        var raw = localStorage.getItem('_eaglercraft_1.12.tcopen');
+        if (raw) {
+          var by = atob(raw);
+          if (by.length > 0 && by.charCodeAt(0) === 1) {
+            localStorage.removeItem('_eaglercraft_1.12.tcopen');
+            if (!gui.classList.contains('open')) openGui();
+          }
+        }
+      } catch (e) {}
+    }
+    function flashPerfNote() {
+      var n = $('#tc-perf-note');
+      if (!n) return;
+      n.textContent = 'Saved. Click “Apply & Reload” to see the new framerate now.';
+      clearTimeout(flashPerfNote._t);
+      flashPerfNote._t = setTimeout(function () { n.textContent = ''; }, 5000);
+    }
+
+    /* ---------- open / close ---------- */
+    function openGui() {
+      gui.classList.add('open'); root.setAttribute('aria-hidden', 'false'); if (root.__tcBgStart) root.__tcBgStart();
+      // Ask the Java side to open the in-game menu so the world pauses (SP) and
+      // the mouse is freed — no more needing to press Escape after the hotkey.
+      try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(1))); } catch (e) {}
+      // Also release pointer lock immediately so the cursor is usable right away.
+      try { if (document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
+    }
+    function closeGui() {
+      // Bug fix: if a keybind was mid-capture, cancel it NOW so the next key the
+      // player presses (e.g. W) goes to gameplay and isn't swallowed as a rebind.
+      if (typeof bindListening !== 'undefined' && bindListening) {
+        bindListening = null;
+        $$('.tc-keybind.listening').forEach(function (o) { o.classList.remove('listening'); });
+        if (typeof refreshBindButtons === 'function') refreshBindButtons();
+      }
+      gui.classList.remove('open'); root.setAttribute('aria-hidden', 'true'); if (root.__tcBgStop) root.__tcBgStop();
+      // Ask Java to close the in-game menu we opened (return to the world).
+      try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(2))); } catch (e) {}
+      if (typeof window.__tcRefocusGame === 'function') window.__tcRefocusGame();
+    }
+    function toggleGui() { gui.classList.contains('open') ? closeGui() : openGui(); }
+    $('#tc-close').addEventListener('click', closeGui);
+    $('#tc-done').addEventListener('click', closeGui);
+    gui.addEventListener('mousedown', function (e) { if (e.target === gui) closeGui(); });
+
+    /* ---------- category tabs ---------- */
+    $$('.tc-cat').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        $$('.tc-cat').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var cat = btn.dataset.cat;
+        // "all" shows every panel; otherwise show every panel in the group.
+        $$('.tc-panel').forEach(function (p) {
+          var show = (cat === 'all') || (p.dataset.group === cat);
+          p.classList.toggle('active', show);
+        });
+      });
+    });
+    // default: show All
+    (function () {
+      var allBtn = $('.tc-cat[data-cat="all"]');
+      if (allBtn) allBtn.click();
+    })();
+
+    /* ---------- toggles / selects / sliders ---------- */
+    $$('.tc-sw[data-mod]').forEach(function (sw) {
+      var key = sw.dataset.mod;
+      if (state[key]) sw.classList.add('on');
+      sw.addEventListener('click', function () {
+        var on = !sw.classList.contains('on');
+        sw.classList.toggle('on', on);
+        state[key] = on; save();
+        if (key === 'fullbright') { applyFullbrightToEngine(); showModFlash('Fullbright ' + (state.fullbright ? 'ON' : 'OFF') + ' — reload to apply'); }
+        else if (key === 'toggleSprint' || key === 'toggleSneak' || key.indexOf('hitbox') === 0 || key === 'pauseUnfocused' || key === 'zoom' || key === 'noParticles' || key === 'noHurtCam' || key === 'tntTimer' || key === 'smoothZoom') { writeModsToEngine(); }
+        else applyHud();
+      });
+    });
+    $$('select[data-mod]').forEach(function (sel) {
+      var key = sel.dataset.mod;
+      if (state[key] != null) sel.value = state[key];
+      sel.addEventListener('change', function () { if (!sel.dataset.pending) { state[key] = sel.value; save(); applyHud(); } });
+    });
+    // sliders now persist to state and re-apply the HUD live (crosshair size/thickness/opacity)
+    $$('input[type="range"][data-mod]').forEach(function (sl) {
+      var key = sl.dataset.mod;
+      var out = sl.parentNode.querySelector('.tc-val');
+      if (state[key] != null) sl.value = state[key];
+      if (out) out.textContent = sl.value;
+      sl.addEventListener('input', function () {
+        if (out) out.textContent = sl.value;
+        state[key] = parseInt(sl.value, 10); save();
+        if (key === 'zoomLevel' || key === 'zoomSpeed') writeModsToEngine(); // zoom tuning lives in the Java bridge
+        else if (key === 'resolutionScale') applyResolutionScale();
+        else applyHud();
+      });
+    });
+
+    /* ---------- per-mod settings: gear expanders + segmented controls ---------- */
+    /* ---------- mod settings sub-page ---------- */
+    var guiPanel = $('#tc-gui-panel'), subPage = $('#tc-subpage'),
+        subTitle = $('#tc-subpage-title'), subBody = $('#tc-subpage-body'),
+        subBack = $('#tc-subback');
+    var subReturnCfg = null; // where to put the cfg back when leaving the sub-page
+    function openSubPage(gearKey, modName) {
+      var cfg = $('.tc-cfg[data-cfg="' + gearKey + '"]');
+      if (!cfg) return;
+      // remember cfg's original slot so Back can restore it exactly
+      subReturnCfg = { node: cfg, parent: cfg.parentNode, next: cfg.nextSibling };
+      subTitle.textContent = modName || 'Settings';
+      subBody.appendChild(cfg);       // move the real cfg into the page (keeps its handlers)
+      cfg.classList.add('open');
+      guiPanel.classList.add('tc-showsub');
+    }
+    function closeSubPage() {
+      if (subReturnCfg) {
+        subReturnCfg.node.classList.remove('open');
+        subReturnCfg.parent.insertBefore(subReturnCfg.node, subReturnCfg.next);
+        subReturnCfg = null;
+      }
+      guiPanel.classList.remove('tc-showsub');
+    }
+    subBack.addEventListener('click', closeSubPage);
+    $$('.tc-gear[data-gear]').forEach(function (g) {
+      // find this gear's mod name (the <b> in the same row)
+      var row = g.closest('.tc-row');
+      var nameEl = row ? row.querySelector('.tc-lab b') : null;
+      var modName = nameEl ? nameEl.textContent : 'Settings';
+      g.addEventListener('click', function (e) { e.stopPropagation(); openSubPage(g.dataset.gear, modName); });
+      // right-click ANYWHERE on the mod box opens its settings sub-page
+      var box = g.closest('.tc-mod');
+      if (box) {
+        box.addEventListener('contextmenu', function (e) { e.preventDefault(); openSubPage(g.dataset.gear, modName); });
+      }
+    });
+    $$('.tc-seg[data-seg]').forEach(function (seg) {
+      var key = seg.dataset.seg;
+      $$('button', seg).forEach(function (b) {
+        b.classList.toggle('on', b.dataset.val === String(state[key]));
+        b.addEventListener('click', function () {
+          state[key] = b.dataset.val;
+          $$('button', seg).forEach(function (x) { x.classList.toggle('on', x === b); });
+          save();
+          writeModsToEngine(); // sprintMode lives in the Java bridge
+          applyHud();          // ksShowMouse / coordPrecision / dirMode are HUD-side
+        });
+      });
+    });
+
+    /* ---------- search across mods / settings / categories ---------- */
+    (function () {
+      var input = $('#tc-search'), body = $('#tc-body');
+      if (!input || !body) return;
+      // The Eaglercraft engine attaches its own key listeners high up (document/
+      // window) and will happily swallow keystrokes meant for this search box.
+      // Stop key events from propagating OUT of the input to the engine, but let
+      // the input handle them itself. stopImmediatePropagation on the element in
+      // the bubble phase keeps the character in the box and away from the game.
+      ['keydown', 'keyup', 'keypress'].forEach(function (evt) {
+        input.addEventListener(evt, function (e) { e.stopPropagation(); e.stopImmediatePropagation(); }, false);
+      });
+      // Make sure a click really focuses it (the engine can steal focus/pointer).
+      input.addEventListener('mousedown', function (e) { e.stopPropagation(); }, false);
+      input.addEventListener('click', function (e) { e.stopPropagation(); try { input.focus(); } catch (x) {} }, false);
+      // Build a search index: every .tc-mod / .tc-row gets a haystack from its
+      // labels, and each panel's category name is attached too.
+      var items = [];
+      $$('.tc-panel').forEach(function (panel) {
+        var cat = panel.dataset.panel || '';
+        $$('.tc-mod, .tc-row, .tc-kb-row', panel).forEach(function (el) {
+          if (el.closest('.tc-cfg')) return; // config sub-rows follow their parent
+          if (el.classList.contains('tc-mod') && el.querySelector('.tc-row, .tc-kb-row') && el.parentNode && el.parentNode.classList.contains('tc-mod')) return;
+          var text = (el.textContent || '').toLowerCase();
+          items.push({ el: el, panel: panel, hay: text + ' ' + cat });
+        });
+      });
+      function clearSearch() {
+        body.classList.remove('searching');
+        $$('.tc-panel').forEach(function (p) { p.classList.remove('tc-search-hit'); });
+        items.forEach(function (it) { it.el.removeAttribute('data-searchmiss'); });
+        var empty = $('#tc-search-empty'); if (empty) empty.remove();
+      }
+      input.addEventListener('input', function () {
+        var q = input.value.trim().toLowerCase();
+        if (!q) { clearSearch(); return; }
+        body.classList.add('searching');
+        var hitPanels = {};
+        var any = false;
+        items.forEach(function (it) {
+          var hit = it.hay.indexOf(q) !== -1;
+          it.el.toggleAttribute('data-searchmiss', !hit);
+          if (hit) { hitPanels[it.panel.dataset.panel] = it.panel; any = true; }
+        });
+        $$('.tc-panel').forEach(function (p) { p.classList.toggle('tc-search-hit', !!hitPanels[p.dataset.panel]); });
+        var empty = $('#tc-search-empty');
+        if (!any) {
+          if (!empty) { empty = document.createElement('div'); empty.id = 'tc-search-empty'; empty.className = 'tc-search-empty'; $('.tc-panels').appendChild(empty); }
+          empty.textContent = 'No mods match “' + input.value.trim() + '”.';
+        } else if (empty) { empty.remove(); }
+      });
+      // clear the search when a category is clicked
+      $$('.tc-cat').forEach(function (c) { c.addEventListener('click', function () { input.value = ''; clearSearch(); }); });
+    })();
+
+    /* ---------- HUD application ---------- */
+    var crosshair = $('#tc-crosshair'), keystrokes = $('#tc-keystrokes'), cpsEl = $('#tc-cps'), fpsEl = $('#tc-fps');
+    var coordsEl = $('#tc-coords'), dirEl = $('#tc-direction'), pingEl = $('#tc-ping'),
+        armorEl = $('#tc-armor'), potionsEl = $('#tc-potions'), heldEl = $('#tc-helditem'),
+        fpsGraphEl = $('#tc-fpsgraph'), perfMonEl = $('#tc-perfmon'), sprintEl = $('#tc-sprint'), sneakEl = $('#tc-sneak');
+    function crosshairShouldShow() {
+      // Only during actual gameplay (pointer locked to the canvas), never on menus.
+      var locked = !!(document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement);
+      return state.crosshair && locked;
+    }
+    function crosshairColorVal() {
+      // 'theme' follows the active mode accent; others are fixed colors
+      switch (state.crosshairColor) {
+        case 'white': return '#ffffff';
+        case 'red': return '#ff5555';
+        case 'green': return '#55ff55';
+        case 'cyan': return '#55ffff';
+        case 'black': return '#000000';
+        default: return getComputedStyle(root).getPropertyValue('--a-1').trim() || '#ffd76b';
+      }
+    }
+    function applyResolutionScale() {
+      // Write the render-resolution scale that PlatformInput reads each frame.
+      // 100 = native, lower = fewer pixels = higher FPS. Real optimization.
+      try {
+        var v = Math.max(30, Math.min(100, parseInt(state.resolutionScale, 10) || 100));
+        localStorage.setItem('_eaglercraft_1.12.tcres', btoa(String(v)));
+      } catch (e) {}
+    }
+    function applyCrosshairStyle() {
+      // size / thickness / gap / opacity / color all driven by settings
+      var s = state.crosshairSize || 22, t = state.crosshairThickness || 2,
+          o = (state.crosshairOpacity == null ? 100 : state.crosshairOpacity) / 100,
+          gap = (state.crosshairGap == null ? 3 : state.crosshairGap),
+          col = crosshairColorVal();
+      crosshair.style.width = s + 'px'; crosshair.style.height = s + 'px'; crosshair.style.opacity = o;
+      // arm length shrinks as gap grows so the crosshair stays within its box
+      var arm = Math.max(3, Math.round(s * 0.36) - gap);
+      if (state.crosshairStyle === 'dot') {
+        crosshair.style.background = col; crosshair.style.width = Math.max(3, t + 2) + 'px'; crosshair.style.height = Math.max(3, t + 2) + 'px'; crosshair.style.borderRadius = '50%';
+      } else if (state.crosshairStyle === 'tshape') {
+        crosshair.style.borderRadius = '0';
+        crosshair.style.background =
+          'linear-gradient(' + col + ',' + col + ') 50% 100%/' + t + 'px ' + arm + 'px no-repeat,' +
+          'linear-gradient(' + col + ',' + col + ') 0 50%/' + arm + 'px ' + t + 'px no-repeat,' +
+          'linear-gradient(' + col + ',' + col + ') 100% 50%/' + arm + 'px ' + t + 'px no-repeat';
+      } else {
+        crosshair.style.borderRadius = '0';
+        crosshair.style.background =
+          'linear-gradient(' + col + ',' + col + ') 50% 0/' + t + 'px ' + arm + 'px no-repeat,' +
+          'linear-gradient(' + col + ',' + col + ') 50% 100%/' + t + 'px ' + arm + 'px no-repeat,' +
+          'linear-gradient(' + col + ',' + col + ') 0 50%/' + arm + 'px ' + t + 'px no-repeat,' +
+          'linear-gradient(' + col + ',' + col + ') 100% 50%/' + arm + 'px ' + t + 'px no-repeat';
+      }
+    }
+    function applyHud() {
+      root.classList.toggle('hud-right', state.hudPos === 'right');
+      if (crosshairShouldShow()) { crosshair.classList.remove('tc-hidden'); applyCrosshairStyle(); }
+      else { crosshair.classList.add('tc-hidden'); }
+      keystrokes.classList.toggle('tc-hidden', !state.keystrokes);
+      // keystrokes: hide mouse+space rows when ksShowMouse is off
+      var showMouse = String(state.ksShowMouse) !== '0';
+      $$('#tc-keystrokes .tc-ks-row').forEach(function (row, idx) {
+        // rows: 0=W, 1=ASD, 2=LMB/RMB, 3=SPACE
+        if (idx >= 2) row.style.display = showMouse ? 'flex' : 'none';
+      });
+      cpsEl.classList.toggle('tc-hidden', !state.cps);
+      fpsEl.classList.toggle('tc-hidden', !state.fps);
+      coordsEl.classList.toggle('tc-hidden', !state.coords);
+      dirEl.classList.toggle('tc-hidden', !state.direction);
+      pingEl.classList.toggle('tc-hidden', !state.ping);
+      armorEl.classList.toggle('tc-hidden', !state.armorStatus);
+      potionsEl.classList.toggle('tc-hidden', !state.potionEffects);
+      heldEl.classList.toggle('tc-hidden', !state.heldItem);
+      fpsGraphEl.classList.toggle('tc-hidden', !state.fpsGraph);
+      perfMonEl.classList.toggle('tc-hidden', !state.perfMonitor);
+      sprintEl.classList.toggle('tc-hidden', !state.sprintStatus);
+      sneakEl.classList.toggle('tc-hidden', !state.sneakStatus);
+      applyHudPositions();
+    }
+    // re-evaluate crosshair whenever pointer-lock changes (entering/leaving gameplay)
+    ['pointerlockchange','mozpointerlockchange','webkitpointerlockchange'].forEach(function (ev) {
+      document.addEventListener(ev, applyHud, false);
+    });
+
+    /* ---------- custom HUD positions (persisted; applied over CSS defaults) ---------- */
+    var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps'];
+    function applyHudPositions() {
+      HUD_ELS.forEach(function (id) {
+        var el = document.getElementById(id); if (!el) return;
+        var p = state.hudPositions && state.hudPositions[id];
+        if (p && typeof p.left === 'number' && typeof p.top === 'number') {
+          el.style.left = p.left + 'px'; el.style.top = p.top + 'px';
+          el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.transform = 'none';
+        }
+      });
+    }
+
+    // Hide every in-game HUD element on the main menu / when not in a world.
+    // Keystrokes, CPS, FPS, coords, etc. are gameplay overlays — they should only
+    // appear once you're actually in a world (hud.active), never on the main menu.
+    // The layout editor is the one exception: it force-shows enabled elements so
+    // you can position them.
+    function applyHudVisibility() {
+      var editing = root.classList.contains('hud-editing');
+      var show = hud.active || editing;
+      root.classList.toggle('tc-nogame', !show);
+    }
+    var keyEls = {};
+    $$('#tc-keystrokes span[data-key]').forEach(function (el) { keyEls[el.dataset.key] = el; });
+    window.addEventListener('keydown', function (e) { if (keyEls[e.code]) keyEls[e.code].classList.add('down'); });
+    window.addEventListener('keyup', function (e) { if (keyEls[e.code]) keyEls[e.code].classList.remove('down'); });
+
+    /* ---------- Zoom (hold key) — drives the Java FOV multiplier via tczoom ---------- */
+    // Only zooms during actual gameplay (pointer locked, GUI closed) and only if
+    // the Zoom mod is enabled. Writing tczoom=1/0 is read by EntityRenderer.
+    var zoomHeld = false;
+    function zoomInGameplay() {
+      // In-game (hud.active from the Java bridge) with the menu closed. We key off
+      // the game bridge rather than pointer-lock, which is more reliable across
+      // browsers and matches when the FOV zoom is actually useful.
+      return state.zoom && hud.active && !gui.classList.contains('open');
+    }
+    function setZoom(on) {
+      if (on === zoomHeld) return;
+      zoomHeld = on;
+      try { localStorage.setItem('_eaglercraft_1.12.tczoom', btoa(String.fromCharCode(on ? 1 : 0))); } catch (e) {}
+    }
+    window.addEventListener('keydown', function (e) {
+      if (bindListening) return; // don't zoom while rebinding
+      if (state.zoomKeyCode && e.code === state.zoomKeyCode && zoomInGameplay()) { setZoom(true); }
+    }, true);
+    window.addEventListener('keyup', function (e) {
+      if (state.zoomKeyCode && e.code === state.zoomKeyCode) { setZoom(false); }
+    }, true);
+    // safety: drop zoom if the window blurs or the menu opens
+    window.addEventListener('blur', function () { setZoom(false); });
+
+    /* ---------- CPS + mouse keystrokes (real: press & release, both buttons) ---------- */
+    var clicks = [];
+    // Track true press/held/release for LMB & RMB so the keystrokes HUD lights up
+    // while a button is held (not just a 90ms blink), and CPS counts left clicks.
+    // Capture phase + both window and document so it still registers while the
+    // engine has pointer lock during gameplay.
+    function mouseDown(e) {
+      if (e.button === 0) { clicks.push(performance.now()); if (keyEls['MouseL']) keyEls['MouseL'].classList.add('down'); }
+      if (e.button === 2 && keyEls['MouseR']) keyEls['MouseR'].classList.add('down');
+    }
+    function mouseUp(e) {
+      if (e.button === 0 && keyEls['MouseL']) keyEls['MouseL'].classList.remove('down');
+      if (e.button === 2 && keyEls['MouseR']) keyEls['MouseR'].classList.remove('down');
+    }
+    // One listener pair on window (capture phase) — this already catches clicks
+    // during pointer-locked gameplay. Registering on document too would double-
+    // count every click (that was the "2 CPS per click" bug).
+    window.addEventListener('mousedown', mouseDown, true);
+    window.addEventListener('mouseup', mouseUp, true);
+    // safety: if focus is lost mid-hold, clear the held states
+    window.addEventListener('blur', function () { if (keyEls['MouseL']) keyEls['MouseL'].classList.remove('down'); if (keyEls['MouseR']) keyEls['MouseR'].classList.remove('down'); });
+
+    /* ============================================================
+       HUD data bridge — reads the REAL game state that the native
+       Java module (TreasureHud.java) publishes each tick to
+       localStorage["_eaglercraft_1.12.tchud"]. Everything shown by
+       Coordinates / Direction / Ping / Armor / Potions / Held Item
+       comes from here, so nothing is ever fabricated: if the Java
+       side hasn't reported a value (or reports active=0), the HUD
+       shows a placeholder instead of a made-up number.
+       ============================================================ */
+    var HUD_KEY = '_eaglercraft_1.12.tchud';
+    var hud = { active: false };
+    function readHudBridge() {
+      try {
+        var raw = localStorage.getItem(HUD_KEY);
+        if (!raw) { hud = { active: false }; return; }
+        var txt = b64decodeStr(raw);
+        var o = {};
+        txt.split('\n').forEach(function (ln) { var i = ln.indexOf('='); if (i > 0) o[ln.substring(0, i)] = ln.substring(i + 1); });
+        hud = o; hud.active = (o.active === '1');
+      } catch (e) { hud = { active: false }; }
+    }
+    function compass(yaw) {
+      // Minecraft yaw: 0=south(+Z), 90=west(-X), 180=north(-Z), 270=east(+X)
+      var dirs8 = ['S','SW','W','NW','N','NE','E','SE'];
+      var idx = Math.round(yaw / 45) % 8; if (idx < 0) idx += 8;
+      var card = dirs8[idx];
+      var axis = { S:'+Z', W:'-X', N:'-Z', E:'+X', SW:'', NW:'', NE:'', SE:'' }[card] || '';
+      return { card: card, axis: axis };
+    }
+    function fmtPrec(v) {
+      var n = parseFloat(v); if (isNaN(n)) return '—';
+      return (String(state.coordPrecision) === '0') ? String(Math.round(n)) : n.toFixed(1);
+    }
+    function updateDataHud() {
+      if (state.coords) {
+        if (hud.active) coordsEl.textContent = 'XYZ  ' + fmtPrec(hud.x) + '  ' + fmtPrec(hud.y) + '  ' + fmtPrec(hud.z);
+        else coordsEl.textContent = 'XYZ  — — —';
+      }
+      if (state.direction) {
+        if (hud.active && hud.yaw != null) {
+          var c = compass(parseFloat(hud.yaw));
+          dirEl.textContent = (state.dirMode === 'detailed' && c.axis) ? (c.card + ' (' + c.axis + ')') : c.card;
+        } else dirEl.textContent = '—';
+      }
+      if (state.ping) {
+        var p = hud.active ? parseInt(hud.ping, 10) : -1;
+        pingEl.textContent = (p != null && p >= 0) ? (p + ' ms') : 'ping n/a';
+      }
+      if (state.armorStatus) renderArmor();
+      if (state.potionEffects) renderPotions();
+      if (state.heldItem) renderHeld();
+      if (state.perfMonitor) renderPerfMon();
+      if (state.sprintStatus) renderSprint();
+      if (state.sneakStatus) renderSneak();
+    }
+    function barColor(frac) { return frac < 0.25 ? 'low' : ''; }
+    function renderArmor() {
+      var names = ['Helmet','Chest','Legs','Boots'];
+      if (!hud.active || !hud.armor) { armorEl.innerHTML = '<div class="tc-armor-slot"><i>—</i></div>'; return; }
+      var slots = hud.armor.split('~');
+      var html = '';
+      for (var i = 0; i < 4; i++) {
+        var s = slots[i] || '-';
+        if (s === '-') { html += '<div class="tc-armor-slot"><b>' + names[i] + '</b><i style="color:var(--dim)">—</i></div>'; continue; }
+        var parts = s.split('|'); var frac = parseFloat(parts[1]);
+        var dur = (frac >= 0) ? Math.round(frac * 100) + '%' : '✓';
+        html += '<div class="tc-armor-slot"><b>' + names[i] + '</b><i class="' + (frac >= 0 ? barColor(frac) : '') + '">' + dur + '</i></div>';
+      }
+      armorEl.innerHTML = html;
+    }
+    function renderPotions() {
+      if (!hud.active || !hud.potions) { potionsEl.innerHTML = ''; return; }
+      var rows = hud.potions.split('~').filter(Boolean);
+      if (!rows.length) { potionsEl.innerHTML = ''; return; }
+      potionsEl.innerHTML = rows.map(function (r) {
+        var p = r.split('|'); var name = p[0] || '?'; var amp = parseInt(p[1], 10) || 0; var secs = parseInt(p[2], 10) || 0;
+        var lvl = amp > 0 ? ' ' + (amp + 1) : '';
+        var mm = Math.floor(secs / 60), ss = secs % 60; var time = mm + ':' + (ss < 10 ? '0' : '') + ss;
+        return '<div class="tc-potion-row"><span class="tc-potion-dot"></span><span>' + name + lvl + '</span><span style="color:var(--dim)">' + time + '</span></div>';
+      }).join('');
+    }
+    function renderHeld() {
+      if (!hud.active || !hud.held || hud.held === '-') { heldEl.textContent = '—'; return; }
+      var p = hud.held.split('|'); var name = p[0] || '?'; var count = parseInt(p[1], 10) || 1; var frac = parseFloat(p[2]);
+      var txt = name + (count > 1 ? ' ×' + count : '');
+      if (frac >= 0) txt += '  ' + Math.round(frac * 100) + '%';
+      heldEl.textContent = txt;
+    }
+    function renderSprint() {
+      var on = (hud.sprintmode === 'toggled');
+      sprintEl.textContent = 'Sprint [' + (on ? 'ON' : 'OFF') + ']';
+    }
+    function renderSneak() {
+      var on = (hud.sneakmode === 'toggled');
+      sneakEl.textContent = 'Sneak [' + (on ? 'ON' : 'OFF') + ']';
+    }
+    function renderPerfMon() {
+      var pingTxt = (hud.active && parseInt(hud.ping, 10) >= 0) ? (parseInt(hud.ping, 10) + ' ms') : 'n/a';
+      perfMonEl.innerHTML =
+        '<div class="tc-pm-row"><span>FPS</span><span>' + fpsVal + '</span></div>' +
+        '<div class="tc-pm-row"><span>Frame</span><span>' + (fpsVal > 0 ? (1000 / fpsVal).toFixed(1) : '—') + ' ms</span></div>' +
+        '<div class="tc-pm-row"><span>Ping</span><span>' + pingTxt + '</span></div>';
+    }
+
+    /* ---------- FPS graph (real recent history) ---------- */
+    var fpsHistory = [];
+    function drawFpsGraph() {
+      var cv = document.getElementById('tc-fpsgraph-cv'); if (!cv) return;
+      var ctx = cv.getContext('2d'); var W = cv.width, H = cv.height;
+      ctx.clearRect(0, 0, W, H);
+      if (!fpsHistory.length) return;
+      var max = Math.max(60, Math.max.apply(null, fpsHistory));
+      var css = getComputedStyle(root);
+      var a1 = css.getPropertyValue('--a-1').trim() || '#ffd76b';
+      ctx.beginPath();
+      for (var i = 0; i < fpsHistory.length; i++) {
+        var x = (i / (fpsHistory.length - 1 || 1)) * W;
+        var y = H - (fpsHistory[i] / max) * (H - 2) - 1;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = a1; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+      ctx.globalAlpha = 0.18; ctx.fillStyle = a1; ctx.fill(); ctx.globalAlpha = 1;
+    }
+
+    /* ---------- FPS (real: page rAF) + CPS + data-HUD readout loop ---------- */
+    var frames = 0, lastFpsT = performance.now(), fpsVal = 0, lastData = 0, lastHudRead = 0, lastModePoll = 0;
+    function loop(now) {
+      frames++;
+      if (now - lastFpsT >= 500) {
+        fpsVal = Math.round(frames * 1000 / (now - lastFpsT)); frames = 0; lastFpsT = now;
+        if (state.fps) fpsEl.textContent = fpsVal + ' FPS';
+        var pf = $('#tc-perf-fps'); if (pf) pf.textContent = fpsVal; // REAL number in the perf panel
+        fpsHistory.push(fpsVal); if (fpsHistory.length > 70) fpsHistory.shift();
+        if (state.fpsGraph) drawFpsGraph();
+      }
+      while (clicks.length && now - clicks[0] > 1000) clicks.shift();
+      if (state.cps) cpsEl.textContent = clicks.length + ' CPS';
+      // read the Java HUD bridge ~5x/sec and refresh the data-driven readouts
+      if (now - lastHudRead >= 200) { readHudBridge(); lastHudRead = now; applyHudVisibility(); }
+      if (now - lastData >= 100) { updateDataHud(); lastData = now; }
+      if (now - lastModePoll >= 300) { pollSharedMode(); lastModePoll = now; }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    /* ============================================================
+       Keybind Manager — one capture system for every Treasure
+       Client hotkey. Buttons carry data-bindkey="menu|sprintToggle
+       |sneakToggle"; clicking one listens for the next key, checks
+       for conflicts, and stores <name>KeyCode/<name>KeyLabel in
+       state (the Mod Menu key stays in menuKeyCode/menuKeyLabel for
+       backwards-compat). In-game the hotkeys flip the matching mod.
+       ============================================================ */
+    var BINDS = {
+      menu:        { code: 'menuKeyCode',        label: 'menuKeyLabel' },
+      zoom:        { code: 'zoomKeyCode',        label: 'zoomKeyLabel' },
+      sprintToggle:{ code: 'sprintToggleKeyCode',label: 'sprintToggleKeyLabel' },
+      sneakToggle: { code: 'sneakToggleKeyCode', label: 'sneakToggleKeyLabel' }
+    };
+    function labelFor(code) {
+      if (!code) return 'Unbound';
+      var map = { KeyA:'A',KeyB:'B',KeyC:'C',KeyD:'D',KeyE:'E',KeyF:'F',KeyG:'G',KeyH:'H',KeyI:'I',KeyJ:'J',KeyK:'K',KeyL:'L',KeyM:'M',KeyN:'N',KeyO:'O',KeyP:'P',KeyQ:'Q',KeyR:'R',KeyS:'S',KeyT:'T',KeyU:'U',KeyV:'V',KeyW:'W',KeyX:'X',KeyY:'Y',KeyZ:'Z', ShiftRight:'Right Shift', ShiftLeft:'Left Shift', ControlLeft:'Left Ctrl', ControlRight:'Right Ctrl', AltLeft:'Left Alt', AltRight:'Right Alt', Backslash:'\\', Backquote:'`', Minus:'-', Equal:'=', Tab:'Tab', BracketLeft:'[', BracketRight:']', Semicolon:';', Quote:"'", Comma:',', Period:'.', Slash:'/' };
+      if (map[code]) return map[code];
+      if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return code;
+      if (/^Key([A-Z])$/.test(code)) return code.slice(3);
+      if (/^Digit(\d)$/.test(code)) return code.slice(5);
+      return code;
+    }
+    function isSafeMenuKey(code) {
+      // The Mod Menu hotkey is captured in the capture phase and swallowed with
+      // stopImmediatePropagation before the game sees it, so letters/numbers are
+      // fine — you just can't bind it to a couple of keys that would trap you in
+      // the menu (Escape closes it) or a modifier that fires constantly.
+      if (['Escape'].indexOf(code) !== -1) return false;
+      return true;
+    }
+    function bindConflict(name, code) {
+      if (!code) return null;
+      var hit = null;
+      Object.keys(BINDS).forEach(function (n) { if (n !== name && state[BINDS[n].code] === code) hit = n; });
+      return hit;
+    }
+    function refreshBindButtons() {
+      $$('.tc-keybind[data-bindkey]').forEach(function (btn) {
+        var name = btn.dataset.bindkey; var b = BINDS[name]; if (!b) return;
+        btn.textContent = state[b.label] || labelFor(state[b.code]);
+      });
+    }
+    var bindListening = null;
+    $$('.tc-keybind[data-bindkey]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        // cancel any other listening button
+        $$('.tc-keybind.listening').forEach(function (o) { o.classList.remove('listening'); refreshBindButtons(); });
+        bindListening = btn.dataset.bindkey;
+        btn.classList.add('listening'); btn.textContent = 'Press a key…';
+      });
+    });
+    function setBind(name, code) {
+      var b = BINDS[name]; if (!b) return;
+      // The Mod Menu key is required — refuse to clear it (only allow a real key).
+      if (name === 'menu' && !code) return;
+      state[b.code] = code; state[b.label] = labelFor(code);
+      if (name === 'menu') { state.menuKeyCode = code; state.menuKeyLabel = labelFor(code); }
+      save(); refreshBindButtons();
+    }
+    var kbWarn = $('#tc-kb-warn');
+    function showBindWarn(msg) {
+      // show in the Movement panel's inline warning if visible, but always also
+      // surface a floating toast so rebinding from the Interface panel (or the
+      // footer) gives feedback too.
+      if (kbWarn) { kbWarn.textContent = msg || ''; if (msg) { clearTimeout(showBindWarn._t); showBindWarn._t = setTimeout(function () { kbWarn.textContent = ''; }, 2600); } }
+      if (msg && typeof showModFlash === 'function') showModFlash(msg);
+    }
+
+    // GUARD: when the user is typing in one of the overlay's own text inputs
+    // (search box, relay code fields, etc.), keep the keystrokes inside that
+    // input and stop the game engine from capturing them as movement/hotkeys.
+    // Without this the engine swallows the letters and you can't type. Runs in
+    // capture phase before everything else. We DON'T stop the bind-capture flow.
+    function tcIsTypingTarget(e) {
+      var t = e.target;
+      if (!t) return false;
+      var tag = t.tagName;
+      return (tag === 'INPUT' || tag === 'TEXTAREA' || t.isContentEditable) && root.contains(t);
+    }
+    ['keydown', 'keyup', 'keypress'].forEach(function (evt) {
+      window.addEventListener(evt, function (e) {
+        // don't intercept while rebinding a key (that flow wants the raw event)
+        if (bindListening) return;
+        if (tcIsTypingTarget(e)) {
+          // The key belongs to one of our text fields. We must NOT stopPropagation
+          // in this window capture-phase listener — that would stop the event
+          // before it descends to the input itself (the classic "can't type"
+          // bug). Instead the input carries its own bubble-phase handlers that
+          // stopImmediatePropagation to keep the key away from the game engine
+          // once the input has processed it. Here we simply bow out.
+          return;
+        }
+      }, true);
+    });
+
+    window.addEventListener('keydown', function (e) {
+      if (bindListening) {
+        e.preventDefault(); e.stopPropagation();
+        var name = bindListening; bindListening = null;
+        $$('.tc-keybind.listening').forEach(function (o) { o.classList.remove('listening'); });
+        if (e.code === 'Escape') { refreshBindButtons(); return; }
+        if (name === 'menu' && !isSafeMenuKey(e.code)) {
+          showBindWarn('That key clashes with movement/typing — pick another for the Mod Menu.');
+          refreshBindButtons(); return;
+        }
+        var conflict = bindConflict(name, e.code);
+        if (conflict) { showBindWarn('Already bound to “' + conflict + '”. Clear it first.'); refreshBindButtons(); return; }
+        setBind(name, e.code);
+        return;
+      }
+      // If the user is typing in one of our text fields, the key belongs to the
+      // field — don't treat it as a hotkey (so e.g. a search containing the menu
+      // key doesn't close the menu, and letters aren't eaten).
+      if (tcIsTypingTarget(e)) return;
+      // Mod Menu open/close
+      if (state.menuKeyCode && e.code === state.menuKeyCode) { e.preventDefault(); e.stopImmediatePropagation(); toggleGui(); return; }
+      // Toggle Sprint / Toggle Sneak are driven by the player's REAL sprint/sneak
+      // keys inside the Java module (so a disabled mod's key does nothing, and the
+      // latch is handled there) — no separate overlay hotkeys needed here.
+      if (e.code === 'Escape' && gui.classList.contains('open')) { e.preventDefault(); closeGui(); }
+    }, true);
+
+    function syncModToggleSwitch(key) {
+      var sw = $('.tc-sw[data-mod="' + key + '"]'); if (sw) sw.classList.toggle('on', !!state[key]);
+    }
+    // tiny transient on-screen flash when a hotkey flips a mod
+    var flashEl = null;
+    function showModFlash(msg) {
+      if (!flashEl) {
+        flashEl = document.createElement('div');
+        flashEl.style.cssText = 'position:fixed;left:50%;top:12%;transform:translateX(-50%);z-index:2147483002;font:600 14px Outfit,sans-serif;color:var(--bg0);background:linear-gradient(180deg,var(--a-1),var(--a-2));padding:8px 18px;border-radius:999px;box-shadow:0 8px 22px -8px var(--glow);pointer-events:none;opacity:0;transition:opacity .18s;';
+        root.appendChild(flashEl);
+      }
+      flashEl.textContent = msg; flashEl.style.opacity = '1';
+      clearTimeout(showModFlash._t); showModFlash._t = setTimeout(function () { flashEl.style.opacity = '0'; }, 1100);
+    }
+    refreshBindButtons();
+
+    /* ---------- Interface panel: clear / reset the Mod Menu key ---------- */
+    (function () {
+      var def = $('#tc-kb-default');
+      // Note: the Mod Menu key can be CHANGED but never cleared — there's
+      // deliberately no "clear" control for it, so the menu can always be reopened.
+      if (def) def.addEventListener('click', function () { setBind('menu', 'ShiftRight'); });
+
+    })();
+
+    /* ---------- Custom HUD Editor (drag to reposition, persisted) ---------- */
+    (function () {
+      var editBtn = $('#tc-hud-edit'), bar = $('#tc-editbar'),
+          resetBtn = $('#tc-eb-reset'), doneBtn = $('#tc-eb-done');
+      var editing = false, drag = null;
+      // which state flag enables each HUD element — edit mode only reveals the
+      // ones the user actually has turned on (no phantom keystrokes/coords/etc.)
+      var HUD_ENABLE = {
+        'tc-coords':'coords', 'tc-direction':'direction', 'tc-ping':'ping',
+        'tc-armor':'armorStatus', 'tc-potions':'potionEffects', 'tc-helditem':'heldItem',
+        'tc-fpsgraph':'fpsGraph', 'tc-perfmon':'perfMonitor',
+        'tc-keystrokes':'keystrokes', 'tc-cps':'cps', 'tc-fps':'fps'
+      };
+      function enabledHudEls() { return HUD_ELS.filter(function (id) { var k = HUD_ENABLE[id]; return k ? !!state[k] : false; }); }
+      function enter() {
+        editing = true; root.classList.add('hud-editing');
+        // only reveal HUD elements that are currently enabled, so you reposition
+        // exactly what you'll actually see — nothing you have switched off
+        HUD_ELS.forEach(function (id) {
+          var el = document.getElementById(id); if (!el) return;
+          var k = HUD_ENABLE[id];
+          if (k && state[k]) el.classList.remove('tc-hidden');
+          else el.classList.add('tc-hidden');
+        });
+        bar.classList.remove('tc-hidden'); closeGui();
+      }
+      function exit() {
+        editing = false; root.classList.remove('hud-editing');
+        bar.classList.add('tc-hidden'); applyHud();
+      }
+      if (editBtn) editBtn.addEventListener('click', enter);
+      if (doneBtn) doneBtn.addEventListener('click', exit);
+      if (resetBtn) resetBtn.addEventListener('click', function () {
+        state.hudPositions = {}; save();
+        HUD_ELS.forEach(function (id) { var el = document.getElementById(id); if (el) { el.style.left = el.style.top = el.style.right = el.style.bottom = el.style.transform = ''; } });
+      });
+      function down(e) {
+        if (!editing) return;
+        var t = e.target.closest('.tc-hud-box, #tc-potions, #tc-keystrokes, #tc-cps, #tc-fps');
+        if (!t || !root.contains(t)) return;
+        if (t.classList.contains('tc-hidden')) return; // don't drag a disabled (hidden) element
+        e.preventDefault();
+        var r = t.getBoundingClientRect();
+        drag = { el: t, dx: e.clientX - r.left, dy: e.clientY - r.top };
+        t.classList.add('tc-hud-drag-active');
+      }
+      function move(e) {
+        if (!drag) return;
+        var left = e.clientX - drag.dx, top = e.clientY - drag.dy;
+        left = Math.max(0, Math.min(window.innerWidth - 20, left));
+        top = Math.max(0, Math.min(window.innerHeight - 20, top));
+        drag.el.style.left = left + 'px'; drag.el.style.top = top + 'px';
+        drag.el.style.right = 'auto'; drag.el.style.bottom = 'auto'; drag.el.style.transform = 'none';
+      }
+      function up() {
+        if (!drag) return;
+        var id = drag.el.id, r = drag.el.getBoundingClientRect();
+        state.hudPositions = state.hudPositions || {};
+        state.hudPositions[id] = { left: Math.round(r.left), top: Math.round(r.top) };
+        save();
+        drag.el.classList.remove('tc-hud-drag-active'); drag = null;
+      }
+      window.addEventListener('mousedown', down, true);
+      window.addEventListener('mousemove', move, true);
+      window.addEventListener('mouseup', up, true);
+    })();
+
+
+    // Apply & Reload — writes current perf options then reloads so the engine
+    // Fullbright is the only engine graphics option we still touch; it's applied
+    // via applyFullbrightToEngine() when toggled. A reload makes it take effect
+    // immediately since the engine re-reads options at startup.
+    (function () {
+      // "Open Video Settings" — the overlay can't push the Java video screen
+      // open directly, so we close the Mod Menu and tell the user where it is
+      // (Options ▸ Video Settings). Fullbright still applies live on reload.
+    })();
+
+    /* ---------- init ---------- */
+    applyMode(); applyHud();
+    applyFullbrightToEngine(); // only writes the Fullbright gamma option
+    applyResolutionScale();    // write the render-resolution scale for PlatformInput
+    writeModsToEngine(); // write toggle-sprint/sneak/hitbox flags for the native Java module
+
+    /* ---------- animated ClickGUI background (gold rain / flowing water) ---------- */
+    (function () {
+      var cv = document.getElementById('tc-gui-bg');
+      if (!cv) return;
+      var ctx = cv.getContext('2d'), W = 0, H = 0, raf = null, parts = [], last = 0;
+      var reduce = false;
+      try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+      function size() { W = cv.clientWidth || cv.offsetWidth || window.innerWidth; H = cv.clientHeight || cv.offsetHeight || window.innerHeight; cv.width = W; cv.height = H; }
+      function seed() {
+        parts = [];
+        if (state.mode === 'deep') { for (var i = 0; i < 26; i++) parts.push(bub(true)); }
+        else { for (var j = 0; j < 60; j++) parts.push(coin(true)); }
+      }
+      function coin(any) { return { x: Math.random()*W, y: any?Math.random()*H:-20, r: 3+Math.random()*5, vy: 22+Math.random()*40, vx: -6+Math.random()*12, sp: Math.random()*Math.PI, vs: (-1+Math.random()*2)*1.1 }; }
+      function bub(any) { return { x: Math.random()*W, y: any?Math.random()*H:H+10, r: 2+Math.random()*6, vy: 9+Math.random()*16, w: Math.random()*Math.PI*2, vw: 0.35+Math.random()*0.6, a: 5+Math.random()*12 }; }
+      function frame(t) {
+        var dt = Math.min(0.05, (t-last)/1000) || 0; last = t;
+        ctx.clearRect(0,0,W,H);
+        if (state.mode === 'deep') {
+          var g = ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'rgba(46,196,241,0.06)'); g.addColorStop(1,'rgba(3,15,24,0.10)'); ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+          for (var i=0;i<parts.length;i++){ var b=parts[i]; b.y-=b.vy*dt; b.w+=b.vw*dt; var x=b.x+Math.sin(b.w)*b.a; if(b.y<-12){parts[i]=bub(false);continue;} ctx.beginPath(); ctx.arc(x,b.y,b.r,0,6.283); ctx.strokeStyle='rgba(190,240,255,0.45)'; ctx.lineWidth=1; ctx.stroke(); }
+        } else {
+          for (var k=0;k<parts.length;k++){ var c=parts[k]; c.y+=c.vy*dt; c.x+=c.vx*dt; c.sp+=c.vs*dt; if(c.y>H+20){parts[k]=coin(false);continue;} var wob=Math.abs(Math.cos(c.sp)); ctx.save(); ctx.translate(c.x,c.y); var grd=ctx.createLinearGradient(0,-c.r,0,c.r); grd.addColorStop(0,'#fff3c4'); grd.addColorStop(0.5,'#e6b93f'); grd.addColorStop(1,'#8a5a20'); ctx.fillStyle=grd; ctx.beginPath(); ctx.ellipse(0,0,c.r*(0.35+0.65*wob),c.r,0,0,6.283); ctx.fill(); ctx.restore(); }
+        }
+        raf = requestAnimationFrame(frame);
+      }
+      function start() { if (reduce) { size(); seed(); ctx.clearRect(0,0,W,H); return; } if (!raf) { size(); seed(); last = performance.now(); raf = requestAnimationFrame(frame); } }
+      function stop() { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      window.addEventListener('resize', function () { if (raf) { size(); seed(); } });
+      // run only while the ClickGUI is open (no cost during actual gameplay)
+      root.__tcBgStart = function () { size(); seed(); start(); };
+      root.__tcBgStop = stop;
+      root.__tcBgReseed = function () { if (raf) { seed(); } };
+    })();
+
+    // (mode change hooks removed — Deep Sea mode no longer exists)
+
+    console.log('[TreasureClient] overlay ready — press', state.menuKeyLabel, 'to open.');
+  }
+})();
+
+</script>
 </body>
 </html>

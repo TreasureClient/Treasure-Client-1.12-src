@@ -439,16 +439,7 @@ public class PlatformRuntime {
 
 		logger.info("Loaded {} resources from EPKs", PlatformAssets.assets.size());
 
-		byte[] finalLoadScreen = PlatformAssets.getResourceBytes("/assets/eagler/eagtek.png");
 
-		if(finalLoadScreen != null) {
-			EarlyLoadScreen.loadFinal(finalLoadScreen);
-			EarlyLoadScreen.paintFinal(PlatformOpenGL.checkVAOCapable(), false);
-		}else {
-			PlatformOpenGL._wglClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-			PlatformOpenGL._wglClear(RealOpenGLEnums.GL_COLOR_BUFFER_BIT);
-			PlatformInput.update();
-		}
 
 		logger.info("Initializing filesystem...");
 
@@ -462,17 +453,11 @@ public class PlatformRuntime {
 
 		logger.info("Initializing sound engine...");
 
-		PlatformInput.pressAnyKeyScreen();
+		// PlatformInput.pressAnyKeyScreen();
 
 		PlatformAudio.initialize();
 
-		if(finalLoadScreen != null) {
-			EarlyLoadScreen.paintFinal(PlatformOpenGL.checkVAOCapable(), false);
-		}else {
-			PlatformOpenGL._wglClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-			PlatformOpenGL._wglClear(RealOpenGLEnums.GL_COLOR_BUFFER_BIT);
-			PlatformInput.update();
-		}
+
 
 		logger.info("Platform initialization complete");
 	}
@@ -1165,8 +1150,6 @@ public class PlatformRuntime {
 	private static native void clearRunningFlag();
 
 	public static void postCreate() {
-		EarlyLoadScreen.paintFinal(true, true);
-		EarlyLoadScreen.destroy();
 	}
 
 	static void beforeUnload() {

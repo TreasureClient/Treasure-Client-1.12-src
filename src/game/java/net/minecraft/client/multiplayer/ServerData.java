@@ -65,7 +65,10 @@ public class ServerData {
 	public String gameVersion = "1.12.2";
 	public boolean pinged;
 	public String playerList;
-	private ServerData.ServerResourceMode resourceMode = ServerData.ServerResourceMode.PROMPT;
+	// Treasure Client: default to ENABLED so modern-server resource packs (e.g.
+	// mace / wind-charge textures on duel servers) download automatically instead
+	// of showing a prompt you might miss or decline.
+	private ServerData.ServerResourceMode resourceMode = ServerData.ServerResourceMode.ENABLED;
 	public boolean hideAddress = false;
 	private boolean field_181042_l;
 	public IServerQuery currentQuery = null;

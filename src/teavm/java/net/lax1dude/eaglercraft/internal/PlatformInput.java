@@ -349,6 +349,12 @@ public class PlatformInput {
 		win.addEventListener("keydown", keydown = new EventListener<KeyboardEvent>() {
 			@Override
 			public void handleEvent(KeyboardEvent evt) {
+				// Treasure Client: if the user is typing in one of the overlay's own
+				// text inputs (Mod Menu search, relay code fields, etc.), let the
+				// browser handle the key normally and don't consume it as a game key.
+				if(tcOverlayInputFocused()) {
+					return;
+				}
 				if(!ClientMain.integratedServerCrashPanelShowing) {
 					evt.preventDefault();
 					evt.stopPropagation();
@@ -404,6 +410,9 @@ public class PlatformInput {
 		win.addEventListener("keyup", keyup = new EventListener<KeyboardEvent>() {
 			@Override
 			public void handleEvent(KeyboardEvent evt) {
+				if(tcOverlayInputFocused()) {
+					return;
+				}
 				if(!ClientMain.integratedServerCrashPanelShowing) {
 					evt.preventDefault();
 					evt.stopPropagation();
@@ -454,6 +463,11 @@ public class PlatformInput {
 		canvas.addEventListener("wheel", wheel = new EventListener<WheelEvent>() {
 			@Override
 			public void handleEvent(WheelEvent evt) {
+				// Treasure Client: when the mod menu is open, let the browser scroll
+				// it instead of consuming the wheel as a game (hotbar) scroll.
+				if(tcMenuOpen()) {
+					return;
+				}
 				evt.preventDefault();
 				evt.stopPropagation();
 				double delta = -evt.getDeltaY();
@@ -468,6 +482,20 @@ public class PlatformInput {
 						}
 					}
 				}
+			}
+		});
+		// Treasure Client: also catch wheel on the window. The overlay layer can sit
+		// on top of the canvas, so a wheel event's target may not be the canvas —
+		// this fallback keeps scroll working in menus (e.g. Video Settings) and in
+		// game. It only feeds the scroll accumulator, and bails when the user is
+		// scrolling inside one of the overlay's own scrollable elements.
+		win.addEventListener("wheel", new EventListener<WheelEvent>() {
+			@Override
+			public void handleEvent(WheelEvent evt) {
+				if(tcOverlayInputFocused() || tcMenuOpen()) {
+					return;
+				}
+				mouseDWheel += -evt.getDeltaY();
 			}
 		});
 		win.addEventListener("blur", blur = new EventListener<Event>() {
@@ -700,6 +728,23 @@ public class PlatformInput {
 	@JSBody(params = { "e" }, script = "return (typeof e.which === \"number\") ? e.which : ((typeof e.keyCode === \"number\") ? e.keyCode : 0);")
 	private static native int getWhich(KeyboardEvent e);
 
+	// Treasure Client: true when the focused element is one of the overlay's own
+	// text inputs, so the game input handler can ignore the key and let the user
+	// type normally (Mod Menu search box, relay join-code fields, etc.).
+	@JSBody(params = {}, script =
+		"var a = document.activeElement;" +
+		"if(!a) return false;" +
+		"var tag = a.tagName;" +
+		"if(tag !== 'INPUT' && tag !== 'TEXTAREA' && !a.isContentEditable) return false;" +
+		"var r = document.getElementById('tc-root');" +
+		"return !!(r && r.contains(a));")
+	private static native boolean tcOverlayInputFocused();
+
+	@JSBody(params = {}, script =
+		"try { var g = document.getElementById('tc-gui');" +
+		"return !!(g && g.classList.contains('open')); } catch(e) { return false; }")
+	private static native boolean tcMenuOpen();
+
 	@JSBody(params = { "e" }, script = "return (typeof e.location === \"number\") ? e.location : 0;")
 	private static native int getLocationSafe(KeyboardEvent e);
 
@@ -748,6 +793,13 @@ public class PlatformInput {
 	@JSBody(params = { "win" }, script = "return (typeof win.devicePixelRatio === \"number\") ? win.devicePixelRatio : 1.0;")
 	static native double getDevicePixelRatio(Window win);
 
+	// Treasure Client: render-resolution scale (0.30..1.00). Reading the option
+	// from localStorage; multiplying the effective pixel ratio genuinely changes
+	// the WebGL framebuffer size, so lower = fewer pixels shaded = higher FPS.
+	// This is a real optimization, not a duplicate of any in-game Video Setting.
+	@JSBody(params = {}, script = "try{var v=localStorage.getItem('_eaglercraft_1.12.tcres');if(!v)return 1.0;var n=parseInt(atob(v),10);if(isNaN(n))return 1.0;if(n<30)n=30;if(n>100)n=100;return n/100.0;}catch(e){return 1.0;}")
+	static native double getTreasureResScale();
+
 	public static void update() {
 		update(0);
 	}
@@ -757,6 +809,9 @@ public class PlatformInput {
 	public static void update(int fpsLimit) {
 		double r = getDevicePixelRatio(win);
 		if(r < 0.01) r = 1.0;
+		double resScale = getTreasureResScale();
+		if(resScale < 0.30) resScale = 0.30; if(resScale > 1.0) resScale = 1.0;
+		r = r * resScale;
 		windowDPI = (float)r;
 		int w = parent.getClientWidth();
 		int h = parent.getClientHeight();
