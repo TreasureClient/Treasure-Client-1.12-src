@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "variant=default": {
+            "model": "tuff_brick_double_slab"
+        }
+    }
+}

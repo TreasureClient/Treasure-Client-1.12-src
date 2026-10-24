@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "variant=default": {
+            "model": "polished_deepslate_double_slab"
+        }
+    }
+}

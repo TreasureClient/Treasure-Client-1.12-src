@@ -1,0 +1,53 @@
+name: Deploy WASM client to GitHub Pages
+
+on:
+  push:
+    branches: [ WASM ]
+    paths:
+      - "wasm_gc_teavm/javascript_dist/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Assemble site (WASM client as index.html)
+        run: |
+          set -eu
+          SRC="wasm_gc_teavm/javascript_dist/Treasure-Client_WASM.html"
+          mkdir -p _site
+          cp "$SRC" "_site/index.html"
+          if [ -f wasm_gc_teavm/javascript_dist/favicon.png ]; then
+            cp wasm_gc_teavm/javascript_dist/favicon.png _site/favicon.png
+          fi
+          # disable Jekyll so files/underscored paths are served verbatim
+          touch _site/.nojekyll
+          echo "Assembled _site:"; ls -la _site
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

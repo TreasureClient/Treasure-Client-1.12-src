@@ -1,0 +1,179 @@
+package net.minecraft.item;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Treasure Client — client-side ViaItems for real servers (e.g. arch.mc).
+ *
+ * Modern servers behind ViaVersion/ViaBackwards down-map modern items (a 1.21
+ * mace, trident, netherite gear, …) to a 1.12 fallback item before they reach an
+ * Eaglercraft 1.12 client — but they keep the item's modern <b>display name</b>
+ * (and ViaVersion backup NBT). TuffX+ doesn't touch items, so no server hands us
+ * the real id; instead we recover it here on the client: when an item's display
+ * name names one of our registered {@link ViaItems}, we render OUR item in its
+ * place (keeping the original name/lore/NBT), so the mace looks like a mace.
+ *
+ * Name-based, so it works on any server that keeps the modern item name (as
+ * arch.mc does: "1.20.5 Mace"). Purely visual/client-side and gated by the
+ * ViaVersion Mod Menu toggle. Fully defensive.
+ */
+public final class ViaItemRemap {
+
+	private ViaItemRemap() {
+	}
+
+	/** [searchPhrase (lowercased, spaces), registry name], longest phrase first. */
+	private static List<String[]> phrases;
+
+	/** lowercased real display name -> registry name (from {@link ViaItemData}). */
+	private static java.util.Map<String, String> exactNames;
+
+	private static void ensure() {
+		if (phrases != null) {
+			return;
+		}
+		java.util.Map<String, String> ex = new java.util.HashMap<String, String>();
+		for (int i = 0; i < ViaItemData.DISPLAY.length; i++) {
+			ex.put(ViaItemData.DISPLAY[i][1].toLowerCase(), ViaItemData.DISPLAY[i][0]);
+		}
+		for (int i = 0; i < ViaItems.NAMES.length; i++) {
+			String phrase = ViaItems.NAMES[i].replace('_', ' ');
+			if (!ex.containsKey(phrase)) {
+				ex.put(phrase, ViaItems.NAMES[i]);
+			}
+		}
+		exactNames = ex;
+		List<String[]> p = new ArrayList<String[]>();
+		for (int i = 0; i < ViaItems.NAMES.length; i++) {
+			String name = ViaItems.NAMES[i];
+			p.add(new String[] { name.replace('_', ' '), name });
+		}
+		// Longest phrase first so "netherite sword" wins over a bare "sword".
+		Collections.sort(p, new Comparator<String[]>() {
+			@Override
+			public int compare(String[] a, String[] b) {
+				return b[0].length() - a[0].length();
+			}
+		});
+		phrases = p;
+	}
+
+	/**
+	 * If this stack is a down-mapped modern item we support, return a copy rendered
+	 * as our item (same count, original NBT preserved); otherwise return it as-is.
+	 */
+	public static ItemStack remap(ItemStack st) {
+		try {
+			if (st == null || st.func_190926_b()) {
+				return st;
+			}
+			if (!net.minecraft.client.gui.TreasureMods.viaEnabled()) {
+				return st;
+			}
+			String disp = st.getDisplayName();
+			if (disp == null) {
+				return st;
+			}
+			String lower = clean(disp);
+			ensure();
+			// 1) Exact name: ViaBackwards labels a down-mapped item "<version> <Name>",
+			//    e.g. "1.21 Wind Charge" — strip the version, look up the real name.
+			String bare = stripVersion(lower);
+			String exact = exactNames.get(bare);
+			if (exact == null && bare != lower) {
+				exact = exactNames.get(lower);
+			}
+			if (exact != null) {
+				ItemStack r = swap(st, exact);
+				if (r != null) {
+					return r;
+				}
+			}
+			// 2) Fallback: the name merely contains one of our item names.
+			for (int i = 0; i < phrases.size(); i++) {
+				String[] pr = phrases.get(i);
+				if (pr[0].length() >= 4 && lower.contains(pr[0])) {
+					// Direct array lookup, not Item.getByNameOrId — the registry can
+					// fail to resolve our high ids in some runtimes.
+					ItemStack r = swap(st, pr[1]);
+					if (r == null) {
+						continue; // not registered / already ours — try the next phrase
+					}
+					return r;
+				}
+			}
+		} catch (Throwable t) {
+			// never let item remapping break the client
+		}
+		return st;
+	}
+
+	/** Our item in place of {@code st} (same count, NBT kept), or null if not applicable. */
+	private static ItemStack swap(ItemStack st, String name) {
+		// Direct array lookup, not Item.getByNameOrId — the registry can fail to
+		// resolve our high ids in some runtimes.
+		Item via = ViaItems.getByName(name);
+		if (via == null || via == st.getItem()) {
+			return null;
+		}
+		ItemStack r = new ItemStack(via, st.func_190916_E());
+		if (st.hasTagCompound()) {
+			r.setTagCompound(st.getTagCompound().copy());
+		}
+		return r;
+	}
+
+	/** Lowercase, without § formatting codes, trimmed. */
+	private static String clean(String s) {
+		StringBuilder b = new StringBuilder(s.length());
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c == '\u00a7' && i + 1 < s.length()) {
+				i++;
+				continue;
+			}
+			b.append(Character.toLowerCase(c));
+		}
+		return b.toString().trim();
+	}
+
+	/** "1.20.5 mace" -> "mace"; anything not starting with a version is returned as-is. */
+	private static String stripVersion(String s) {
+		int i = 0;
+		int n = s.length();
+		boolean digit = false;
+		boolean dot = false;
+		while (i < n) {
+			char c = s.charAt(i);
+			if (c >= '0' && c <= '9') {
+				digit = true;
+			} else if (c == '.') {
+				dot = true;
+			} else {
+				break;
+			}
+			i++;
+		}
+		if (digit && dot && i < n && s.charAt(i) == ' ') {
+			return s.substring(i + 1).trim();
+		}
+		return s;
+	}
+
+	/** Remap every stack in a window-items list in place. */
+	public static void remapList(List<ItemStack> list) {
+		if (list == null) {
+			return;
+		}
+		try {
+			for (int i = 0; i < list.size(); i++) {
+				list.set(i, remap(list.get(i)));
+			}
+		} catch (Throwable t) {
+			// ignore
+		}
+	}
+}

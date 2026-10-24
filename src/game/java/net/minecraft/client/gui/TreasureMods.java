@@ -48,6 +48,7 @@ public class TreasureMods {
 	private static long zoomFrameTime = 0L;
 
 	private static long lastLoad = 0L;
+	private static long lastInWorldWrite = 0L;
 
 	// ---- Deep Sea performance mode ----
 	// Deep Sea is a real performance mode: on entering it we SAVE the player's
@@ -63,6 +64,36 @@ public class TreasureMods {
 	public static boolean noHurtCam() { return noHurtCam; }
 	public static boolean tntTimer() { return tntTimer; }
 	public static boolean noParticles() { return noParticles; }
+
+	// ViaVersion: master toggle for the Option A modern-content data path
+	// (handshake + applying modern blocks/items/entities streamed by servers).
+	// Default ON; the overlay writes via=0 when the user turns it off.
+	private static boolean via = true;
+	public static boolean viaEnabled() { return via; }
+
+	private static float clamp01(float v, float lo, float hi) {
+		return v < lo ? lo : (v > hi ? hi : v);
+	}
+
+	// ---- new 1.2 mods ----
+	// Password hider: mask the password when typing /login, /register, etc.
+	private static boolean passwordHider = false;
+	public static boolean passwordHider() { return passwordHider; }
+	// Low fire: shorter first-person fire overlay. Height 0.05..1.0 (default 0.40).
+	private static boolean lowFire = false;
+	private static float lowFireH = 0.40f;
+	public static boolean lowFire() { return lowFire; }
+	public static float lowFireHeight() { return lowFireH; }
+	// Low shield: push the blocking shield down so it covers less view. 0..0.6 (default 0.30).
+	private static boolean lowShield = false;
+	private static float lowShieldAmt = 0.30f;
+	public static boolean lowShield() { return lowShield; }
+	public static float lowShieldAmount() { return lowShieldAmt; }
+	// Small totem: scale the totem particle pop. 0.1..1.0 (default 0.40).
+	private static boolean smallTotem = false;
+	private static float totemScaleV = 0.40f;
+	public static boolean smallTotem() { return smallTotem; }
+	public static float totemScale() { return totemScaleV; }
 
 	// toggle-via-sprint-key state + status display
 	private static boolean sprintToggledOn = false;
@@ -81,12 +112,107 @@ public class TreasureMods {
 	private static long lastForwardTapTime = 0L;
 	private static boolean doubleTapLatched = false;
 
+	// ---- F6 item-NBT dump (diagnostic for building ViaItems) ----
+	// Press F6 to print the item you're hovering (in a container), holding on the
+	// cursor, or in your main hand — registry name + display name + full NBT — to
+	// chat and the console. This reveals whether a server's down-mapped modern
+	// item (e.g. a mace shown as an axe) still carries its modern identity in NBT.
+	private static boolean dumpKeyWasDown = false;
+
+	/** Key-triggered dump (backslash "\"). Chat command ".viadump" is the reliable path. */
+	private static void dumpHeldItemOnKey(Minecraft mc) {
+		try {
+			boolean down = net.lax1dude.eaglercraft.Keyboard.isKeyDown(net.lax1dude.eaglercraft.Keyboard.KEY_BACKSLASH);
+			if (down && !dumpKeyWasDown) {
+				dumpHeldItem(mc);
+			}
+			dumpKeyWasDown = down;
+		} catch (Throwable t) {}
+	}
+
+	/**
+	 * Print the item you're hovering (in a container), holding on the cursor, or
+	 * in your main hand — registry name + display name + full NBT — to chat and
+	 * the console. Triggered by the chat command ".viadump" or the "\" key.
+	 */
+	public static void dumpHeldItem(Minecraft mc) {
+		try {
+			if (mc == null) {
+				return;
+			}
+			net.minecraft.item.ItemStack st = null;
+			if (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer) {
+				net.minecraft.inventory.Slot slot =
+						((net.minecraft.client.gui.inventory.GuiContainer) mc.currentScreen).tcHoveredSlot();
+				if (slot != null && slot.getHasStack()) {
+					st = slot.getStack();
+				}
+				if (st == null && mc.player != null) {
+					net.minecraft.item.ItemStack cur = mc.player.inventory.getItemStack();
+					if (cur != null && !cur.func_190926_b()) {
+						st = cur;
+					}
+				}
+			}
+			if (st == null && mc.player != null) {
+				st = mc.player.getHeldItemMainhand();
+			}
+
+			String msg;
+			if (st == null || st.func_190926_b()) {
+				msg = "[ViaItems] item: (empty) — hold the item in your main hand, then type .viadump";
+			} else {
+				net.minecraft.item.Item it = st.getItem();
+				net.minecraft.util.ResourceLocation rl = (it != null)
+						? net.minecraft.item.Item.REGISTRY.getNameForObject(it) : null;
+				String rn = (rl != null) ? rl.toString() : "?";
+				String nbt = (st.getTagCompound() != null) ? st.getTagCompound().toString() : "(no NBT)";
+				msg = "[ViaItems] " + rn + " x" + st.func_190916_E()
+						+ " name='" + st.getDisplayName() + "' nbt=" + nbt;
+			}
+			System.out.println(msg);
+			try {
+				mc.ingameGUI.getChatGUI().printChatMessage(
+						new net.minecraft.util.text.TextComponentString(msg));
+			} catch (Throwable t) {}
+			// Short, prominent verdict — printed LAST so it stays at the bottom of
+			// chat (the long NBT line above wraps and scrolls its start out of view).
+			try {
+				if (st != null && !st.func_190926_b()) {
+					net.minecraft.item.Item vit = st.getItem();
+					int vid = (vit != null) ? net.minecraft.item.Item.getIdFromItem(vit) : -1;
+					boolean ours = vid >= net.minecraft.item.ViaItems.FIRST_ID;
+					// Is our mace item actually registered in this runtime?
+					net.minecraft.item.Item maceReg = net.minecraft.item.Item.getByNameOrId("mace");
+					String maceStr = (maceReg != null)
+							? ("YES id " + net.minecraft.item.Item.getIdFromItem(maceReg)) : "NO(null)";
+					// Would the remap change THIS stack right now (name is known-good here)?
+					boolean changes = false;
+					try {
+						net.minecraft.item.ItemStack rr = net.minecraft.item.ViaItemRemap.remap(st);
+						changes = (rr != null && rr.getItem() != st.getItem());
+					} catch (Throwable t2) {}
+					String verdict = ">> VERDICT: held=" + (ours ? ("OURS id " + vid) : ("vanilla id " + vid))
+							+ " | mace reg=" + maceStr + " | remap-now=" + (changes ? "SWAPS" : "no-op")
+							+ " | Via " + (viaEnabled() ? "ON" : "OFF");
+					mc.ingameGUI.getChatGUI().printChatMessage(
+							new net.minecraft.util.text.TextComponentString(verdict));
+				}
+			} catch (Throwable t) {}
+		} catch (Throwable t) {}
+	}
+
 	private static void reload() {
 		try {
 			byte[] data = EagRuntime.getStorage("tcmods");
 			sprint = false; sprintMode = 0; sneak = false;
 			hitboxes = false; hitboxPlayers = true; hitboxMobs = true; hitboxAnimals = true; hitboxOther = false;
 			pauseUnfocused = false;
+			via = true; // default ON unless the overlay explicitly says via=0
+			passwordHider = false;
+			lowFire = false; lowFireH = 0.40f;
+			lowShield = false; lowShieldAmt = 0.30f;
+			smallTotem = false; totemScaleV = 0.40f;
 			if (data != null && data.length > 0) {
 				String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
 				String[] parts = s.split(",");
@@ -108,6 +234,14 @@ public class TreasureMods {
 				else if (k.equals("noParticles")) noParticles = v.equals("1");
 				else if (k.equals("noHurtCam")) noHurtCam = v.equals("1");
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
+				else if (k.equals("via")) via = v.equals("1");
+				else if (k.equals("pwHide")) passwordHider = v.equals("1");
+				else if (k.equals("lowFire")) lowFire = v.equals("1");
+				else if (k.equals("lowFireH")) { try { lowFireH = clamp01(Integer.parseInt(v) / 100.0f, 0.05f, 1.0f); } catch (Throwable t) {} }
+				else if (k.equals("lowShield")) lowShield = v.equals("1");
+				else if (k.equals("lowShieldA")) { try { lowShieldAmt = clamp01(Integer.parseInt(v) / 100.0f, 0.0f, 0.6f); } catch (Throwable t) {} }
+				else if (k.equals("smallTotem")) smallTotem = v.equals("1");
+				else if (k.equals("totemScale")) { try { totemScaleV = clamp01(Integer.parseInt(v) / 100.0f, 0.1f, 1.0f); } catch (Throwable t) {} }
 				}
 			}
 		} catch (Throwable t) {
@@ -122,6 +256,22 @@ public class TreasureMods {
 			// re-read settings ~4x/second so overlay changes apply live
 			long now = EagRuntime.steadyTimeMillis();
 			if (now - lastLoad > 250L) { reload(); lastLoad = now; }
+
+			// Treasure Client — apply any pending TuffX+ ViaBlocks overrides (modern
+			// blocks streamed by real servers) + the F6 item-NBT dump diagnostic.
+			try { net.minecraft.client.network.TuffViaBlocks.tick(); } catch (Throwable t) {}
+			dumpHeldItemOnKey(mc);
+
+			// Treasure Client — tell the overlay whether we're in a world, so the
+			// out-of-game Mod Menu can show the theme background (and the in-game Mod
+			// Menu is left untouched, showing the paused world behind it).
+			if (now - lastInWorldWrite > 250L) {
+				lastInWorldWrite = now;
+				try {
+					boolean inWorld = (mc.world != null && mc.player != null);
+					EagRuntime.setStorage("tcinworld", new byte[] { (byte) (inWorld ? 1 : 0) });
+				} catch (Throwable t) {}
+			}
 
 			// No Particles: force the game's particle setting to minimal while the
 			// toggle is on (keeps applying each reload since the user could change it).

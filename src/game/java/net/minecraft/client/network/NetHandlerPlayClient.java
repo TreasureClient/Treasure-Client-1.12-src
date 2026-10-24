@@ -406,6 +406,13 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.gameSettings.sendSettingsToServer();
 		this.netManager.sendPacket(new CPacketCustomPayload("MC|Brand",
 				(new PacketBuffer(Unpooled.buffer())).writeString(ClientBrandRetriever.getClientModName())));
+		// Treasure Client — announce ViaBlocks support so an Option-A server/proxy
+		// can send our modern block-state ids (data source).
+		TreasureViaHandshake.sendHandshake(this.netManager);
+		// Treasure Client — TuffX+ ViaBlocks: register + opt in so a TuffX+ backend
+		// (e.g. arch.mc) streams modern blocks we render from our own registry.
+		TuffViaBlocks.onJoin(this.netManager);
+		ViaEntitiesClient.onJoin(this.netManager);
 		WebViewOverlayController.setPacketSendCallback(this::webViewSendHandler);
 	}
 
@@ -620,6 +627,19 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		Entity entity = this.clientWorldController.getEntityByID(packetIn.getEntityId());
 
 		if (entity != null && packetIn.getDataManagerEntries() != null) {
+			// Treasure Client — ViaItems: dropped items, item frames, fireworks etc.
+			// carry their stack in entity metadata; remap those too.
+			try {
+				for (net.minecraft.network.datasync.EntityDataManager.DataEntry<?> e : packetIn.getDataManagerEntries()) {
+					if (e.getValue() instanceof ItemStack) {
+						@SuppressWarnings("unchecked")
+						net.minecraft.network.datasync.EntityDataManager.DataEntry<ItemStack> ie =
+								(net.minecraft.network.datasync.EntityDataManager.DataEntry<ItemStack>) e;
+						ie.setValue(net.minecraft.item.ViaItemRemap.remap(ie.getValue()));
+					}
+				}
+			} catch (Throwable t) {
+			}
 			entity.getDataManager().setEntryValues(packetIn.getDataManagerEntries());
 		}
 	}
@@ -1157,7 +1177,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleSetSlot(SPacketSetSlot packetIn) {
 		EntityPlayer entityplayer = this.gameController.player;
-		ItemStack itemstack = packetIn.getStack();
+		// Treasure Client — ViaItems: render modern items (mace, trident, …) the
+		// server down-mapped, by their preserved modern name.
+		ItemStack itemstack = net.minecraft.item.ViaItemRemap.remap(packetIn.getStack());
 		int i = packetIn.getSlot();
 		this.gameController.func_193032_ao().func_193301_a(itemstack);
 
@@ -1215,6 +1237,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleWindowItems(SPacketWindowItems packetIn) {
 		EntityPlayer entityplayer = this.gameController.player;
+		// Treasure Client — ViaItems: remap modern items across the whole window.
+		net.minecraft.item.ViaItemRemap.remapList(packetIn.getItemStacks());
 
 		if (packetIn.getWindowId() == 0) {
 			entityplayer.inventoryContainer.func_190896_a(packetIn.getItemStacks());
@@ -1283,7 +1307,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		Entity entity = this.clientWorldController.getEntityByID(packetIn.getEntityID());
 
 		if (entity != null) {
-			entity.setItemStackToSlot(packetIn.getEquipmentSlot(), packetIn.getItemStack());
+			// Treasure Client — ViaItems: other players' modern held items / armor.
+			entity.setItemStackToSlot(packetIn.getEquipmentSlot(),
+					net.minecraft.item.ViaItemRemap.remap(packetIn.getItemStack()));
 		}
 	}
 
@@ -1797,6 +1823,15 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			String s = packetbuffer3.readStringFromBuffer(32767);
 			String s1 = packetbuffer3.readStringFromBuffer(256);
 			this.gameController.getSoundHandler().stop(s1, SoundCategory.getByName(s));
+		} else if (TreasureViaHandshake.CHANNEL.equals(packetIn.getChannelName())) {
+			// Treasure Client — server acknowledged ViaBlocks support (data source).
+			TreasureViaHandshake.handleServer(packetIn.getBufferData());
+		} else if (TuffViaBlocks.DATA_CHANNEL.equals(packetIn.getChannelName())) {
+			// Treasure Client — TuffX+ ViaBlocks modern-block stream (real servers).
+			TuffViaBlocks.handleData(packetIn.getBufferData());
+		} else if (ViaEntitiesClient.DATA_CHANNEL.equals(packetIn.getChannelName())) {
+			// Treasure Client — TuffX+ ViaEntities modern-entity stream.
+			ViaEntitiesClient.handleData(packetIn.getBufferData());
 		} else {
 			try {
 				eaglerMessageController.handlePacket(packetIn.getChannelName(), packetIn.getBufferData());

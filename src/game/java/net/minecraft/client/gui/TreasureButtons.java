@@ -34,13 +34,54 @@ public class TreasureButtons {
 		return false;
 	}
 
-	// ---- palette (ARGB ints) ----
-	private static int accent()      { return isDeepSea() ? 0xFF7FE9FF : 0xFFFFD76B; } // main accent
-	private static int accentDeep()  { return isDeepSea() ? 0xFF2EC4F1 : 0xFFD4A537; } // darker accent (gradient bottom)
-	private static int textIdle()    { return isDeepSea() ? 0xFFDFF6FF : 0xFFF6ECD2; }
-	private static int textOnFill()  { return isDeepSea() ? 0xFF03101A : 0xFF0F0A05; } // dark text on filled button
+	/**
+	 * True when the Frost theme is active (selected in the Mod Menu's Themes tab).
+	 * When it is, every button switches to the icy blue/cyan palette so the theme
+	 * applies to the whole client, not just the main menu.
+	 */
+	private static boolean isFrost()      { return TreasureTheme.isFrost(); }
+	private static boolean isTropical()   { return TreasureTheme.isTropical(); }
+	private static boolean isTerracotta() { return TreasureTheme.isTerracotta(); }
+	private static boolean isForest()     { return TreasureTheme.isForest(); }
+
+	// ---- palette (ARGB ints). Frost=icy blue, Tropical=turquoise+sand,
+	// Terracotta=burnt orange, Forest=green, else the default gold. ----
+	private static int accent() {
+		if (isTropical()) return 0xFF45E3C6;
+		if (isFrost()) return 0xFF7FE9FF;
+		if (isTerracotta()) return 0xFFDB7A3C;
+		if (isForest()) return 0xFF6FCB5B;
+		return 0xFFFFD76B;
+	}
+	private static int accentDeep() {
+		if (isTropical()) return 0xFF1AA7B0;
+		if (isFrost()) return 0xFF2EC4F1;
+		if (isTerracotta()) return 0xFFB85C2A;
+		if (isForest()) return 0xFF2F8F3E;
+		return 0xFFD4A537;
+	}
+	private static int textIdle() {
+		if (isTropical()) return 0xFFF1E6C6;
+		if (isFrost()) return 0xFFDFF6FF;
+		if (isTerracotta()) return 0xFFF3E0CC;
+		if (isForest()) return 0xFFE8F6D8;
+		return 0xFFF6ECD2;
+	}
+	private static int textOnFill() {
+		if (isTropical()) return 0xFF042024;
+		if (isFrost()) return 0xFF03101A;
+		if (isTerracotta()) return 0xFF2A1205;
+		if (isForest()) return 0xFF07200C;
+		return 0xFF0F0A05;
+	}
 	private static int textDisabled(){ return 0xFF6A6A6A; }
-	private static int panelBg()     { return isDeepSea() ? 0xE6031019 : 0xE6140D06; } // hollow interior fill
+	private static int panelBg() {
+		if (isTropical()) return 0xE6071D22;
+		if (isFrost()) return 0xE6031019;
+		if (isTerracotta()) return 0xE6241206;
+		if (isForest()) return 0xE60C2410;
+		return 0xE6140D06;
+	}
 
 	private static int lerpColor(int a, int b, float t) {
 		int aa = (a >>> 24) & 0xFF, ar = (a >>> 16) & 0xFF, ag = (a >>> 8) & 0xFF, ab = a & 0xFF;

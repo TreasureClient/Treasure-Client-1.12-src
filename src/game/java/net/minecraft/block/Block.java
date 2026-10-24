@@ -1580,6 +1580,7 @@ public class Block {
 				.setUnlocalizedName("concretePowder"));
 		registerBlock(255, "structure_block", (new BlockStructure()).setBlockUnbreakable().setResistance(6000000.0F)
 				.setUnlocalizedName("structureBlock"));
+		registerViaBlocks();
 		REGISTRY.validateKey();
 
 		for (Block block15 : REGISTRY) {
@@ -1618,6 +1619,59 @@ public class Block {
 					BLOCK_STATE_IDS.put(iblockstate, k);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Treasure Client — register the modern "ViaBlocks" (see {@link ViaBlocks}).
+	 * Called from registerBlocks() before the block-state-id loop so these blocks
+	 * get normal block-state ids and flow through the chunk palette like any other.
+	 * Full-cube rock blocks for the phase-3 proof of concept.
+	 */
+	private static void registerViaBlocks() {
+		for (int i = 0; i < ViaBlocks.NAMES.length; i++) {
+			// Phase 4b: pillars render through an axis-rotated model; everything else
+			// stays a plain full cube. Both share the same rock material / sounds and
+			// flow through the identical registry + item pipeline.
+			Block base = ViaBlocks.isPillar(ViaBlocks.NAMES[i])
+					? new BlockRotatedPillar(Material.ROCK)
+					: new Block(Material.ROCK);
+			Block viaBlock = base.setHardness(2.0F).setResistance(10.0F)
+					.setSoundType(SoundType.STONE).setUnlocalizedName(ViaBlocks.NAMES[i])
+					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
+			registerBlock(ViaBlocks.FIRST_ID + i, ViaBlocks.NAMES[i], viaBlock);
+			ViaBlocks.BLOCKS[i] = viaBlock;
+		}
+		// Phase 4b slabs: each type is a double + half pair (single "default" variant).
+		for (int i = 0; i < ViaBlocks.SLAB_NAMES.length; i++) {
+			String slabName = ViaBlocks.SLAB_NAMES[i];
+			String doubleName = slabName.substring(0, slabName.length() - "_slab".length()) + "_double_slab";
+			BlockViaSlab dbl = (BlockViaSlab) (new BlockViaSlab.Double()).setHardness(2.0F).setResistance(10.0F)
+					.setSoundType(SoundType.STONE).setUnlocalizedName(slabName);
+			BlockViaSlab half = (BlockViaSlab) (new BlockViaSlab.Half()).setHardness(2.0F).setResistance(10.0F)
+					.setSoundType(SoundType.STONE).setUnlocalizedName(slabName);
+			half.halfSource = half;
+			dbl.halfSource = half;
+			registerBlock(ViaBlocks.SLAB_FIRST_ID + 2 * i, doubleName, dbl);
+			registerBlock(ViaBlocks.SLAB_FIRST_ID + 2 * i + 1, slabName, half);
+			ViaBlocks.SLAB_HALF[i] = half;
+			ViaBlocks.SLAB_DOUBLE[i] = dbl;
+		}
+		// Phase 4b walls: single-variant walls modelled on a base ViaBlock cube.
+		for (int i = 0; i < ViaBlocks.WALL_NAMES.length; i++) {
+			Block model = ViaBlocks.blockByName(ViaBlocks.WALL_BASE[i]);
+			if (model == null) {
+				model = new Block(Material.ROCK);
+			}
+			Block wall = (new BlockViaWall(model)).setUnlocalizedName(ViaBlocks.WALL_NAMES[i]);
+			registerBlock(ViaBlocks.WALL_FIRST_ID + i, ViaBlocks.WALL_NAMES[i], wall);
+			ViaBlocks.WALLS[i] = wall;
+		}
+		// Cross-model plants (coral plants, kelp, seagrass, berry bush).
+		for (int i = 0; i < ViaBlocks.CROSS_NAMES.length; i++) {
+			Block cross = (new BlockViaCross()).setHardness(0.0F).setUnlocalizedName(ViaBlocks.CROSS_NAMES[i]);
+			registerBlock(ViaBlocks.CROSS_FIRST_ID + i, ViaBlocks.CROSS_NAMES[i], cross);
+			ViaBlocks.CROSS[i] = cross;
 		}
 	}
 

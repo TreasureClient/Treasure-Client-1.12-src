@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "variant=default": {
+            "model": "cobbled_deepslate_double_slab"
+        }
+    }
+}

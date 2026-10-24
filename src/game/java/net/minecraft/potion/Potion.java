@@ -295,13 +295,15 @@ public class Potion {
 	}
 
 	public static void registerPotions() {
+		// Treasure Client: effect colours updated to modern Minecraft (1.19.4+) so potions
+		// look like they do on modern servers (e.g. Strength is gold, Swiftness cyan).
 		REGISTRY.register(1, new ResourceLocation("speed"),
-				(new Potion(false, 8171462)).setPotionName("effect.moveSpeed").setIconIndex(0, 0)
+				(new Potion(false, 3402751)).setPotionName("effect.moveSpeed").setIconIndex(0, 0)
 						.registerPotionAttributeModifier(SharedMonsterAttributes.MOVEMENT_SPEED,
 								"91AEAA56-376B-4498-935B-2F7F68070635", 0.20000000298023224D, 2)
 						.setBeneficial());
 		REGISTRY.register(2, new ResourceLocation("slowness"),
-				(new Potion(true, 5926017)).setPotionName("effect.moveSlowdown").setIconIndex(1, 0)
+				(new Potion(true, 9154528)).setPotionName("effect.moveSlowdown").setIconIndex(1, 0)
 						.registerPotionAttributeModifier(SharedMonsterAttributes.MOVEMENT_SPEED,
 								"7107DE5E-7CE8-4030-940E-514C1F160890", -0.15000000596046448D, 2));
 		REGISTRY.register(3, new ResourceLocation("haste"),
@@ -313,32 +315,32 @@ public class Potion {
 						.registerPotionAttributeModifier(SharedMonsterAttributes.ATTACK_SPEED,
 								"55FCED67-E92A-486E-9800-B47F202C4386", -0.10000000149011612D, 2));
 		REGISTRY.register(5, new ResourceLocation("strength"),
-				(new PotionAttackDamage(false, 9643043, 3.0D)).setPotionName("effect.damageBoost").setIconIndex(4, 0)
+				(new PotionAttackDamage(false, 16762624, 3.0D)).setPotionName("effect.damageBoost").setIconIndex(4, 0)
 						.registerPotionAttributeModifier(SharedMonsterAttributes.ATTACK_DAMAGE,
 								"648D7064-6A60-4F59-8ABE-C2C23A6DD7A9", 0.0D, 0)
 						.setBeneficial());
 		REGISTRY.register(6, new ResourceLocation("instant_health"),
 				(new PotionHealth(false, 16262179)).setPotionName("effect.heal").setBeneficial());
 		REGISTRY.register(7, new ResourceLocation("instant_damage"),
-				(new PotionHealth(true, 4393481)).setPotionName("effect.harm").setBeneficial());
+				(new PotionHealth(true, 11101546)).setPotionName("effect.harm").setBeneficial());
 		REGISTRY.register(8, new ResourceLocation("jump_boost"),
-				(new Potion(false, 2293580)).setPotionName("effect.jump").setIconIndex(2, 1).setBeneficial());
+				(new Potion(false, 16646020)).setPotionName("effect.jump").setIconIndex(2, 1).setBeneficial());
 		REGISTRY.register(9, new ResourceLocation("nausea"), (new Potion(true, 5578058))
 				.setPotionName("effect.confusion").setIconIndex(3, 1).setEffectiveness(0.25D));
 		REGISTRY.register(10, new ResourceLocation("regeneration"), (new Potion(false, 13458603))
 				.setPotionName("effect.regeneration").setIconIndex(7, 0).setEffectiveness(0.25D).setBeneficial());
 		REGISTRY.register(11, new ResourceLocation("resistance"),
-				(new Potion(false, 10044730)).setPotionName("effect.resistance").setIconIndex(6, 1).setBeneficial());
-		REGISTRY.register(12, new ResourceLocation("fire_resistance"), (new Potion(false, 14981690))
+				(new Potion(false, 9520880)).setPotionName("effect.resistance").setIconIndex(6, 1).setBeneficial());
+		REGISTRY.register(12, new ResourceLocation("fire_resistance"), (new Potion(false, 16750848))
 				.setPotionName("effect.fireResistance").setIconIndex(7, 1).setBeneficial());
 		REGISTRY.register(13, new ResourceLocation("water_breathing"),
-				(new Potion(false, 3035801)).setPotionName("effect.waterBreathing").setIconIndex(0, 2).setBeneficial());
+				(new Potion(false, 10017472)).setPotionName("effect.waterBreathing").setIconIndex(0, 2).setBeneficial());
 		REGISTRY.register(14, new ResourceLocation("invisibility"),
-				(new Potion(false, 8356754)).setPotionName("effect.invisibility").setIconIndex(0, 1).setBeneficial());
+				(new Potion(false, 16185078)).setPotionName("effect.invisibility").setIconIndex(0, 1).setBeneficial());
 		REGISTRY.register(15, new ResourceLocation("blindness"), (new Potion(true, 2039587))
 				.setPotionName("effect.blindness").setIconIndex(5, 1).setEffectiveness(0.25D));
 		REGISTRY.register(16, new ResourceLocation("night_vision"),
-				(new Potion(false, 2039713)).setPotionName("effect.nightVision").setIconIndex(4, 1).setBeneficial());
+				(new Potion(false, 12779366)).setPotionName("effect.nightVision").setIconIndex(4, 1).setBeneficial());
 		REGISTRY.register(17, new ResourceLocation("hunger"),
 				(new Potion(true, 5797459)).setPotionName("effect.hunger").setIconIndex(1, 1));
 		REGISTRY.register(18, new ResourceLocation("weakness"),
@@ -346,9 +348,9 @@ public class Potion {
 						.registerPotionAttributeModifier(SharedMonsterAttributes.ATTACK_DAMAGE,
 								"22653B89-116E-49DC-9B6B-9971489B5BE5", 0.0D, 0));
 		REGISTRY.register(19, new ResourceLocation("poison"),
-				(new Potion(true, 5149489)).setPotionName("effect.poison").setIconIndex(6, 0).setEffectiveness(0.25D));
+				(new Potion(true, 8889187)).setPotionName("effect.poison").setIconIndex(6, 0).setEffectiveness(0.25D));
 		REGISTRY.register(20, new ResourceLocation("wither"),
-				(new Potion(true, 3484199)).setPotionName("effect.wither").setIconIndex(1, 2).setEffectiveness(0.25D));
+				(new Potion(true, 7561558)).setPotionName("effect.wither").setIconIndex(1, 2).setEffectiveness(0.25D));
 		REGISTRY.register(21, new ResourceLocation("health_boost"),
 				(new PotionHealthBoost(false, 16284963)).setPotionName("effect.healthBoost").setIconIndex(7, 2)
 						.registerPotionAttributeModifier(SharedMonsterAttributes.MAX_HEALTH,
@@ -363,7 +365,7 @@ public class Potion {
 		REGISTRY.register(25, new ResourceLocation("levitation"),
 				(new Potion(true, 13565951)).setPotionName("effect.levitation").setIconIndex(3, 2));
 		REGISTRY.register(26, new ResourceLocation("luck"),
-				(new Potion(false, 3381504)).setPotionName("effect.luck").setIconIndex(5, 2).setBeneficial()
+				(new Potion(false, 5882118)).setPotionName("effect.luck").setIconIndex(5, 2).setBeneficial()
 						.registerPotionAttributeModifier(SharedMonsterAttributes.LUCK,
 								"03C3C89D-7037-4B42-869F-B146BCB64D2E", 1.0D, 0));
 		REGISTRY.register(27, new ResourceLocation("unluck"),

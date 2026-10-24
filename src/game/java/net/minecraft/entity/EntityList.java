@@ -378,6 +378,13 @@ public class EntityList {
 		func_191305_a("zombie_horse", 3232308, 9945732);
 		func_191305_a("zombie_pigman", 15373203, 5009705);
 		func_191305_a("zombie_villager", 5651507, 7969893);
+		// Treasure Client — modern ViaEntities.
+		func_191303_a(201, "copper_golem", net.minecraft.entity.passive.EntityCopperGolem.class,
+				net.minecraft.entity.passive.EntityCopperGolem::new, "CopperGolem");
+		func_191305_a("copper_golem", 13792316, 8371866);
+		func_191303_a(202, "bee", net.minecraft.entity.passive.EntityBee.class,
+				net.minecraft.entity.passive.EntityBee::new, "Bee");
+		func_191305_a("bee", 15582019, 4400155);
 		field_191309_d.add(field_191307_a);
 	}
 

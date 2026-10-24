@@ -27,6 +27,26 @@ public class GuiTextField extends Gui {
 	private int maxStringLength = 32;
 	private int cursorCounter;
 	private boolean enableBackgroundDrawing = true;
+	/** Treasure Client: index from which to render chars as '*' (-1 = off). */
+	private int tcMaskFrom = -1;
+
+	/** Treasure Client (Password Hider): render chars at/after {@code from} as '*'. */
+	public void tcSetMask(int from) {
+		this.tcMaskFrom = from;
+	}
+
+	private String tcDisplayText() {
+		int m = this.tcMaskFrom;
+		if (m < 0 || this.text == null || m >= this.text.length()) {
+			return this.text;
+		}
+		StringBuilder sb = new StringBuilder(this.text.length());
+		sb.append(this.text, 0, m);
+		for (int i = m; i < this.text.length(); i++) {
+			sb.append('*');
+		}
+		return sb.toString();
+	}
 
 	/**
 	 * if true the textbox can lose focus by clicking elsewhere on the screen
@@ -454,7 +474,7 @@ public class GuiTextField extends Gui {
 			int i = this.isEnabled ? this.enabledColor : this.disabledColor;
 			int j = this.cursorPosition - this.lineScrollOffset;
 			int k = this.selectionEnd - this.lineScrollOffset;
-			String s = this.fontRendererInstance.trimStringToWidth(this.text.substring(this.lineScrollOffset),
+			String s = this.fontRendererInstance.trimStringToWidth(this.tcDisplayText().substring(this.lineScrollOffset),
 					this.getWidth());
 			boolean flag = j >= 0 && j <= s.length();
 			boolean flag1 = this.isFocused && this.cursorCounter / 6 % 2 == 0 && flag;

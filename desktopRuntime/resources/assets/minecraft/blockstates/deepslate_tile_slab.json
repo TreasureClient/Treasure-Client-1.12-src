@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "half=bottom,variant=default": {
+            "model": "half_slab_deepslate_tile"
+        },
+        "half=top,variant=default": {
+            "model": "upper_slab_deepslate_tile"
+        }
+    }
+}

@@ -16,6 +16,30 @@
 
 const platfInputName = "platformInput";
 
+/* Treasure Client: true when the focused element is one of the overlay's own
+   text inputs, so the game input handler can ignore the key and let the user
+   type normally (Mod Menu search box, relay join-code fields, etc.). */
+function tcOverlayInputFocused() {
+	try {
+		var a = document.activeElement;
+		if(!a) return false;
+		var tag = a.tagName;
+		if(tag !== "INPUT" && tag !== "TEXTAREA" && !a.isContentEditable) return false;
+		var r = document.getElementById("tc-root");
+		return !!(r && r.contains(a));
+	} catch(e) { return false; }
+}
+
+/* True when the Treasure Client mod menu is open, so game input (keys, wheel)
+   should be left to the browser / overlay instead of being consumed. */
+function tcMenuOpen() {
+	try {
+		var g = document.getElementById("tc-gui");
+		return !!(g && g.classList.contains("open"));
+	} catch(e) { return false; }
+}
+
+
 async function initPlatformInput(inputImports) {
 
 	const EVENT_INPUT_MOUSE = 0;
@@ -147,9 +171,26 @@ async function initPlatformInput(inputImports) {
 		}
 	}
 
+	function tcResScale() {
+		// Treasure Client: render-resolution scale (0.30..1.00). Read from localStorage
+		// (mod menu writes _eaglercraft_1.12.tcres as a base64 percent). Lower = fewer
+		// pixels drawn = higher FPS, with the UI/text still sharp. This is the biggest
+		// FPS lever that isn't an in-game Video Setting.
+		try {
+			var v = window.localStorage.getItem("_eaglercraft_1.12.tcres");
+			if(!v) return 1.0;
+			var n = parseInt(window.atob(v), 10);
+			if(isNaN(n)) return 1.0;
+			if(n < 30) n = 30; if(n > 100) n = 100;
+			return n / 100.0;
+		} catch(e) { return 1.0; }
+	}
+
 	function reportWindowSize() {
 		var newWindowDPI = window.devicePixelRatio;
 		if(newWindowDPI < 0.01) newWindowDPI = 1.0;
+		// apply the Treasure Client render-resolution scale to the framebuffer size
+		newWindowDPI = newWindowDPI * tcResScale();
 		updateTouchOffset();
 		const w = parentElement.clientWidth;
 		const h = parentElement.clientHeight;
@@ -333,6 +374,9 @@ async function initPlatformInput(inputImports) {
 	}));
 
 	canvasElement.addEventListener("wheel", /** @type {function(Event)} */ (currentEventListeners.wheel = function(/** WheelEvent */ evt) {
+		// Treasure Client: when the mod menu is open, let the browser scroll it
+		// instead of consuming the wheel as a game (hotbar) scroll.
+		if(tcMenuOpen()) { return; }
 		evt.preventDefault();
 		evt.stopPropagation();
 		pushEvent(EVENT_TYPE_INPUT, EVENT_INPUT_MOUSE, {
@@ -370,6 +414,10 @@ async function initPlatformInput(inputImports) {
 	}
 
 	window.addEventListener("keydown", /** @type {function(Event)} */ (currentEventListeners.keydown = function(/** KeyboardEvent */ evt) {
+		// Treasure Client: if the user is typing in one of the overlay's own text
+		// inputs (Mod Menu search, relay code fields), let the browser handle the
+		// key and don't consume it as a game key.
+		if(tcOverlayInputFocused()) { return; }
 		if(!integratedServerCrashPanelShowing) {
 			evt.preventDefault();
 			evt.stopPropagation();
@@ -383,6 +431,7 @@ async function initPlatformInput(inputImports) {
 	}));
 
 	window.addEventListener("keyup", /** @type {function(Event)} */ (currentEventListeners.keyup = function(/** KeyboardEvent */ evt) {
+		if(tcOverlayInputFocused()) { return; }
 		if(!integratedServerCrashPanelShowing) {
 			evt.preventDefault();
 			evt.stopPropagation();

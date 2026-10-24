@@ -1,0 +1,33 @@
+# TreasureViaAuto — Option A phase 4 (automatic modern-block down-mapping).
+
+# Plugin-message channels to listen on for the TC|ViaBlocks handshake.
+#
+# A 1.12 Treasure Client sends on the legacy channel "TC|ViaBlocks". When that
+# passes through ViaVersion to a 1.13+ backend, Via rewrites the legacy channel
+# name (modern servers require namespaced "ns:key" channels). The exact rewrite
+# depends on your Via version, so we register SEVERAL candidate names and simply
+# reply/stream on whichever one the handshake actually arrives on. Add more here
+# if `/viaauto status` shows no clients being detected — the server log prints
+# which channels registered.
+channels:
+  - "legacy:tc_viablocks"
+  - "tc:viablocks"
+  - "treasure:viablocks"
+# Also try the raw legacy name. On a 1.13+ server this registration may be
+# rejected (non-namespaced); it's attempted in a try/catch and skipped if so.
+try-legacy-name: true
+
+# Re-assert stored overrides to each nearby Treasure Client this often (ticks).
+resend-period-ticks: 60
+# Only stream/resend overrides within this many blocks of the player.
+resend-radius: 96
+
+# Scan each chunk for modern blocks when it loads. This catches pre-existing
+# world content (not just freshly placed blocks), but a full chunk scan is
+# expensive, so it's OFF by default. Turn it on only if your world already
+# contains modern blocks you want shown. Freshly placed/broken blocks are always
+# tracked via events regardless of this setting.
+scan-chunks-on-load: false
+
+# Extra logging (per-block detection). Noisy; for debugging only.
+debug: false

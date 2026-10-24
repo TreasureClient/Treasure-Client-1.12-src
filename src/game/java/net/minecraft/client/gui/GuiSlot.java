@@ -213,27 +213,9 @@ public abstract class GuiSlot {
 			GlStateManager.disableFog();
 			Tessellator tessellator = Tessellator.getInstance();
 			WorldRenderer bufferbuilder = tessellator.getBuffer();
-			this.mc.getTextureManager().bindTexture(Gui.OPTIONS_BACKGROUND);
-			GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-			float f = 32.0F;
-			bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
-			bufferbuilder.pos((double) this.left, (double) this.bottom, 0.0D)
-					.tex((double) ((float) this.left / 32.0F),
-							(double) ((float) (this.bottom + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			bufferbuilder.pos((double) this.right, (double) this.bottom, 0.0D)
-					.tex((double) ((float) this.right / 32.0F),
-							(double) ((float) (this.bottom + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			bufferbuilder.pos((double) this.right, (double) this.top, 0.0D)
-					.tex((double) ((float) this.right / 32.0F),
-							(double) ((float) (this.top + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			bufferbuilder.pos((double) this.left, (double) this.top, 0.0D)
-					.tex((double) ((float) this.left / 32.0F),
-							(double) ((float) (this.top + (int) this.amountScrolled) / 32.0F))
-					.color(32, 32, 32, 255).endVertex();
-			tessellator.draw();
+			// Treasure Client: the list panel is a translucent dark overlay over the
+			// themed background (drawn by the screen) instead of a tiled dirt texture.
+			Gui.drawRect(this.left, this.top, this.right, this.bottom, 0x73000000);
 			int k = this.left + this.width / 2 - this.getListWidth() / 2 + 2;
 			int l = this.top + 4 - (int) this.amountScrolled;
 
@@ -243,8 +225,10 @@ public abstract class GuiSlot {
 
 			this.func_192638_a(k, l, mouseXIn, mouseYIn, partialTicks);
 			GlStateManager.disableDepth();
-			this.overlayBackground(0, this.top, 255, 255);
-			this.overlayBackground(this.bottom, this.height, 255, 255);
+			// Treasure Client: the header/footer strips used to be tiled with the dirt
+			// texture (Gui.OPTIONS_BACKGROUND). Drop them so the themed screen
+			// background (drawn by GuiScreen.drawBackground) fills the whole screen.
+			// The soft top/bottom gradient below still provides the fade over the list.
 			GlStateManager.enableBlend();
 			GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
 					RealOpenGLEnums.GL_ZERO, RealOpenGLEnums.GL_ONE);

@@ -48,6 +48,11 @@ public abstract class GuiContainer extends GuiScreen {
 	/** holds the slot currently hovered */
 	private Slot theSlot;
 
+	/** Treasure Client: the slot currently under the mouse (for the F6 item-NBT dump). */
+	public Slot tcHoveredSlot() {
+		return this.theSlot;
+	}
+
 	/** Used when touchscreen is enabled. */
 	private Slot clickedSlot;
 

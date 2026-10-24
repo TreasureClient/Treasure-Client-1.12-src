@@ -95,8 +95,10 @@ public class GuiScreenEditProfile extends GuiScreen {
 	}
 
 	public void drawScreen(int mx, int my, float partialTicks) {
-		drawDefaultBackground();
-		drawCenteredString(fontRendererObj, screenTitle, width / 2, 15, 16777215);
+		// Treasure Client: themed backdrop instead of the default dirt. No panel box.
+		net.minecraft.client.gui.TreasureBackground.draw(this.width, this.height, this.zLevel);
+		int tcAccent = net.minecraft.client.gui.TreasureBackground.accent();
+		drawCenteredString(fontRendererObj, screenTitle, width / 2, 15, tcAccent);
 		drawString(fontRendererObj, I18n.format("editProfile.username"), width / 2 - 20, height / 6 + 8, 10526880);
 		drawString(fontRendererObj, I18n.format("editProfile.playerSkin"), width / 2 - 20, height / 6 + 66, 10526880);
 		
@@ -108,7 +110,7 @@ public class GuiScreenEditProfile extends GuiScreen {
 		int skinWidth = 80;
 		int skinHeight = 130;
 		
-		drawRect(skinX, skinY, skinX + skinWidth, skinY + skinHeight, 0xFFA0A0A0);
+		drawRect(skinX, skinY, skinX + skinWidth, skinY + skinHeight, tcAccent);
 		drawRect(skinX + 1, skinY + 1, skinX + skinWidth - 1, skinY + skinHeight - 1, 0xFF000015);
 		
 		GlStateManager.pushMatrix();

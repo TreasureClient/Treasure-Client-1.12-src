@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "variant=default": {
+            "model": "polished_tuff_double_slab"
+        }
+    }
+}

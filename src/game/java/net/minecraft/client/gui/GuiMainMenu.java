@@ -67,12 +67,67 @@ public class GuiMainMenu extends GuiScreen {
 		}
 	}
 
-	// palette helpers, per mode
+	// Treasure Client: custom client title chosen in the Mod Menu's Themes tab.
+	// The in-browser overlay writes the active theme's title to storage key
+	// "tctitle" (localStorage "_eaglercraft_1.12.tctitle"); we read it here so the
+	// main-menu brand line shows whatever the user renamed the client to
+	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
+	// renaming in the overlay shows up live without a per-frame storage read.
+	private static String brandTitle = "Treasure Client 1.2";
+	private static boolean customBrand = false; // true when the user set a custom title
+	private static long brandRead = 0L;
+
+	private static String brandLine() {
+		try {
+			long now = EagRuntime.steadyTimeMillis();
+			if (now - brandRead > 500L) {
+				brandRead = now;
+				byte[] b = EagRuntime.getStorage("tctitle");
+				if (b != null && b.length > 0) {
+					String s = new String(b, StandardCharsets.UTF_8).trim();
+					if (s.isEmpty()) { brandTitle = "Treasure Client 1.2"; customBrand = false; }
+					else { brandTitle = s; customBrand = true; }
+				} else {
+					brandTitle = "Treasure Client 1.2"; customBrand = false;
+				}
+			}
+		} catch (Throwable t) {
+			brandTitle = "Treasure Client 1.2"; customBrand = false;
+		}
+		return brandTitle;
+	}
+
+	// palette helpers, per theme/mode. Frost (selected in the Mod Menu Themes tab)
+	// uses the icy blue/cyan accent so the whole menu matches the theme.
+	private boolean frost()      { return TreasureTheme.isFrost(); }
+	private boolean tropical()   { return TreasureTheme.isTropical(); }
+	private boolean terracotta() { return TreasureTheme.isTerracotta(); }
+	private boolean forest()     { return TreasureTheme.isForest(); }
 	private int cBgTop()    { return deepSeaMode ? 0xff0a3350 : 0xff2a1b0d; }
 	private int cBgBottom() { return deepSeaMode ? 0xff030f18 : 0xff0f0a05; }
-	private int cAccent()   { return deepSeaMode ? 0xff7fe9ff : 0xffffd76b; }
-	private int cAccentDim(){ return deepSeaMode ? 0xff8fb9cc : 0xffc9b183; }
-	private int cParticle() { return deepSeaMode ? 0x807fe9ff : 0x80ffd76b; }
+	// Per-theme accents: Frost=icy blue, Tropical=turquoise+sand, Terracotta=burnt
+	// orange, Forest=green, else the default gold.
+	private int cAccent() {
+		if (frost()) return 0xff7fe9ff;
+		if (tropical()) return 0xff45e3c6;
+		if (terracotta()) return 0xffdb7a3c;
+		if (forest()) return 0xff6fcb5b;
+		return 0xffffd76b;
+	}
+	private int cAccentDim() {
+		if (frost()) return 0xff8fb9cc;
+		if (tropical()) return 0xffe0cd97;
+		if (terracotta()) return 0xffe8b98a;
+		if (forest()) return 0xffbfe0a0;
+		return 0xffc9b183;
+	}
+	private int cParticle() {
+		if (frost()) return 0x807fe9ff;
+		if (tropical()) return 0x8045e3c6;
+		if (terracotta()) return 0x80e89a5a;
+		if (forest()) return 0x80bfe88a;
+		return 0x80ffd76b;
+	}
 
 	/** Counts the number of screen updates. */
 	private final float updateCounter;
@@ -103,6 +158,20 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation MINECRAFT_TITLE_TEXTURES = new ResourceLocation(
 			"textures/gui/title/minecraft.png");
 	private static final ResourceLocation field_194400_H = new ResourceLocation("textures/gui/title/edition.png");
+	// Treasure Client: main-menu background images (packed into assets.epk from
+	// desktopRuntime/resources/assets/minecraft/textures/gui/title/*.png).
+	private static final ResourceLocation TREASURE_BG = new ResourceLocation("textures/gui/title/treasure_bg.png");
+	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
+	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
+	private static final ResourceLocation TERRACOTTA_BG = new ResourceLocation("textures/gui/title/terracotta_bg.png");
+	private static final ResourceLocation FOREST_BG = new ResourceLocation("textures/gui/title/forest_bg.png");
+	// Treasure Client: per-theme recolored chest logo drawn above the wordmark.
+	private static final ResourceLocation LOGO_NORMAL = new ResourceLocation("textures/gui/title/treasure_logo_normal.png");
+	private static final ResourceLocation LOGO_FROST = new ResourceLocation("textures/gui/title/treasure_logo_frost.png");
+	private static final ResourceLocation LOGO_TROPICAL = new ResourceLocation("textures/gui/title/treasure_logo_tropical.png");
+	private static final ResourceLocation LOGO_TERRACOTTA = new ResourceLocation("textures/gui/title/treasure_logo_terracotta.png");
+	private static final ResourceLocation LOGO_FOREST = new ResourceLocation("textures/gui/title/treasure_logo_forest.png");
+	private static final float LOGO_ASPECT = 221.0F / 224.0F; // texture width / height
 
 	/** An array of all the paths to the panorama pictures. */
 	private static final ResourceLocation[] TITLE_PANORAMA_PATHS = new ResourceLocation[] {
@@ -468,35 +537,156 @@ public class GuiMainMenu extends GuiScreen {
 	}
 
 	/**
+	 * Treasure Client: draw a main-menu background image stretched to fill the
+	 * whole screen (behind the buttons), the same way the panorama blit does.
+	 */
+	private void drawBgTexture(ResourceLocation tex) {
+		GlStateManager.disableDepth();
+		GlStateManager.depthMask(false);
+		GlStateManager.enableTexture2D();
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		this.mc.getTextureManager().bindTexture(tex);
+		// Linear filtering so the stretched/blurred photo isn't nearest-neighbor
+		// pixelated (3553=GL_TEXTURE_2D, 10241/10240=MIN/MAG, 9729=GL_LINEAR).
+		EaglercraftGPU.glTexParameteri(3553, 10241, 9729);
+		EaglercraftGPU.glTexParameteri(3553, 10240, 9729);
+
+		// Slow horizontal pan (eases left <-> right) with a slight zoom, so the
+		// sampled sub-rect always drifts within the image and never shows an edge.
+		float t = (float) Minecraft.getSystemTime();
+		float zoom = 0.82F;
+		float margin = 1.0F - zoom;
+		float panX = (MathHelper.sin(t / 9000.0F) * 0.5F + 0.5F) * margin; // 0..margin
+		float panY = margin * 0.5F; // vertically centered
+		float u0 = panX, u1 = panX + zoom;
+		float v0 = panY, v1 = panY + zoom;
+
+		// Cheap multi-tap "blur": an opaque base plus 8 low-alpha copies at small
+		// screen-space offsets, so the background reads as soft/blurred — no shaders.
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(770, 771); // GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
+		// Larger radius + two concentric rings of samples (16 taps) give a soft,
+		// smooth gaussian-like blur instead of the old blocky 8-tap pass.
+		float r = Math.max(3.0F, this.width / 150.0F);
+		blitBg(u0, v0, u1, v1, 0.0F, 0.0F, 255);
+		float[][] ring = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
+				{ 0.7F, 0.7F }, { -0.7F, -0.7F }, { 0.7F, -0.7F }, { -0.7F, 0.7F } };
+		for (int i = 0; i < ring.length; i++) {
+			// inner ring (stronger) then a wider outer ring (fainter) for softness
+			blitBg(u0, v0, u1, v1, ring[i][0] * r, ring[i][1] * r, 42);
+			blitBg(u0, v0, u1, v1, ring[i][0] * r * 2.2F, ring[i][1] * r * 2.2F, 24);
+		}
+		GlStateManager.disableBlend();
+
+		GlStateManager.depthMask(true);
+		GlStateManager.enableDepth();
+	}
+
+	/** Draw the full-screen background quad with a tex sub-rect, pixel offset and alpha. */
+	private void blitBg(float u0, float v0, float u1, float v1, float ox, float oy, int a) {
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer bufferbuilder = tessellator.getBuffer();
+		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		double z = (double) this.zLevel;
+		double x0 = ox, y0 = oy, x1 = this.width + ox, y1 = this.height + oy;
+		bufferbuilder.pos(x0, y1, z).tex((double) u0, (double) v1).color(255, 255, 255, a).endVertex();
+		bufferbuilder.pos(x1, y1, z).tex((double) u1, (double) v1).color(255, 255, 255, a).endVertex();
+		bufferbuilder.pos(x1, y0, z).tex((double) u1, (double) v0).color(255, 255, 255, a).endVertex();
+		bufferbuilder.pos(x0, y0, z).tex((double) u0, (double) v0).color(255, 255, 255, a).endVertex();
+		tessellator.draw();
+	}
+
+	/** Treasure Client: the chest logo texture for the active theme. */
+	private ResourceLocation activeLogo() {
+		if (this.frost()) return LOGO_FROST;
+		if (this.tropical()) return LOGO_TROPICAL;
+		if (this.terracotta()) return LOGO_TERRACOTTA;
+		if (this.forest()) return LOGO_FOREST;
+		return LOGO_NORMAL;
+	}
+
+	/**
+	 * Treasure Client: draw the recolored chest logo centered at cx with its top
+	 * at topY and the given height (width follows the texture aspect ratio).
+	 */
+	private void drawLogo(int cx, int topY, int h) {
+		int w = Math.round(h * LOGO_ASPECT);
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(770, 771); // GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		this.mc.getTextureManager().bindTexture(this.activeLogo());
+		EaglercraftGPU.glTexParameteri(3553, 10241, 9729); // GL_LINEAR so it isn't pixelated
+		EaglercraftGPU.glTexParameteri(3553, 10240, 9729);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer bufferbuilder = tessellator.getBuffer();
+		double x0 = cx - w / 2.0, x1 = cx + w / 2.0, y0 = topY, y1 = topY + h, z = this.zLevel;
+		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		bufferbuilder.pos(x0, y1, z).tex(0.0D, 1.0D).color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos(x1, y1, z).tex(1.0D, 1.0D).color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos(x1, y0, z).tex(1.0D, 0.0D).color(255, 255, 255, 255).endVertex();
+		bufferbuilder.pos(x0, y0, z).tex(0.0D, 0.0D).color(255, 255, 255, 255).endVertex();
+		tessellator.draw();
+		GlStateManager.disableBlend();
+	}
+
+	/**
 	 * Draws the screen and all the components in it.
 	 */
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
 		this.panoramaTimer += partialTicks;
 
-		// ---- themed background gradient (mode-based) ----
-		this.drawGradientRect(0, 0, this.width, this.height, cBgTop(), cBgBottom());
-		this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x88000000);
+		boolean frost = this.frost();
+		boolean tropical = this.tropical();
+		boolean terracotta = this.terracotta();
+		boolean forest = this.forest();
 
-		// ---- animated particle field (gold flecks fall / bubbles rise) ----
+		// ---- background ----
+		// Each theme uses a full-screen image background.
+		ResourceLocation bg;
+		if (frost) bg = FROST_BG;
+		else if (tropical) bg = TROPICAL_BG;
+		else if (terracotta) bg = TERRACOTTA_BG;
+		else if (forest) bg = FOREST_BG;
+		else bg = TREASURE_BG;
+		this.drawBgTexture(bg);
+		// very light darkening only near the bottom, so the background stays clearly visible
+		this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x33000000);
+
+		// ---- animated particle field (snow on wind / gold flecks fall / bubbles rise) ----
 		// Deterministic pseudo-random field advanced by system time; no textures,
 		// just small drawn rects, so it's cheap and portable.
 		long t = Minecraft.getSystemTime();
-		int particleColor = cParticle();
-		int count = 48;
+		int particleColor = frost ? 0x99EAF6FF
+				: tropical ? 0x9945E3C6
+				: terracotta ? 0x99E89A5A
+				: forest ? 0x99C8E88A
+				: cParticle();
+		// Frost wind: two slow sine waves summed so the gust eases between calm and
+		// windy over time (never a constant gale). Value = horizontal push in px.
+		float gust = frost
+				? (MathHelper.sin((float) (t / 7000.0)) * 0.5F + MathHelper.sin((float) (t / 2300.0)) * 0.5F) * 34.0F
+				: 0.0F;
+		int count = frost ? 50 : 30;
 		for (int i = 0; i < count; i++) {
 			// stable per-particle pseudo-random seeds
 			float sx = ((i * 73 + 11) % 100) / 100.0F;
 			float speed = 0.25F + (((i * 37 + 7) % 100) / 100.0F) * 0.55F;
-			float size = 1.0F + ((i * 53 + 3) % 3);
-			float drift = MathHelper.sin((float) ((t / 1600.0) + i)) * 12.0F;
-			int x = (int) (sx * this.width + drift);
+			float size = frost ? (1.0F + ((i * 29 + 5) % 2)) : (1.0F + ((i * 53 + 3) % 2));
+			float sway = MathHelper.sin((float) ((t / 1600.0) + i)) * (frost ? 7.0F : 12.0F);
+			float lane = 0.4F + ((i * 17 + 9) % 100) / 100.0F; // how strongly this flake catches the wind
+			int x = (int) (sx * this.width + sway + (frost ? gust * lane : 0.0F));
+			if (frost) {
+				// wrap horizontally so wind-blown flakes re-enter from the other edge
+				int w = this.width + 32;
+				x = (((x + 16) % w) + w) % w - 16;
+			}
 			float phase = (float) (((t / 2200.0) * speed + (i * 0.137F)) % 1.0);
 			int y;
-			if (deepSeaMode) {
-				// bubbles rise
+			if (!frost && (tropical || forest || deepSeaMode)) {
+				// tropical / forest / deep-sea particles rise
 				y = (int) (this.height - phase * this.height);
 			} else {
-				// gold flecks fall
+				// snow / gold flecks fall
 				y = (int) (phase * this.height);
 			}
 			this.drawRect(x, y, x + (int) size, y + (int) size, particleColor);
@@ -504,33 +694,53 @@ public class GuiMainMenu extends GuiScreen {
 
 		int j = this.width / 2;
 
-		// ---- wordmark: big, layered shadow + themed accent + subtle pulse ----
-		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 46.0F, 0.0F);
-		GlStateManager.scale(3.4F, 3.4F, 3.4F);
-		// drop shadow
-		this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
-		// main
-		this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 0, -4, cAccent());
-		GlStateManager.popMatrix();
+		// ---- chest logo crest above the wordmark (recolored to the active theme) ----
+		this.drawLogo(j, 1, 36);
 
-		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 82.0F, 0.0F);
-		GlStateManager.scale(1.9F, 1.9F, 1.9F);
-		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
-		this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
-		GlStateManager.popMatrix();
+		// ---- wordmark: big, layered shadow + themed accent ----
+		brandLine(); // refresh brandTitle / customBrand from the overlay
+		if (customBrand) {
+			// The user renamed the client in the Mod Menu — show that title as the
+			// big wordmark, scaled to fit the screen width (one centered line).
+			String ct = brandTitle;
+			int cw = Math.max(1, this.fontRendererObj.getStringWidth(ct));
+			float sc = (this.width - 60.0F) / (float) cw;
+			if (sc > 2.5F) sc = 2.5F;
+			if (sc < 1.0F) sc = 1.0F;
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) j, 58.0F, 0.0F);
+			GlStateManager.scale(sc, sc, sc);
+			this.drawCenteredString(this.fontRendererObj, ct, 1, -3, 0xff000000);
+			this.drawCenteredString(this.fontRendererObj, ct, 0, -4, cAccent());
+			GlStateManager.popMatrix();
+		} else {
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) j, 48.0F, 0.0F);
+			GlStateManager.scale(2.5F, 2.5F, 2.5F);
+			// drop shadow
+			this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
+			// main
+			this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 0, -4, cAccent());
+			GlStateManager.popMatrix();
+
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) j, 72.0F, 0.0F);
+			GlStateManager.scale(1.4F, 1.4F, 1.4F);
+			this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
+			this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
+			GlStateManager.popMatrix();
+		}
 
 		// splash with gentle pulse
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 108.0F, 0.0F);
+		GlStateManager.translate((float) j, 90.0F, 0.0F);
 		float f = 1.0F - 0.08F * MathHelper
 				.abs(MathHelper.sin((float) (t % 1000L) / 1000.0F * ((float) Math.PI * 2F)));
 		GlStateManager.scale(f, f, f);
 		this.drawCenteredString(this.fontRendererObj, this.splashText, 0, 0, cAccent());
 		GlStateManager.popMatrix();
 
-		this.drawString(this.fontRendererObj, "Treasure Client 1.1", 2, this.height - 20, cAccentDim());
+		this.drawString(this.fontRendererObj, brandLine(), 2, this.height - 20, cAccentDim());
 		this.drawString(this.fontRendererObj, "Eaglercraft 1.12.2",
 				2, this.height - 10, cAccentDim());
 

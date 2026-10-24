@@ -168,7 +168,8 @@ public class GameSettings {
 	public float saturation;
 
 	/** GUI scale */
-	public int guiScale;
+	// Treasure Client: default to Normal (2) instead of Auto (0). 0=auto,1=small,2=normal,3=large.
+	public int guiScale = 2;
 
 	/** Determines amount of particles. 0 = All, 1 = Decreased, 2 = Minimal */
 	public int particleSetting;

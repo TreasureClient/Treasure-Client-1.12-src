@@ -515,6 +515,34 @@ public class Item {
 
 	public static void registerItems() {
 		registerItemBlock(Blocks.AIR, new ItemAir(Blocks.AIR));
+		// Treasure Client — item forms for the modern ViaBlocks (inherit the block's
+		// creative tab via ItemBlock.getCreativeTab()).
+		for (int viaI = 0; viaI < net.minecraft.block.ViaBlocks.BLOCKS.length; viaI++) {
+			if (net.minecraft.block.ViaBlocks.BLOCKS[viaI] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.BLOCKS[viaI]);
+			}
+		}
+		// Treasure Client — ViaBlocks slabs: only the half form gets an item
+		// (ItemSlab maps it to the double form when stacked).
+		for (int viaS = 0; viaS < net.minecraft.block.ViaBlocks.SLAB_HALF.length; viaS++) {
+			net.minecraft.block.BlockSlab half = net.minecraft.block.ViaBlocks.SLAB_HALF[viaS];
+			net.minecraft.block.BlockSlab dbl = net.minecraft.block.ViaBlocks.SLAB_DOUBLE[viaS];
+			if (half != null && dbl != null) {
+				registerItemBlock(half, new ItemSlab(half, half, dbl));
+			}
+		}
+		// Treasure Client — ViaBlocks walls: a plain ItemBlock each.
+		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
+			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.WALLS[viaW]);
+			}
+		}
+		// Treasure Client — ViaBlocks cross-model plants: a plain ItemBlock each.
+		for (int viaC = 0; viaC < net.minecraft.block.ViaBlocks.CROSS.length; viaC++) {
+			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.CROSS[viaC]);
+			}
+		}
 		registerItemBlock(Blocks.STONE,
 				(new ItemMultiTexture(Blocks.STONE, Blocks.STONE, new ItemMultiTexture.Mapper() {
 					public String apply(ItemStack p_apply_1_) {
@@ -1133,6 +1161,18 @@ public class Item {
 		registerItem(2266, "record_11", (new ItemRecord("11", SoundEvents.RECORD_11)).setUnlocalizedName("record"));
 		registerItem(2267, "record_wait",
 				(new ItemRecord("wait", SoundEvents.RECORD_WAIT)).setUnlocalizedName("record"));
+		// Treasure Client — modern ViaItems (spears, netherite tools + armor,
+		// materials). Each item's kind is decided by ViaItems.createItem(name).
+		for (int viaI = 0; viaI < net.minecraft.item.ViaItems.NAMES.length; viaI++) {
+			try {
+				String viaName = net.minecraft.item.ViaItems.NAMES[viaI];
+				Item viaItem = net.minecraft.item.ViaItems.createItem(viaName);
+				registerItem(net.minecraft.item.ViaItems.FIRST_ID + viaI, viaName, viaItem);
+				net.minecraft.item.ViaItems.ITEMS[viaI] = viaItem;
+			} catch (Throwable viaErr) {
+				// One bad ViaItem must not abort the loop — keep the rest (mace, …).
+			}
+		}
 	}
 
 	/**
@@ -1164,7 +1204,9 @@ public class Item {
 
 	public static enum ToolMaterial {
 		WOOD(0, 59, 2.0F, 0.0F, 15), STONE(1, 131, 4.0F, 1.0F, 5), IRON(2, 250, 6.0F, 2.0F, 14),
-		DIAMOND(3, 1561, 8.0F, 3.0F, 10), GOLD(0, 32, 12.0F, 0.0F, 22);
+		DIAMOND(3, 1561, 8.0F, 3.0F, 10), GOLD(0, 32, 12.0F, 0.0F, 22),
+		// Treasure Client (ViaItems) — modern netherite tier.
+		NETHERITE(4, 2031, 9.0F, 4.0F, 15);
 
 		private final int harvestLevel;
 		private final int maxUses;

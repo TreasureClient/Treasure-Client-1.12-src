@@ -373,6 +373,10 @@ public class ItemRenderer {
 
 				case BLOCK:
 					this.transformSideFirstPerson(enumhandside, p_187457_7_);
+					// Treasure Client — Low Shield: drop the shield down so it covers less view.
+					if (net.minecraft.client.gui.TreasureMods.lowShield()) {
+						GlStateManager.translate(0.0F, -net.minecraft.client.gui.TreasureMods.lowShieldAmount(), 0.0F);
+					}
 					break;
 
 				case BOW:
@@ -554,6 +558,15 @@ public class ItemRenderer {
 			float f9 = -0.5F;
 			GlStateManager.translate((float) (-(i * 2 - 1)) * 0.24F, -0.3F, 0.0F);
 			GlStateManager.rotate((float) (i * 2 - 1) * 10.0F, 0.0F, 1.0F, 0.0F);
+			// Treasure Client — Low Fire: slide the overlay down so it blocks less view.
+			// Most of the fire quad already sits below the screen; only its top ~0.55
+			// units are visible (the hand projection shows y -0.35..0.35 at z=-0.5).
+			// Shrinking it from its off-screen bottom pushed it out of view entirely,
+			// so instead lower it until only fh of that visible part remains.
+			if (net.minecraft.client.gui.TreasureMods.lowFire()) {
+				float fh = net.minecraft.client.gui.TreasureMods.lowFireHeight();
+				GlStateManager.translate(0.0F, -(1.0F - fh) * 0.55F, 0.0F);
+			}
 			bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
 			bufferbuilder.pos(-0.5D, -0.5D, -0.5D).tex((double) f2, (double) f4).endVertex();
 			bufferbuilder.pos(0.5D, -0.5D, -0.5D).tex((double) f1, (double) f4).endVertex();

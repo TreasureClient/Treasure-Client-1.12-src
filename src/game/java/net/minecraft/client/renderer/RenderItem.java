@@ -466,6 +466,36 @@ public class RenderItem implements IResourceManagerReloadListener {
 	}
 
 	private void registerItems() {
+		// Treasure Client — item models for the modern ViaBlocks (item model = block model).
+		for (int viaI = 0; viaI < net.minecraft.block.ViaBlocks.BLOCKS.length; viaI++) {
+			if (net.minecraft.block.ViaBlocks.BLOCKS[viaI] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.BLOCKS[viaI], net.minecraft.block.ViaBlocks.NAMES[viaI]);
+			}
+		}
+		// Treasure Client — item models for the modern ViaItems.
+		for (int viaItemI = 0; viaItemI < net.minecraft.item.ViaItems.ITEMS.length; viaItemI++) {
+			if (net.minecraft.item.ViaItems.ITEMS[viaItemI] != null) {
+				this.registerItem(net.minecraft.item.ViaItems.ITEMS[viaItemI], net.minecraft.item.ViaItems.NAMES[viaItemI]);
+			}
+		}
+		// Treasure Client — item models for the ViaBlocks slabs (half form only).
+		for (int viaS = 0; viaS < net.minecraft.block.ViaBlocks.SLAB_HALF.length; viaS++) {
+			if (net.minecraft.block.ViaBlocks.SLAB_HALF[viaS] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.SLAB_HALF[viaS], net.minecraft.block.ViaBlocks.SLAB_NAMES[viaS]);
+			}
+		}
+		// Treasure Client — item models for the ViaBlocks walls.
+		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
+			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.WALLS[viaW], net.minecraft.block.ViaBlocks.WALL_NAMES[viaW]);
+			}
+		}
+		// Treasure Client — item models for the ViaBlocks cross-model plants.
+		for (int viaC = 0; viaC < net.minecraft.block.ViaBlocks.CROSS.length; viaC++) {
+			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.CROSS[viaC], net.minecraft.block.ViaBlocks.CROSS_NAMES[viaC]);
+			}
+		}
 		this.registerBlock(Blocks.ANVIL, "anvil_intact");
 		this.registerBlock(Blocks.ANVIL, 1, "anvil_slightly_damaged");
 		this.registerBlock(Blocks.ANVIL, 2, "anvil_very_damaged");

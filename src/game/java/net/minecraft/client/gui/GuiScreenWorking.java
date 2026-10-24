@@ -52,7 +52,8 @@ public class GuiScreenWorking extends GuiScreen implements IProgressUpdate {
 		if (this.doneWorking) {
 			this.mc.displayGuiScreen((GuiScreen) null);
 		} else {
-			this.drawDefaultBackground();
+			// Treasure Client: themed backdrop on the loading/working screen.
+			TreasureBackground.draw(this.width, this.height, this.zLevel);
 			this.drawCenteredString(this.fontRendererObj, this.title, this.width / 2, 70, 16777215);
 			this.drawCenteredString(this.fontRendererObj, this.stage + " " + this.progress + "%", this.width / 2, 90,
 					16777215);

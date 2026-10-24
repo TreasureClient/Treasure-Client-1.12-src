@@ -1,0 +1,1063 @@
+{
+  "note": "block state id = regId<<4 | meta. baseStateId uses meta 0 (default state).",
+  "blocks": {
+    "deepslate": {
+      "modern": "minecraft:deepslate",
+      "blockId": 1000,
+      "baseStateId": 16000,
+      "kind": "cube"
+    },
+    "calcite": {
+      "modern": "minecraft:calcite",
+      "blockId": 1001,
+      "baseStateId": 16016,
+      "kind": "cube"
+    },
+    "tuff": {
+      "modern": "minecraft:tuff",
+      "blockId": 1002,
+      "baseStateId": 16032,
+      "kind": "cube"
+    },
+    "amethyst_block": {
+      "modern": "minecraft:amethyst_block",
+      "blockId": 1003,
+      "baseStateId": 16048,
+      "kind": "cube"
+    },
+    "copper_block": {
+      "modern": "minecraft:copper_block",
+      "blockId": 1004,
+      "baseStateId": 16064,
+      "kind": "cube"
+    },
+    "smooth_basalt": {
+      "modern": "minecraft:smooth_basalt",
+      "blockId": 1005,
+      "baseStateId": 16080,
+      "kind": "cube"
+    },
+    "cobbled_deepslate": {
+      "modern": "minecraft:cobbled_deepslate",
+      "blockId": 1006,
+      "baseStateId": 16096,
+      "kind": "cube"
+    },
+    "polished_deepslate": {
+      "modern": "minecraft:polished_deepslate",
+      "blockId": 1007,
+      "baseStateId": 16112,
+      "kind": "cube"
+    },
+    "deepslate_bricks": {
+      "modern": "minecraft:deepslate_bricks",
+      "blockId": 1008,
+      "baseStateId": 16128,
+      "kind": "cube"
+    },
+    "deepslate_tiles": {
+      "modern": "minecraft:deepslate_tiles",
+      "blockId": 1009,
+      "baseStateId": 16144,
+      "kind": "cube"
+    },
+    "chiseled_deepslate": {
+      "modern": "minecraft:chiseled_deepslate",
+      "blockId": 1010,
+      "baseStateId": 16160,
+      "kind": "cube"
+    },
+    "polished_tuff": {
+      "modern": "minecraft:polished_tuff",
+      "blockId": 1011,
+      "baseStateId": 16176,
+      "kind": "cube"
+    },
+    "tuff_bricks": {
+      "modern": "minecraft:tuff_bricks",
+      "blockId": 1012,
+      "baseStateId": 16192,
+      "kind": "cube"
+    },
+    "blackstone": {
+      "modern": "minecraft:blackstone",
+      "blockId": 1013,
+      "baseStateId": 16208,
+      "kind": "cube"
+    },
+    "polished_blackstone": {
+      "modern": "minecraft:polished_blackstone",
+      "blockId": 1014,
+      "baseStateId": 16224,
+      "kind": "cube"
+    },
+    "polished_blackstone_bricks": {
+      "modern": "minecraft:polished_blackstone_bricks",
+      "blockId": 1015,
+      "baseStateId": 16240,
+      "kind": "cube"
+    },
+    "gilded_blackstone": {
+      "modern": "minecraft:gilded_blackstone",
+      "blockId": 1016,
+      "baseStateId": 16256,
+      "kind": "cube"
+    },
+    "exposed_copper": {
+      "modern": "minecraft:exposed_copper",
+      "blockId": 1017,
+      "baseStateId": 16272,
+      "kind": "cube"
+    },
+    "weathered_copper": {
+      "modern": "minecraft:weathered_copper",
+      "blockId": 1018,
+      "baseStateId": 16288,
+      "kind": "cube"
+    },
+    "oxidized_copper": {
+      "modern": "minecraft:oxidized_copper",
+      "blockId": 1019,
+      "baseStateId": 16304,
+      "kind": "cube"
+    },
+    "cut_copper": {
+      "modern": "minecraft:cut_copper",
+      "blockId": 1020,
+      "baseStateId": 16320,
+      "kind": "cube"
+    },
+    "dripstone_block": {
+      "modern": "minecraft:dripstone_block",
+      "blockId": 1021,
+      "baseStateId": 16336,
+      "kind": "cube"
+    },
+    "moss_block": {
+      "modern": "minecraft:moss_block",
+      "blockId": 1022,
+      "baseStateId": 16352,
+      "kind": "cube"
+    },
+    "packed_mud": {
+      "modern": "minecraft:packed_mud",
+      "blockId": 1023,
+      "baseStateId": 16368,
+      "kind": "cube"
+    },
+    "mud_bricks": {
+      "modern": "minecraft:mud_bricks",
+      "blockId": 1024,
+      "baseStateId": 16384,
+      "kind": "cube"
+    },
+    "deepslate_coal_ore": {
+      "modern": "minecraft:deepslate_coal_ore",
+      "blockId": 1025,
+      "baseStateId": 16400,
+      "kind": "cube"
+    },
+    "deepslate_iron_ore": {
+      "modern": "minecraft:deepslate_iron_ore",
+      "blockId": 1026,
+      "baseStateId": 16416,
+      "kind": "cube"
+    },
+    "deepslate_copper_ore": {
+      "modern": "minecraft:deepslate_copper_ore",
+      "blockId": 1027,
+      "baseStateId": 16432,
+      "kind": "cube"
+    },
+    "deepslate_gold_ore": {
+      "modern": "minecraft:deepslate_gold_ore",
+      "blockId": 1028,
+      "baseStateId": 16448,
+      "kind": "cube"
+    },
+    "deepslate_redstone_ore": {
+      "modern": "minecraft:deepslate_redstone_ore",
+      "blockId": 1029,
+      "baseStateId": 16464,
+      "kind": "cube"
+    },
+    "deepslate_emerald_ore": {
+      "modern": "minecraft:deepslate_emerald_ore",
+      "blockId": 1030,
+      "baseStateId": 16480,
+      "kind": "cube"
+    },
+    "deepslate_lapis_ore": {
+      "modern": "minecraft:deepslate_lapis_ore",
+      "blockId": 1031,
+      "baseStateId": 16496,
+      "kind": "cube"
+    },
+    "deepslate_diamond_ore": {
+      "modern": "minecraft:deepslate_diamond_ore",
+      "blockId": 1032,
+      "baseStateId": 16512,
+      "kind": "cube"
+    },
+    "raw_iron_block": {
+      "modern": "minecraft:raw_iron_block",
+      "blockId": 1033,
+      "baseStateId": 16528,
+      "kind": "cube"
+    },
+    "raw_copper_block": {
+      "modern": "minecraft:raw_copper_block",
+      "blockId": 1034,
+      "baseStateId": 16544,
+      "kind": "cube"
+    },
+    "raw_gold_block": {
+      "modern": "minecraft:raw_gold_block",
+      "blockId": 1035,
+      "baseStateId": 16560,
+      "kind": "cube"
+    },
+    "blue_ice": {
+      "modern": "minecraft:blue_ice",
+      "blockId": 1036,
+      "baseStateId": 16576,
+      "kind": "cube"
+    },
+    "tube_coral_block": {
+      "modern": "minecraft:tube_coral_block",
+      "blockId": 1037,
+      "baseStateId": 16592,
+      "kind": "cube"
+    },
+    "brain_coral_block": {
+      "modern": "minecraft:brain_coral_block",
+      "blockId": 1038,
+      "baseStateId": 16608,
+      "kind": "cube"
+    },
+    "bubble_coral_block": {
+      "modern": "minecraft:bubble_coral_block",
+      "blockId": 1039,
+      "baseStateId": 16624,
+      "kind": "cube"
+    },
+    "fire_coral_block": {
+      "modern": "minecraft:fire_coral_block",
+      "blockId": 1040,
+      "baseStateId": 16640,
+      "kind": "cube"
+    },
+    "horn_coral_block": {
+      "modern": "minecraft:horn_coral_block",
+      "blockId": 1041,
+      "baseStateId": 16656,
+      "kind": "cube"
+    },
+    "dead_tube_coral_block": {
+      "modern": "minecraft:dead_tube_coral_block",
+      "blockId": 1042,
+      "baseStateId": 16672,
+      "kind": "cube"
+    },
+    "dead_brain_coral_block": {
+      "modern": "minecraft:dead_brain_coral_block",
+      "blockId": 1043,
+      "baseStateId": 16688,
+      "kind": "cube"
+    },
+    "dead_bubble_coral_block": {
+      "modern": "minecraft:dead_bubble_coral_block",
+      "blockId": 1044,
+      "baseStateId": 16704,
+      "kind": "cube"
+    },
+    "dead_fire_coral_block": {
+      "modern": "minecraft:dead_fire_coral_block",
+      "blockId": 1045,
+      "baseStateId": 16720,
+      "kind": "cube"
+    },
+    "dead_horn_coral_block": {
+      "modern": "minecraft:dead_horn_coral_block",
+      "blockId": 1046,
+      "baseStateId": 16736,
+      "kind": "cube"
+    },
+    "dried_kelp_block": {
+      "modern": "minecraft:dried_kelp_block",
+      "blockId": 1047,
+      "baseStateId": 16752,
+      "kind": "cube"
+    },
+    "nether_gold_ore": {
+      "modern": "minecraft:nether_gold_ore",
+      "blockId": 1048,
+      "baseStateId": 16768,
+      "kind": "cube"
+    },
+    "ancient_debris": {
+      "modern": "minecraft:ancient_debris",
+      "blockId": 1049,
+      "baseStateId": 16784,
+      "kind": "cube"
+    },
+    "copper_ore": {
+      "modern": "minecraft:copper_ore",
+      "blockId": 1050,
+      "baseStateId": 16800,
+      "kind": "cube"
+    },
+    "barrel": {
+      "modern": "minecraft:barrel",
+      "blockId": 1051,
+      "baseStateId": 16816,
+      "kind": "cube"
+    },
+    "blast_furnace": {
+      "modern": "minecraft:blast_furnace",
+      "blockId": 1052,
+      "baseStateId": 16832,
+      "kind": "cube"
+    },
+    "smoker": {
+      "modern": "minecraft:smoker",
+      "blockId": 1053,
+      "baseStateId": 16848,
+      "kind": "cube"
+    },
+    "composter": {
+      "modern": "minecraft:composter",
+      "blockId": 1054,
+      "baseStateId": 16864,
+      "kind": "cube"
+    },
+    "cartography_table": {
+      "modern": "minecraft:cartography_table",
+      "blockId": 1055,
+      "baseStateId": 16880,
+      "kind": "cube"
+    },
+    "fletching_table": {
+      "modern": "minecraft:fletching_table",
+      "blockId": 1056,
+      "baseStateId": 16896,
+      "kind": "cube"
+    },
+    "smithing_table": {
+      "modern": "minecraft:smithing_table",
+      "blockId": 1057,
+      "baseStateId": 16912,
+      "kind": "cube"
+    },
+    "honeycomb_block": {
+      "modern": "minecraft:honeycomb_block",
+      "blockId": 1058,
+      "baseStateId": 16928,
+      "kind": "cube"
+    },
+    "honey_block": {
+      "modern": "minecraft:honey_block",
+      "blockId": 1059,
+      "baseStateId": 16944,
+      "kind": "cube"
+    },
+    "bee_nest": {
+      "modern": "minecraft:bee_nest",
+      "blockId": 1060,
+      "baseStateId": 16960,
+      "kind": "cube"
+    },
+    "beehive": {
+      "modern": "minecraft:beehive",
+      "blockId": 1061,
+      "baseStateId": 16976,
+      "kind": "cube"
+    },
+    "netherite_block": {
+      "modern": "minecraft:netherite_block",
+      "blockId": 1062,
+      "baseStateId": 16992,
+      "kind": "cube"
+    },
+    "chiseled_polished_blackstone": {
+      "modern": "minecraft:chiseled_polished_blackstone",
+      "blockId": 1063,
+      "baseStateId": 17008,
+      "kind": "cube"
+    },
+    "cracked_polished_blackstone_bricks": {
+      "modern": "minecraft:cracked_polished_blackstone_bricks",
+      "blockId": 1064,
+      "baseStateId": 17024,
+      "kind": "cube"
+    },
+    "chiseled_nether_bricks": {
+      "modern": "minecraft:chiseled_nether_bricks",
+      "blockId": 1065,
+      "baseStateId": 17040,
+      "kind": "cube"
+    },
+    "cracked_nether_bricks": {
+      "modern": "minecraft:cracked_nether_bricks",
+      "blockId": 1066,
+      "baseStateId": 17056,
+      "kind": "cube"
+    },
+    "soul_soil": {
+      "modern": "minecraft:soul_soil",
+      "blockId": 1067,
+      "baseStateId": 17072,
+      "kind": "cube"
+    },
+    "crying_obsidian": {
+      "modern": "minecraft:crying_obsidian",
+      "blockId": 1068,
+      "baseStateId": 17088,
+      "kind": "cube"
+    },
+    "shroomlight": {
+      "modern": "minecraft:shroomlight",
+      "blockId": 1069,
+      "baseStateId": 17104,
+      "kind": "cube"
+    },
+    "warped_wart_block": {
+      "modern": "minecraft:warped_wart_block",
+      "blockId": 1070,
+      "baseStateId": 17120,
+      "kind": "cube"
+    },
+    "nether_wart_block": {
+      "modern": "minecraft:nether_wart_block",
+      "blockId": 1071,
+      "baseStateId": 17136,
+      "kind": "cube"
+    },
+    "quartz_bricks": {
+      "modern": "minecraft:quartz_bricks",
+      "blockId": 1072,
+      "baseStateId": 17152,
+      "kind": "cube"
+    },
+    "crimson_planks": {
+      "modern": "minecraft:crimson_planks",
+      "blockId": 1073,
+      "baseStateId": 17168,
+      "kind": "cube"
+    },
+    "warped_planks": {
+      "modern": "minecraft:warped_planks",
+      "blockId": 1074,
+      "baseStateId": 17184,
+      "kind": "cube"
+    },
+    "crimson_nylium": {
+      "modern": "minecraft:crimson_nylium",
+      "blockId": 1075,
+      "baseStateId": 17200,
+      "kind": "cube"
+    },
+    "warped_nylium": {
+      "modern": "minecraft:warped_nylium",
+      "blockId": 1076,
+      "baseStateId": 17216,
+      "kind": "cube"
+    },
+    "target": {
+      "modern": "minecraft:target",
+      "blockId": 1077,
+      "baseStateId": 17232,
+      "kind": "cube"
+    },
+    "lodestone": {
+      "modern": "minecraft:lodestone",
+      "blockId": 1078,
+      "baseStateId": 17248,
+      "kind": "cube"
+    },
+    "crimson_stem": {
+      "modern": "minecraft:crimson_stem",
+      "blockId": 1079,
+      "baseStateId": 17264,
+      "kind": "cube"
+    },
+    "warped_stem": {
+      "modern": "minecraft:warped_stem",
+      "blockId": 1080,
+      "baseStateId": 17280,
+      "kind": "cube"
+    },
+    "stripped_crimson_stem": {
+      "modern": "minecraft:stripped_crimson_stem",
+      "blockId": 1081,
+      "baseStateId": 17296,
+      "kind": "cube"
+    },
+    "stripped_warped_stem": {
+      "modern": "minecraft:stripped_warped_stem",
+      "blockId": 1082,
+      "baseStateId": 17312,
+      "kind": "cube"
+    },
+    "basalt": {
+      "modern": "minecraft:basalt",
+      "blockId": 1083,
+      "baseStateId": 17328,
+      "kind": "cube"
+    },
+    "polished_basalt": {
+      "modern": "minecraft:polished_basalt",
+      "blockId": 1084,
+      "baseStateId": 17344,
+      "kind": "cube"
+    },
+    "bamboo_block": {
+      "modern": "minecraft:bamboo_block",
+      "blockId": 1085,
+      "baseStateId": 17360,
+      "kind": "cube"
+    },
+    "muddy_mangrove_roots": {
+      "modern": "minecraft:muddy_mangrove_roots",
+      "blockId": 1086,
+      "baseStateId": 17376,
+      "kind": "cube"
+    },
+    "cobbled_deepslate_slab": {
+      "modern": "minecraft:cobbled_deepslate_slab",
+      "blockId": 1101,
+      "baseStateId": 17616,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17616,
+        "half=top": 17624
+      },
+      "doubleBlockId": 1100,
+      "doubleStateId": 17600
+    },
+    "polished_deepslate_slab": {
+      "modern": "minecraft:polished_deepslate_slab",
+      "blockId": 1103,
+      "baseStateId": 17648,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17648,
+        "half=top": 17656
+      },
+      "doubleBlockId": 1102,
+      "doubleStateId": 17632
+    },
+    "deepslate_brick_slab": {
+      "modern": "minecraft:deepslate_brick_slab",
+      "blockId": 1105,
+      "baseStateId": 17680,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17680,
+        "half=top": 17688
+      },
+      "doubleBlockId": 1104,
+      "doubleStateId": 17664
+    },
+    "deepslate_tile_slab": {
+      "modern": "minecraft:deepslate_tile_slab",
+      "blockId": 1107,
+      "baseStateId": 17712,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17712,
+        "half=top": 17720
+      },
+      "doubleBlockId": 1106,
+      "doubleStateId": 17696
+    },
+    "polished_tuff_slab": {
+      "modern": "minecraft:polished_tuff_slab",
+      "blockId": 1109,
+      "baseStateId": 17744,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17744,
+        "half=top": 17752
+      },
+      "doubleBlockId": 1108,
+      "doubleStateId": 17728
+    },
+    "tuff_brick_slab": {
+      "modern": "minecraft:tuff_brick_slab",
+      "blockId": 1111,
+      "baseStateId": 17776,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17776,
+        "half=top": 17784
+      },
+      "doubleBlockId": 1110,
+      "doubleStateId": 17760
+    },
+    "polished_blackstone_slab": {
+      "modern": "minecraft:polished_blackstone_slab",
+      "blockId": 1113,
+      "baseStateId": 17808,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17808,
+        "half=top": 17816
+      },
+      "doubleBlockId": 1112,
+      "doubleStateId": 17792
+    },
+    "cut_copper_slab": {
+      "modern": "minecraft:cut_copper_slab",
+      "blockId": 1115,
+      "baseStateId": 17840,
+      "kind": "slab",
+      "states": {
+        "half=bottom": 17840,
+        "half=top": 17848
+      },
+      "doubleBlockId": 1114,
+      "doubleStateId": 17824
+    },
+    "cobbled_deepslate_wall": {
+      "modern": "minecraft:cobbled_deepslate_wall",
+      "blockId": 1200,
+      "baseStateId": 19200,
+      "kind": "wall",
+      "note": "connection flags are client-side actualState; map to baseStateId"
+    },
+    "deepslate_brick_wall": {
+      "modern": "minecraft:deepslate_brick_wall",
+      "blockId": 1201,
+      "baseStateId": 19216,
+      "kind": "wall",
+      "note": "connection flags are client-side actualState; map to baseStateId"
+    },
+    "blackstone_wall": {
+      "modern": "minecraft:blackstone_wall",
+      "blockId": 1202,
+      "baseStateId": 19232,
+      "kind": "wall",
+      "note": "connection flags are client-side actualState; map to baseStateId"
+    },
+    "polished_blackstone_wall": {
+      "modern": "minecraft:polished_blackstone_wall",
+      "blockId": 1203,
+      "baseStateId": 19248,
+      "kind": "wall",
+      "note": "connection flags are client-side actualState; map to baseStateId"
+    },
+    "polished_blackstone_brick_wall": {
+      "modern": "minecraft:polished_blackstone_brick_wall",
+      "blockId": 1204,
+      "baseStateId": 19264,
+      "kind": "wall",
+      "note": "connection flags are client-side actualState; map to baseStateId"
+    },
+    "mud_brick_wall": {
+      "modern": "minecraft:mud_brick_wall",
+      "blockId": 1205,
+      "baseStateId": 19280,
+      "kind": "wall",
+      "note": "connection flags are client-side actualState; map to baseStateId"
+    },
+    "tube_coral": {
+      "modern": "minecraft:tube_coral",
+      "blockId": 1300,
+      "baseStateId": 20800,
+      "kind": "cross"
+    },
+    "brain_coral": {
+      "modern": "minecraft:brain_coral",
+      "blockId": 1301,
+      "baseStateId": 20816,
+      "kind": "cross"
+    },
+    "bubble_coral": {
+      "modern": "minecraft:bubble_coral",
+      "blockId": 1302,
+      "baseStateId": 20832,
+      "kind": "cross"
+    },
+    "fire_coral": {
+      "modern": "minecraft:fire_coral",
+      "blockId": 1303,
+      "baseStateId": 20848,
+      "kind": "cross"
+    },
+    "horn_coral": {
+      "modern": "minecraft:horn_coral",
+      "blockId": 1304,
+      "baseStateId": 20864,
+      "kind": "cross"
+    },
+    "dead_tube_coral": {
+      "modern": "minecraft:dead_tube_coral",
+      "blockId": 1305,
+      "baseStateId": 20880,
+      "kind": "cross"
+    },
+    "dead_brain_coral": {
+      "modern": "minecraft:dead_brain_coral",
+      "blockId": 1306,
+      "baseStateId": 20896,
+      "kind": "cross"
+    },
+    "dead_bubble_coral": {
+      "modern": "minecraft:dead_bubble_coral",
+      "blockId": 1307,
+      "baseStateId": 20912,
+      "kind": "cross"
+    },
+    "dead_fire_coral": {
+      "modern": "minecraft:dead_fire_coral",
+      "blockId": 1308,
+      "baseStateId": 20928,
+      "kind": "cross"
+    },
+    "dead_horn_coral": {
+      "modern": "minecraft:dead_horn_coral",
+      "blockId": 1309,
+      "baseStateId": 20944,
+      "kind": "cross"
+    },
+    "kelp": {
+      "modern": "minecraft:kelp",
+      "blockId": 1310,
+      "baseStateId": 20960,
+      "kind": "cross"
+    },
+    "seagrass": {
+      "modern": "minecraft:seagrass",
+      "blockId": 1311,
+      "baseStateId": 20976,
+      "kind": "cross"
+    },
+    "sweet_berry_bush": {
+      "modern": "minecraft:sweet_berry_bush",
+      "blockId": 1312,
+      "baseStateId": 20992,
+      "kind": "cross"
+    },
+    "lantern": {
+      "modern": "minecraft:lantern",
+      "blockId": 1313,
+      "baseStateId": 21008,
+      "kind": "cross"
+    },
+    "soul_lantern": {
+      "modern": "minecraft:soul_lantern",
+      "blockId": 1314,
+      "baseStateId": 21024,
+      "kind": "cross"
+    },
+    "lectern": {
+      "modern": "minecraft:lectern",
+      "blockId": 1315,
+      "baseStateId": 21040,
+      "kind": "cross"
+    }
+  },
+  "items": {
+    "mace": {
+      "modern": "minecraft:mace",
+      "itemId": 3000
+    },
+    "trident": {
+      "modern": "minecraft:trident",
+      "itemId": 3001
+    },
+    "wooden_spear": {
+      "modern": "minecraft:wooden_spear",
+      "itemId": 3002
+    },
+    "stone_spear": {
+      "modern": "minecraft:stone_spear",
+      "itemId": 3003
+    },
+    "copper_spear": {
+      "modern": "minecraft:copper_spear",
+      "itemId": 3004
+    },
+    "iron_spear": {
+      "modern": "minecraft:iron_spear",
+      "itemId": 3005
+    },
+    "diamond_spear": {
+      "modern": "minecraft:diamond_spear",
+      "itemId": 3006
+    },
+    "netherite_spear": {
+      "modern": "minecraft:netherite_spear",
+      "itemId": 3007
+    },
+    "netherite_sword": {
+      "modern": "minecraft:netherite_sword",
+      "itemId": 3008
+    },
+    "netherite_pickaxe": {
+      "modern": "minecraft:netherite_pickaxe",
+      "itemId": 3009
+    },
+    "netherite_axe": {
+      "modern": "minecraft:netherite_axe",
+      "itemId": 3010
+    },
+    "netherite_shovel": {
+      "modern": "minecraft:netherite_shovel",
+      "itemId": 3011
+    },
+    "netherite_hoe": {
+      "modern": "minecraft:netherite_hoe",
+      "itemId": 3012
+    },
+    "netherite_helmet": {
+      "modern": "minecraft:netherite_helmet",
+      "itemId": 3013
+    },
+    "netherite_chestplate": {
+      "modern": "minecraft:netherite_chestplate",
+      "itemId": 3014
+    },
+    "netherite_leggings": {
+      "modern": "minecraft:netherite_leggings",
+      "itemId": 3015
+    },
+    "netherite_boots": {
+      "modern": "minecraft:netherite_boots",
+      "itemId": 3016
+    },
+    "amethyst_shard": {
+      "modern": "minecraft:amethyst_shard",
+      "itemId": 3017
+    },
+    "copper_ingot": {
+      "modern": "minecraft:copper_ingot",
+      "itemId": 3018
+    },
+    "netherite_ingot": {
+      "modern": "minecraft:netherite_ingot",
+      "itemId": 3019
+    },
+    "honeycomb": {
+      "modern": "minecraft:honeycomb",
+      "itemId": 3020
+    },
+    "honey_bottle": {
+      "modern": "minecraft:honey_bottle",
+      "itemId": 3021
+    },
+    "recovery_compass": {
+      "modern": "minecraft:recovery_compass",
+      "itemId": 3022
+    },
+    "echo_shard": {
+      "modern": "minecraft:echo_shard",
+      "itemId": 3023
+    },
+    "goat_horn": {
+      "modern": "minecraft:goat_horn",
+      "itemId": 3024
+    },
+    "disc_fragment_5": {
+      "modern": "minecraft:disc_fragment_5",
+      "itemId": 3025
+    },
+    "music_disc_5": {
+      "modern": "minecraft:music_disc_5",
+      "itemId": 3026
+    },
+    "music_disc_otherside": {
+      "modern": "minecraft:music_disc_otherside",
+      "itemId": 3027
+    },
+    "brush": {
+      "modern": "minecraft:brush",
+      "itemId": 3028
+    },
+    "music_disc_relic": {
+      "modern": "minecraft:music_disc_relic",
+      "itemId": 3029
+    },
+    "torchflower_seeds": {
+      "modern": "minecraft:torchflower_seeds",
+      "itemId": 3030
+    },
+    "pitcher_pod": {
+      "modern": "minecraft:pitcher_pod",
+      "itemId": 3031
+    },
+    "netherite_upgrade_smithing_template": {
+      "modern": "minecraft:netherite_upgrade_smithing_template",
+      "itemId": 3032
+    },
+    "angler_pottery_sherd": {
+      "modern": "minecraft:angler_pottery_sherd",
+      "itemId": 3033
+    },
+    "archer_pottery_sherd": {
+      "modern": "minecraft:archer_pottery_sherd",
+      "itemId": 3034
+    },
+    "arms_up_pottery_sherd": {
+      "modern": "minecraft:arms_up_pottery_sherd",
+      "itemId": 3035
+    },
+    "blade_pottery_sherd": {
+      "modern": "minecraft:blade_pottery_sherd",
+      "itemId": 3036
+    },
+    "brewer_pottery_sherd": {
+      "modern": "minecraft:brewer_pottery_sherd",
+      "itemId": 3037
+    },
+    "burn_pottery_sherd": {
+      "modern": "minecraft:burn_pottery_sherd",
+      "itemId": 3038
+    },
+    "danger_pottery_sherd": {
+      "modern": "minecraft:danger_pottery_sherd",
+      "itemId": 3039
+    },
+    "explorer_pottery_sherd": {
+      "modern": "minecraft:explorer_pottery_sherd",
+      "itemId": 3040
+    },
+    "friend_pottery_sherd": {
+      "modern": "minecraft:friend_pottery_sherd",
+      "itemId": 3041
+    },
+    "heart_pottery_sherd": {
+      "modern": "minecraft:heart_pottery_sherd",
+      "itemId": 3042
+    },
+    "heartbreak_pottery_sherd": {
+      "modern": "minecraft:heartbreak_pottery_sherd",
+      "itemId": 3043
+    },
+    "howl_pottery_sherd": {
+      "modern": "minecraft:howl_pottery_sherd",
+      "itemId": 3044
+    },
+    "miner_pottery_sherd": {
+      "modern": "minecraft:miner_pottery_sherd",
+      "itemId": 3045
+    },
+    "mourner_pottery_sherd": {
+      "modern": "minecraft:mourner_pottery_sherd",
+      "itemId": 3046
+    },
+    "plenty_pottery_sherd": {
+      "modern": "minecraft:plenty_pottery_sherd",
+      "itemId": 3047
+    },
+    "prize_pottery_sherd": {
+      "modern": "minecraft:prize_pottery_sherd",
+      "itemId": 3048
+    },
+    "sheaf_pottery_sherd": {
+      "modern": "minecraft:sheaf_pottery_sherd",
+      "itemId": 3049
+    },
+    "shelter_pottery_sherd": {
+      "modern": "minecraft:shelter_pottery_sherd",
+      "itemId": 3050
+    },
+    "skull_pottery_sherd": {
+      "modern": "minecraft:skull_pottery_sherd",
+      "itemId": 3051
+    },
+    "snort_pottery_sherd": {
+      "modern": "minecraft:snort_pottery_sherd",
+      "itemId": 3052
+    },
+    "coast_armor_trim_smithing_template": {
+      "modern": "minecraft:coast_armor_trim_smithing_template",
+      "itemId": 3053
+    },
+    "dune_armor_trim_smithing_template": {
+      "modern": "minecraft:dune_armor_trim_smithing_template",
+      "itemId": 3054
+    },
+    "eye_armor_trim_smithing_template": {
+      "modern": "minecraft:eye_armor_trim_smithing_template",
+      "itemId": 3055
+    },
+    "host_armor_trim_smithing_template": {
+      "modern": "minecraft:host_armor_trim_smithing_template",
+      "itemId": 3056
+    },
+    "raiser_armor_trim_smithing_template": {
+      "modern": "minecraft:raiser_armor_trim_smithing_template",
+      "itemId": 3057
+    },
+    "rib_armor_trim_smithing_template": {
+      "modern": "minecraft:rib_armor_trim_smithing_template",
+      "itemId": 3058
+    },
+    "sentry_armor_trim_smithing_template": {
+      "modern": "minecraft:sentry_armor_trim_smithing_template",
+      "itemId": 3059
+    },
+    "shaper_armor_trim_smithing_template": {
+      "modern": "minecraft:shaper_armor_trim_smithing_template",
+      "itemId": 3060
+    },
+    "silence_armor_trim_smithing_template": {
+      "modern": "minecraft:silence_armor_trim_smithing_template",
+      "itemId": 3061
+    },
+    "snout_armor_trim_smithing_template": {
+      "modern": "minecraft:snout_armor_trim_smithing_template",
+      "itemId": 3062
+    },
+    "spire_armor_trim_smithing_template": {
+      "modern": "minecraft:spire_armor_trim_smithing_template",
+      "itemId": 3063
+    },
+    "tide_armor_trim_smithing_template": {
+      "modern": "minecraft:tide_armor_trim_smithing_template",
+      "itemId": 3064
+    },
+    "vex_armor_trim_smithing_template": {
+      "modern": "minecraft:vex_armor_trim_smithing_template",
+      "itemId": 3065
+    },
+    "ward_armor_trim_smithing_template": {
+      "modern": "minecraft:ward_armor_trim_smithing_template",
+      "itemId": 3066
+    },
+    "wayfinder_armor_trim_smithing_template": {
+      "modern": "minecraft:wayfinder_armor_trim_smithing_template",
+      "itemId": 3067
+    },
+    "wild_armor_trim_smithing_template": {
+      "modern": "minecraft:wild_armor_trim_smithing_template",
+      "itemId": 3068
+    }
+  },
+  "entities": {
+    "copper_golem": {
+      "modern": "minecraft:copper_golem",
+      "entityTypeId": 201
+    },
+    "bee": {
+      "modern": "minecraft:bee",
+      "entityTypeId": 202
+    }
+  },
+  "summary": {
+    "blockEntries": 117,
+    "itemEntries": 69,
+    "blockIdRange": [
+      1000,
+      1315
+    ],
+    "maxBaseStateId": 21040,
+    "itemIdRange": [
+      3000,
+      3068
+    ],
+    "entityEntries": 2
+  }
+}

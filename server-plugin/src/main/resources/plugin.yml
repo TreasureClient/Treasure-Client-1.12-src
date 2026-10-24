@@ -1,0 +1,36 @@
+name: TreasureViaServer
+version: 0.3
+main: com.treasureclient.via.TreasureViaServer
+author: Treasure Client
+description: >
+  Option A data source (server side). Detects Treasure Clients via the
+  TC|ViaBlocks handshake and streams modern blocks, items and entities to them
+  over that channel (the client applies them from its ViaBlocks/ViaItems
+  registries). Block overrides are persisted and re-asserted so they stick.
+# 1.12 uses legacy plugin-channel names, so no api-version line here.
+commands:
+  viablock:
+    description: Place the modern block you're looking at (persisted; Treasure Client only).
+    usage: /viablock <name>
+    permission: treasurevia.use
+  viablocks:
+    description: List the available modern block/item/entity names.
+  viagive:
+    description: Give yourself a modern item (client-side; Treasure Client only).
+    usage: /viagive <name> [count]
+    permission: treasurevia.use
+  viaentity:
+    description: Spawn a modern entity where you're looking (client-side).
+    usage: /viaentity <name>
+    permission: treasurevia.use
+  viaclear:
+    description: Clear your stored modern block overrides (nearby, or 'all').
+    usage: /viaclear [all]
+    permission: treasurevia.use
+  viatest:
+    description: Send a sampler of modern blocks to your client (persisted).
+    permission: treasurevia.use
+permissions:
+  treasurevia.use:
+    description: Use the ViaBlocks placement/streaming commands.
+    default: op

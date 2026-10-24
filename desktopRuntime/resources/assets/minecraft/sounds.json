@@ -4545,8 +4545,7 @@
     "sounds": [
       {
         "name": "music/menu/menu1",
-        "stream": true,
-        "volume": 0.20
+        "stream": true
       },
       {
         "name": "music/menu/menu2",
