@@ -404,7 +404,23 @@ public class ItemRenderer {
 					GlStateManager.translate(f6 * 0.0F, f6 * 0.0F, f6 * 0.04F);
 					GlStateManager.scale(1.0F, 1.0F, 1.0F + f6 * 0.2F);
 					GlStateManager.rotate((float) j * 45.0F, 0.0F, -1.0F, 0.0F);
+					break;
+
+				case SPEAR:
+					// Treasure Client — modern spear charge pose
+					if (p_187457_6_.getItem() instanceof net.minecraft.item.ItemSpear) {
+						float held = (float) p_187457_6_.getMaxItemUseDuration()
+								- ((float) p_187457_1_.getItemInUseCount() - p_187457_2_ + 1.0F);
+						SpearAnimations.firstPersonUse(held, j,
+								(net.minecraft.item.ItemSpear) p_187457_6_.getItem());
+					} else {
+						this.transformSideFirstPerson(enumhandside, p_187457_7_);
+					}
 				}
+			} else if (p_187457_6_.getItem() instanceof net.minecraft.item.ItemSpear) {
+				// Treasure Client — modern spear jab (STAB swing) instead of the normal swing
+				this.transformSideFirstPerson(enumhandside, p_187457_7_);
+				SpearAnimations.firstPersonAttack(p_187457_5_, flag1 ? 1 : -1);
 			} else {
 				float f = -0.4F * MathHelper.sin(MathHelper.sqrt(p_187457_5_) * (float) Math.PI);
 				float f1 = 0.2F * MathHelper.sin(MathHelper.sqrt(p_187457_5_) * ((float) Math.PI * 2F));

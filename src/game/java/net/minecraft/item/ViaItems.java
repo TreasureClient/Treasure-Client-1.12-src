@@ -444,6 +444,9 @@ public final class ViaItems {
 			it = new ItemSpade(Item.ToolMaterial.NETHERITE);
 		} else if (name.equals("netherite_hoe")) {
 			it = new ItemHoe(Item.ToolMaterial.NETHERITE);
+		} else if (ItemSpear.forName(name) != null) {
+			// spears: jab (left click) + charge (hold right click) like modern Minecraft
+			it = ItemSpear.forName(name);
 		} else if (isWeapon(name)) {
 			// mace, trident, and all spears: sword-like melee weapons
 			it = new ItemSword(swordMaterial(name));

@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "infested_deepslate"
+        },
+        "axis=z": {
+            "model": "infested_deepslate",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "infested_deepslate",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

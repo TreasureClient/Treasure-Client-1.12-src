@@ -184,6 +184,10 @@ public class ModelBiped extends ModelBase {
 		case ITEM:
 			this.bipedLeftArm.rotateAngleX = this.bipedLeftArm.rotateAngleX * 0.5F - ((float) Math.PI / 10F);
 			this.bipedLeftArm.rotateAngleY = 0.0F;
+			break;
+
+		case SPEAR:
+			this.tcSpearPose(this.bipedLeftArm, false, entityIn);
 		}
 
 		switch (this.rightArmPose) {
@@ -199,6 +203,10 @@ public class ModelBiped extends ModelBase {
 		case ITEM:
 			this.bipedRightArm.rotateAngleX = this.bipedRightArm.rotateAngleX * 0.5F - ((float) Math.PI / 10F);
 			this.bipedRightArm.rotateAngleY = 0.0F;
+			break;
+
+		case SPEAR:
+			this.tcSpearPose(this.bipedRightArm, true, entityIn);
 		}
 
 		if (this.swingProgress > 0.0F) {
@@ -218,6 +226,10 @@ public class ModelBiped extends ModelBase {
 			this.bipedRightArm.rotateAngleY += this.bipedBody.rotateAngleY;
 			this.bipedLeftArm.rotateAngleY += this.bipedBody.rotateAngleY;
 			this.bipedLeftArm.rotateAngleX += this.bipedBody.rotateAngleY;
+			if (tcSwingingSpear(entityIn)) {
+				// Treasure Client — modern spear jab (STAB) arm motion
+				net.minecraft.client.renderer.SpearAnimations.thirdPersonAttackHand(this, this.swingProgress, enumhandside);
+			} else {
 			f1 = 1.0F - this.swingProgress;
 			f1 = f1 * f1;
 			f1 = f1 * f1;
@@ -229,6 +241,7 @@ public class ModelBiped extends ModelBase {
 					- ((double) f2 * 1.2D + (double) f3));
 			modelrenderer.rotateAngleY += this.bipedBody.rotateAngleY * 2.0F;
 			modelrenderer.rotateAngleZ += MathHelper.sin(this.swingProgress * (float) Math.PI) * -0.4F;
+			}
 		}
 
 		if (this.isSneak) {
@@ -308,7 +321,37 @@ public class ModelBiped extends ModelBase {
 		}
 	}
 
+	/** Treasure Client — the entity is swinging a modern spear with its main hand. */
+	public static boolean tcSwingingSpear(Entity entityIn) {
+		if (!(entityIn instanceof net.minecraft.entity.EntityLivingBase)) {
+			return false;
+		}
+		net.minecraft.entity.EntityLivingBase e = (net.minecraft.entity.EntityLivingBase) entityIn;
+		return e.swingingHand == net.minecraft.util.EnumHand.MAIN_HAND
+				&& net.minecraft.item.ItemSpear.isSpear(e.getHeldItemMainhand());
+	}
+
+	/** Treasure Client — arm pose while charging a modern spear. */
+	private void tcSpearPose(ModelRenderer arm, boolean rightArm, Entity entityIn) {
+		float ticks = 0.0F;
+		boolean flying = false;
+		net.minecraft.item.ItemSpear spear = null;
+		if (entityIn instanceof net.minecraft.entity.EntityLivingBase) {
+			net.minecraft.entity.EntityLivingBase e = (net.minecraft.entity.EntityLivingBase) entityIn;
+			flying = e.isElytraFlying();
+			if (e.isHandActive() && e.getActiveItemStack().getItem() instanceof net.minecraft.item.ItemSpear) {
+				spear = (net.minecraft.item.ItemSpear) e.getActiveItemStack().getItem();
+				ticks = (float) e.getItemInUseMaxCount()
+						+ net.minecraft.client.Minecraft.getMinecraft().getRenderPartialTicks();
+			}
+		}
+		net.minecraft.client.renderer.SpearAnimations.thirdPersonHandUse(arm, this.bipedHead, rightArm, flying, ticks,
+				spear);
+	}
+
 	public static enum ArmPose {
-		EMPTY, ITEM, BLOCK, BOW_AND_ARROW;
+		EMPTY, ITEM, BLOCK, BOW_AND_ARROW,
+		/** Treasure Client — charging a modern spear. */
+		SPEAR;
 	}
 }

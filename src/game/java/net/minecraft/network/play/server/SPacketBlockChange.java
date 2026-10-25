@@ -10,6 +10,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 public class SPacketBlockChange implements Packet<INetHandlerPlayClient> {
+	/** Treasure Client — extra TuffX+ bytes after the vanilla data, or null. */
+	public byte[] tuffTrailer;
+
 	private BlockPos blockPosition;
 	private IBlockState blockState;
 
@@ -27,6 +30,8 @@ public class SPacketBlockChange implements Packet<INetHandlerPlayClient> {
 	public void readPacketData(PacketBuffer buf) throws IOException {
 		this.blockPosition = buf.readBlockPos();
 		this.blockState = Block.BLOCK_STATE_IDS.getByValue(buf.readVarIntFromBuffer());
+		// Treasure Client — keep bytes a TuffX+ server appended (ViaBlocks data)
+		this.tuffTrailer = TuffTrailer.read(buf);
 	}
 
 	/**

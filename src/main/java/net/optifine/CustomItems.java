@@ -699,6 +699,12 @@ public class CustomItems {
             if (s == null) {
                 return 0;
             } else {
+                // Treasure Client: servers behind ViaVersion send "strong_strength"
+                // without the namespace; the table is keyed "minecraft:...". Without
+                // this every potion missed its resource-pack (CIT) texture.
+                if (s.indexOf(':') < 0) {
+                    s = "minecraft:" + s;
+                }
                 Integer integer = mapPotionDamages.get(s);
 
                 if (integer == null) {

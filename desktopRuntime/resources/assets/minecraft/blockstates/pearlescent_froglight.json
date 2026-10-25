@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "pearlescent_froglight"
+        },
+        "axis=z": {
+            "model": "pearlescent_froglight",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "pearlescent_froglight",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

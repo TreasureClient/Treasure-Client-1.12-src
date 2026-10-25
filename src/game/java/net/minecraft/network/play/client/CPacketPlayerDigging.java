@@ -62,6 +62,8 @@ public class CPacketPlayerDigging implements Packet<INetHandlerPlayServer> {
 
 	public static enum Action {
 		START_DESTROY_BLOCK, ABORT_DESTROY_BLOCK, STOP_DESTROY_BLOCK, DROP_ALL_ITEMS, DROP_ITEM, RELEASE_USE_ITEM,
-		SWAP_HELD_ITEMS;
+		SWAP_HELD_ITEMS,
+		/** Treasure Client — modern spear jab. Wire id 7 = STAB on 1.21.11+ servers (through ViaVersion). */
+		STAB;
 	}
 }

@@ -264,8 +264,16 @@ public class RenderItem implements IResourceManagerReloadListener {
 	public void renderItem(ItemStack stack, EntityLivingBase entitylivingbaseIn,
 			ItemCameraTransforms.TransformType transform, boolean leftHanded) {
 		if (!stack.func_190926_b() && entitylivingbaseIn != null) {
-			IBakedModel ibakedmodel = this.getItemModelWithOverrides(stack, entitylivingbaseIn.world,
-					entitylivingbaseIn);
+			// Treasure Client — held spears use the long "in hand" model (modern display_context select)
+			net.minecraft.item.ItemSpear.renderingInHand = transform != ItemCameraTransforms.TransformType.GUI
+					&& transform != ItemCameraTransforms.TransformType.GROUND
+					&& transform != ItemCameraTransforms.TransformType.FIXED;
+			IBakedModel ibakedmodel;
+			try {
+				ibakedmodel = this.getItemModelWithOverrides(stack, entitylivingbaseIn.world, entitylivingbaseIn);
+			} finally {
+				net.minecraft.item.ItemSpear.renderingInHand = false;
+			}
 			this.renderItemModel(stack, ibakedmodel, transform, leftHanded);
 		}
 	}
@@ -491,6 +499,11 @@ public class RenderItem implements IResourceManagerReloadListener {
 			}
 		}
 		// Treasure Client — item models for the ViaBlocks cross-model plants.
+		for (int viaE = 0; viaE < net.minecraft.block.ViaBlocks.EXTRA.length; viaE++) {
+			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.EXTRA[viaE], net.minecraft.block.ViaBlocks.EXTRA_NAMES[viaE]);
+			}
+		}
 		for (int viaC = 0; viaC < net.minecraft.block.ViaBlocks.CROSS.length; viaC++) {
 			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null) {
 				this.registerBlock(net.minecraft.block.ViaBlocks.CROSS[viaC], net.minecraft.block.ViaBlocks.CROSS_NAMES[viaC]);

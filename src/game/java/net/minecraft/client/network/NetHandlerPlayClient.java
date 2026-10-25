@@ -822,6 +822,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			this.clientWorldController.invalidateRegionAndSetBlock(spacketmultiblockchange$blockupdatedata.getPos(),
 					spacketmultiblockchange$blockupdatedata.getBlockState());
 		}
+		TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
 	}
 
 	/**
@@ -855,6 +856,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 				tileentity.readFromNBT(nbttagcompound);
 			}
 		}
+		// Treasure Client — TuffX+ ViaBlocks: modern blocks for this chunk
+		TuffViaBlocks.onChunkLoaded(packetIn.getChunkX(), packetIn.getChunkZ());
+		TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
 	}
 
 	public void processChunkUnload(SPacketUnloadChunk packetIn) {
@@ -867,6 +871,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleBlockChange(SPacketBlockChange packetIn) {
 		this.clientWorldController.invalidateRegionAndSetBlock(packetIn.getBlockPosition(), packetIn.getBlockState());
+		TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
 	}
 
 	/**
@@ -1123,6 +1128,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 
 		this.gameController.setDimensionAndSpawnPlayer(packetIn.getDimensionID());
 		this.gameController.playerController.setGameType(packetIn.getGameType());
+		// Treasure Client — a proxy server switch only sends a respawn: opt in to TuffX+ again
+		TuffViaBlocks.onRespawn(this.netManager);
 	}
 
 	/**

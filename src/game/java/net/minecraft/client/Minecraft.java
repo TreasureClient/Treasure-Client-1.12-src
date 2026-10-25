@@ -1059,6 +1059,11 @@ public class Minecraft implements IThreadListener {
 		}
 
 		if (this.leftClickCounter <= 0 && !this.player.isHandActive()) {
+			// Treasure Client — a modern spear can't break blocks (left click only jabs)
+			if (leftClick && this.tcSpearActive()) {
+				this.playerController.resetBlockRemoving();
+				return;
+			}
 			if (leftClick && this.objectMouseOver != null
 					&& this.objectMouseOver.typeOfHit == RayTraceResult.Type.BLOCK) {
 				BlockPos blockpos = this.objectMouseOver.getBlockPos();
@@ -1074,6 +1079,28 @@ public class Minecraft implements IThreadListener {
 		}
 	}
 
+	/** Treasure Client — holding a modern spear on a multiplayer server. */
+	private boolean tcSpearActive() {
+		return this.player != null && !this.isSingleplayer() && !this.player.isSpectator()
+				&& net.minecraft.item.ItemSpear.isSpear(this.player.getHeldItemMainhand());
+	}
+
+	/**
+	 * Treasure Client — modern spear jab: like the modern client, send player action
+	 * STAB (the server ignores normal attacks while a spear is held), then swing.
+	 * Only when the attack cooldown is full, which the server requires.
+	 */
+	private void tcSpearJab() {
+		if (this.player.getCooledAttackStrength(0.0F) < 1.0F) {
+			return;
+		}
+		this.playerController.syncCurrentPlayItem();
+		this.player.connection.sendPacket(new CPacketPlayerDigging(CPacketPlayerDigging.Action.STAB, BlockPos.ORIGIN,
+				EnumFacing.DOWN));
+		this.player.resetCooldown();
+		this.player.swingArm(EnumHand.MAIN_HAND);
+	}
+
 	private void clickMouse() {
 		if (this.leftClickCounter <= 0) {
 			if (this.objectMouseOver == null) {
@@ -1083,6 +1110,11 @@ public class Minecraft implements IThreadListener {
 					this.leftClickCounter = 10;
 				}
 			} else if (!this.player.isRowingBoat()) {
+				// Treasure Client — modern spear jab
+				if (this.tcSpearActive()) {
+					this.tcSpearJab();
+					return;
+				}
 				switch (this.objectMouseOver.typeOfHit) {
 				case ENTITY:
 					this.playerController.attackEntity(this.player, this.objectMouseOver.entityHit);

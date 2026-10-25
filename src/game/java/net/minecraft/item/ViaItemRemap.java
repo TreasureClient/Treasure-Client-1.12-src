@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import net.minecraft.init.Items;
+
 /**
  * Treasure Client — client-side ViaItems for real servers (e.g. arch.mc).
  *
@@ -73,6 +75,15 @@ public final class ViaItemRemap {
 			if (!net.minecraft.client.gui.TreasureMods.viaEnabled()) {
 				return st;
 			}
+			// 0) Most reliable: the original item id ViaBackwards saved in the NBT.
+			//    Works even when the server gave the item a custom name ("Spearmace").
+			String backup = fromBackup(st);
+			if (backup != null) {
+				ItemStack r = swap(st, backup);
+				if (r != null) {
+					return r;
+				}
+			}
 			String disp = st.getDisplayName();
 			if (disp == null) {
 				return st;
@@ -92,7 +103,17 @@ public final class ViaItemRemap {
 					return r;
 				}
 			}
-			// 2) Fallback: the name merely contains one of our item names.
+			// 2) A renamed spear ("Spearmace") down-mapped to a sword: spear of that material.
+			if (lower.contains("spear")) {
+				String sp = spearFor(st.getItem());
+				if (sp != null) {
+					ItemStack r = swap(st, sp);
+					if (r != null) {
+						return r;
+					}
+				}
+			}
+			// 3) Fallback: the name merely contains one of our item names.
 			for (int i = 0; i < phrases.size(); i++) {
 				String[] pr = phrases.get(i);
 				if (pr[0].length() >= 4 && lower.contains(pr[0])) {
@@ -109,6 +130,87 @@ public final class ViaItemRemap {
 			// never let item remapping break the client
 		}
 		return st;
+	}
+
+	/** version ("1_21_11") -> (id -> registry name), parsed from {@link ViaItemIds} on first use. */
+	private static java.util.Map<String, java.util.Map<Integer, String>> idTables;
+	/** Version order, oldest first, so the newest backup wins. */
+	private static java.util.List<String> idOrder;
+
+	private static void ensureIds() {
+		if (idTables != null) {
+			return;
+		}
+		java.util.Map<String, java.util.Map<Integer, String>> t = new java.util.HashMap<String, java.util.Map<Integer, String>>();
+		java.util.List<String> order = new ArrayList<String>();
+		for (int i = 0; i < ViaItemIds.TABLE.length; i++) {
+			java.util.Map<Integer, String> m = new java.util.HashMap<Integer, String>();
+			String[] pairs = ViaItemIds.TABLE[i][1].split(";");
+			for (int j = 0; j < pairs.length; j++) {
+				int eq = pairs[j].indexOf('=');
+				if (eq > 0) {
+					m.put(Integer.valueOf(Integer.parseInt(pairs[j].substring(0, eq))), pairs[j].substring(eq + 1));
+				}
+			}
+			t.put(ViaItemIds.TABLE[i][0], m);
+			order.add(ViaItemIds.TABLE[i][0]);
+		}
+		idOrder = order;
+		idTables = t;
+	}
+
+	/**
+	 * Looks for ViaBackwards backups like {@code "VB|Protocol1_21_11To1_21_9": ...}
+	 * next to an {@code id}. That id is the item's id in the first version of the
+	 * key. Returns our item name for the newest backup that names one, or null.
+	 */
+	static String fromBackup(ItemStack st) {
+		if (!st.hasTagCompound()) {
+			return null;
+		}
+		ensureIds();
+		String[] best = new String[2]; // {name, version}
+		scan(st.getTagCompound(), best, 0);
+		return best[0];
+	}
+
+	private static void scan(net.minecraft.nbt.NBTTagCompound c, String[] best, int depth) {
+		if (c == null || depth > 8) {
+			return;
+		}
+		boolean hasId = c.hasKey("id", 99);
+		for (String key : c.getKeySet()) {
+			if (hasId && key.startsWith("VB|Protocol")) {
+				int to = key.indexOf("To", 11);
+				if (to > 11) {
+					String ver = key.substring(11, to);
+					java.util.Map<Integer, String> m = idTables.get(ver);
+					if (m != null) {
+						String name = m.get(Integer.valueOf(c.getInteger("id")));
+						if (name != null && (best[1] == null || idOrder.indexOf(ver) > idOrder.indexOf(best[1]))) {
+							best[0] = name;
+							best[1] = ver;
+						}
+					}
+				}
+			}
+			net.minecraft.nbt.NBTBase child = c.getTag(key);
+			if (child instanceof net.minecraft.nbt.NBTTagCompound) {
+				scan((net.minecraft.nbt.NBTTagCompound) child, best, depth + 1);
+			}
+		}
+	}
+
+	/** The spear ViaBackwards turns into this sword, or null. */
+	private static String spearFor(Item it) {
+		if (it == Items.WOODEN_SWORD) return "wooden_spear";
+		if (it == Items.STONE_SWORD) return "stone_spear";
+		if (it == Items.IRON_SWORD) return "iron_spear";
+		if (it == Items.GOLDEN_SWORD) return "golden_spear";
+		if (it == Items.DIAMOND_SWORD) return "diamond_spear";
+		Item n = ViaItems.getByName("netherite_sword");
+		if (n != null && it == n) return "netherite_spear";
+		return null;
 	}
 
 	/** Our item in place of {@code st} (same count, NBT kept), or null if not applicable. */

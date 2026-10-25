@@ -107,6 +107,9 @@ public class RenderPlayer extends RenderLivingBase<AbstractClientPlayer> {
 						modelbiped$armpose = ModelBiped.ArmPose.BLOCK;
 					} else if (enumaction == EnumAction.BOW) {
 						modelbiped$armpose = ModelBiped.ArmPose.BOW_AND_ARROW;
+					} else if (enumaction == EnumAction.SPEAR
+							&& clientPlayer.getActiveHand() == net.minecraft.util.EnumHand.MAIN_HAND) {
+						modelbiped$armpose = ModelBiped.ArmPose.SPEAR;
 					}
 				}
 			}
@@ -119,6 +122,9 @@ public class RenderPlayer extends RenderLivingBase<AbstractClientPlayer> {
 
 					if (enumaction1 == EnumAction.BLOCK) {
 						modelbiped$armpose1 = ModelBiped.ArmPose.BLOCK;
+					} else if (enumaction1 == EnumAction.SPEAR
+							&& clientPlayer.getActiveHand() == net.minecraft.util.EnumHand.OFF_HAND) {
+						modelbiped$armpose1 = ModelBiped.ArmPose.SPEAR;
 					}
 				}
 			}

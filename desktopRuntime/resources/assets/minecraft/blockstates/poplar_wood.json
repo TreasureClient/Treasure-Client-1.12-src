@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "poplar_wood"
+        },
+        "axis=z": {
+            "model": "poplar_wood",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "poplar_wood",
+            "x": 90,
+            "y": 90
+        }
+    }
+}
