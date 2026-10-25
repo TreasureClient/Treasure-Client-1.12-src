@@ -123,6 +123,12 @@ public final class BatchAssembler {
                                                 TessellationProvider tessellationProvider) {
         var batch = fillRegion(region, storage, renderList, camera, pass, useBlockFaceCulling);
 
+        // Treasure Client: unsorted passes read the shared quad index buffer, so base vertices can be folded away
+        if (batch instanceof org.embeddedt.embeddium.impl.gl.device.DirectMultiDrawBatch direct && !pass.isSorted()) {
+            var primitiveType = storage.getPrimitiveType();
+            direct.foldBaseVertexIntoElementPointer(primitiveType.getVerticesPerPrimitive(), primitiveType.getIndexBufferElementsPerPrimitive());
+        }
+
         GlTessellation tessellation = null;
 
         if (batch != null) {

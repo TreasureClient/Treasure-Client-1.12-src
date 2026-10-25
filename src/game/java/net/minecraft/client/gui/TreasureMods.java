@@ -71,6 +71,9 @@ public class TreasureMods {
 	private static boolean via = true;
 	public static boolean viaEnabled() { return via; }
 
+	// Celeritas: the faster chunk renderer (WASM only). Default ON; overlay writes celeritas=0 to turn it off.
+	private static boolean celeritas = true;
+
 	private static float clamp01(float v, float lo, float hi) {
 		return v < lo ? lo : (v > hi ? hi : v);
 	}
@@ -209,6 +212,7 @@ public class TreasureMods {
 			hitboxes = false; hitboxPlayers = true; hitboxMobs = true; hitboxAnimals = true; hitboxOther = false;
 			pauseUnfocused = false;
 			via = true; // default ON unless the overlay explicitly says via=0
+			celeritas = true;
 			passwordHider = false;
 			lowFire = false; lowFireH = 0.40f;
 			lowShield = false; lowShieldAmt = 0.30f;
@@ -235,6 +239,7 @@ public class TreasureMods {
 				else if (k.equals("noHurtCam")) noHurtCam = v.equals("1");
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
 				else if (k.equals("via")) via = v.equals("1");
+				else if (k.equals("celeritas")) celeritas = v.equals("1");
 				else if (k.equals("pwHide")) passwordHider = v.equals("1");
 				else if (k.equals("lowFire")) lowFire = v.equals("1");
 				else if (k.equals("lowFireH")) { try { lowFireH = clamp01(Integer.parseInt(v) / 100.0f, 0.05f, 1.0f); } catch (Throwable t) {} }
@@ -256,6 +261,9 @@ public class TreasureMods {
 			// re-read settings ~4x/second so overlay changes apply live
 			long now = EagRuntime.steadyTimeMillis();
 			if (now - lastLoad > 250L) { reload(); lastLoad = now; }
+
+			// switch between the Celeritas and vanilla chunk renderers when the toggle changes
+			try { org.taumc.celeritas.impl.TreasureCeleritas.setEnabled(celeritas); } catch (Throwable t) {}
 
 			// Treasure Client — apply any pending TuffX+ ViaBlocks overrides (modern
 			// blocks streamed by real servers) + the F6 item-NBT dump diagnostic.

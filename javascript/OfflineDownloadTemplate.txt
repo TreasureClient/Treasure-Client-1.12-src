@@ -825,8 +825,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         <div class="tc-panels">
           <div class="tc-catbar" id="tc-catbar">
             <button class="tc-cat active" data-cat="all">All</button>
-            <button class="tc-cat" data-cat="render">Render</button>
             <button class="tc-cat" data-cat="hud">HUD</button>
+            <button class="tc-cat" data-cat="render">Render</button>
+            <button class="tc-cat" data-cat="perf">Performance</button>
             <button class="tc-cat" data-cat="misc">Misc</button>
           </div>
           <!-- hud -->
@@ -877,12 +878,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>CPS Counter</b><i>Live clicks per second</i></div><div class="tc-sw" data-mod="cps"><i></i></div></div>
             </div>
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>HUD Editor</b><i>Drag any enabled HUD element to reposition it</i></div><button class="tc-apply tc-btn-sm" id="tc-hud-edit">Edit Layout</button></div>
-            </div>
-          </div>
-          <!-- visual -->
-          <div class="tc-panel" data-panel="visual" data-group="render">
-            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>FPS Counter</b><i>Live framerate readout</i></div><div class="tc-sw" data-mod="fps"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -894,7 +889,12 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Performance Monitor</b><i>FPS, frame time &amp; ping together</i></div><div class="tc-sw" data-mod="perfMonitor"><i></i></div></div>
             </div>
-            <div class="tc-sep"></div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>HUD Editor</b><i>Drag any enabled HUD element to reposition it</i></div><button class="tc-apply tc-btn-sm" id="tc-hud-edit">Edit Layout</button></div>
+            </div>
+          </div>
+          <!-- visual -->
+          <div class="tc-panel" data-panel="visual" data-group="render">
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Fullbright</b><i>Max brightness — see in caves &amp; at night</i></div><div class="tc-sw" data-mod="fullbright"><i></i></div></div>
             </div>
@@ -939,48 +939,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
                 <div class="tc-cfg-row"><span>Other entities</span><div class="tc-sw" data-mod="hitboxOther" style="margin-left:auto;"><i></i></div></div>
               </div>
             </div>
-          </div>
-          <!-- movement / controls -->
-          <div class="tc-panel" data-panel="movement" data-group="misc">
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Toggle Sprint</b><i>Sprint key flips ON (tap W to sprint) / OFF (vanilla)</i></div><button class="tc-gear" data-gear="sprintcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="toggleSprint"><i></i></div></div>
-              <div class="tc-cfg" data-cfg="sprintcfg">
-                <div class="tc-cfg-row"><span>Show on HUD</span><div class="tc-sw" data-mod="sprintStatus" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span></span><span class="tc-hint">Shows Sprint [ON] / [OFF] in-game</span></div>
-              </div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Toggle Sneak</b><i>Sneak key flips ON (stay sneaking) / OFF (vanilla)</i></div><button class="tc-gear" data-gear="sneakcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="toggleSneak"><i></i></div></div>
-              <div class="tc-cfg" data-cfg="sneakcfg">
-                <div class="tc-cfg-row"><span>Show on HUD</span><div class="tc-sw" data-mod="sneakStatus" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span></span><span class="tc-hint">Shows Sneak [ON] / [OFF] in-game</span></div>
-              </div>
-            </div>
-          </div>
-          <!-- perf -->
-          <div class="tc-panel" data-panel="perf" data-group="render">
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>No Particles</b><i>Disable all particles for more FPS</i></div><div class="tc-sw" data-mod="noParticles"><i></i></div></div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Pause When Unfocused</b><i>Stop rendering when the tab loses focus</i></div><div class="tc-sw" data-mod="pauseUnfocused"><i></i></div></div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Render Resolution</b><i>Render the world at lower resolution for more FPS</i></div></div>
-              <div class="tc-cfg tc-cfg-static">
-                <div class="tc-cfg-row"><span>Scale</span><div class="tc-slider"><input type="range" min="30" max="100" step="5" data-mod="resolutionScale"><span class="tc-val">100</span></div></div>
-                <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower = higher FPS, softer image</span></div>
-              </div>
-            </div>
-          </div>
-          <!-- interface -->
-          <div class="tc-panel" data-panel="interface" data-group="misc">
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>ViaVersion</b><i>Show modern 1.13+ blocks, items &amp; entities sent by servers</i></div><div class="tc-sw on" data-mod="via"><i></i></div></div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Password Hider</b><i>Hide your password when typing /login, /register, etc.</i></div><div class="tc-sw" data-mod="pwHide"><i></i></div></div>
-            </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Low Fire</b><i>Shorter fire overlay so it blocks less of your view</i></div><button class="tc-gear" data-gear="lowfirecfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="lowFire"><i></i></div></div>
               <div class="tc-cfg" data-cfg="lowfirecfg">
@@ -1008,6 +966,48 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
                 <div class="tc-cfg-row"><span>Hold key</span><button class="tc-keybind" data-bindkey="zoom">C</button></div>
                 <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower strength = closer zoom · higher speed = snappier</span></div>
               </div>
+            </div>
+          </div>
+          <!-- perf -->
+          <div class="tc-panel" data-panel="perf" data-group="perf">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>No Particles</b><i>Disable all particles for more FPS</i></div><div class="tc-sw" data-mod="noParticles"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Pause When Unfocused</b><i>Stop rendering when the tab loses focus</i></div><div class="tc-sw" data-mod="pauseUnfocused"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Render Resolution</b><i>Render the world at lower resolution for more FPS</i></div></div>
+              <div class="tc-cfg tc-cfg-static">
+                <div class="tc-cfg-row"><span>Scale</span><div class="tc-slider"><input type="range" min="30" max="100" step="5" data-mod="resolutionScale"><span class="tc-val">100</span></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower = higher FPS, softer image</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- movement / controls -->
+          <div class="tc-panel" data-panel="movement" data-group="misc">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Toggle Sprint</b><i>Sprint key flips ON (tap W to sprint) / OFF (vanilla)</i></div><button class="tc-gear" data-gear="sprintcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="toggleSprint"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="sprintcfg">
+                <div class="tc-cfg-row"><span>Show on HUD</span><div class="tc-sw" data-mod="sprintStatus" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Shows Sprint [ON] / [OFF] in-game</span></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Toggle Sneak</b><i>Sneak key flips ON (stay sneaking) / OFF (vanilla)</i></div><button class="tc-gear" data-gear="sneakcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="toggleSneak"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="sneakcfg">
+                <div class="tc-cfg-row"><span>Show on HUD</span><div class="tc-sw" data-mod="sneakStatus" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Shows Sneak [ON] / [OFF] in-game</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- interface -->
+          <div class="tc-panel" data-panel="interface" data-group="misc">
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>ViaVersion</b><i>Show modern 1.13+ blocks, items &amp; entities sent by servers</i></div><div class="tc-sw on" data-mod="via"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Password Hider</b><i>Hide your password when typing /login, /register, etc.</i></div><div class="tc-sw" data-mod="pwHide"><i></i></div></div>
             </div>
             <div class="tc-sep"></div>
             <div class="tc-seclabel">Keybind Manager</div>
@@ -1137,7 +1137,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1255,6 +1255,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'noHurtCam=' + (state.noHurtCam ? 1 : 0),
           'tntTimer=' + (state.tntTimer ? 1 : 0),
           'via=' + (state.via === false ? 0 : 1),
+          'celeritas=' + (state.celeritas === false ? 0 : 1),
           'pwHide=' + (state.pwHide ? 1 : 0),
           'lowFire=' + (state.lowFire ? 1 : 0),
           'lowFireH=' + (state.lowFireH || 40),
@@ -1635,7 +1636,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     });
 
     /* ---------- custom HUD positions (persisted; applied over CSS defaults) ---------- */
-    var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps'];
+    var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps','tc-sprint','tc-sneak'];
     function applyHudPositions() {
       HUD_ELS.forEach(function (id) {
         var el = document.getElementById(id); if (!el) return;
@@ -2016,7 +2017,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         'tc-coords':'coords', 'tc-direction':'direction', 'tc-ping':'ping',
         'tc-armor':'armorStatus', 'tc-potions':'potionEffects', 'tc-helditem':'heldItem',
         'tc-fpsgraph':'fpsGraph', 'tc-perfmon':'perfMonitor',
-        'tc-keystrokes':'keystrokes', 'tc-cps':'cps', 'tc-fps':'fps'
+        'tc-keystrokes':'keystrokes', 'tc-cps':'cps', 'tc-fps':'fps',
+        'tc-sprint':'sprintStatus', 'tc-sneak':'sneakStatus'
       };
       function enabledHudEls() { return HUD_ELS.filter(function (id) { var k = HUD_ENABLE[id]; return k ? !!state[k] : false; }); }
       function enter() {
