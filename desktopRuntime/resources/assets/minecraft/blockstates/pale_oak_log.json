@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "pale_oak_log"
+        },
+        "axis=z": {
+            "model": "pale_oak_log",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "pale_oak_log",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

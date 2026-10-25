@@ -1667,6 +1667,18 @@ public class Block {
 			registerBlock(ViaBlocks.WALL_FIRST_ID + i, ViaBlocks.WALL_NAMES[i], wall);
 			ViaBlocks.WALLS[i] = wall;
 		}
+		// Extra simple modern blocks (cubes, pillars, see-through cubes) for TuffX+ servers.
+		for (int i = 0; i < ViaBlocks.EXTRA_NAMES.length; i++) {
+			int kind = ViaBlocks.EXTRA_KIND[i];
+			Block extra = kind == 1 ? new BlockRotatedPillar(Material.ROCK)
+					: (kind == 2 ? new BlockViaCutout() : new Block(Material.ROCK));
+			extra.setHardness(kind == 2 ? 0.3F : 2.0F).setResistance(kind == 2 ? 1.5F : 10.0F)
+					.setSoundType(kind == 2 ? SoundType.GLASS : SoundType.STONE)
+					.setUnlocalizedName(ViaBlocks.EXTRA_NAMES[i])
+					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
+			registerBlock(ViaBlocks.EXTRA_FIRST_ID + i, ViaBlocks.EXTRA_NAMES[i], extra);
+			ViaBlocks.EXTRA[i] = extra;
+		}
 		// Cross-model plants (coral plants, kelp, seagrass, berry bush).
 		for (int i = 0; i < ViaBlocks.CROSS_NAMES.length; i++) {
 			Block cross = (new BlockViaCross()).setHardness(0.0F).setUnlocalizedName(ViaBlocks.CROSS_NAMES[i]);

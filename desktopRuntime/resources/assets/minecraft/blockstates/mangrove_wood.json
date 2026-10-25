@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "mangrove_wood"
+        },
+        "axis=z": {
+            "model": "mangrove_wood",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "mangrove_wood",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

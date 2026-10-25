@@ -1432,6 +1432,11 @@ public abstract class EntityLivingBase extends Entity {
 	 * enchantments into account.
 	 */
 	private int getArmSwingAnimationEnd() {
+		// Treasure Client — a modern spear jab lasts its attack duration
+		ItemStack tcMain = this.getHeldItemMainhand();
+		if (this.swingingHand == EnumHand.MAIN_HAND && tcMain.getItem() instanceof net.minecraft.item.ItemSpear) {
+			return ((net.minecraft.item.ItemSpear) tcMain.getItem()).getSwingTicks();
+		}
 		if (this.isPotionActive(MobEffects.HASTE)) {
 			return 6 - (1 + this.getActivePotionEffect(MobEffects.HASTE).getAmplifier());
 		} else {
@@ -1456,6 +1461,11 @@ public abstract class EntityLivingBase extends Entity {
 	}
 
 	public void handleStatusUpdate(byte id) {
+		// Treasure Client — on 1.21.11+ servers event 2 from a player charging a spear means
+		// "your spear hit something", not "you got hurt".
+		if (id == 2 && this.isHandActive() && this.getActiveItemStack().getItem() instanceof net.minecraft.item.ItemSpear) {
+			return;
+		}
 		boolean flag = id == 33;
 		boolean flag1 = id == 36;
 		boolean flag2 = id == 37;

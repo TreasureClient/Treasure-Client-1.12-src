@@ -54,6 +54,21 @@ public class LayerHeldItem implements LayerRenderer<EntityLivingBase> {
 			GlStateManager.rotate(180.0F, 0.0F, 1.0F, 0.0F);
 			boolean flag = handSide == EnumHandSide.LEFT;
 			GlStateManager.translate((float) (flag ? -1 : 1) / 16.0F, 0.125F, -0.625F);
+			// Treasure Client — modern spear jab / charge motion of the held spear
+			if (p_188358_2_.getItem() instanceof net.minecraft.item.ItemSpear) {
+				net.minecraft.item.ItemSpear spear = (net.minecraft.item.ItemSpear) p_188358_2_.getItem();
+				float partial = Minecraft.getMinecraft().getRenderPartialTicks();
+				boolean mainSide = handSide == p_188358_1_.getPrimaryHand();
+				float swing = p_188358_1_.getSwingProgress(partial);
+				if (mainSide && net.minecraft.client.model.ModelBiped.tcSwingingSpear(p_188358_1_)) {
+					net.minecraft.client.renderer.SpearAnimations.thirdPersonAttackItem(swing);
+				}
+				if (p_188358_1_.isHandActive() && net.minecraft.item.ItemSpear.isSpear(p_188358_1_.getActiveItemStack())
+						&& (p_188358_1_.getActiveHand() == net.minecraft.util.EnumHand.MAIN_HAND) == mainSide) {
+					float held = (float) p_188358_1_.getItemInUseMaxCount() + partial;
+					net.minecraft.client.renderer.SpearAnimations.thirdPersonUseItem(swing, held, !flag, spear);
+				}
+			}
 			Minecraft.getMinecraft().getItemRenderer().renderItemSide(p_188358_1_, p_188358_2_, p_188358_3_, flag);
 			GlStateManager.popMatrix();
 		}

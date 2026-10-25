@@ -16,6 +16,9 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
 public class SPacketChunkData implements Packet<INetHandlerPlayClient> {
+	/** Treasure Client — extra TuffX+ bytes after the vanilla data, or null. */
+	public byte[] tuffTrailer;
+
 	private int chunkX;
 	private int chunkZ;
 	private int availableSections;
@@ -70,6 +73,8 @@ public class SPacketChunkData implements Packet<INetHandlerPlayClient> {
 			for (int k = 0; k < j; ++k) {
 				this.tileEntityTags.add(buf.readNBTTagCompoundFromBuffer());
 			}
+		// Treasure Client — keep bytes a TuffX+ server appended (ViaBlocks data)
+		this.tuffTrailer = TuffTrailer.read(buf);
 		}
 	}
 

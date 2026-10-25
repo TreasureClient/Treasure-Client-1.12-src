@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "stripped_poplar_wood"
+        },
+        "axis=z": {
+            "model": "stripped_poplar_wood",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "stripped_poplar_wood",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

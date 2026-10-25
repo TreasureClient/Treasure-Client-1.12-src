@@ -531,6 +531,12 @@ public class Item {
 				registerItemBlock(half, new ItemSlab(half, half, dbl));
 			}
 		}
+		// Treasure Client — extra simple ViaBlocks: a plain ItemBlock each.
+		for (int viaE = 0; viaE < net.minecraft.block.ViaBlocks.EXTRA.length; viaE++) {
+			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.EXTRA[viaE]);
+			}
+		}
 		// Treasure Client — ViaBlocks walls: a plain ItemBlock each.
 		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
 			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {

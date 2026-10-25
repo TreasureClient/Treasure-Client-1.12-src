@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "poplar_log"
+        },
+        "axis=z": {
+            "model": "poplar_log",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "poplar_log",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

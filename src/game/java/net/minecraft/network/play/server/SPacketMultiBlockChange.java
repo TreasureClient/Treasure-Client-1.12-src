@@ -11,6 +11,9 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.chunk.Chunk;
 
 public class SPacketMultiBlockChange implements Packet<INetHandlerPlayClient> {
+	/** Treasure Client — extra TuffX+ bytes after the vanilla data, or null. */
+	public byte[] tuffTrailer;
+
 	private ChunkPos chunkPos;
 	private SPacketMultiBlockChange.BlockUpdateData[] changedBlocks;
 
@@ -37,6 +40,8 @@ public class SPacketMultiBlockChange implements Packet<INetHandlerPlayClient> {
 			this.changedBlocks[i] = new SPacketMultiBlockChange.BlockUpdateData(buf.readShort(),
 					Block.BLOCK_STATE_IDS.getByValue(buf.readVarIntFromBuffer()));
 		}
+		// Treasure Client — keep bytes a TuffX+ server appended (ViaBlocks data)
+		this.tuffTrailer = TuffTrailer.read(buf);
 	}
 
 	/**

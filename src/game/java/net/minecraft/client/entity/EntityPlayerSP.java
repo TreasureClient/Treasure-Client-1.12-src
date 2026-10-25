@@ -347,6 +347,11 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 				net.minecraft.client.gui.TreasureMods.dumpHeldItem(this.mc);
 				return;
 			}
+			if (tcCmd.equalsIgnoreCase(".viablocks")) {
+				this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
+						net.minecraft.client.network.TuffViaBlocks.status()));
+				return;
+			}
 		}
 		if (this.connection.getNetworkManager() instanceof SingleplayerNetworkManager && message.startsWith("/eagskull")) {
 			this.mc.eagskullCommand.openFileChooser();
@@ -849,7 +854,10 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 		this.movementInput.updatePlayerMoveState();
 		this.mc.func_193032_ao().func_193293_a(this.movementInput);
 
-		if (this.isHandActive() && !this.isRiding()) {
+		// Treasure Client — charging a modern spear keeps full speed and sprint (modern UseEffects)
+		boolean tcSpearCharge = this.isHandActive() && net.minecraft.item.ItemSpear.isSpear(this.getActiveItemStack());
+
+		if (this.isHandActive() && !this.isRiding() && !tcSpearCharge) {
 			this.movementInput.moveStrafe *= 0.2F;
 			this.movementInput.field_192832_b *= 0.2F;
 			this.sprintToggleTimer = 0;
@@ -875,7 +883,7 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 		boolean flag4 = (float) this.getFoodStats().getFoodLevel() > 6.0F || this.capabilities.allowFlying;
 
 		if (this.onGround && !flag1 && !flag2 && this.movementInput.field_192832_b >= 0.8F && !this.isSprinting()
-				&& flag4 && !this.isHandActive() && !this.isPotionActive(MobEffects.BLINDNESS)) {
+				&& flag4 && (!this.isHandActive() || tcSpearCharge) && !this.isPotionActive(MobEffects.BLINDNESS)) {
 			if (this.sprintToggleTimer <= 0 && !this.mc.gameSettings.keyBindSprint.isKeyDown()) {
 				this.sprintToggleTimer = 7;
 			} else {
@@ -883,7 +891,7 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 			}
 		}
 
-		if (!this.isSprinting() && this.movementInput.field_192832_b >= 0.8F && flag4 && !this.isHandActive()
+		if (!this.isSprinting() && this.movementInput.field_192832_b >= 0.8F && flag4 && (!this.isHandActive() || tcSpearCharge)
 				&& !this.isPotionActive(MobEffects.BLINDNESS) && this.mc.gameSettings.keyBindSprint.isKeyDown()) {
 			this.setSprinting(true);
 		}

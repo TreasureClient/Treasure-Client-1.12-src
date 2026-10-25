@@ -138,3 +138,18 @@ The server component depends entirely on your stack. Which is it?
 - **(3)** A standalone 1.12 Eaglercraft server (no modern content upstream) →
   then there's nothing modern to map; we'd instead inject modern blocks via a
   world-gen/worldedit style plugin on that server.
+
+## TuffX+ compatibility (works on any server running the TuffX+ plugin)
+`TuffViaBlocks` speaks TuffNetwork's TuffX+ ViaBlocks protocol:
+- Opt-in: REGISTER `viablocks:data` + one byte on `viablocks:handshake`, sent on
+  JoinGame **and on every Respawn** (a BungeeCord server switch only sends a respawn).
+- The palette (`INIT_PALETTE` / `NEW_PALETTE_ENTRY`) and the first chunks arrive as
+  `viablocks:data` plugin messages.
+- After that, TuffX+ **appends** `ADD_CHUNK` / `ADD_SINGLE` bytes to the end of the
+  normal chunk (0x20), block change (0x0B) and multi block change (0x10) packets,
+  optionally followed by a Below-Y0 trailer (`0x59304348`, length, bytes). Those three
+  packets keep their trailing bytes (`tuffTrailer`) and the handler applies them
+  after the vanilla data.
+- Palette strings are matched only against our own ViaBlocks (id >= 1000), with
+  `axis` for pillars and `type` for slabs. Anything else keeps the 1.12 stand-in.
+- Chat command `.viablocks` prints whether TuffX+ data is arriving.
