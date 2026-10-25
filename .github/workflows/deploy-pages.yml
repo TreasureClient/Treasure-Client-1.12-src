@@ -1,11 +1,9 @@
 name: Deploy WASM client to GitHub Pages
 
 on:
+  # Every push to WASM republishes the beta. Push JS first so its newest build is picked up.
   push:
     branches: [ WASM ]
-    paths:
-      - "wasm_gc_teavm/javascript_dist/**"
-      - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -27,18 +25,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Assemble site (WASM client as index.html)
+      - name: Assemble site (beta builds)
         run: |
           set -eu
-          SRC="wasm_gc_teavm/javascript_dist/Treasure-Client_WASM.html"
           mkdir -p _site
-          cp "$SRC" "_site/index.html"
+          # WASM build at the site root (and wasm.html)
+          cp wasm_gc_teavm/javascript_dist/Treasure-Client_WASM.html _site/index.html
+          cp _site/index.html _site/wasm.html
           if [ -f wasm_gc_teavm/javascript_dist/favicon.png ]; then
             cp wasm_gc_teavm/javascript_dist/favicon.png _site/favicon.png
           fi
-          # disable Jekyll so files/underscored paths are served verbatim
+          # JS build from the JS branch
+          git fetch --depth=1 origin JS
+          git show FETCH_HEAD:javascript/Eaglercraft_1.12_Offline_en_US.html > _site/js.html
+          # Version shown on treasureclient.github.io (from the main menu title)
+          VERSION=$(sed -n 's/.*brandTitle = "Treasure Client \([^"]*\)".*/\1/p' src/game/java/net/minecraft/client/gui/GuiMainMenu.java | head -n 1)
+          printf '{"version":"%s","commit":"%s","date":"%s"}\n' "${VERSION:-Beta}" "$(git rev-parse --short HEAD)" "$(date -u +%Y-%m-%d)" > _site/version.json
+          # disable Jekyll so files are served verbatim
           touch _site/.nojekyll
-          echo "Assembled _site:"; ls -la _site
+          echo "Assembled _site:"; ls -la _site; cat _site/version.json
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
