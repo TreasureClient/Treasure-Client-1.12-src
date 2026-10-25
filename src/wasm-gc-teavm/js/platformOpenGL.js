@@ -122,6 +122,9 @@ function setCurrentGLContext(ctx, glesVersIn, allowExts, glImports) {
 	glImports["glEnableVertexAttribArray"] = ctx.enableVertexAttribArray.bind(ctx);
 	glImports["glDisableVertexAttribArray"] = ctx.disableVertexAttribArray.bind(ctx);
 	glImports["glVertexAttribPointer"] = ctx.vertexAttribPointer.bind(ctx);
+	// Treasure Client: used by the Celeritas chunk renderer (WebGL 2 only)
+	glImports["glVertexAttribIPointer"] = glesVersIn >= 300 ? ctx.vertexAttribIPointer.bind(ctx) : unsupportedFunc(platfOpenGLName, "glVertexAttribIPointer");
+	glImports["glCopyBufferSubData"] = glesVersIn >= 300 ? ctx.copyBufferSubData.bind(ctx) : unsupportedFunc(platfOpenGLName, "glCopyBufferSubData");
 	glImports["glActiveTexture"] = ctx.activeTexture.bind(ctx);
 	glImports["glBindTexture"] = ctx.bindTexture.bind(ctx);
 	glImports["glTexParameterf"] = ctx.texParameterf.bind(ctx);
@@ -321,6 +324,8 @@ function setNoGLContext(glImports) {
 	setUnsupportedFunc(glImports, platfOpenGLName, "glEnableVertexAttribArray");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glDisableVertexAttribArray");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glVertexAttribPointer");
+	setUnsupportedFunc(glImports, platfOpenGLName, "glVertexAttribIPointer");
+	setUnsupportedFunc(glImports, platfOpenGLName, "glCopyBufferSubData");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glActiveTexture");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glBindTexture");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glTexParameterf");

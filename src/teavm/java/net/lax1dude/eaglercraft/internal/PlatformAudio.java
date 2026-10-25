@@ -500,7 +500,7 @@ public class PlatformAudio {
 		panner.setMaxDistance(v1);
 		panner.setRolloffFactor(1.0f);
 		panner.setDistanceModel("linear");
-		panner.setPanningModel("HRTF");
+		panner.setPanningModel("equalpower"); // Treasure Client: HRTF is much heavier on the CPU
 		panner.setConeInnerAngle(360.0f);
 		panner.setConeOuterAngle(0.0f);
 		panner.setConeOuterGain(0.0f);

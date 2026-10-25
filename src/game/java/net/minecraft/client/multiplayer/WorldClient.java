@@ -44,7 +44,15 @@ import net.minecraft.world.storage.SaveHandlerMP;
 import net.minecraft.world.storage.WorldInfo;
 import net.optifine.PlayerControllerOF;
 
-public class WorldClient extends World {
+public class WorldClient extends World implements org.embeddedt.embeddium.impl.render.chunk.map.ChunkTrackerHolder {
+	/** Treasure Client: tells the Celeritas renderer which chunks are loaded. */
+	private final org.embeddedt.embeddium.impl.render.chunk.map.ChunkTracker tcChunkTracker = new org.embeddedt.embeddium.impl.render.chunk.map.ChunkTracker();
+
+	@Override
+	public org.embeddedt.embeddium.impl.render.chunk.map.ChunkTracker sodium$getTracker() {
+		return this.tcChunkTracker;
+	}
+
 	/** The packets that need to be sent to the server. */
 	private final NetHandlerPlayClient connection;
 

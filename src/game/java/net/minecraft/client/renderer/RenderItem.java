@@ -205,6 +205,7 @@ public class RenderItem implements IResourceManagerReloadListener {
 
 		for (int j = p_191970_2_.size(); i < j; ++i) {
 			BakedQuad bakedquad = p_191970_2_.get(i);
+			net.minecraft.client.renderer.texture.TCAnimTracker.use(bakedquad.getSprite());
 			int k = p_191970_3_;
 
 			if (flag && bakedquad.hasTintIndex()) {

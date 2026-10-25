@@ -357,6 +357,14 @@ public class PlatformOpenGL {
 	public static native void _wglVertexAttribPointer(int index, int size, int type,
 			boolean normalized, int stride, int offset);
 
+	/** Treasure Client: integer vertex attributes (WebGL 2), used by Celeritas. */
+	@Import(module = "platformOpenGL", name = "glVertexAttribIPointer")
+	public static native void _wglVertexAttribIPointer(int index, int size, int type, int stride, int offset);
+
+	/** Treasure Client: buffer-to-buffer copy (WebGL 2), used by Celeritas. */
+	@Import(module = "platformOpenGL", name = "glCopyBufferSubData")
+	public static native void _wglCopyBufferSubData(int readTarget, int writeTarget, int readOffset, int writeOffset, int size);
+
 	@Import(module = "platformOpenGL", name = "glVertexAttribDivisor")
 	public static native void _wglVertexAttribDivisor(int index, int divisor);
 

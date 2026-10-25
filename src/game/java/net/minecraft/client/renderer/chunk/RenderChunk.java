@@ -119,6 +119,9 @@ public class RenderChunk {
 			boolean[] aboolean = new boolean[BlockRenderLayer.values().length];
 			BlockRendererDispatcher blockrendererdispatcher = Minecraft.getMinecraft().getBlockRendererDispatcher();
 
+			// Treasure Client: record which animated textures this chunk uses
+			net.minecraft.client.renderer.texture.TCAnimTracker.beginCompile(compiledChunk.tcAnimSprites);
+			try {
 			for (BlockPos blockpos$mutableblockpos : BlockPos.getAllInBoxMutable(blockpos, blockpos1)) {
 				IBlockState iblockstate = regionrendercache.getBlockStateFaster(blockpos$mutableblockpos);
 				Block block = iblockstate.getBlock();
@@ -157,6 +160,9 @@ public class RenderChunk {
 
 					aboolean[j] |= blockrendererdispatcher.renderBlock(iblockstate, blockpos$mutableblockpos, regionrendercache, bufferbuilder);
 				}
+			}
+			} finally {
+				net.minecraft.client.renderer.texture.TCAnimTracker.endCompile();
 			}
 
 			BlockRenderLayer[] layers = BlockRenderLayer._VALUES;

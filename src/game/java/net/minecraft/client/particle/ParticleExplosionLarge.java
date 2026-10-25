@@ -105,6 +105,11 @@ public class ParticleExplosionLarge extends Particle {
 	public static class Factory implements IParticleFactory {
 		public Particle createParticle(int particleID, World worldIn, double xCoordIn, double yCoordIn, double zCoordIn,
 				double xSpeedIn, double ySpeedIn, double zSpeedIn, int... p_178902_15_) {
+			// Treasure Client: these are big see-through sprites; dozens of them
+			// stacked on screen from a TNT chain is very slow on weaker GPUs
+			if (!net.minecraft.world.TCPerf.takeLargeExplosion(worldIn)) {
+				return null;
+			}
 			return new ParticleExplosionLarge(Minecraft.getMinecraft().getTextureManager(), worldIn, xCoordIn, yCoordIn,
 					zCoordIn, xSpeedIn, ySpeedIn, zSpeedIn);
 		}

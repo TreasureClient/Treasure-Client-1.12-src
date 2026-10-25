@@ -122,6 +122,7 @@ public class BlockModelRenderer {
 
 		for (int j = list.size(); i < j; ++i) {
 			BakedQuad bakedquad = list.get(i);
+			net.minecraft.client.renderer.texture.TCAnimTracker.use(bakedquad.getSprite());
 			this.fillQuadBounds(stateIn, bakedquad.getVertexData(), bakedquad.getFace(), quadBounds, bitSet);
 			aoFace.updateVertexBrightness(blockAccessIn, stateIn.getBlock(), posIn, bakedquad.getFace(), quadBounds, bitSet);
 			buffer.addVertexData(bakedquad.getVertexData());
@@ -243,6 +244,7 @@ public class BlockModelRenderer {
 
 		for (int j = list.size(); i < j; ++i) {
 			BakedQuad bakedquad = list.get(i);
+			net.minecraft.client.renderer.texture.TCAnimTracker.use(bakedquad.getSprite());
 
 			if (ownBrightness) {
 				this.fillQuadBounds(stateIn, bakedquad.getVertexData(), bakedquad.getFace(), (float[]) null, bitSet);
@@ -280,15 +282,26 @@ public class BlockModelRenderer {
 
 	public void renderModelBrightnessColor(IBlockState state, IBakedModel p_187495_2_, float p_187495_3_,
 			float p_187495_4_, float p_187495_5_, float p_187495_6_) {
+		// Treasure Client: draw the whole model in one call instead of one draw
+		// per face (6+ per block). Lit TNT, falling blocks and TNT minecarts all
+		// go through here every frame.
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer bufferbuilder = tessellator.getBuffer();
+		bufferbuilder.begin(7, DefaultVertexFormats.ITEM);
+		boolean any = false;
 		EnumFacing[] values = EnumFacing._VALUES;
 		for (int i = 0; i < values.length; i++) {
-			EnumFacing enumfacing = values[i];
-			this.renderModelBrightnessColorQuads(p_187495_3_, p_187495_4_, p_187495_5_, p_187495_6_,
-					p_187495_2_.getQuads(state, enumfacing, 0L));
+			any |= this.renderModelBrightnessColorQuads(bufferbuilder, p_187495_3_, p_187495_4_, p_187495_5_,
+					p_187495_6_, p_187495_2_.getQuads(state, values[i], 0L));
 		}
 
-		this.renderModelBrightnessColorQuads(p_187495_3_, p_187495_4_, p_187495_5_, p_187495_6_,
+		any |= this.renderModelBrightnessColorQuads(bufferbuilder, p_187495_3_, p_187495_4_, p_187495_5_, p_187495_6_,
 				p_187495_2_.getQuads(state, (EnumFacing) null, 0L));
+		if (any) {
+			tessellator.draw();
+		} else {
+			bufferbuilder.finishDrawing();
+		}
 	}
 
 	public void renderModelBrightness(IBakedModel model, IBlockState state, float brightness, boolean p_178266_4_) {
@@ -311,15 +324,12 @@ public class BlockModelRenderer {
 		this.renderModelBrightnessColor(state, model, brightness, f, f1, f2);
 	}
 
-	private void renderModelBrightnessColorQuads(float brightness, float red, float green, float blue,
-			List<BakedQuad> listQuads) {
-		Tessellator tessellator = Tessellator.getInstance();
-		WorldRenderer bufferbuilder = tessellator.getBuffer();
-		int i = 0;
-
-		for (int j = listQuads.size(); i < j; ++i) {
+	private boolean renderModelBrightnessColorQuads(WorldRenderer bufferbuilder, float brightness, float red,
+			float green, float blue, List<BakedQuad> listQuads) {
+		int j = listQuads.size();
+		for (int i = 0; i < j; ++i) {
 			BakedQuad bakedquad = listQuads.get(i);
-			bufferbuilder.begin(7, DefaultVertexFormats.ITEM);
+			net.minecraft.client.renderer.texture.TCAnimTracker.use(bakedquad.getSprite());
 			bufferbuilder.addVertexData(bakedquad.getVertexData());
 
 			if (bakedquad.hasTintIndex()) {
@@ -330,8 +340,8 @@ public class BlockModelRenderer {
 
 			Vec3i vec3i = bakedquad.getFace().getDirectionVec();
 			bufferbuilder.putNormal((float) vec3i.getX(), (float) vec3i.getY(), (float) vec3i.getZ());
-			tessellator.draw();
 		}
+		return j > 0;
 	}
 
 	public static class AmbientOcclusionFace {

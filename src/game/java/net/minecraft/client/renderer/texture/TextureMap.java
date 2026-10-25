@@ -93,6 +93,9 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 		int i = Minecraft.getGLMaximumTextureSize();
 		Stitcher stitcher = new Stitcher(i, i, 0, this.mipmapLevels);
 		this.mapUploadedSprites.clear();
+		for (int ii = 0, ll = this.listAnimatedSprites.size(); ii < ll; ++ii) {
+			this.listAnimatedSprites.get(ii).tcAnimated = false;
+		}
 		this.listAnimatedSprites.clear();
 		int j = Integer.MAX_VALUE;
 		int k = 1 << this.mipmapLevels;
@@ -235,12 +238,17 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 
 			if (textureatlassprite2.hasAnimationMetadata()) {
 				this.listAnimatedSprites.add(textureatlassprite2);
+				textureatlassprite2.tcAnimated = true;
+				textureatlassprite2.tcLastSeenTick = TCAnimTracker.tick;
+				textureatlassprite2.tcStale = false;
 			}
 		}
 
 		for (TextureAtlasSprite textureatlassprite2 : map.values()) {
 			textureatlassprite2.copyFrom(this.missingImage);
 		}
+
+		this.tcBuildSpriteGrid(spriteList);
 
 		PlatformOpenGL._wglBindFramebuffer(_GL_FRAMEBUFFER, null);
 	}
@@ -261,8 +269,32 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 	}
 
 	public void updateAnimations() {
+		// Treasure Client: every animation keeps ticking, but new frames are only
+		// copied into the atlas (a GPU draw per texture per mip level) for
+		// textures drawn recently. One coming back into view gets its current
+		// frame on the next tick.
+		++TCAnimTracker.tick;
+		boolean any = false;
 		for (int j = 0, l = this.listAnimatedSprites.size(); j < l; ++j) {
-			this.listAnimatedSprites.get(j).updateAnimation();
+			TextureAtlasSprite s = this.listAnimatedSprites.get(j);
+			s.updateAnimation();
+			if (TCAnimTracker.isVisible(s)) {
+				if (s.tcStale) {
+					s.tcCopyCurrentFrame();
+					s.tcStale = false;
+				}
+				s.tcCopy = s.currentAnimUpdater != null;
+			} else {
+				if (s.currentAnimUpdater != null) {
+					s.tcStale = true;
+				}
+				s.tcCopy = false;
+			}
+			any |= s.tcCopy;
+		}
+
+		if (!any) {
+			return;
 		}
 
 		for (int i = 0; i < copyColorFramebuffer.length; ++i) {
@@ -271,7 +303,10 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 			PlatformOpenGL._wglBindFramebuffer(_GL_FRAMEBUFFER, copyColorFramebuffer[i]);
 			GlStateManager.viewport(0, 0, w, h);
 			for (int j = 0, l = this.listAnimatedSprites.size(); j < l; ++j) {
-				this.listAnimatedSprites.get(j).copyAnimationFrame(w, h, i);
+				TextureAtlasSprite s = this.listAnimatedSprites.get(j);
+				if (s.tcCopy) {
+					s.copyAnimationFrame(w, h, i);
+				}
 			}
 		}
 
@@ -325,6 +360,55 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 			}
 			copyMaterialFramebuffer = null;
 		}
+	}
+
+	/** Treasure Client: atlas grid for finding which sprite a texture coordinate falls in. */
+	private TextureAtlasSprite[] tcSpriteGrid;
+	private int tcGridCell = 16;
+	private int tcGridW;
+	private int tcGridH;
+
+	private void tcBuildSpriteGrid(List<TextureAtlasSprite> sprites) {
+		int cell = Integer.MAX_VALUE;
+		for (int i = 0, n = sprites.size(); i < n; ++i) {
+			TextureAtlasSprite sp = sprites.get(i);
+			cell = Math.min(cell, Math.min(sp.getIconWidth(), sp.getIconHeight()));
+		}
+		if (cell == Integer.MAX_VALUE || cell <= 0 || width <= 0 || height <= 0) {
+			this.tcSpriteGrid = null;
+			return;
+		}
+		this.tcGridCell = cell;
+		this.tcGridW = (width + cell - 1) / cell;
+		this.tcGridH = (height + cell - 1) / cell;
+		TextureAtlasSprite[] grid = new TextureAtlasSprite[this.tcGridW * this.tcGridH];
+		for (int i = 0, n = sprites.size(); i < n; ++i) {
+			TextureAtlasSprite sp = sprites.get(i);
+			int x0 = sp.getOriginX() / cell;
+			int y0 = sp.getOriginY() / cell;
+			int x1 = Math.min(this.tcGridW, (sp.getOriginX() + sp.getIconWidth() + cell - 1) / cell);
+			int y1 = Math.min(this.tcGridH, (sp.getOriginY() + sp.getIconHeight() + cell - 1) / cell);
+			for (int y = y0; y < y1; ++y) {
+				for (int x = x0; x < x1; ++x) {
+					grid[y * this.tcGridW + x] = sp;
+				}
+			}
+		}
+		this.tcSpriteGrid = grid;
+	}
+
+	/** Returns the sprite under the given atlas texture coordinate, or null. */
+	public TextureAtlasSprite tcFindSpriteAt(float u, float v) {
+		TextureAtlasSprite[] grid = this.tcSpriteGrid;
+		if (grid == null) {
+			return null;
+		}
+		int x = (int) (u * width) / this.tcGridCell;
+		int y = (int) (v * height) / this.tcGridCell;
+		if (x < 0 || y < 0 || x >= this.tcGridW || y >= this.tcGridH) {
+			return null;
+		}
+		return grid[y * this.tcGridW + x];
 	}
 
 	public int getWidth() {

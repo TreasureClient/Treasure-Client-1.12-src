@@ -35,6 +35,23 @@ public class TextureAtlasSprite {
 	protected int frameCounter;
 	protected int tickCounter;
 
+	// Treasure Client: see TCAnimTracker
+	boolean tcAnimated = false;
+	int tcLastSeenTick = 0;
+	boolean tcStale = false;
+	boolean tcCopy = false;
+
+	/** Next copy puts this texture's current frame into the atlas (after being out of view). */
+	void tcCopyCurrentFrame() {
+		final int k = this.animationMetadata.getFrameIndex(this.frameCounter);
+		if (k >= 0 && k < this.framesTextureData.size()) {
+			currentAnimUpdater = (mapWidth, mapHeight, mapLevel) -> {
+				animationCache.copyFrameToTex2D(k, mapLevel, this.originX >> mapLevel, this.originY >> mapLevel,
+						this.width >> mapLevel, this.height >> mapLevel, mapWidth, mapHeight);
+			};
+		}
+	}
+
 	protected TextureAnimationCache animationCache = null;
 
 	protected TextureAtlasSprite(String spriteName) {

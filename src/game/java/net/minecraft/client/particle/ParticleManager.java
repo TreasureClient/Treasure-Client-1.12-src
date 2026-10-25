@@ -47,6 +47,9 @@ public class ParticleManager {
 	private final Map<Integer, IParticleFactory> particleTypes = Maps.<Integer, IParticleFactory>newHashMap();
 	private final List<Particle> queueEntityFX = Lists.<Particle>newArrayList();
 
+	/** Treasure Client: most particles kept per layer (vanilla 16384). */
+	private static final int MAX_PARTICLES_PER_LAYER = 8192;
+
 	private final Minecraft mc;
 
 	public ParticleManager(World worldIn, TextureManager rendererIn) {
@@ -179,18 +182,25 @@ public class ParticleManager {
 			this.particleEmitters.removeAll(list);
 		}
 
+		// Treasure Client: add every queued particle in one pass, then trim each
+		// layer in one go. The old code removed items one at a time from the
+		// front of big lists (shifting the whole list each time) and only handled
+		// half the queue per tick, which made TNT explosions very laggy.
 		if (!this.queueEntityFX.isEmpty()) {
-			for (int i = 0; i < this.queueEntityFX.size(); i++) {
+			for (int i = 0, n = this.queueEntityFX.size(); i < n; i++) {
 				Particle particle = this.queueEntityFX.get(i);
-				int j = particle.getFXLayer();
-				int k = particle.isTransparent() ? 0 : 1;
+				this.fxLayers[particle.getFXLayer()][particle.isTransparent() ? 0 : 1].add(particle);
+			}
+			this.queueEntityFX.clear();
 
-				if (this.fxLayers[j][k].size() >= 16384) {
-					this.fxLayers[j][k].remove(0);
+			for (int j = 0; j < 4; ++j) {
+				for (int k = 0; k < 2; ++k) {
+					List<Particle> layer = this.fxLayers[j][k];
+					int over = layer.size() - MAX_PARTICLES_PER_LAYER;
+					if (over > 0) {
+						layer.subList(0, over).clear();
+					}
 				}
-
-				this.fxLayers[j][k].add(particle);
-				this.queueEntityFX.remove(particle);
 			}
 		}
 	}
@@ -203,13 +213,24 @@ public class ParticleManager {
 
 	private void tickParticleList(List<Particle> p_187240_1_) {
 		if (!p_187240_1_.isEmpty()) {
-			for (int i = 0; i < p_187240_1_.size(); i++) {
+			// Treasure Client: tick every particle and drop dead ones in a single
+			// pass (the old code removed them one by one, shifting the list each
+			// time, and skipped ticking the particle after each removed one).
+			int n = p_187240_1_.size();
+			int w = 0;
+			for (int i = 0; i < n; i++) {
 				Particle particle = p_187240_1_.get(i);
 				this.tickParticle(particle);
 
-				if (!particle.isAlive()) {
-					p_187240_1_.remove(particle);
+				if (particle.isAlive()) {
+					if (w != i) {
+						p_187240_1_.set(w, particle);
+					}
+					++w;
 				}
+			}
+			if (w < n) {
+				p_187240_1_.subList(w, n).clear();
 			}
 		}
 	}

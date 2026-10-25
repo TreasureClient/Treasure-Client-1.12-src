@@ -47,6 +47,10 @@ public class ChunkProviderClient implements IChunkProvider {
 		}
 
 		this.chunkMapping.remove(ChunkPos.asLong(x, z));
+		if (this.worldObj instanceof WorldClient) {
+			((WorldClient) this.worldObj).sodium$getTracker().onChunkStatusRemoved(x, z,
+					org.embeddedt.embeddium.impl.render.chunk.map.ChunkStatus.FLAG_ALL);
+		}
 	}
 
 	@Nullable
@@ -61,6 +65,10 @@ public class ChunkProviderClient implements IChunkProvider {
 		Chunk chunk = new Chunk(this.worldObj, chunkX, chunkZ);
 		this.chunkMapping.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
 		chunk.setChunkLoaded(true);
+		if (this.worldObj instanceof WorldClient) {
+			((WorldClient) this.worldObj).sodium$getTracker().onChunkStatusAdded(chunkX, chunkZ,
+					org.embeddedt.embeddium.impl.render.chunk.map.ChunkStatus.FLAG_ALL);
+		}
 		return chunk;
 	}
 

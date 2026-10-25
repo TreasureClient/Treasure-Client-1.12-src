@@ -463,8 +463,10 @@ public class ItemRenderer {
 			}
 
 			if (iblockstate.getRenderType() != EnumBlockRenderType.INVISIBLE) {
-				this.renderBlockInHand(
-						this.mc.getBlockRendererDispatcher().getBlockModelShapes().getTexture(iblockstate));
+				TextureAtlasSprite tcInside = this.mc.getBlockRendererDispatcher().getBlockModelShapes()
+						.getTexture(iblockstate);
+				net.minecraft.client.renderer.texture.TCAnimTracker.use(tcInside);
+				this.renderBlockInHand(tcInside);
 			}
 		}
 
@@ -562,6 +564,7 @@ public class ItemRenderer {
 			GlStateManager.pushMatrix();
 			TextureAtlasSprite textureatlassprite = this.mc.getTextureMapBlocks()
 					.getAtlasSprite("minecraft:blocks/fire_layer_1");
+			net.minecraft.client.renderer.texture.TCAnimTracker.use(textureatlassprite);
 			this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 			float f1 = textureatlassprite.getMinU();
 			float f2 = textureatlassprite.getMaxU();

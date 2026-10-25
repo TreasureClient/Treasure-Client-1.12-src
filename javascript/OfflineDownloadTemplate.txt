@@ -1465,20 +1465,25 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       var n = parseFloat(v); if (isNaN(n)) return '—';
       return (String(state.coordPrecision) === '0') ? String(Math.round(n)) : n.toFixed(1);
     }
+    // Treasure Client: only touch the page when a HUD value actually changes.
+    // Rewriting the same text or HTML still makes the browser redo layout on
+    // top of the game every time.
+    function tcSetText(el, s) { if (el && el.__tcT !== s) { el.__tcT = s; el.textContent = s; } }
+    function tcSetHTML(el, s) { if (el && el.__tcH !== s) { el.__tcH = s; el.innerHTML = s; } }
     function updateDataHud() {
       if (state.coords) {
-        if (hud.active) coordsEl.textContent = 'XYZ  ' + fmtPrec(hud.x) + '  ' + fmtPrec(hud.y) + '  ' + fmtPrec(hud.z);
-        else coordsEl.textContent = 'XYZ  — — —';
+        if (hud.active) tcSetText(coordsEl, 'XYZ  ' + fmtPrec(hud.x) + '  ' + fmtPrec(hud.y) + '  ' + fmtPrec(hud.z));
+        else tcSetText(coordsEl, 'XYZ  — — —');
       }
       if (state.direction) {
         if (hud.active && hud.yaw != null) {
           var c = compass(parseFloat(hud.yaw));
-          dirEl.textContent = (state.dirMode === 'detailed' && c.axis) ? (c.card + ' (' + c.axis + ')') : c.card;
-        } else dirEl.textContent = '—';
+          tcSetText(dirEl, (state.dirMode === 'detailed' && c.axis) ? (c.card + ' (' + c.axis + ')') : c.card);
+        } else tcSetText(dirEl, '—');
       }
       if (state.ping) {
         var p = hud.active ? parseInt(hud.ping, 10) : -1;
-        pingEl.textContent = (p != null && p >= 0) ? (p + ' ms') : 'ping n/a';
+        tcSetText(pingEl, (p != null && p >= 0) ? (p + ' ms') : 'ping n/a');
       }
       if (state.armorStatus) renderArmor();
       if (state.potionEffects) renderPotions();
@@ -1490,7 +1495,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     function barColor(frac) { return frac < 0.25 ? 'low' : ''; }
     function renderArmor() {
       var names = ['Helmet','Chest','Legs','Boots'];
-      if (!hud.active || !hud.armor) { armorEl.innerHTML = '<div class="tc-armor-slot"><i>—</i></div>'; return; }
+      if (!hud.active || !hud.armor) { tcSetHTML(armorEl, '<div class="tc-armor-slot"><i>—</i></div>'); return; }
       var slots = hud.armor.split('~');
       var html = '';
       for (var i = 0; i < 4; i++) {
@@ -1500,40 +1505,40 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var dur = (frac >= 0) ? Math.round(frac * 100) + '%' : '✓';
         html += '<div class="tc-armor-slot"><b>' + names[i] + '</b><i class="' + (frac >= 0 ? barColor(frac) : '') + '">' + dur + '</i></div>';
       }
-      armorEl.innerHTML = html;
+      tcSetHTML(armorEl, html);
     }
     function renderPotions() {
-      if (!hud.active || !hud.potions) { potionsEl.innerHTML = ''; return; }
+      if (!hud.active || !hud.potions) { tcSetHTML(potionsEl, ''); return; }
       var rows = hud.potions.split('~').filter(Boolean);
-      if (!rows.length) { potionsEl.innerHTML = ''; return; }
-      potionsEl.innerHTML = rows.map(function (r) {
+      if (!rows.length) { tcSetHTML(potionsEl, ''); return; }
+      tcSetHTML(potionsEl, rows.map(function (r) {
         var p = r.split('|'); var name = p[0] || '?'; var amp = parseInt(p[1], 10) || 0; var secs = parseInt(p[2], 10) || 0;
         var lvl = amp > 0 ? ' ' + (amp + 1) : '';
         var mm = Math.floor(secs / 60), ss = secs % 60; var time = mm + ':' + (ss < 10 ? '0' : '') + ss;
         return '<div class="tc-potion-row"><span class="tc-potion-dot"></span><span>' + name + lvl + '</span><span style="color:var(--dim)">' + time + '</span></div>';
-      }).join('');
+      }).join(''));
     }
     function renderHeld() {
-      if (!hud.active || !hud.held || hud.held === '-') { heldEl.textContent = '—'; return; }
+      if (!hud.active || !hud.held || hud.held === '-') { tcSetText(heldEl, '—'); return; }
       var p = hud.held.split('|'); var name = p[0] || '?'; var count = parseInt(p[1], 10) || 1; var frac = parseFloat(p[2]);
       var txt = name + (count > 1 ? ' ×' + count : '');
       if (frac >= 0) txt += '  ' + Math.round(frac * 100) + '%';
-      heldEl.textContent = txt;
+      tcSetText(heldEl, txt);
     }
     function renderSprint() {
       var on = (hud.sprintmode === 'toggled');
-      sprintEl.textContent = 'Sprint [' + (on ? 'ON' : 'OFF') + ']';
+      tcSetText(sprintEl, 'Sprint [' + (on ? 'ON' : 'OFF') + ']');
     }
     function renderSneak() {
       var on = (hud.sneakmode === 'toggled');
-      sneakEl.textContent = 'Sneak [' + (on ? 'ON' : 'OFF') + ']';
+      tcSetText(sneakEl, 'Sneak [' + (on ? 'ON' : 'OFF') + ']');
     }
     function renderPerfMon() {
       var pingTxt = (hud.active && parseInt(hud.ping, 10) >= 0) ? (parseInt(hud.ping, 10) + ' ms') : 'n/a';
-      perfMonEl.innerHTML =
+      tcSetHTML(perfMonEl,
         '<div class="tc-pm-row"><span>FPS</span><span>' + fpsVal + '</span></div>' +
         '<div class="tc-pm-row"><span>Frame</span><span>' + (fpsVal > 0 ? (1000 / fpsVal).toFixed(1) : '—') + ' ms</span></div>' +
-        '<div class="tc-pm-row"><span>Ping</span><span>' + pingTxt + '</span></div>';
+        '<div class="tc-pm-row"><span>Ping</span><span>' + pingTxt + '</span></div>');
     }
 
     /* ---------- FPS graph (real recent history) ---------- */
@@ -1563,13 +1568,13 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       frames++;
       if (now - lastFpsT >= 500) {
         fpsVal = Math.round(frames * 1000 / (now - lastFpsT)); frames = 0; lastFpsT = now;
-        if (state.fps) fpsEl.textContent = fpsVal + ' FPS';
+        if (state.fps) tcSetText(fpsEl, fpsVal + ' FPS');
         var pf = $('#tc-perf-fps'); if (pf) pf.textContent = fpsVal; // REAL number in the perf panel
         fpsHistory.push(fpsVal); if (fpsHistory.length > 70) fpsHistory.shift();
         if (state.fpsGraph) drawFpsGraph();
       }
       while (clicks.length && now - clicks[0] > 1000) clicks.shift();
-      if (state.cps) cpsEl.textContent = clicks.length + ' CPS';
+      if (state.cps) tcSetText(cpsEl, clicks.length + ' CPS');
       // read the Java HUD bridge ~5x/sec and refresh the data-driven readouts
       if (now - lastHudRead >= 200) { readHudBridge(); lastHudRead = now; applyHudVisibility(); }
       if (now - lastData >= 100) { updateDataHud(); lastData = now; }
