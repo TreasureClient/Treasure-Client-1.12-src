@@ -35,6 +35,10 @@ public class ChunkBuilder {
      */
     private static final int TASK_QUEUE_LIMIT_PER_WORKER = 2;
 
+    /** Treasure Client: main-thread chunk build time allowed per frame, and the most builds per frame. */
+    private static final double MAIN_THREAD_BUDGET_NANOS = TimeUnit.MILLISECONDS.toNanos(4);
+    private static final int MAIN_THREAD_MAX_TASKS = 16;
+
     /**
      * Whether the adaptive scheduling controller is enabled. When disabled, the in-flight target stays pinned at
      * the floor and the scheduler falls back to the legacy fixed per-frame budget of
@@ -187,6 +191,14 @@ public class ChunkBuilder {
         }
 
         this.lastTickNanos = now;
+
+        if (this.threads.isEmpty()) {
+            // Treasure Client: builds run on the main thread, so give them a time budget per frame
+            // instead of a fixed count: fast builds load the world quicker, slow ones don't stall frames.
+            double meshNanos = Math.max(50_000.0, metrics.getAverageExecutionNanos(ChunkBuildOutput.class, DEFAULT_MESH_TASK_NANOS));
+            this.targetInFlight = (int) Math.max(1, Math.min(MAIN_THREAD_MAX_TASKS, (long) (MAIN_THREAD_BUDGET_NANOS / meshNanos)));
+            return;
+        }
 
         if (!ENABLE_ADAPTIVE_SCHEDULING) {
             // Legacy behavior: the target stays pinned at the floor, so getSchedulingBudget() yields the fixed

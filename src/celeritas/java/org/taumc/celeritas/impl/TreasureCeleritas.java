@@ -96,6 +96,41 @@ public final class TreasureCeleritas {
         renderer = null;
     }
 
+    /**
+     * Player toggle from the Mod Menu. Swaps between Celeritas and the vanilla
+     * chunk renderer, rebuilding the world's chunks if one is loaded. Turning it
+     * back on also retries after an earlier failure.
+     */
+    public static void setEnabled(boolean on) {
+        if (enabled == on) {
+            return;
+        }
+        enabled = on;
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+        if (on) {
+            failed = false;
+            failure = null;
+            if (mc.world != null) {
+                setWorld(mc.world);
+            }
+        } else if (renderer != null) {
+            try {
+                RenderDevice.enterManagedCode();
+                try {
+                    renderer.setWorld(null);
+                } finally {
+                    RenderDevice.exitManagedCode();
+                }
+            } catch (Throwable t) {
+                LOGGER.error("Could not shut down Celeritas", t);
+            }
+            renderer = null;
+        }
+        if (mc.world != null && mc.renderGlobal != null) {
+            mc.renderGlobal.loadRenderers();
+        }
+    }
+
     /** Called when RenderGlobal's world changes (null when leaving a world). */
     public static void setWorld(WorldClient world) {
         if (!isActive() && renderer == null) {
