@@ -40,6 +40,8 @@ public class BlockFluidRenderer {
 		BlockLiquid blockliquid = (BlockLiquid) blockStateIn.getBlock();
 		boolean flag = blockStateIn.getMaterial() == Material.LAVA;
 		TextureAtlasSprite[] atextureatlassprite = flag ? this.atlasSpritesLava : this.atlasSpritesWater;
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(atextureatlassprite[0]);
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(atextureatlassprite[1]);
 		int i = this.blockColors.colorMultiplier(blockStateIn, blockAccess, blockPosIn, 0);
 		float f = (float) (i >> 16 & 255) / 255.0F;
 		float f1 = (float) (i >> 8 & 255) / 255.0F;

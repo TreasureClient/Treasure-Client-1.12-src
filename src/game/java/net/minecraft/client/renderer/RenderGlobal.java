@@ -438,6 +438,9 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 		this.renderManager.set(worldClientIn);
 		this.theWorld = worldClientIn;
 
+		// Treasure Client: give the Celeritas renderer the new world (before loadRenderers reloads it)
+		org.taumc.celeritas.impl.TreasureCeleritas.setWorld(worldClientIn);
+
 		if (worldClientIn != null) {
 			worldClientIn.addEventListener(this);
 			this.loadRenderers();
@@ -474,7 +477,9 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 				this.setTileEntities.clear();
 			}
 
-			this.viewFrustum = new ViewFrustum(this.theWorld, this.mc.gameSettings.renderDistanceChunks, this,
+			// Treasure Client: with Celeritas drawing the terrain, vanilla keeps no chunk storage
+			boolean tcCeleritas = org.taumc.celeritas.impl.TreasureCeleritas.isActive();
+			this.viewFrustum = new ViewFrustum(this.theWorld, tcCeleritas ? 0 : this.mc.gameSettings.renderDistanceChunks, this,
 					this.renderChunkFactory);
 
 			if (this.theWorld != null) {
@@ -486,6 +491,11 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			}
 
 			this.renderEntitiesStartupCounter = 2;
+
+			if (tcCeleritas && !org.taumc.celeritas.impl.TreasureCeleritas.reload()) {
+				// Celeritas failed to start, so set up the vanilla renderer instead
+				this.loadRenderers();
+			}
 		}
 	}
 
@@ -530,6 +540,8 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
                 GlStateManager.disableFog();
             }
 
+			net.minecraft.client.renderer.entity.Render.tcBeginFireBatch();
+
 			for (int i = 0; i < this.theWorld.weatherEffects.size(); ++i) {
 				Entity entity1 = this.theWorld.weatherEffects.get(i);
 				++this.countEntitiesRendered;
@@ -542,6 +554,36 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			List<Entity> list1 = Lists.<Entity>newArrayList();
 			List<Entity> list2 = Lists.<Entity>newArrayList();
 			BlockPos blockpos$pooledmutableblockpos = new BlockPos();
+
+			if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+				// Treasure Client: Celeritas has no renderInfos list, so walk the loaded entities and
+				// skip the ones that aren't inside a visible chunk
+				for (int ii = 0, ll = list.size(); ii < ll; ++ii) {
+					Entity entity2 = list.get(ii);
+					boolean shouldRender = this.renderManager.shouldRender(entity2, camera, d0, d1, d2)
+							|| entity2.isRidingOrBeingRiddenBy(this.mc.player);
+
+					if (shouldRender && org.taumc.celeritas.impl.TreasureCeleritas.isEntityVisible(entity2)) {
+						boolean flag1 = this.mc.getRenderViewEntity() instanceof EntityLivingBase
+								? ((EntityLivingBase) this.mc.getRenderViewEntity()).isPlayerSleeping()
+								: false;
+
+						if ((entity2 != this.mc.getRenderViewEntity() || this.mc.gameSettings.thirdPersonView != 0
+								|| flag1)
+								&& (entity2.posY < 0.0D || entity2.posY >= 256.0D || this.theWorld
+										.isBlockLoaded(blockpos$pooledmutableblockpos.setPos(entity2)))) {
+							++this.countEntitiesRendered;
+							this.renderManager.renderEntityStatic(entity2, partialTicks, false);
+							if (this.isOutlineActive(entity2, entity, camera)) {
+								list1.add(entity2);
+							}
+							if (this.renderManager.isRenderMultipass(entity2)) {
+								list2.add(entity2);
+							}
+						}
+					}
+				}
+			}
 
 			label738: for (int ii = 0, ll = this.renderInfos.size(); ii < ll; ++ii) {
 				RenderGlobal.ContainerLocalRenderInformation renderglobal$containerlocalrenderinformation = this.renderInfos
@@ -586,7 +628,13 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 				}
 			}
 
+			net.minecraft.client.renderer.entity.Render.tcEndFireBatch();
+
 			RenderHelper.enableStandardItemLighting();
+
+			if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+				org.taumc.celeritas.impl.TreasureCeleritas.renderTileEntities(this.damagedBlocks, partialTicks);
+			}
 
 			for (int ii = 0, ll = this.renderInfos.size(); ii < ll; ++ii) {
 				RenderGlobal.ContainerLocalRenderInformation renderglobal$containerlocalrenderinformation1 = this.renderInfos
@@ -665,15 +713,22 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 	 * Gets the render info for use on the Debug screen
 	 */
 	public String getDebugInfoRenders() {
+		if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+			return org.taumc.celeritas.impl.TreasureCeleritas.getDebugInfoRenders();
+		}
 		int i = this.viewFrustum.renderChunks.length;
 		int j = this.getRenderedChunks();
 		return HString.format("C: %d/%d %sD: %d, L: %d, %s",
 				new Object[] { Integer.valueOf(j), Integer.valueOf(i), this.mc.renderChunksMany ? "(s) " : "",
 						Integer.valueOf(this.renderDistanceChunks), Integer.valueOf(this.setLightUpdates.size()),
-						this.renderDispatcher == null ? "null" : this.renderDispatcher.getDebugInfo() });
+						this.renderDispatcher == null ? "null" : this.renderDispatcher.getDebugInfo() })
+				+ org.taumc.celeritas.impl.TreasureCeleritas.getFailureNote();
 	}
 
 	protected int getRenderedChunks() {
+		if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+			return org.taumc.celeritas.impl.TreasureCeleritas.getRenderedChunks();
+		}
 		int i = 0;
 
 		for (int i1 = 0; i1 < this.renderInfos.size(); i1++) {
@@ -700,6 +755,11 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			boolean playerSpectator) {
 		if (this.mc.gameSettings.renderDistanceChunks != this.renderDistanceChunks) {
 			this.loadRenderers();
+		}
+
+		if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+			org.taumc.celeritas.impl.TreasureCeleritas.setupTerrain(viewEntity, partialTicks, frameCount, playerSpectator);
+			return;
 		}
 
 		double d0 = viewEntity.posX - this.frustumUpdatePosX;
@@ -958,6 +1018,10 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 	}
 
 	public int renderBlockLayer(BlockRenderLayer blockLayerIn, double partialTicks, int pass, Entity entityIn) {
+		if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+			return org.taumc.celeritas.impl.TreasureCeleritas.renderBlockLayer(blockLayerIn, partialTicks, entityIn);
+		}
+
 		RenderHelper.disableStandardItemLighting();
 
 		if (blockLayerIn == BlockRenderLayer.TRANSLUCENT) {
@@ -989,6 +1053,13 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 
 		for (int j = i1; j != i; j += j1) {
 			RenderChunk renderchunk = (this.renderInfos.get(j)).renderChunk;
+
+			// Treasure Client: this chunk is on screen, so its animated textures are too
+			List<net.minecraft.client.renderer.texture.TextureAtlasSprite> tcAnim = renderchunk
+					.getCompiledChunk().tcAnimSprites;
+			if (!tcAnim.isEmpty()) {
+				net.minecraft.client.renderer.texture.TCAnimTracker.useAll(tcAnim);
+			}
 
 			if (!renderchunk.getCompiledChunk().isLayerEmpty(blockLayerIn)) {
 				++l;
@@ -1685,6 +1756,11 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 
 	private void markBlocksForUpdate(int p_184385_1_, int p_184385_2_, int p_184385_3_, int p_184385_4_,
 			int p_184385_5_, int p_184385_6_, boolean p_184385_7_) {
+		if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
+			org.taumc.celeritas.impl.TreasureCeleritas.markBlocksForUpdate(p_184385_1_, p_184385_2_, p_184385_3_,
+					p_184385_4_, p_184385_5_, p_184385_6_, p_184385_7_);
+			return;
+		}
 		this.viewFrustum.markBlocksForUpdate(p_184385_1_, p_184385_2_, p_184385_3_, p_184385_4_, p_184385_5_,
 				p_184385_6_, p_184385_7_);
 	}
@@ -2236,6 +2312,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 
 	public void setDisplayListEntitiesDirty() {
 		this.displayListEntitiesDirty = true;
+		org.taumc.celeritas.impl.TreasureCeleritas.scheduleTerrainUpdate();
 	}
 
 	public void updateTileEntities(Collection<TileEntity> tileEntitiesToRemove,

@@ -69,11 +69,29 @@ public class RenderTNTPrimed extends Render<EntityTNTPrimed> {
 		if (net.minecraft.client.gui.TreasureMods.tntTimer()) {
 			float secs = ((float) entity.getFuse() - partialTicks + 1.0F) / 20.0F;
 			if (secs < 0.0F) secs = 0.0F;
-			String label = String.format("%.1fs", secs);
-			this.renderLivingLabel(entity, label, x, y + 0.5, z, 64);
+			this.renderLivingLabel(entity, timerLabel(Math.round(secs * 10.0F)), x, y + 0.5, z, 64);
 		}
 
 		super.doRender(entity, x, y, z, entityYaw, partialTicks);
+	}
+
+	// Treasure Client: the timer text ("3.2s") is made once per value and reused,
+	// instead of formatting a new string for every TNT every frame.
+	private static final String[] TIMER_LABELS = new String[1201];
+
+	private static String timerLabel(int tenths) {
+		if (tenths < 0) {
+			tenths = 0;
+		}
+		if (tenths >= TIMER_LABELS.length) {
+			return (tenths / 10) + "." + (tenths % 10) + "s";
+		}
+		String s = TIMER_LABELS[tenths];
+		if (s == null) {
+			s = (tenths / 10) + "." + (tenths % 10) + "s";
+			TIMER_LABELS[tenths] = s;
+		}
+		return s;
 	}
 
 	/**

@@ -988,6 +988,7 @@ public class GuiIngame extends Gui {
 		this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 		TextureAtlasSprite textureatlassprite = this.mc.getBlockRendererDispatcher().getBlockModelShapes()
 				.getTexture(Blocks.PORTAL.getDefaultState());
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(textureatlassprite);
 		float f = textureatlassprite.getMinU();
 		float f1 = textureatlassprite.getMinV();
 		float f2 = textureatlassprite.getMaxU();

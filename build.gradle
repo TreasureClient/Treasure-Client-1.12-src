@@ -19,7 +19,8 @@ sourceSets {
 		"src/main/java",
                 "src/game/java",
                	"src/protocol-game/java",
-		"src/teavm/java"
+		"src/teavm/java",
+		"src/celeritas/java"
             )
         }
     }

@@ -77,6 +77,7 @@ public class ParticleDigging extends Particle {
 	 */
 	public void renderParticle(WorldRenderer worldRendererIn, Entity entityIn, float partialTicks, float rotationX,
 			float rotationZ, float rotationYZ, float rotationXY, float rotationXZ) {
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(this.particleTexture);
 		float f = ((float) this.particleTextureIndexX + this.particleTextureJitterX / 4.0F) / 16.0F;
 		float f1 = f + 0.015609375F;
 		float f2 = ((float) this.particleTextureIndexY + this.particleTextureJitterY / 4.0F) / 16.0F;

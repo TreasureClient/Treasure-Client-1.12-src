@@ -817,12 +817,18 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * S21PacketChunkData
 	 */
 	public void handleMultiBlockChange(SPacketMultiBlockChange packetIn) {
-		for (SPacketMultiBlockChange.BlockUpdateData spacketmultiblockchange$blockupdatedata : packetIn
-				.getChangedBlocks()) {
-			this.clientWorldController.invalidateRegionAndSetBlock(spacketmultiblockchange$blockupdatedata.getPos(),
-					spacketmultiblockchange$blockupdatedata.getBlockState());
+		// Treasure Client: do the lighting once for the whole packet
+		this.clientWorldController.tcBeginLightBatch();
+		try {
+			for (SPacketMultiBlockChange.BlockUpdateData spacketmultiblockchange$blockupdatedata : packetIn
+					.getChangedBlocks()) {
+				this.clientWorldController.invalidateRegionAndSetBlock(spacketmultiblockchange$blockupdatedata.getPos(),
+						spacketmultiblockchange$blockupdatedata.getBlockState());
+			}
+			TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
+		} finally {
+			this.clientWorldController.tcEndLightBatch();
 		}
-		TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
 	}
 
 	/**

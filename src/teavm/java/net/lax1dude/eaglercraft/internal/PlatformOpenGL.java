@@ -410,6 +410,16 @@ public class PlatformOpenGL {
 		ctx.vertexAttribPointer(index, size, type, normalized, stride, offset);
 	}
 
+	/** Treasure Client: integer vertex attributes (WebGL 2), used by Celeritas. */
+	public static final void _wglVertexAttribIPointer(int index, int size, int type, int stride, int offset) {
+		ctx.vertexAttribIPointer(index, size, type, stride, offset);
+	}
+
+	/** Treasure Client: buffer-to-buffer copy (WebGL 2), used by Celeritas. */
+	public static final void _wglCopyBufferSubData(int readTarget, int writeTarget, int readOffset, int writeOffset, int size) {
+		ctx.copyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size);
+	}
+
 	public static final void _wglVertexAttribDivisor(int index, int divisor) {
 		switch(instancingImpl) {
 		case INSTANCE_IMPL_CORE:

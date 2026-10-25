@@ -359,7 +359,7 @@ public class PlatformAudio {
 	@JSBody(params = { "node" }, script = "node.distanceModel = \"linear\";")
 	static native void setDistanceModelLinearFast(PannerNode node) ;
 
-	@JSBody(params = { "node" }, script = "node.panningModel = \"HRTF\";")
+	@JSBody(params = { "node" }, script = "node.panningModel = \"equalpower\";")
 	static native void setPanningModelHRTFFast(PannerNode node) ;
 
 	public static IAudioHandle beginPlayback(IAudioResource track, float x, float y, float z,

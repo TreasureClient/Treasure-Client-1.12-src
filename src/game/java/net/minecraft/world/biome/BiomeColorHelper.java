@@ -50,7 +50,7 @@ public class BiomeColorHelper {
 		return getColorAtPos(blockAccess, pos, WATER_COLOR);
 	}
 
-	interface ColorResolver {
+	public interface ColorResolver {
 		int getColorAtPos(Biome biome, BlockPos blockPosition);
 	}
 }

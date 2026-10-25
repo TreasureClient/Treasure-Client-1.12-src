@@ -343,6 +343,26 @@ public abstract class World implements IBlockAccess {
 	 * prevents the block from being re-rendered, if this is a client world. Flags
 	 * can be added together.
 	 */
+	// Treasure Client: while a batch is open, light updates from block changes
+	// are saved and done together at the end. When an explosion removes
+	// hundreds of blocks, doing the lighting once on the finished crater is
+	// much faster than redoing it after every single block.
+	private int tcLightBatchDepth = 0;
+	private final java.util.ArrayList<BlockPos> tcDeferredLight = new java.util.ArrayList<BlockPos>();
+
+	public void tcBeginLightBatch() {
+		++this.tcLightBatchDepth;
+	}
+
+	public void tcEndLightBatch() {
+		if (this.tcLightBatchDepth > 0 && --this.tcLightBatchDepth == 0 && !this.tcDeferredLight.isEmpty()) {
+			for (int i = 0, n = this.tcDeferredLight.size(); i < n; ++i) {
+				this.checkLight(this.tcDeferredLight.get(i));
+			}
+			this.tcDeferredLight.clear();
+		}
+	}
+
 	public boolean setBlockState(BlockPos pos, IBlockState newState, int flags) {
 		if (this.isOutsideBuildHeight(pos)) {
 			return false;
@@ -358,7 +378,11 @@ public abstract class World implements IBlockAccess {
 			} else {
 				if (newState.getLightOpacity() != iblockstate.getLightOpacity()
 						|| newState.getLightValue() != iblockstate.getLightValue()) {
-					this.checkLight(pos);
+					if (this.tcLightBatchDepth > 0) {
+						this.tcDeferredLight.add(new BlockPos(pos.getX(), pos.getY(), pos.getZ()));
+					} else {
+						this.checkLight(pos);
+					}
 				}
 
 				if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0) && chunk.isPopulated()) {
@@ -1114,8 +1138,11 @@ public abstract class World implements IBlockAccess {
 								iblockstate1 = this.getBlockState(blockpos$pooledmutableblockpos);
 							}
 
-							iblockstate1.addCollisionBoxToList(this, blockpos$pooledmutableblockpos, p_191504_2_,
-									p_191504_4_, p_191504_1_, false);
+							// Treasure Client: air never has a collision box, so don't ask it for one
+							if (iblockstate1.getBlock() != Blocks.AIR) {
+								iblockstate1.addCollisionBoxToList(this, blockpos$pooledmutableblockpos, p_191504_2_,
+										p_191504_4_, p_191504_1_, false);
+							}
 
 							if (p_191504_3_ && !p_191504_4_.isEmpty()) {
 								boolean flag5 = true;

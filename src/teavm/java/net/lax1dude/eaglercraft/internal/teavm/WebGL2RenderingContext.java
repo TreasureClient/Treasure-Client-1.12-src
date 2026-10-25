@@ -67,6 +67,11 @@ public interface WebGL2RenderingContext extends WebGLRenderingContext {
 
 	void vertexAttribDivisor(int p1, int p2);
 
+	// Treasure Client: used by the Celeritas renderer
+	void vertexAttribIPointer(int index, int size, int type, int stride, int offset);
+
+	void copyBufferSubData(int readTarget, int writeTarget, int readOffset, int writeOffset, int size);
+
 	void drawArraysInstanced(int p1, int p2, int p3, int p4);
 
 	void drawElementsInstanced(int p1, int p2, int p3, int p4, int p5);

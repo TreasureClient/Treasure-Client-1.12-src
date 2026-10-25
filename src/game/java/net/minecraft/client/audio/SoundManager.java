@@ -279,6 +279,13 @@ public class SoundManager {
 					}
 				}
 
+				// Treasure Client: don't stack lots of copies of the same sound
+				// (TNT chains, a crowd of burning mobs). Each playing sound costs
+				// CPU, and past a few copies you can't hear the difference.
+				if (tcTooManyPlaying(p_sound)) {
+					return;
+				}
+
 				Sound etr = accessor.cloneEntry();
 				if (etr == SoundHandler.MISSING_SOUND) {
 					LOGGER.warn("Unable to play empty soundEvent(2): {}", etr.getSoundAsOggLocation().toString());
@@ -319,6 +326,34 @@ public class SoundManager {
 				}
 			}
 		}
+	}
+
+	/** Most copies of one sound playing at once. */
+	private static final int TC_MAX_SAME_SOUND = 4;
+	/** Most sounds playing at once overall (music and looping sounds don't count). */
+	private static final int TC_MAX_SOUNDS = 40;
+
+	private boolean tcTooManyPlaying(ISound sound) {
+		if (sound.canRepeat() || sound instanceof ITickableSound || sound.getCategory() == SoundCategory.MUSIC
+				|| sound.getCategory() == SoundCategory.RECORDS || sound.getCategory() == SoundCategory.MASTER) {
+			return false;
+		}
+		ResourceLocation loc = sound.getSoundLocation();
+		int same = 0;
+		int total = 0;
+		Iterator<ActiveSoundEvent> soundItr = activeSounds.iterator();
+		while (soundItr.hasNext()) {
+			ActiveSoundEvent evt = soundItr.next();
+			if (evt.soundHandle.shouldFree() || evt.soundInstance.canRepeat()
+					|| evt.soundInstance instanceof ITickableSound) {
+				continue;
+			}
+			++total;
+			if (loc.equals(evt.soundInstance.getSoundLocation()) && ++same >= TC_MAX_SAME_SOUND) {
+				return true;
+			}
+		}
+		return total >= TC_MAX_SOUNDS;
 	}
 
 	private float getClampedPitch(ISound soundIn) {

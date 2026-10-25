@@ -11,6 +11,9 @@ import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumFacing;
 
 public class CompiledChunk {
+	/** Treasure Client: animated textures used by this chunk (see TCAnimTracker). */
+	public final List<net.minecraft.client.renderer.texture.TextureAtlasSprite> tcAnimSprites = Lists.newArrayList();
+
 	public static final CompiledChunk DUMMY = new CompiledChunk(null) {
 		protected void setLayerUsed(BlockRenderLayer layer) {
 			throw new UnsupportedOperationException();
@@ -37,6 +40,7 @@ public class CompiledChunk {
 	}
 	
 	public void reset() {
+		this.tcAnimSprites.clear();
 		Arrays.fill(layersUsed, false);
 		Arrays.fill(layersStarted, false);
 		empty = true;

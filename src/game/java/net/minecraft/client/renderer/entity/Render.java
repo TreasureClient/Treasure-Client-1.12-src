@@ -122,11 +122,111 @@ public abstract class Render<T extends Entity> {
 	/**
 	 * Renders a layer of fire on top of an entity.
 	 */
+	// Treasure Client: during the main world pass, the fire on burning mobs is
+	// collected and drawn for all of them in one call at the end, instead of
+	// one draw call per burning mob.
+	private static boolean tcFireBatch = false;
+	private static float[] tcFireVerts = new float[5 * 4 * 64];
+	private static int tcFireFloats = 0;
+
+	public static void tcBeginFireBatch() {
+		tcFireBatch = true;
+		tcFireFloats = 0;
+	}
+
+	public static void tcEndFireBatch() {
+		tcFireBatch = false;
+		if (tcFireFloats == 0) {
+			return;
+		}
+		Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+		net.minecraft.client.renderer.OpenGlHelper.setLightmapTextureCoords(
+				net.minecraft.client.renderer.OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
+		GlStateManager.disableLighting();
+		GlStateManager.enableAlpha();
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer bufferbuilder = tessellator.getBuffer();
+		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
+		float[] v = tcFireVerts;
+		for (int i = 0, n = tcFireFloats; i < n; i += 5) {
+			bufferbuilder.pos(v[i], v[i + 1], v[i + 2]).tex(v[i + 3], v[i + 4]).endVertex();
+		}
+		tessellator.draw();
+		GlStateManager.enableLighting();
+		tcFireFloats = 0;
+	}
+
+	private static void tcFireVertex(double ox, double oy, double oz, float f, float cos, float sin, float vx,
+			float vy, float vz, float u, float vv) {
+		if (tcFireFloats + 5 > tcFireVerts.length) {
+			float[] bigger = new float[tcFireVerts.length * 2];
+			System.arraycopy(tcFireVerts, 0, bigger, 0, tcFireFloats);
+			tcFireVerts = bigger;
+		}
+		float[] a = tcFireVerts;
+		int i = tcFireFloats;
+		// same as: translate(o), scale(f), rotate around Y, then the vertex
+		a[i] = (float) (ox + f * (cos * vx + sin * vz));
+		a[i + 1] = (float) (oy + f * vy);
+		a[i + 2] = (float) (oz + f * (-sin * vx + cos * vz));
+		a[i + 3] = u;
+		a[i + 4] = vv;
+		tcFireFloats = i + 5;
+	}
+
+	private void renderEntityOnFireBatched(Entity entity, double x, double y, double z) {
+		TextureMap texturemap = Minecraft.getMinecraft().getTextureMapBlocks();
+		TextureAtlasSprite fire0 = texturemap.getAtlasSprite("minecraft:blocks/fire_layer_0");
+		TextureAtlasSprite fire1 = texturemap.getAtlasSprite("minecraft:blocks/fire_layer_1");
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(fire0);
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(fire1);
+		float f = entity.width * 1.4F;
+		float angle = -this.renderManager.playerViewY * 0.017453292F;
+		float cos = MathHelper.cos(angle);
+		float sin = MathHelper.sin(angle);
+		float f1 = 0.5F;
+		float f3 = entity.height / f;
+		float f4 = (float) (entity.posY - entity.getEntityBoundingBox().minY);
+		float f5 = -0.3F + (float) ((int) f3) * 0.02F;
+		int i = 0;
+
+		while (f3 > 0.0F) {
+			TextureAtlasSprite s = i % 2 == 0 ? fire0 : fire1;
+			float f6 = s.getMinU();
+			float f7 = s.getMinV();
+			float f8 = s.getMaxU();
+			float f9 = s.getMaxV();
+
+			if (i / 2 % 2 == 0) {
+				float f10 = f8;
+				f8 = f6;
+				f6 = f10;
+			}
+
+			tcFireVertex(x, y, z, f, cos, sin, f1, -f4, f5, f8, f9);
+			tcFireVertex(x, y, z, f, cos, sin, -f1, -f4, f5, f6, f9);
+			tcFireVertex(x, y, z, f, cos, sin, -f1, 1.4F - f4, f5, f6, f7);
+			tcFireVertex(x, y, z, f, cos, sin, f1, 1.4F - f4, f5, f8, f7);
+			f3 -= 0.45F;
+			f4 -= 0.45F;
+			f1 *= 0.9F;
+			f5 += 0.03F;
+			++i;
+		}
+	}
+
 	private void renderEntityOnFire(Entity entity, double x, double y, double z, float partialTicks) {
+		if (tcFireBatch) {
+			this.renderEntityOnFireBatched(entity, x, y, z);
+			return;
+		}
 		GlStateManager.disableLighting();
 		TextureMap texturemap = Minecraft.getMinecraft().getTextureMapBlocks();
 		TextureAtlasSprite textureatlassprite = texturemap.getAtlasSprite("minecraft:blocks/fire_layer_0");
 		TextureAtlasSprite textureatlassprite1 = texturemap.getAtlasSprite("minecraft:blocks/fire_layer_1");
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(textureatlassprite);
+		net.minecraft.client.renderer.texture.TCAnimTracker.use(textureatlassprite1);
 		GlStateManager.pushMatrix();
 		GlStateManager.translate((float) x, (float) y, (float) z);
 		float f = entity.width * 1.4F;
@@ -142,11 +242,11 @@ public abstract class Render<T extends Entity> {
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 		float f5 = 0.0F;
 		int i = 0;
+		this.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
 
 		while (f3 > 0.0F) {
 			TextureAtlasSprite textureatlassprite2 = i % 2 == 0 ? textureatlassprite : textureatlassprite1;
-			this.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 			float f6 = textureatlassprite2.getMinU();
 			float f7 = textureatlassprite2.getMinV();
 			float f8 = textureatlassprite2.getMaxU();

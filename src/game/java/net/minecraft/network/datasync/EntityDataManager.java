@@ -204,7 +204,11 @@ public class EntityDataManager {
 			EntityDataManager.DataEntry<?> dataentry1 = (EntityDataManager.DataEntry) this.entries
 					.get(Integer.valueOf(dataentry.getKey().getSerializerID()));
 
-			if (dataentry1 != null) {
+			// Treasure Client: skip values whose type doesn't match (servers going
+			// through ViaVersion sometimes send the wrong type, e.g. an int for an
+			// effect cloud's radius), instead of crashing later when it's read.
+			if (dataentry1 != null && dataentry1.getKey().getSerializerDataType() == dataentry.getKey()
+					.getSerializerDataType()) {
 				this.setEntryValue(dataentry1, dataentry);
 				this.entity.notifyDataManagerChange(dataentry.getKey());
 			}

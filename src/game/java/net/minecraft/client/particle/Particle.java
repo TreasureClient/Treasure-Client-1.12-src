@@ -187,6 +187,7 @@ public class Particle {
 		float f4 = 0.1F * this.particleScale;
 
 		if (this.particleTexture != null) {
+			net.minecraft.client.renderer.texture.TCAnimTracker.use(this.particleTexture);
 			f = this.particleTexture.getMinU();
 			f1 = this.particleTexture.getMaxU();
 			f2 = this.particleTexture.getMinV();
