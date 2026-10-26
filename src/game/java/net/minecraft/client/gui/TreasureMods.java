@@ -73,6 +73,12 @@ public class TreasureMods {
 
 	// Celeritas: the faster chunk renderer (WASM only). Default ON; overlay writes celeritas=0 to turn it off.
 	private static boolean celeritas = true;
+	/** The Celeritas setting saved by the overlay (the Mods screen shows and changes it). */
+	public static boolean celeritasSetting() { return celeritas; }
+
+	// Entity Culling: skip mobs/block entities hidden behind walls. Default ON; overlay writes entcull=0 to turn it off.
+	private static boolean entityCulling = true;
+	public static boolean entityCulling() { return entityCulling; }
 
 	private static float clamp01(float v, float lo, float hi) {
 		return v < lo ? lo : (v > hi ? hi : v);
@@ -213,6 +219,7 @@ public class TreasureMods {
 			pauseUnfocused = false;
 			via = true; // default ON unless the overlay explicitly says via=0
 			celeritas = true;
+			entityCulling = true;
 			passwordHider = false;
 			lowFire = false; lowFireH = 0.40f;
 			lowShield = false; lowShieldAmt = 0.30f;
@@ -240,6 +247,7 @@ public class TreasureMods {
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
 				else if (k.equals("via")) via = v.equals("1");
 				else if (k.equals("celeritas")) celeritas = v.equals("1");
+				else if (k.equals("entcull")) entityCulling = v.equals("1");
 				else if (k.equals("pwHide")) passwordHider = v.equals("1");
 				else if (k.equals("lowFire")) lowFire = v.equals("1");
 				else if (k.equals("lowFireH")) { try { lowFireH = clamp01(Integer.parseInt(v) / 100.0f, 0.05f, 1.0f); } catch (Throwable t) {} }

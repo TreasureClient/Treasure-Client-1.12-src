@@ -118,7 +118,8 @@ public class TileEntityRendererDispatcher {
 
 	public void renderTileEntity(TileEntity tileentityIn, float partialTicks, int destroyStage) {
 		if (tileentityIn.getDistanceSq(this.entityX, this.entityY, this.entityZ) < tileentityIn
-				.getMaxRenderDistanceSquared()) {
+				.getMaxRenderDistanceSquared()
+				&& (destroyStage != -1 || net.minecraft.client.renderer.TCEntityCulling.isVisible(tileentityIn))) {
 			RenderHelper.enableStandardItemLighting();
 			int i = this.worldObj.getCombinedLight(tileentityIn.getPos(), 0);
 			int j = i % 65536;

@@ -541,6 +541,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
             }
 
 			net.minecraft.client.renderer.entity.Render.tcBeginFireBatch();
+			TCEntityCulling.beginFrame(entity, partialTicks);
 
 			for (int i = 0; i < this.theWorld.weatherEffects.size(); ++i) {
 				Entity entity1 = this.theWorld.weatherEffects.get(i);
@@ -563,7 +564,8 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 					boolean shouldRender = this.renderManager.shouldRender(entity2, camera, d0, d1, d2)
 							|| entity2.isRidingOrBeingRiddenBy(this.mc.player);
 
-					if (shouldRender && org.taumc.celeritas.impl.TreasureCeleritas.isEntityVisible(entity2)) {
+					if (shouldRender && org.taumc.celeritas.impl.TreasureCeleritas.isEntityVisible(entity2)
+							&& TCEntityCulling.isVisible(entity2)) {
 						boolean flag1 = this.mc.getRenderViewEntity() instanceof EntityLivingBase
 								? ((EntityLivingBase) this.mc.getRenderViewEntity()).isPlayerSleeping()
 								: false;
@@ -598,7 +600,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 						boolean shouldRender = this.renderManager.shouldRender(entity2, camera, d0, d1, d2)
 								|| entity2.isRidingOrBeingRiddenBy(this.mc.player);
 
-						if (shouldRender) {
+						if (shouldRender && TCEntityCulling.isVisible(entity2)) {
 							boolean flag1 = this.mc.getRenderViewEntity() instanceof EntityLivingBase
 									? ((EntityLivingBase) this.mc.getRenderViewEntity()).isPlayerSleeping()
 									: false;
@@ -748,7 +750,8 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 	 * Gets the entities info for use on the Debug screen
 	 */
 	public String getDebugInfoEntities() {
-		return "E: " + this.countEntitiesRendered + "/" + this.countEntitiesTotal + ", B: " + this.countEntitiesHidden;
+		return "E: " + this.countEntitiesRendered + "/" + this.countEntitiesTotal + ", B: " + this.countEntitiesHidden
+				+ ", " + TCEntityCulling.getDebugString();
 	}
 
 	public void setupTerrain(Entity viewEntity, double partialTicks, ICamera camera, int frameCount,

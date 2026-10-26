@@ -281,6 +281,21 @@ public final class TreasureCeleritas {
         return r != null ? r.getChunksDebugString() : "Celeritas: off";
     }
 
+    /** True when this browser can run Celeritas (WASM build with WebGL 2). */
+    public static boolean isAvailable() {
+        return isSupported();
+    }
+
+    /** Whether Celeritas is drawing the world right now. */
+    public static boolean isRunning() {
+        return renderer != null && isActive();
+    }
+
+    /** Why Celeritas switched itself off, or null. */
+    public static String getFailure() {
+        return failure;
+    }
+
     /** Shown on the F3 chunk line after Celeritas switched itself off. */
     public static String getFailureNote() {
         return failure == null ? "" : " [Celeritas off - " + failure + "]";

@@ -73,7 +73,7 @@ public class GuiMainMenu extends GuiScreen {
 	// main-menu brand line shows whatever the user renamed the client to
 	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
 	// renaming in the overlay shows up live without a per-frame storage read.
-	private static String brandTitle = "Treasure Client 1.3 Beta";
+	private static String brandTitle = "Treasure Client 1.3";
 	private static boolean customBrand = false; // true when the user set a custom title
 	private static long brandRead = 0L;
 
@@ -85,14 +85,14 @@ public class GuiMainMenu extends GuiScreen {
 				byte[] b = EagRuntime.getStorage("tctitle");
 				if (b != null && b.length > 0) {
 					String s = new String(b, StandardCharsets.UTF_8).trim();
-					if (s.isEmpty()) { brandTitle = "Treasure Client 1.3 Beta"; customBrand = false; }
+					if (s.isEmpty()) { brandTitle = "Treasure Client 1.3"; customBrand = false; }
 					else { brandTitle = s; customBrand = true; }
 				} else {
-					brandTitle = "Treasure Client 1.3 Beta"; customBrand = false;
+					brandTitle = "Treasure Client 1.3"; customBrand = false;
 				}
 			}
 		} catch (Throwable t) {
-			brandTitle = "Treasure Client 1.3 Beta"; customBrand = false;
+			brandTitle = "Treasure Client 1.3"; customBrand = false;
 		}
 		return brandTitle;
 	}
@@ -259,13 +259,14 @@ public class GuiMainMenu extends GuiScreen {
 			this.addSingleplayerMultiplayerButtons(j, 24);
 		}
 
-		this.buttonList.add(new GuiButton(0, this.width / 2 - 100, j + 72 + 12, 98, 20, I18n.format("menu.options")));
+		// Treasure Client: Options takes the third row (Credits moved into the Mods screen)
+		this.buttonList.add(new GuiButton(0, this.width / 2 - 100, j + 24 * 2, I18n.format("menu.options")));
+		this.buttonList.add(new GuiButton(102, this.width / 2 - 100, j + 72 + 12, 98, 20, "Mods"));
 		this.buttonList.add(new GuiButton(4, this.width / 2 + 2, j + 72 + 12, 98, 20, I18n.format("Edit Profile")));
 		this.buttonList.add(new GuiButtonLanguage(5, this.width / 2 - 124, j + 72 + 12));
-		// Treasure Client: always-available Mod Menu opener (so an unbound hotkey
-		// can never lock you out of the Mod Menu). Deep Sea mode was removed, so this
-		// now sits centered on its own row.
-		this.buttonList.add(new GuiButton(101, this.width / 2 - 100, j + 72 + 36, 200, 20, "Mod Menu"));
+		// Treasure Client: always-available Treasure Settings opener (so an unbound
+		// hotkey can never lock you out of the overlay menu).
+		this.buttonList.add(new GuiButton(101, this.width / 2 - 100, j + 72 + 36, 200, 20, "Treasure Settings"));
 	}
 
 	/**
@@ -276,8 +277,6 @@ public class GuiMainMenu extends GuiScreen {
 		this.buttonList.add(new GuiButton(1, this.width / 2 - 100, p_73969_1_, I18n.format("menu.singleplayer")));
 		this.buttonList.add(
 				new GuiButton(2, this.width / 2 - 100, p_73969_1_ + p_73969_2_ * 1, I18n.format("menu.multiplayer")));
-		this.buttonList
-				.add(new GuiButton(14, this.width / 2 - 100, p_73969_1_ + p_73969_2_ * 2, I18n.format("menu.credits")));
 	}
 
 	/**
@@ -313,6 +312,10 @@ public class GuiMainMenu extends GuiScreen {
 
 		if (button.id == 0) {
 			this.mc.displayGuiScreen(new GuiOptions(this, this.mc.gameSettings));
+		}
+
+		if (button.id == 102) {
+			this.mc.displayGuiScreen(new GuiTreasureModList(this));
 		}
 
 		if (button.id == 5) {
