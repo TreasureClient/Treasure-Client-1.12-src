@@ -80,6 +80,14 @@ public class TreasureMods {
 	private static boolean entityCulling = true;
 	public static boolean entityCulling() { return entityCulling; }
 
+	// Particle Culling: skip particles outside the view. Default ON; overlay writes pcull=0 to turn it off.
+	private static boolean particleCulling = true;
+	public static boolean particleCulling() { return particleCulling; }
+
+	// Entity render distance in blocks (mobs, players, items, chests, signs...). 0 = off (vanilla).
+	private static int entityDistance = 0;
+	public static int entityDistance() { return entityDistance; }
+
 	private static float clamp01(float v, float lo, float hi) {
 		return v < lo ? lo : (v > hi ? hi : v);
 	}
@@ -220,6 +228,8 @@ public class TreasureMods {
 			via = true; // default ON unless the overlay explicitly says via=0
 			celeritas = true;
 			entityCulling = true;
+			particleCulling = true;
+			entityDistance = 0;
 			passwordHider = false;
 			lowFire = false; lowFireH = 0.40f;
 			lowShield = false; lowShieldAmt = 0.30f;
@@ -248,6 +258,8 @@ public class TreasureMods {
 				else if (k.equals("via")) via = v.equals("1");
 				else if (k.equals("celeritas")) celeritas = v.equals("1");
 				else if (k.equals("entcull")) entityCulling = v.equals("1");
+				else if (k.equals("pcull")) particleCulling = v.equals("1");
+				else if (k.equals("entDist")) { try { entityDistance = Math.max(0, Math.min(256, Integer.parseInt(v))); } catch (Throwable t) {} }
 				else if (k.equals("pwHide")) passwordHider = v.equals("1");
 				else if (k.equals("lowFire")) lowFire = v.equals("1");
 				else if (k.equals("lowFireH")) { try { lowFireH = clamp01(Integer.parseInt(v) / 100.0f, 0.05f, 1.0f); } catch (Throwable t) {} }

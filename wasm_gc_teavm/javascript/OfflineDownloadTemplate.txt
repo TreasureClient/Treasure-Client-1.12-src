@@ -707,6 +707,16 @@ ${classes_js}
               <div class="tc-row"><div class="tc-lab"><b>Entity Culling</b><i>Skip drawing mobs, chests and signs hidden behind walls</i></div><div class="tc-sw on" data-mod="entcull"><i></i></div></div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Entity Render Distance</b><i>Stop drawing mobs, players, items and chests past this many blocks</i></div></div>
+              <div class="tc-cfg tc-cfg-static">
+                <div class="tc-cfg-row"><span>Distance</span><div class="tc-slider"><input type="range" min="0" max="128" step="8" value="0" data-mod="entDist"><span class="tc-val">Off</span></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Off = vanilla. Lower = higher FPS in crowded places</span></div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Celeritas Renderer</b><i>Faster chunk rendering (Sodium for 1.12). Turn off if the world looks wrong</i></div><div class="tc-sw on" data-mod="celeritas"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -1415,6 +1425,16 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>Entity Culling</b><i>Skip drawing mobs, chests and signs hidden behind walls</i></div><div class="tc-sw on" data-mod="entcull"><i></i></div></div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Entity Render Distance</b><i>Stop drawing mobs, players, items and chests past this many blocks</i></div></div>
+              <div class="tc-cfg tc-cfg-static">
+                <div class="tc-cfg-row"><span>Distance</span><div class="tc-slider"><input type="range" min="0" max="128" step="8" value="0" data-mod="entDist"><span class="tc-val">Off</span></div></div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Off = vanilla. Lower = higher FPS in crowded places</span></div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Celeritas Renderer</b><i>Faster chunk rendering (Sodium for 1.12). Turn off if the world looks wrong</i></div><div class="tc-sw on" data-mod="celeritas"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -1584,7 +1604,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, entcull:true,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, entcull:true, pcull:true, entDist:0,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1704,6 +1724,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'via=' + (state.via === false ? 0 : 1),
           'celeritas=' + (state.celeritas === false ? 0 : 1),
           'entcull=' + (state.entcull === false ? 0 : 1),
+          'pcull=' + (state.pcull === false ? 0 : 1),
+          'entDist=' + (state.entDist || 0),
           'pwHide=' + (state.pwHide ? 1 : 0),
           'lowFire=' + (state.lowFire ? 1 : 0),
           'lowFireH=' + (state.lowFireH || 40),
@@ -1750,7 +1772,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull')) return;
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull')) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;
@@ -1899,11 +1921,12 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       var key = sl.dataset.mod;
       var out = sl.parentNode.querySelector('.tc-val');
       if (state[key] != null) sl.value = state[key];
-      if (out) out.textContent = sl.value;
+      function showVal() { if (out) out.textContent = (key === 'entDist' && +sl.value === 0) ? 'Off' : sl.value; }
+      showVal();
       sl.addEventListener('input', function () {
-        if (out) out.textContent = sl.value;
+        showVal();
         state[key] = parseInt(sl.value, 10); save();
-        if (key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
+        if (key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
         else if (key === 'resolutionScale') applyResolutionScale();
         else applyHud();
       });

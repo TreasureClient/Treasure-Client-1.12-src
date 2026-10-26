@@ -281,6 +281,16 @@ public class ParticleManager {
 
 		List<List<Particle>> visibleParticles = null;
 
+		// Treasure Client: Particle Culling. Skip particles outside the view (behind
+		// you or off to the side) so their quads are never built. The box is padded
+		// by 2 blocks so big particles (explosions) near the screen edge still draw.
+		net.minecraft.client.renderer.culling.Frustum tcFrustum = null;
+		if (net.minecraft.client.gui.TreasureMods.particleCulling()) {
+			tcFrustum = new net.minecraft.client.renderer.culling.Frustum();
+			tcFrustum.setPosition(Particle.interpPosX, Particle.interpPosY, Particle.interpPosZ);
+		}
+		int tcCulled = 0;
+
 		for (int i_nf = 0; i_nf < 3; ++i_nf) {
 			final int i = i_nf;
 
@@ -309,6 +319,11 @@ public class ParticleManager {
 					bufferbuilder.begin(7, DefaultVertexFormats.PARTICLE_POSITION_TEX_COLOR_LMAP);
 
 					for (final Particle particle : this.fxLayers[i][j]) {
+						if (tcFrustum != null && !tcFrustum.isBoxInFrustum(particle.posX - 2.0D, particle.posY - 2.0D,
+								particle.posZ - 2.0D, particle.posX + 2.0D, particle.posY + 2.0D, particle.posZ + 2.0D)) {
+							++tcCulled;
+							continue;
+						}
 						try {
 							particle.renderParticle(bufferbuilder, entityIn, partialTicks, f, f4, f1, f2, f3);
 						} catch (Throwable throwable) {
@@ -343,7 +358,11 @@ public class ParticleManager {
 		GlStateManager.depthMask(true);
 		GlStateManager.disableBlend();
 		GlStateManager.alphaFunc(516, 0.1F);
+		tcCulledParticles = tcCulled;
 	}
+
+	/** Treasure Client: particles skipped by Particle Culling last frame (shown on F3). */
+	public static int tcCulledParticles = 0;
 
 	public void renderLitParticles(Entity entityIn, float partialTick) {
 		float f = 0.017453292F;
@@ -460,7 +479,8 @@ public class ParticleManager {
 			}
 		}
 
-		return "" + i;
+		// Treasure Client: show how many were skipped by Particle Culling
+		return net.minecraft.client.gui.TreasureMods.particleCulling() ? i + " (" + tcCulledParticles + " culled)" : "" + i;
 	}
 
 	public List<Particle>[][] getFxLayers() {

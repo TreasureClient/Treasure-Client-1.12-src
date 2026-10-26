@@ -27,6 +27,9 @@ import net.minecraft.world.chunk.Chunk;
  * a few times a second, within a small time budget each frame, so a scene full
  * of hidden entities can't cost more than about 1.5 ms per frame.
  *
+ * <p>Also does the entity render distance setting: past that many blocks, mobs,
+ * players, items and block entities aren't drawn (bosses and glowing mobs are).
+ *
  * <p>Our own code, inspired by tr7zw's Entity Culling mod. Works with both
  * Celeritas and the vanilla renderer.
  */
@@ -47,6 +50,8 @@ public final class TCEntityCulling {
 	private static final double MAX_DIST = 128.0;
 
 	private static boolean frameActive;
+	/** Entity render distance this frame (squared blocks), or 0 when off. */
+	private static double maxDistSq;
 	private static long frameStartNs;
 	private static boolean budgetLeft;
 	private static long nowMs;
@@ -58,25 +63,27 @@ public final class TCEntityCulling {
 	private static int lastChunkX = Integer.MIN_VALUE, lastChunkZ = Integer.MIN_VALUE;
 
 	/** Counters for the F3 screen (last frame). */
-	public static int culledEntities, culledTiles;
-	private static int frameCulledEntities, frameCulledTiles;
+	public static int culledEntities, culledTiles, farEntities, farTiles;
+	private static int frameCulledEntities, frameCulledTiles, frameFarEntities, frameFarTiles;
 
 	/** Call once per frame before entities draw. */
 	public static void beginFrame(Entity viewEntity, float partialTicks) {
 		culledEntities = frameCulledEntities;
 		culledTiles = frameCulledTiles;
+		farEntities = frameFarEntities;
+		farTiles = frameFarTiles;
 		frameCulledEntities = 0;
 		frameCulledTiles = 0;
+		frameFarEntities = 0;
+		frameFarTiles = 0;
 		Minecraft mc = Minecraft.getMinecraft();
 		world = mc.world;
 		lastChunk = null;
 		lastChunkX = lastChunkZ = Integer.MIN_VALUE;
 		frameActive = false;
-		if (!TreasureMods.entityCulling() || world == null || viewEntity == null) {
+		maxDistSq = 0.0;
+		if (world == null || viewEntity == null) {
 			return;
-		}
-		if (viewEntity instanceof EntityPlayer && ((EntityPlayer) viewEntity).isSpectator()) {
-			return; // spectators can look through walls
 		}
 		Vec3d cam = ActiveRenderInfo.projectViewFromEntity(viewEntity, partialTicks);
 		camX = cam.xCoord;
@@ -85,6 +92,16 @@ public final class TCEntityCulling {
 		camBX = floor(camX);
 		camBY = floor(camY);
 		camBZ = floor(camZ);
+		int dist = TreasureMods.entityDistance();
+		if (dist > 0) {
+			maxDistSq = (double) dist * (double) dist;
+		}
+		if (!TreasureMods.entityCulling()) {
+			return;
+		}
+		if (viewEntity instanceof EntityPlayer && ((EntityPlayer) viewEntity).isSpectator()) {
+			return; // spectators can look through walls
+		}
 		if (isOpaque(camBX, camBY, camBZ)) {
 			return; // camera inside a block: don't guess
 		}
@@ -96,6 +113,15 @@ public final class TCEntityCulling {
 
 	/** Whether an entity should be drawn. */
 	public static boolean isVisible(Entity e) {
+		if (maxDistSq > 0.0 && !e.isGlowing() && !e.isBeingRidden() && !e.isRiding()
+				&& !(e instanceof net.minecraft.entity.boss.EntityDragon)
+				&& !(e instanceof net.minecraft.entity.boss.EntityWither)) {
+			double dx = e.posX - camX, dy = e.posY - camY, dz = e.posZ - camZ;
+			if (dx * dx + dy * dy + dz * dz > maxDistSq) {
+				++frameFarEntities;
+				return false;
+			}
+		}
 		if (!frameActive || e instanceof EntityPlayer || e.isGlowing() || e.getAlwaysRenderNameTagForRender()
 				|| e.isBeingRidden() || e.isRiding() || e.ignoreFrustumCheck) {
 			return true;
@@ -120,6 +146,14 @@ public final class TCEntityCulling {
 
 	/** Whether a block entity should be drawn. */
 	public static boolean isVisible(TileEntity te) {
+		if (maxDistSq > 0.0 && !(te instanceof TileEntityBeacon) && !(te instanceof TileEntityEndGateway)) {
+			BlockPos p = te.getPos();
+			double dx = p.getX() + 0.5 - camX, dy = p.getY() + 0.5 - camY, dz = p.getZ() + 0.5 - camZ;
+			if (dx * dx + dy * dy + dz * dz > maxDistSq) {
+				++frameFarTiles;
+				return false;
+			}
+		}
 		if (!frameActive || te instanceof TileEntityBeacon || te instanceof TileEntityEndGateway
 				|| te instanceof TileEntityEndPortal || te instanceof TileEntityStructure
 				|| te instanceof TileEntityPiston) {
@@ -257,8 +291,12 @@ public final class TCEntityCulling {
 	}
 
 	public static String getDebugString() {
-		return frameActive || culledEntities > 0 || culledTiles > 0
+		String s = frameActive || culledEntities > 0 || culledTiles > 0
 				? "Culled: " + culledEntities + " entities, " + culledTiles + " block entities"
 				: (TreasureMods.entityCulling() ? "Culled: 0" : "Culling off");
+		if (maxDistSq > 0.0 || farEntities > 0 || farTiles > 0) {
+			s += ", Far: " + farEntities + " + " + farTiles;
+		}
+		return s;
 	}
 }
