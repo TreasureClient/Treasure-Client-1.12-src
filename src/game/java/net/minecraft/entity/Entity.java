@@ -262,6 +262,9 @@ public abstract class Entity implements ICommandSender {
 	 * frustum.
 	 */
 	public boolean ignoreFrustumCheck;
+	/** Treasure Client: Entity Culling result cache (see TCEntityCulling). */
+	public boolean tcCullHidden;
+	public long tcCullCheckedAt;
 	public boolean isAirBorne;
 	public int timeUntilPortal;
 

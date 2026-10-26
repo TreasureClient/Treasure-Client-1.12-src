@@ -27,6 +27,9 @@ import org.apache.logging.log4j.Logger;
 import com.google.common.collect.Maps;
 
 public abstract class TileEntity {
+	/** Treasure Client: Entity Culling result cache (see TCEntityCulling). */
+	public boolean tcCullHidden;
+	public long tcCullCheckedAt;
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final RegistryNamespaced<ResourceLocation, Class<? extends TileEntity>> field_190562_f = new RegistryNamespaced<ResourceLocation, Class<? extends TileEntity>>();
 	private static final RegistryNamespaced<ResourceLocation, Supplier<? extends TileEntity>> nameToCtorMap = new RegistryNamespaced<ResourceLocation, Supplier<? extends TileEntity>>();

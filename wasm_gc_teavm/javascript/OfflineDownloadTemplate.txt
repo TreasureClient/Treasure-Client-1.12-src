@@ -704,6 +704,9 @@ ${classes_js}
           <!-- perf -->
           <div class="tc-panel" data-panel="perf" data-group="perf">
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Entity Culling</b><i>Skip drawing mobs, chests and signs hidden behind walls</i></div><div class="tc-sw on" data-mod="entcull"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Celeritas Renderer</b><i>Faster chunk rendering (Sodium for 1.12). Turn off if the world looks wrong</i></div><div class="tc-sw on" data-mod="celeritas"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -747,10 +750,10 @@ ${classes_js}
             </div>
             <div class="tc-sep"></div>
             <div class="tc-seclabel">Keybind Manager</div>
-            <div class="tc-note">Click a bind, then press a key. The Mod Menu key can be changed but not removed.</div>
-            <div class="tc-kb-row"><div class="tc-lab"><b>Mod Menu</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
+            <div class="tc-note">Click a bind, then press a key. The Treasure Settings key can be changed but not removed.</div>
+            <div class="tc-kb-row"><div class="tc-lab"><b>Treasure Settings</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
             <div class="tc-kb-warn" id="tc-kb-warn"></div>
-            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Mod Menu key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
+            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Treasure Settings key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
             <div class="tc-sep"></div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Menu Animations</b><i>Smooth open / close &amp; hover transitions</i></div><div class="tc-sw on" data-mod="guiAnim"><i></i></div></div>
@@ -1409,6 +1412,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           <!-- perf -->
           <div class="tc-panel" data-panel="perf" data-group="perf">
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Entity Culling</b><i>Skip drawing mobs, chests and signs hidden behind walls</i></div><div class="tc-sw on" data-mod="entcull"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Celeritas Renderer</b><i>Faster chunk rendering (Sodium for 1.12). Turn off if the world looks wrong</i></div><div class="tc-sw on" data-mod="celeritas"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -1452,10 +1458,10 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-sep"></div>
             <div class="tc-seclabel">Keybind Manager</div>
-            <div class="tc-note">Click a bind, then press a key. The Mod Menu key can be changed but not removed.</div>
-            <div class="tc-kb-row"><div class="tc-lab"><b>Mod Menu</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
+            <div class="tc-note">Click a bind, then press a key. The Treasure Settings key can be changed but not removed.</div>
+            <div class="tc-kb-row"><div class="tc-lab"><b>Treasure Settings</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
             <div class="tc-kb-warn" id="tc-kb-warn"></div>
-            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Mod Menu key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
+            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Treasure Settings key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
             <div class="tc-sep"></div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Menu Animations</b><i>Smooth open / close &amp; hover transitions</i></div><div class="tc-sw on" data-mod="guiAnim"><i></i></div></div>
@@ -1578,7 +1584,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, entcull:true,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1697,6 +1703,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'tntTimer=' + (state.tntTimer ? 1 : 0),
           'via=' + (state.via === false ? 0 : 1),
           'celeritas=' + (state.celeritas === false ? 0 : 1),
+          'entcull=' + (state.entcull === false ? 0 : 1),
           'pwHide=' + (state.pwHide ? 1 : 0),
           'lowFire=' + (state.lowFire ? 1 : 0),
           'lowFireH=' + (state.lowFireH || 40),
@@ -1732,6 +1739,23 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             localStorage.removeItem('_eaglercraft_1.12.tcopen');
             if (!gui.classList.contains('open')) openGui();
           }
+        }
+      } catch (e) {}
+      // The Java "Mods" screen sets tcset="celeritas=0,via=1" to change switches.
+      // Save them here so Treasure Settings and the game stay in sync.
+      try {
+        var req = localStorage.getItem('_eaglercraft_1.12.tcset');
+        if (req) {
+          localStorage.removeItem('_eaglercraft_1.12.tcset');
+          var changed = false;
+          atob(req).split(',').forEach(function (pair) {
+            var kv = pair.split('=');
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull')) return;
+            state[kv[0]] = kv[1] === '1';
+            var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
+            changed = true;
+          });
+          if (changed) { save(); writeModsToEngine(); }
         }
       } catch (e) {}
     }
@@ -1773,7 +1797,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         if (!wm) {
           wm = document.createElement('div');
           wm.id = 'tc-watermark';
-          wm.textContent = 'Treasure Client 1.2';
+          wm.textContent = 'Treasure Client 1.3';
           wm.style.cssText = 'position:fixed;right:6px;bottom:4px;z-index:2147483647;'
             + 'pointer-events:none;font:600 11px/1.2 system-ui,Arial,sans-serif;'
             + 'color:rgba(255,255,255,0.72);text-shadow:0 1px 2px rgba(0,0,0,0.9);'
@@ -2405,7 +2429,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         $$('.tc-keybind.listening').forEach(function (o) { o.classList.remove('listening'); });
         if (e.code === 'Escape') { refreshBindButtons(); return; }
         if (name === 'menu' && !isSafeMenuKey(e.code)) {
-          showBindWarn('That key clashes with movement/typing — pick another for the Mod Menu.');
+          showBindWarn('That key clashes with movement/typing — pick another for Treasure Settings.');
           refreshBindButtons(); return;
         }
         var conflict = bindConflict(name, e.code);

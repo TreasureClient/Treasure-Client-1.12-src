@@ -339,7 +339,7 @@ public final class TuffViaBlocks {
 		}
 		if (palette.isEmpty() && statMessages == 0 && statTrailers == 0) {
 			return "[ViaBlocks] No TuffX+ data from this server. The server needs the TuffX+ plugin"
-					+ (net.minecraft.client.gui.TreasureMods.viaEnabled() ? "." : " (and ViaVersion is OFF in the Mod Menu).");
+					+ (net.minecraft.client.gui.TreasureMods.viaEnabled() ? "." : " (and ViaVersion is OFF in Treasure Settings).");
 		}
 		return "[ViaBlocks] TuffX+ connected: palette " + palette.size() + " (" + known + " we can draw), messages "
 				+ statMessages + ", chunk/block extras " + statTrailers + ", blocks placed " + statApplied
