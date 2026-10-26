@@ -617,6 +617,10 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			entity.setVelocity((double) packetIn.getMotionX() / 8000.0D, (double) packetIn.getMotionY() / 8000.0D,
 					(double) packetIn.getMotionZ() / 8000.0D);
 		}
+		if (tcKbDebug && entity != null && entity == this.gameController.player) {
+			tcDebugChat("[KB] velocity set to " + packetIn.getMotionX() / 8000.0D + " / "
+					+ packetIn.getMotionY() / 8000.0D + " / " + packetIn.getMotionZ() / 8000.0D);
+		}
 	}
 
 	/**
@@ -1145,10 +1149,34 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	public void handleExplosion(SPacketExplosion packetIn) {
 		Explosion explosion = new Explosion(this.gameController.world, (Entity) null, packetIn.getX(), packetIn.getY(),
 				packetIn.getZ(), packetIn.getStrength(), packetIn.getAffectedBlockPositions());
-		explosion.doExplosionB(true);
+		// Treasure Client: the knockback (wind charges, TNT) must always apply, even
+		// if something in the explosion effects (sound, particles, blocks) fails.
+		Throwable effectsError = null;
+		try {
+			explosion.doExplosionB(true);
+		} catch (Throwable t) {
+			effectsError = t;
+		}
 		this.gameController.player.motionX += (double) packetIn.getMotionX();
 		this.gameController.player.motionY += (double) packetIn.getMotionY();
 		this.gameController.player.motionZ += (double) packetIn.getMotionZ();
+		if (tcKbDebug) {
+			tcDebugChat("[KB] explosion power " + packetIn.getStrength() + ", blocks "
+					+ packetIn.getAffectedBlockPositions().size() + ", knockback " + packetIn.getMotionX() + " / "
+					+ packetIn.getMotionY() + " / " + packetIn.getMotionZ()
+					+ (effectsError != null ? ", effects error: " + effectsError : ""));
+		}
+	}
+
+	/** Treasure Client: ".kbdebug" chat command shows knockback packets in chat. */
+	public static boolean tcKbDebug = false;
+
+	private void tcDebugChat(String msg) {
+		try {
+			this.gameController.ingameGUI.getChatGUI()
+					.printChatMessage(new net.minecraft.util.text.TextComponentString(msg));
+		} catch (Throwable t) {
+		}
 	}
 
 	/**
