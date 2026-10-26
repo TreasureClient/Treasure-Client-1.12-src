@@ -2490,6 +2490,15 @@ public abstract class EntityLivingBase extends Entity {
 		if (this.isHandActive()) {
 			ItemStack itemstack = this.getHeldItem(this.getActiveHand());
 
+			// Treasure Client: modern servers often re-send the held item's slot (a new
+			// but equal stack) while you draw a bow or eat. 1.12 compared the exact
+			// object and cancelled the use. Like modern Minecraft, keep going as long
+			// as it's still the same item, and follow the new stack.
+			if (itemstack != this.activeItemStack && this.world.isRemote && !itemstack.func_190926_b()
+					&& !this.activeItemStack.func_190926_b() && itemstack.getItem() == this.activeItemStack.getItem()) {
+				this.activeItemStack = itemstack;
+			}
+
 			if (itemstack == this.activeItemStack) {
 				if (this.getItemInUseCount() <= 25 && this.getItemInUseCount() % 4 == 0) {
 					this.updateItemUse(this.activeItemStack, 5);
