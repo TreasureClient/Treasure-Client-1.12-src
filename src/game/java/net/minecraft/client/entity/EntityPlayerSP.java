@@ -347,6 +347,12 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 				net.minecraft.client.gui.TreasureMods.dumpHeldItem(this.mc);
 				return;
 			}
+			if (tcCmd.equalsIgnoreCase(".kbdebug")) {
+				net.minecraft.client.network.NetHandlerPlayClient.tcKbDebug = !net.minecraft.client.network.NetHandlerPlayClient.tcKbDebug;
+				this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
+						"[KB] knockback debug " + (net.minecraft.client.network.NetHandlerPlayClient.tcKbDebug ? "ON" : "OFF")));
+				return;
+			}
 			if (tcCmd.equalsIgnoreCase(".viablocks")) {
 				this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
 						net.minecraft.client.network.TuffViaBlocks.status()));
