@@ -80,6 +80,10 @@ public class TreasureMods {
 	private static boolean entityCulling = true;
 	public static boolean entityCulling() { return entityCulling; }
 
+	// VanillaFix: crash recovery and Minecraft bug fixes. Default ON; overlay writes vanillafix=0 to turn it off.
+	private static boolean vanillaFix = true;
+	public static boolean vanillaFix() { return vanillaFix; }
+
 	// Particle Culling: skip particles outside the view. Default ON; overlay writes pcull=0 to turn it off.
 	private static boolean particleCulling = true;
 	public static boolean particleCulling() { return particleCulling; }
@@ -87,6 +91,36 @@ public class TreasureMods {
 	// Entity render distance in blocks (mobs, players, items, chests, signs...). 0 = off (vanilla).
 	private static int entityDistance = 0;
 	public static int entityDistance() { return entityDistance; }
+
+	// 1.7 Animations (Render): master switch off by default, parts on by default
+	private static boolean oldAnim = false, oaBlock = true, oaNoDip = true, oaUseSwing = true, oaArmor = true;
+	public static boolean oldAnim() { return oldAnim; }
+	public static boolean oaBlock() { return oaBlock; }
+	public static boolean oaNoDip() { return oaNoDip; }
+	public static boolean oaUseSwing() { return oaUseSwing; }
+	public static boolean oaArmor() { return oaArmor; }
+
+	// Fullbright (gamma is applied by the overlay) + its Clear Water option (less fog underwater)
+	private static boolean fullbright = false, clearWater = true;
+	public static boolean clearWater() { return fullbright && clearWater; }
+
+	// Saturation Display (HUD): gold outlines on the food bar
+	private static boolean satDisplay = false;
+	public static boolean saturationDisplay() { return satDisplay; }
+
+	// Hit Color (Render): custom hurt tint. Color is 0xRRGGBB, strength 0..1
+	private static boolean hitColorOn = false;
+	private static int hitColor = 0xFF0000;
+	private static float hitAlpha = 0.30f;
+	public static boolean hitColorOn() { return hitColorOn; }
+	public static int hitColor() { return hitColor; }
+	public static float hitAlpha() { return hitAlpha; }
+
+	// Tier Tagger (Render): MCTiers PvP tiers next to player names. Mode: "highest" or a gamemode id
+	private static boolean tierTagger = false;
+	private static String ttMode = "highest";
+	public static boolean tierTagger() { return tierTagger; }
+	public static String tierTaggerMode() { return ttMode; }
 
 	private static float clamp01(float v, float lo, float hi) {
 		return v < lo ? lo : (v > hi ? hi : v);
@@ -229,7 +263,12 @@ public class TreasureMods {
 			celeritas = true;
 			entityCulling = true;
 			particleCulling = true;
+			vanillaFix = true;
 			entityDistance = 0;
+			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
+			fullbright = false; clearWater = true; satDisplay = false;
+			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
+			tierTagger = false; ttMode = "highest";
 			passwordHider = false;
 			lowFire = false; lowFireH = 0.40f;
 			lowShield = false; lowShieldAmt = 0.30f;
@@ -258,7 +297,21 @@ public class TreasureMods {
 				else if (k.equals("via")) via = v.equals("1");
 				else if (k.equals("celeritas")) celeritas = v.equals("1");
 				else if (k.equals("entcull")) entityCulling = v.equals("1");
+				else if (k.equals("vanillafix")) vanillaFix = v.equals("1");
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
+				else if (k.equals("oldAnim")) oldAnim = v.equals("1");
+				else if (k.equals("oaBlock")) oaBlock = v.equals("1");
+				else if (k.equals("oaNoDip")) oaNoDip = v.equals("1");
+				else if (k.equals("oaUseSwing")) oaUseSwing = v.equals("1");
+				else if (k.equals("oaArmor")) oaArmor = v.equals("1");
+				else if (k.equals("fullbright")) fullbright = v.equals("1");
+				else if (k.equals("clearWater")) clearWater = v.equals("1");
+				else if (k.equals("satDisplay")) satDisplay = v.equals("1");
+				else if (k.equals("hitColorOn")) hitColorOn = v.equals("1");
+				else if (k.equals("hitColor")) { try { hitColor = Integer.parseInt(v, 16) & 0xFFFFFF; } catch (Throwable t) {} }
+				else if (k.equals("hitAlpha")) { try { hitAlpha = clamp01(Integer.parseInt(v) / 100.0f, 0.05f, 0.9f); } catch (Throwable t) {} }
+				else if (k.equals("tierTagger")) tierTagger = v.equals("1");
+				else if (k.equals("ttMode")) ttMode = v;
 				else if (k.equals("entDist")) { try { entityDistance = Math.max(0, Math.min(256, Integer.parseInt(v))); } catch (Throwable t) {} }
 				else if (k.equals("pwHide")) passwordHider = v.equals("1");
 				else if (k.equals("lowFire")) lowFire = v.equals("1");

@@ -36,6 +36,7 @@ import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.GuiCommandBlock;
 import net.minecraft.client.gui.GuiDisconnected;
 import net.minecraft.client.gui.GuiDownloadTerrain;
+import net.minecraft.client.gui.TreasureMods;
 import net.minecraft.client.gui.GuiGameOver;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiMerchant;
@@ -398,7 +399,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.gameSettings.difficulty = packetIn.getDifficulty();
 		this.gameController.loadWorld(this.clientWorldController);
 		this.gameController.player.dimension = packetIn.getDimension();
-		this.gameController.displayGuiScreen(new GuiDownloadTerrain());
+		// VanillaFix: go straight into the world instead of waiting on "Downloading terrain"
+		this.gameController.displayGuiScreen(TreasureMods.vanillaFix() ? null : new GuiDownloadTerrain());
 		this.gameController.player.setEntityId(packetIn.getPlayerId());
 		this.currentServerMaxPlayers = packetIn.getMaxPlayers();
 		this.gameController.player.setReducedDebug(packetIn.isReducedDebugInfo());
@@ -1133,7 +1135,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			this.clientWorldController.setWorldScoreboard(scoreboard);
 			this.gameController.loadWorld(this.clientWorldController);
 			this.gameController.player.dimension = packetIn.getDimensionID();
-			this.gameController.displayGuiScreen(new GuiDownloadTerrain());
+			// VanillaFix: no "Downloading terrain" screen when changing dimension
+			this.gameController.displayGuiScreen(TreasureMods.vanillaFix() ? null : new GuiDownloadTerrain());
 		}
 
 		this.gameController.setDimensionAndSpawnPlayer(packetIn.getDimensionID());

@@ -752,6 +752,29 @@ public class GlStateManager {
 		}
 	}
 
+	/**
+	 * Treasure Client (VanillaFix crash recovery): after a crash in the middle of a
+	 * frame the matrix stacks can be left pushed, so put them back to the bottom and
+	 * restore the usual state for drawing menus.
+	 */
+	public static void tcResetAfterCrash() {
+		modelMatrixStackPointer = 0;
+		projectionMatrixStackPointer = 0;
+		for (int i = 0; i < textureMatrixStackPointer.length; ++i) {
+			textureMatrixStackPointer[i] = 0;
+		}
+		matrixMode(GL_MODELVIEW);
+		loadIdentity();
+		disableFog();
+		disableLighting();
+		disableBlend();
+		enableAlpha();
+		enableTexture2D();
+		enableDepth();
+		depthMask(true);
+		color(1.0F, 1.0F, 1.0F, 1.0F);
+	}
+
 	public static void pushMatrix() {
 		int push;
 		switch(stateMatrixMode) {

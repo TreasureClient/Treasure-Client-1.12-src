@@ -510,9 +510,14 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					f3 = f3 * 0.1F;
 					f4 = f4 * 0.1F;
 					f5 = f5 * 0.1F;
-					RayTraceResult raytraceresult = this.mc.world
-							.rayTraceBlocks(new Vec3d(d0 + (double) f3, d1 + (double) f4, d2 + (double) f5), new Vec3d(
-									d0 - d4 + (double) f3 + (double) f5, d1 - d6 + (double) f4, d2 - d5 + (double) f5));
+					Vec3d tcFrom = new Vec3d(d0 + (double) f3, d1 + (double) f4, d2 + (double) f5);
+					Vec3d tcTo = new Vec3d(d0 - d4 + (double) f3 + (double) f5, d1 - d6 + (double) f4,
+							d2 - d5 + (double) f5);
+					// VanillaFix (MC-30845): the third-person camera passes through grass, flowers and other
+					// blocks you can walk through instead of zooming in on them
+					RayTraceResult raytraceresult = net.minecraft.client.gui.TreasureMods.vanillaFix()
+							? this.mc.world.rayTraceBlocks(tcFrom, tcTo, false, true, true)
+							: this.mc.world.rayTraceBlocks(tcFrom, tcTo);
 
 					if (raytraceresult != null) {
 						double d7 = raytraceresult.hitVec.distanceTo(new Vec3d(d0, d1, d2));
@@ -1603,6 +1608,10 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 				}
 			}
 			
+			// Treasure Client — Clear Water (Fullbright option): brighter water fog color
+			if (net.minecraft.client.gui.TreasureMods.clearWater()) {
+				f12 = Math.max(f12, 0.6F);
+			}
 			this.fogColorRed = 0.02F + f12;
 			this.fogColorGreen = 0.02F + f12;
 			this.fogColorBlue = 0.2F + f12;
@@ -1713,7 +1722,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
         } else if (iblockstate.getMaterial() == Material.WATER) {
             GlStateManager.setFog(RealOpenGLEnums.GL_EXP);
             
-            if (entity instanceof EntityLivingBase) {
+            if (net.minecraft.client.gui.TreasureMods.clearWater()) {
+                GlStateManager.setFogDensity(0.005F); // Treasure Client — Clear Water: see far underwater
+            } else if (entity instanceof EntityLivingBase) {
                 if (((EntityLivingBase)entity).isPotionActive(MobEffects.WATER_BREATHING)) {
                     GlStateManager.setFogDensity(0.01F);
                 } else {

@@ -810,7 +810,9 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 		this.prevTimeInPortal = this.timeInPortal;
 
 		if (this.inPortal) {
-			if (this.mc.currentScreen != null && !this.mc.currentScreen.doesGuiPauseGame()) {
+			// VanillaFix (MC-2071): menus and chests stay open while standing in a nether portal
+			if (this.mc.currentScreen != null && !this.mc.currentScreen.doesGuiPauseGame()
+					&& !net.minecraft.client.gui.TreasureMods.vanillaFix()) {
 				if (this.mc.currentScreen instanceof GuiContainer) {
 					this.closeScreen();
 				}

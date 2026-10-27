@@ -856,6 +856,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               </div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Saturation Display</b><i>Gold outlines on the food bar show hidden saturation</i></div><div class="tc-sw" data-mod="satDisplay"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -897,7 +900,10 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           <!-- visual -->
           <div class="tc-panel" data-panel="visual" data-group="render">
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Fullbright</b><i>Max brightness — see in caves &amp; at night</i></div><div class="tc-sw" data-mod="fullbright"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Fullbright</b><i>Max brightness — see in caves &amp; at night</i></div><button class="tc-gear" data-gear="fbcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="fullbright"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="fbcfg">
+                <div class="tc-cfg-row"><span>Clear water (less fog underwater)</span><div class="tc-sw on" data-mod="clearWater" style="margin-left:auto;"><i></i></div></div>
+              </div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>No Hurt Cam</b><i>Stop the camera tilting when you take damage</i></div><div class="tc-sw" data-mod="noHurtCam"><i></i></div></div>
@@ -941,6 +947,56 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               </div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>1.7 Animations</b><i>Old-school sword blocking, no hit dip, punch while eating</i></div><button class="tc-gear" data-gear="oacfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="oldAnim"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="oacfg">
+                <div class="tc-cfg-row"><span>Sword blocking (1.8 servers, hold right-click)</span><div class="tc-sw on" data-mod="oaBlock" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>No item dip on hit / update</span><div class="tc-sw on" data-mod="oaNoDip" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Swing while eating / bow</span><div class="tc-sw on" data-mod="oaUseSwing" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Red armor on hit</span><div class="tc-sw on" data-mod="oaArmor" style="margin-left:auto;"><i></i></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Hit Color</b><i>Change the red flash when players and mobs get hurt</i></div><button class="tc-gear" data-gear="hitcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="hitColorOn"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="hitcfg">
+                <div class="tc-cfg-row"><span>Color</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="hitColor">
+                    <button data-val="red">Red</button>
+                    <button data-val="orange">Orange</button>
+                    <button data-val="yellow">Yellow</button>
+                    <button data-val="green">Green</button>
+                    <button data-val="cyan">Cyan</button>
+                    <button data-val="blue">Blue</button>
+                    <button data-val="purple">Purple</button>
+                    <button data-val="pink">Pink</button>
+                    <button data-val="white">White</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" value="30" data-mod="hitAlpha"><span class="tc-val">30</span></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Tier Tagger</b><i>Shows players' Eaglercraft Ranked and EaglerTiers tiers before their name</i></div><button class="tc-gear" data-gear="ttcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="tierTagger"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="ttcfg">
+                <div class="tc-cfg-row"><span>Gamemode</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="ttMode">
+                    <button data-val="highest">Overall</button>
+                    <button data-val="sword">Sword</button>
+                    <button data-val="axe">Axe</button>
+                    <button data-val="vanilla">Vanilla</button>
+                    <button data-val="mace">Mace</button>
+                    <button data-val="spearmace">Spear Mace</button>
+                    <button data-val="cart">Cart</button>
+                    <button data-val="diamondsmp">Dia SMP</button>
+                    <button data-val="smp">SMP</button>
+                    <button data-val="pot">Pot</button>
+                    <button data-val="netheriteop">Neth OP</button>
+                    <button data-val="uhc">UHC</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Tiers from Eaglercraft Ranked and EaglerTiers, looked up by player name</span></div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Low Fire</b><i>Shorter fire overlay so it blocks less of your view</i></div><button class="tc-gear" data-gear="lowfirecfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="lowFire"><i></i></div></div>
               <div class="tc-cfg" data-cfg="lowfirecfg">
                 <div class="tc-cfg-row"><span>Fire height</span><div class="tc-slider"><input type="range" min="5" max="100" step="5" value="40" data-mod="lowFireH"><span class="tc-val">40</span></div></div>
@@ -976,6 +1032,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>VanillaFix</b><i>Recover from crashes instead of closing the game, plus Minecraft bug fixes</i></div><div class="tc-sw on" data-mod="vanillafix"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Entity Render Distance</b><i>Stop drawing mobs, players, items and chests past this many blocks</i></div></div>
@@ -1151,7 +1210,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, entcull:true, pcull:true, entDist:0,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1271,7 +1330,21 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'via=' + (state.via === false ? 0 : 1),
           'celeritas=' + (state.celeritas === false ? 0 : 1),
           'entcull=' + (state.entcull === false ? 0 : 1),
+          'vanillafix=' + (state.vanillafix === false ? 0 : 1),
           'pcull=' + (state.pcull === false ? 0 : 1),
+          'oldAnim=' + (state.oldAnim ? 1 : 0),
+          'oaBlock=' + (state.oaBlock === false ? 0 : 1),
+          'oaNoDip=' + (state.oaNoDip === false ? 0 : 1),
+          'oaUseSwing=' + (state.oaUseSwing === false ? 0 : 1),
+          'oaArmor=' + (state.oaArmor === false ? 0 : 1),
+          'fullbright=' + (state.fullbright ? 1 : 0),
+          'clearWater=' + (state.clearWater === false ? 0 : 1),
+          'satDisplay=' + (state.satDisplay ? 1 : 0),
+          'hitColorOn=' + (state.hitColorOn ? 1 : 0),
+          'hitColor=' + ({red:'ff0000', orange:'ff8800', yellow:'ffee00', green:'00ff44', cyan:'00ffff', blue:'2266ff', purple:'aa33ff', pink:'ff55cc', white:'ffffff'}[state.hitColor] || 'ff0000'),
+          'hitAlpha=' + (state.hitAlpha || 30),
+          'tierTagger=' + (state.tierTagger ? 1 : 0),
+          'ttMode=' + (state.ttMode || 'highest'),
           'entDist=' + (state.entDist || 0),
           'pwHide=' + (state.pwHide ? 1 : 0),
           'lowFire=' + (state.lowFire ? 1 : 0),
@@ -1297,7 +1370,95 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
     /* ---------- external open request ----------
        The Java main menu "Mod Menu" button sets tcopen=1 to ask us to open. */
+    /* Tier Tagger: the game asks for names in "tcttreq"; we look them up on Eaglercraft Ranked
+       and EaglerTiers and write the results to "tctiers"
+       (name=role|overall:gold_3,sword:emerald_1,...|sword:HT3,axe:RLT2,...; empty = not found). */
+    var ttCache = {}, ttQueue = [], ttBusy = 0, ttSaveTimer = 0;
+    try { localStorage.removeItem('_eaglercraft_1.12.tctiers'); } catch (e) {} // fresh lookups each session
+    function ttSave() {
+      clearTimeout(ttSaveTimer);
+      ttSaveTimer = setTimeout(function () {
+        try {
+          var out = Object.keys(ttCache).map(function (n) { return n + '=' + ttCache[n]; }).join('\n');
+          localStorage.setItem('_eaglercraft_1.12.tctiers', btoa(out));
+        } catch (e) {}
+      }, 300);
+    }
+    /* EaglerTiers (eaglertiers.com) API key. Their API needs one for lookups; ask
+       EaglerTiers for a key and put it here. Empty = EaglerTiers is skipped. */
+    var ET_KEY = '';
+    /* EaglerTiers tiers as "mode:HT3,mode:RLT2,..." (R = retired), '' = none. */
+    function ttEaglerTiers(name) {
+      if (!ET_KEY) return Promise.resolve('');
+      return fetch('https://api.eaglertiers.com/api/players/' + encodeURIComponent(name) + '?key=' + encodeURIComponent(ET_KEY))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          var p = j && (j.player || j.data || j), out = [], seen = {};
+          if (!p) return '';
+          function add(tiers, prefix) {
+            Object.keys(tiers || {}).forEach(function (m) {
+              var t = String(tiers[m] || '').toUpperCase();
+              if (seen[m] || !/^[a-z0-9_]+$/.test(m) || !/^[HL]T[1-5]$/.test(t)) return;
+              seen[m] = 1;
+              out.push(m + ':' + prefix + t);
+            });
+          }
+          add(p.tiers, '');
+          add(p.retiredTiers, 'R');
+          return out.join(',');
+        })
+        .catch(function () { return ''; });
+    }
+    function ttNext() {
+      while (ttBusy < 2 && ttQueue.length) {
+        var name = ttQueue.shift();
+        ttBusy++;
+        var er = fetch('https://services.eaglercraftranked.com/api/v1/profile?name=' + encodeURIComponent(name))
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!j || !j.ok || !j.profile) return '|';
+            var a = j.account || {}, role = '', r = String(a.role || '').toLowerCase();
+            if (r === 'admin' || r === 'owner') role = 'admin';
+            else if (r === 'moderator' || r === 'staff' || r === 'mod') role = 'moderator';
+            else if (r === 'helper') role = 'helper';
+            else if (a.media) role = 'media';
+            else if (a.booster) role = 'booster';
+            else if (a.supporter) role = 'supporter';
+            else if (a.premium) role = 'premium';
+            var p = j.profile, ranks = [];
+            if (p.overall && p.overall.rank) ranks.push('overall:' + p.overall.rank);
+            Object.keys(p.modes || {}).forEach(function (m) {
+              var k = p.modes[m];
+              if (k && k.rank && /^[a-z0-9_]+$/.test(m)) ranks.push(m + ':' + k.rank);
+            });
+            return role + '|' + ranks.join(',');
+          })
+          .catch(function () { return '|'; });
+        Promise.all([er, ttEaglerTiers(name)])
+          .then(function (res) {
+            ttCache[this] = (res[0] === '|' && !res[1]) ? '' : res[0] + '|' + res[1];
+          }.bind(name.toLowerCase()))
+          .catch(function () { ttCache[this] = ''; }.bind(name.toLowerCase()))
+          .then(function () { ttBusy--; ttSave(); setTimeout(ttNext, 150); });
+      }
+    }
+    function tierPoll() {
+      try {
+        var req = localStorage.getItem('_eaglercraft_1.12.tcttreq');
+        if (!req) return;
+        localStorage.removeItem('_eaglercraft_1.12.tcttreq');
+        atob(req).split(',').forEach(function (n) {
+          n = n.trim();
+          if (!/^[A-Za-z0-9_]{3,16}$/.test(n)) return;
+          var key = n.toLowerCase();
+          if (ttCache.hasOwnProperty(key) || ttQueue.indexOf(n) >= 0) return;
+          ttQueue.push(n);
+        });
+        ttNext();
+      } catch (e) {}
+    }
     function pollSharedMode() {
+      tierPoll();
       // Java main menu "Mod Menu" button sets tcopen=1 to ask us to open. This is
       // the always-available way in, so an unbound hotkey can never lock you out.
       try {
@@ -1319,7 +1480,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull')) return;
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix')) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;
@@ -1443,7 +1604,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     /* ---------- toggles / selects / sliders ---------- */
     $$('.tc-sw[data-mod]').forEach(function (sw) {
       var key = sw.dataset.mod;
-      if (state[key]) sw.classList.add('on');
+      sw.classList.toggle('on', !!state[key]); // match the saved setting (some switches start "on" in the markup)
       sw.addEventListener('click', function () {
         var on = !sw.classList.contains('on');
         sw.classList.toggle('on', on);
@@ -1473,7 +1634,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       sl.addEventListener('input', function () {
         showVal();
         state[key] = parseInt(sl.value, 10); save();
-        if (key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
+        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
         else if (key === 'resolutionScale') applyResolutionScale();
         else applyHud();
       });

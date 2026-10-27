@@ -255,6 +255,17 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 			float f2 = (float) (i >>> 16 & 255) / 255.0F;
 			float f3 = (float) (i >>> 8 & 255) / 255.0F;
 			float f4 = (float) (i & 255) / 255.0F;
+			if (flag1 && net.minecraft.client.gui.TreasureMods.hitColorOn()) {
+				// Treasure Client — Hit Color: blend the chosen color in instead of the red flash
+				int c = net.minecraft.client.gui.TreasureMods.hitColor();
+				float a = net.minecraft.client.gui.TreasureMods.hitAlpha();
+				float keep = f1 * (1.0F - a);
+				GlStateManager.setShaderBlendSrc(keep, keep, keep, 1.0F);
+				GlStateManager.setShaderBlendAdd(f2 * keep + (float) (c >> 16 & 255) / 255.0F * a,
+						f3 * keep + (float) (c >> 8 & 255) / 255.0F * a, f4 * keep + (float) (c & 255) / 255.0F * a,
+						0.0f);
+				return true;
+			}
 			GlStateManager.setShaderBlendSrc(f1, f1, f1, 1.0F);
 			GlStateManager.setShaderBlendAdd(f2 * f1 + 0.4F, f3 * f1, f4 * f1, 0.0f);
 			return true;

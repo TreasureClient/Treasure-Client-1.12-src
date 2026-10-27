@@ -25,20 +25,6 @@ import net.minecraft.util.math.MathHelper;
 
 public class EnchantmentHelper {
 	/**
-	 * Used to calculate the extra armor of enchantments on armors equipped on
-	 * player.
-	 */
-	private static final EnchantmentHelper.ModifierDamage ENCHANTMENT_MODIFIER_DAMAGE = new EnchantmentHelper.ModifierDamage();
-
-	/**
-	 * Used to calculate the (magic) extra damage done by enchantments on current
-	 * equipped item of player.
-	 */
-	private static final EnchantmentHelper.ModifierLiving ENCHANTMENT_MODIFIER_LIVING = new EnchantmentHelper.ModifierLiving();
-	private static final EnchantmentHelper.HurtIterator ENCHANTMENT_ITERATOR_HURT = new EnchantmentHelper.HurtIterator();
-	private static final EnchantmentHelper.DamageIterator ENCHANTMENT_ITERATOR_DAMAGE = new EnchantmentHelper.DamageIterator();
-
-	/**
 	 * Returns the level of enchantment on the ItemStack passed.
 	 */
 	public static int getEnchantmentLevel(Enchantment enchID, ItemStack stack) {
@@ -139,17 +125,21 @@ public class EnchantmentHelper {
 	 * Returns the modifier of protection enchantments on armors equipped on player.
 	 */
 	public static int getEnchantmentModifierDamage(Iterable<ItemStack> stacks, DamageSource source) {
-		ENCHANTMENT_MODIFIER_DAMAGE.damageModifier = 0;
-		ENCHANTMENT_MODIFIER_DAMAGE.source = source;
-		applyEnchantmentModifierArray(ENCHANTMENT_MODIFIER_DAMAGE, stacks);
-		return ENCHANTMENT_MODIFIER_DAMAGE.damageModifier;
+		// VanillaFix: a new helper per call. The shared static ones kept the last
+		// entity and damage source alive, which held on to old worlds (memory leak).
+		EnchantmentHelper.ModifierDamage modifier = new EnchantmentHelper.ModifierDamage();
+		modifier.damageModifier = 0;
+		modifier.source = source;
+		applyEnchantmentModifierArray(modifier, stacks);
+		return modifier.damageModifier;
 	}
 
 	public static float getModifierForCreature(ItemStack stack, EnumCreatureAttribute creatureAttribute) {
-		ENCHANTMENT_MODIFIER_LIVING.livingModifier = 0.0F;
-		ENCHANTMENT_MODIFIER_LIVING.entityLiving = creatureAttribute;
-		applyEnchantmentModifier(ENCHANTMENT_MODIFIER_LIVING, stack);
-		return ENCHANTMENT_MODIFIER_LIVING.livingModifier;
+		EnchantmentHelper.ModifierLiving modifier = new EnchantmentHelper.ModifierLiving();
+		modifier.livingModifier = 0.0F;
+		modifier.entityLiving = creatureAttribute;
+		applyEnchantmentModifier(modifier, stack);
+		return modifier.livingModifier;
 	}
 
 	public static float func_191527_a(EntityLivingBase p_191527_0_) {
@@ -158,28 +148,30 @@ public class EnchantmentHelper {
 	}
 
 	public static void applyThornEnchantments(EntityLivingBase p_151384_0_, Entity p_151384_1_) {
-		ENCHANTMENT_ITERATOR_HURT.attacker = p_151384_1_;
-		ENCHANTMENT_ITERATOR_HURT.user = p_151384_0_;
+		EnchantmentHelper.HurtIterator iterator = new EnchantmentHelper.HurtIterator();
+		iterator.attacker = p_151384_1_;
+		iterator.user = p_151384_0_;
 
 		if (p_151384_0_ != null) {
-			applyEnchantmentModifierArray(ENCHANTMENT_ITERATOR_HURT, p_151384_0_.getEquipmentAndArmor());
+			applyEnchantmentModifierArray(iterator, p_151384_0_.getEquipmentAndArmor());
 		}
 
 		if (p_151384_1_ instanceof EntityPlayer) {
-			applyEnchantmentModifier(ENCHANTMENT_ITERATOR_HURT, p_151384_0_.getHeldItemMainhand());
+			applyEnchantmentModifier(iterator, p_151384_0_.getHeldItemMainhand());
 		}
 	}
 
 	public static void applyArthropodEnchantments(EntityLivingBase p_151385_0_, Entity p_151385_1_) {
-		ENCHANTMENT_ITERATOR_DAMAGE.user = p_151385_0_;
-		ENCHANTMENT_ITERATOR_DAMAGE.target = p_151385_1_;
+		EnchantmentHelper.DamageIterator iterator = new EnchantmentHelper.DamageIterator();
+		iterator.user = p_151385_0_;
+		iterator.target = p_151385_1_;
 
 		if (p_151385_0_ != null) {
-			applyEnchantmentModifierArray(ENCHANTMENT_ITERATOR_DAMAGE, p_151385_0_.getEquipmentAndArmor());
+			applyEnchantmentModifierArray(iterator, p_151385_0_.getEquipmentAndArmor());
 		}
 
 		if (p_151385_0_ instanceof EntityPlayer) {
-			applyEnchantmentModifier(ENCHANTMENT_ITERATOR_DAMAGE, p_151385_0_.getHeldItemMainhand());
+			applyEnchantmentModifier(iterator, p_151385_0_.getHeldItemMainhand());
 		}
 	}
 

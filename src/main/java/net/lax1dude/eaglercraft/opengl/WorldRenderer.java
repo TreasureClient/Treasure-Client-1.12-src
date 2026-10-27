@@ -221,6 +221,15 @@ public class WorldRenderer {
 		this.vertexFormat = state.getVertexFormat();
 	}
 
+	/**
+	 * Treasure Client (VanillaFix crash recovery): drop a half-built batch left over
+	 * from a crash, so the next begin() doesn't fail with "already building".
+	 */
+	public void tcAbort() {
+		this.isDrawing = false;
+		this.reset();
+	}
+
 	public void reset() {
 		this.vertexCount = 0;
 		this.byteBuffer.clear();

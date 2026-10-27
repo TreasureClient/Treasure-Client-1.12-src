@@ -356,7 +356,12 @@ public class ItemRenderer {
 		} else {
 			boolean flag1 = enumhandside == EnumHandSide.RIGHT;
 
-			if (p_187457_1_.isHandActive() && p_187457_1_.getItemInUseCount() > 0
+			if (flag && TCOldAnimations.isSwordBlocking(p_187457_1_)) {
+				// Treasure Client — 1.7 Animations: sword block pose; it still swings (block-hitting)
+				this.transformSideFirstPerson(enumhandside, p_187457_7_);
+				this.transformFirstPerson(enumhandside, p_187457_5_);
+				TCOldAnimations.swordBlockFirstPerson(flag1 ? 1 : -1);
+			} else if (p_187457_1_.isHandActive() && p_187457_1_.getItemInUseCount() > 0
 					&& p_187457_1_.getActiveHand() == p_187457_4_) {
 				int j = flag1 ? 1 : -1;
 
@@ -369,10 +374,16 @@ public class ItemRenderer {
 				case DRINK:
 					this.transformEatFirstPerson(p_187457_2_, enumhandside, p_187457_6_);
 					this.transformSideFirstPerson(enumhandside, p_187457_7_);
+					if (TCOldAnimations.useSwingOn()) {
+						this.transformFirstPerson(enumhandside, p_187457_5_); // 1.7: punch while eating
+					}
 					break;
 
 				case BLOCK:
 					this.transformSideFirstPerson(enumhandside, p_187457_7_);
+					if (TCOldAnimations.useSwingOn()) {
+						this.transformFirstPerson(enumhandside, p_187457_5_);
+					}
 					// Treasure Client — Low Shield: drop the shield down so it covers less view.
 					if (net.minecraft.client.gui.TreasureMods.lowShield()) {
 						GlStateManager.translate(0.0F, -net.minecraft.client.gui.TreasureMods.lowShieldAmount(), 0.0F);
@@ -381,6 +392,9 @@ public class ItemRenderer {
 
 				case BOW:
 					this.transformSideFirstPerson(enumhandside, p_187457_7_);
+					if (TCOldAnimations.useSwingOn()) {
+						this.transformFirstPerson(enumhandside, p_187457_5_);
+					}
 					GlStateManager.translate((float) j * -0.2785682F, 0.18344387F, 0.15731531F);
 					GlStateManager.rotate(-13.935F, 1.0F, 0.0F, 0.0F);
 					GlStateManager.rotate((float) j * 35.3F, 0.0F, 1.0F, 0.0F);
@@ -472,7 +486,9 @@ public class ItemRenderer {
 
 		if (!this.mc.player.isSpectator()) {
 			if (this.mc.player.isInsideOfMaterial(Material.WATER)) {
-				this.renderWaterOverlayTexture(partialTicks);
+				if (!net.minecraft.client.gui.TreasureMods.clearWater()) { // Treasure Client — Clear Water
+					this.renderWaterOverlayTexture(partialTicks);
+				}
 			}
 
 			if (this.mc.player.isBurning()) {
@@ -613,6 +629,20 @@ public class ItemRenderer {
 			this.equippedProgressOffHand = MathHelper.clamp(this.equippedProgressOffHand - 0.4F, 0.0F, 1.0F);
 		} else {
 			float f = entityplayersp.getCooledAttackStrength(1.0F);
+			// Treasure Client — 1.7 Animations "no dip": no lowering after hits, and a
+			// server update of the same item in the same slot doesn't replay the equip animation
+			boolean noDip = TCOldAnimations.noDipOn();
+			if (noDip) {
+				f = 1.0F;
+				if (this.itemStackMainHand != itemstack && entityplayersp.inventory.currentItem == this.tcLastSlot
+						&& tcSameItem(this.itemStackMainHand, itemstack)) {
+					this.itemStackMainHand = itemstack;
+				}
+				if (this.itemStackOffHand != itemstack1 && tcSameItem(this.itemStackOffHand, itemstack1)) {
+					this.itemStackOffHand = itemstack1;
+				}
+			}
+			this.tcLastSlot = entityplayersp.inventory.currentItem;
 			this.equippedProgressMainHand += MathHelper
 					.clamp((Objects.equals(this.itemStackMainHand, itemstack) ? f * f * f : 0.0F)
 							- this.equippedProgressMainHand, -0.4F, 0.4F);
@@ -628,6 +658,13 @@ public class ItemRenderer {
 		if (this.equippedProgressOffHand < 0.1F) {
 			this.itemStackOffHand = itemstack1;
 		}
+	}
+
+	/** Treasure Client: hotbar slot last tick, so switching between two of the same item still animates. */
+	private int tcLastSlot = -1;
+
+	private static boolean tcSameItem(ItemStack a, ItemStack b) {
+		return !a.func_190926_b() && !b.func_190926_b() && a.getItem() == b.getItem();
 	}
 
 	public void resetEquippedProgress(EnumHand hand) {

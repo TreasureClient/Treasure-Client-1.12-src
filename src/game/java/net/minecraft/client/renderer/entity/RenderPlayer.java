@@ -114,6 +114,11 @@ public class RenderPlayer extends RenderLivingBase<AbstractClientPlayer> {
 				}
 			}
 
+			// Treasure Client — 1.7 Animations: sword block pose in third person
+			if (net.minecraft.client.renderer.TCOldAnimations.isSwordBlocking(clientPlayer)) {
+				modelbiped$armpose = ModelBiped.ArmPose.BLOCK;
+			}
+
 			if (!itemstack1.func_190926_b()) {
 				modelbiped$armpose1 = ModelBiped.ArmPose.ITEM;
 
@@ -174,7 +179,9 @@ public class RenderPlayer extends RenderLivingBase<AbstractClientPlayer> {
 			}
 		}
 
-		super.renderEntityName(entityIn, x, y, z, name, distanceSq);
+		// Treasure Client — Tier Tagger: MCTiers tier in front of the name
+		super.renderEntityName(entityIn, x, y, z,
+				net.minecraft.client.renderer.TCTierTagger.decorate(entityIn.getName(), name), distanceSq);
 	}
 
 	public void renderRightArm(AbstractClientPlayer clientPlayer) {
