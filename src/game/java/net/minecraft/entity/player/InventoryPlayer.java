@@ -141,12 +141,22 @@ public class InventoryPlayer implements IInventory {
 		return -1;
 	}
 
+	/**
+	 * VanillaFix (MC-129057): the recipe book matches items by type and data value
+	 * instead of exact NBT, so items with extra tags still fill recipes. Renamed or
+	 * enchanted items are still skipped below. Data value 32767 accepts any.
+	 */
+	private boolean tcRecipeItemMatches(ItemStack recipe, ItemStack stack) {
+		return recipe.getItem() == stack.getItem()
+				&& (recipe.getMetadata() == 32767 || recipe.getMetadata() == stack.getMetadata());
+	}
+
 	public int func_194014_c(ItemStack p_194014_1_) {
 		for (int i = 0; i < this.mainInventory.size(); ++i) {
 			ItemStack itemstack = this.mainInventory.get(i);
 
 			if (!((ItemStack) this.mainInventory.get(i)).func_190926_b()
-					&& this.stackEqualExact(p_194014_1_, this.mainInventory.get(i))
+					&& tcRecipeItemMatches(p_194014_1_, this.mainInventory.get(i))
 					&& !((ItemStack) this.mainInventory.get(i)).isItemDamaged() && !itemstack.isItemEnchanted()
 					&& !itemstack.hasDisplayName()) {
 				return i;

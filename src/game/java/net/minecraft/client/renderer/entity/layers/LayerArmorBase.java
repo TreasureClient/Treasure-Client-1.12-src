@@ -49,7 +49,8 @@ public abstract class LayerArmorBase<T extends ModelBase> implements LayerRender
 	}
 
 	public boolean shouldCombineTextures() {
-		return false;
+		// Treasure Client — 1.7 Animations: armor turns red with the player when hurt
+		return net.minecraft.client.renderer.TCOldAnimations.armorOn();
 	}
 
 	private void renderArmorLayer(EntityLivingBase entityLivingBaseIn, float limbSwing, float limbSwingAmount,

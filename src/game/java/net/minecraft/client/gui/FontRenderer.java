@@ -378,6 +378,40 @@ public class FontRenderer implements IResourceManagerReloadListener {
 	}
 
 	/**
+	 * Treasure Client: exact RGB text colors. {@link #tcColor(int)} returns a two
+	 * character code ("§" + a private-use char) that works like "§6" but sets any
+	 * color, e.g. for Tier Tagger ranks in their website colors.
+	 */
+	public static final char TC_RGB_BASE = '\uE000';
+	private static final int[] TC_RGB = new int[256];
+	private static int tcRgbCount = 0;
+
+	public static String tcColor(int rgb) {
+		rgb &= 0xFFFFFF;
+		int idx = -1;
+		for (int i = 0; i < tcRgbCount; ++i) {
+			if (TC_RGB[i] == rgb) {
+				idx = i;
+				break;
+			}
+		}
+		if (idx < 0) {
+			if (tcRgbCount >= TC_RGB.length) {
+				return "\u00a7f";
+			}
+			idx = tcRgbCount;
+			TC_RGB[tcRgbCount++] = rgb;
+		}
+		return "\u00a7" + (char) (TC_RGB_BASE + idx);
+	}
+
+	/** The RGB color for a char following "§", or -1 if it isn't one of ours. */
+	public static int tcRgb(char c) {
+		int i = c - TC_RGB_BASE;
+		return i >= 0 && i < tcRgbCount ? TC_RGB[i] : -1;
+	}
+
+	/**
 	 * Render a single line string at the current (posX,posY) and update posX
 	 */
 	protected void renderStringAtPos(String text, boolean shadow) {
@@ -385,6 +419,20 @@ public class FontRenderer implements IResourceManagerReloadListener {
 			char c0 = text.charAt(i);
 
 			if (c0 == 167 && i + 1 < text.length()) {
+				int tcRgb = tcRgb(text.charAt(i + 1));
+				if (tcRgb != -1) {
+					this.randomStyle = false;
+					this.boldStyle = false;
+					this.strikethroughStyle = false;
+					this.underlineStyle = false;
+					this.italicStyle = false;
+					int j1 = shadow ? (tcRgb & 0xFCFCFC) >> 2 : tcRgb;
+					this.textColor = j1;
+					GlStateManager.color((float) (j1 >> 16) / 255.0F, (float) (j1 >> 8 & 255) / 255.0F,
+							(float) (j1 & 255) / 255.0F, this.alpha);
+					++i;
+					continue;
+				}
 				int i1 = "0123456789abcdefklmnor".indexOf(String.valueOf(text.charAt(i + 1)).toLowerCase().charAt(0));
 
 				if (i1 < 16) {

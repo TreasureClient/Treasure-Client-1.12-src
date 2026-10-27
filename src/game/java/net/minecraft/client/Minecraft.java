@@ -419,10 +419,24 @@ public class Minecraft implements IThreadListener {
 				}
 
 				if (!this.hasCrashed || this.crashReporter == null) {
-					this.runGameLoop();
+					try {
+						this.runGameLoop();
+					} catch (MinecraftError e) {
+						throw e;
+					} catch (Throwable t) {
+						// VanillaFix: show a crash screen and keep running instead of closing
+						CrashReport report = t instanceof ReportedException ? ((ReportedException) t).getCrashReport()
+								: new CrashReport("Unexpected error", t);
+						if (!this.tcRecoverFromCrash(report)) {
+							throw t;
+						}
+					}
 					continue;
 				}
 
+				if (this.tcRecoverFromCrash(this.crashReporter)) {
+					continue;
+				}
 				this.displayCrashReport(this.crashReporter);
 			}
 		} catch (MinecraftError var12) {
@@ -609,6 +623,55 @@ public class Minecraft implements IThreadListener {
 
 	public String getVersion() {
 		return this.launchedVersion;
+	}
+
+	private int tcCrashCount = 0;
+	private long tcLastCrashTime = 0L;
+
+	/**
+	 * Treasure Client, from VanillaFix: after a crash, leave the world, clean up
+	 * and show {@link GuiTCCrashScreen} so the game keeps running. Returns false
+	 * (use the normal crash screen) when VanillaFix is off, or when the game keeps
+	 * crashing right after recovering.
+	 */
+	private boolean tcRecoverFromCrash(CrashReport report) {
+		if (!net.minecraft.client.gui.TreasureMods.vanillaFix()) {
+			return false;
+		}
+		long now = EagRuntime.steadyTimeMillis();
+		this.tcCrashCount = now - this.tcLastCrashTime < 15000L ? this.tcCrashCount + 1 : 1;
+		this.tcLastCrashTime = now;
+		if (this.tcCrashCount > 3) {
+			return false;
+		}
+		try {
+			this.addGraphicsAndWorldToCrashReport(report);
+			String text = report.getCompleteReport();
+			LOGGER.fatal("Treasure Client crashed, recovering (VanillaFix)");
+			Bootstrap.printToSYSOUT(text);
+			this.hasCrashed = false;
+			this.crashReporter = null;
+			Tessellator.getInstance().getWorldRenderer().tcAbort();
+			GlStateManager.tcResetAfterCrash();
+			try {
+				if (this.getConnection() != null) {
+					this.getConnection().getNetworkManager()
+							.closeChannel(new TextComponentString("Client crashed"));
+				}
+			} catch (Throwable t) {
+			}
+			this.loadWorld((WorldClient) null);
+			synchronized (this.scheduledTasks) {
+				this.scheduledTasks.clear();
+			}
+			this.gameSettings.showDebugInfo = false;
+			this.ingameGUI.getChatGUI().clearChatMessages(true);
+			this.displayGuiScreen(new net.minecraft.client.gui.GuiTCCrashScreen(report, text));
+			return true;
+		} catch (Throwable t) {
+			LOGGER.error("Could not recover from the crash", t);
+			return false;
+		}
 	}
 
 	public void crashed(CrashReport crash) {
@@ -1709,7 +1772,10 @@ public class Minecraft implements IThreadListener {
 			}
 
 			while (this.gameSettings.keyBindAttack.isPressed()) {
-				;
+				// Treasure Client — 1.7 Animations: punch while eating/drinking/drawing (visual only)
+				if (net.minecraft.client.renderer.TCOldAnimations.useSwingOn()) {
+					net.minecraft.client.renderer.TCOldAnimations.localSwing(this.player);
+				}
 			}
 
 			while (this.gameSettings.keyBindUseItem.isPressed()) {

@@ -829,6 +829,21 @@ public class GuiIngame extends Gui {
 					int l7 = i1 - l5 * 8 - 9;
 					this.drawTexturedModalRect(l7, j6, 16 + j7 * 9, 27, 9, 9);
 
+					// Treasure Client — Saturation Display: gold outline behind each shank that
+					// still has saturation (2 points per shank, half shank = right half)
+					if (TreasureMods.saturationDisplay()) {
+						float sat = foodstats.getSaturationLevel() - (float) (l5 * 2);
+						if (sat >= 0.5F) {
+							GlStateManager.color(1.0F, 0.78F, 0.1F, 1.0F);
+							if (sat >= 1.5F) {
+								this.drawTexturedModalRect(l7, j6, 16, 27, 9, 9);
+							} else {
+								this.drawTexturedModalRect(l7 + 4, j6, 16 + 4, 27, 5, 9);
+							}
+							GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+						}
+					}
+
 					if (l5 * 2 + 1 < k) {
 						this.drawTexturedModalRect(l7, j6, l6 + 36, 27, 9, 9);
 					}

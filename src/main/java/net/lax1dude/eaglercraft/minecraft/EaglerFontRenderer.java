@@ -95,6 +95,17 @@ public class EaglerFontRenderer extends FontRenderer {
 		for (int i = 0; i < parString1.length(); ++i) {
 			char c0 = parString1.charAt(i);
 			if (c0 == 167 && i + 1 < parString1.length()) {
+				int tcRgb = tcRgb(parString1.charAt(i + 1));
+				if (tcRgb != -1) { // Treasure Client exact RGB color
+					this.randomStyle = false;
+					this.boldStyle = false;
+					this.strikethroughStyle = false;
+					this.underlineStyle = false;
+					this.italicStyle = false;
+					this.textColor = tcRgb | (this.textColor & 0xFF000000);
+					++i;
+					continue;
+				}
 				int i1 = "0123456789abcdefklmnor".indexOf(Character.toLowerCase(parString1.charAt(i + 1)));
 				if (i1 < 16) {
 					this.randomStyle = false;
@@ -238,7 +249,14 @@ public class EaglerFontRenderer extends FontRenderer {
 
 	private boolean decodeASCIICodepointsAndValidate(String str) {
 		for (int i = 0, l = str.length(); i < l; ++i) {
-			int j = FontMappingHelper.lookupChar(str.charAt(i), true);
+			char c = str.charAt(i);
+			if (c == 167 && i + 1 < l && tcRgb(str.charAt(i + 1)) != -1) {
+				// Treasure Client RGB color code: not drawn, so it doesn't need a glyph
+				temporaryCodepointArray[i] = 0;
+				temporaryCodepointArray[++i] = 0;
+				continue;
+			}
+			int j = FontMappingHelper.lookupChar(c, true);
 			if (j != -1) {
 				temporaryCodepointArray[i] = j;
 			} else {

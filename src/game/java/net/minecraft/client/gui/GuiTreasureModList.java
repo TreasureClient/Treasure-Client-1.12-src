@@ -96,6 +96,17 @@ public class GuiTreasureModList extends GuiScreen {
 						+ net.minecraft.client.renderer.TCEntityCulling.culledTiles + " block entities hidden";
 			}
 		});
+		this.entries.add(new Entry("VanillaFix", "DimensionalDevelopment", "MIT",
+				"Recovers from crashes instead of closing the game, and fixes Minecraft bugs (menus in portals, camera in grass, a memory leak).",
+				"vanillafix") {
+			boolean setting() {
+				return TreasureMods.vanillaFix();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("ViaVersion support", "Treasure Client", "Built in",
 				"Shows modern 1.13+ blocks, items and entities on servers that send them.", "via") {
 			boolean setting() {

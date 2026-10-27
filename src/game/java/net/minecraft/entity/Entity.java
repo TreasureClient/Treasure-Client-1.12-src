@@ -1156,6 +1156,10 @@ public abstract class Entity implements ICommandSender {
 	protected void updateFallState(double y, boolean onGroundIn, IBlockState state, BlockPos pos) {
 		if (onGroundIn) {
 			if (this.fallDistance > 0.0F) {
+				// VanillaFix: count the last bit of the fall before landing
+				if (y < 0.0D) {
+					this.fallDistance = (float) ((double) this.fallDistance - y);
+				}
 				state.getBlock().onFallenUpon(this.world, pos, this, this.fallDistance);
 			}
 
