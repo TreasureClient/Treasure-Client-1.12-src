@@ -322,6 +322,11 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 		}
 	}
 
+	// Treasure Client (TexFix)
+	public java.util.Collection<TextureAtlasSprite> tcUploadedSprites() {
+		return this.mapUploadedSprites.values();
+	}
+
 	public TextureAtlasSprite registerSprite(ResourceLocation location) {
 		if (location == null) {
 			throw new IllegalArgumentException("Location cannot be null!");

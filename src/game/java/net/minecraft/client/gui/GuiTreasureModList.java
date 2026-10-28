@@ -127,6 +127,21 @@ public class GuiTreasureModList extends GuiScreen {
 				return "§aOn §7· built into loading";
 			}
 		});
+		this.entries.add(new Entry("TexFix", "Treasure Client, inspired by Speiger", "Built in",
+				"Less memory: after textures load, frees the leftover pixel copies of every texture that never animates.",
+				"texfix") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn §7· built into loading";
+			}
+		});
 		this.entries.add(new Entry("Lithium", "CaffeineMC", "LGPL-3.0",
 				"Faster collisions, chunk lookups and block entity lists, with the same results. Also speeds up singleplayer.",
 				"lithium") {
