@@ -524,10 +524,11 @@ public class Block {
 	protected static void addCollisionBoxToList(BlockPos pos, AxisAlignedBB entityBox,
 			List<AxisAlignedBB> collidingBoxes, @Nullable AxisAlignedBB blockBox) {
 		if (blockBox != NULL_AABB) {
-			AxisAlignedBB axisalignedbb = blockBox.offset(pos);
-
-			if (entityBox.intersectsWith(axisalignedbb)) {
-				collidingBoxes.add(axisalignedbb);
+			// Treasure Client (Lithium): test first, only make the moved box when it touches (same math as offset())
+			double x = (double) pos.getX(), y = (double) pos.getY(), z = (double) pos.getZ();
+			if (entityBox.intersects(blockBox.minX + x, blockBox.minY + y, blockBox.minZ + z, blockBox.maxX + x,
+					blockBox.maxY + y, blockBox.maxZ + z)) {
+				collidingBoxes.add(blockBox.offset(pos));
 			}
 		}
 	}

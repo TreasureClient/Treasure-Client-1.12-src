@@ -354,7 +354,7 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 	 * also releases skins.
 	 */
 	public void removeAllEntities() {
-		this.loadedEntityList.removeAll(this.unloadedEntityList);
+		net.minecraft.util.TCLithium.removeAll(this.loadedEntityList, this.unloadedEntityList); // Treasure Client (Lithium): one pass
 
 		for (int i = 0; i < this.unloadedEntityList.size(); ++i) {
 			Entity entity = this.unloadedEntityList.get(i);

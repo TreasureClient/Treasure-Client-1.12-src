@@ -237,6 +237,9 @@ public abstract class EntityMinecart extends Entity implements IWorldNameable {
 	 * Called to update the entity's position/logic.
 	 */
 	public void onUpdate() {
+		if (!this.isDead) {
+			this.world.tcHardEntities.add(this); // Treasure Client (Lithium): stay counted as an entity you can bump into
+		}
 		if (this.getRollingAmplitude() > 0) {
 			this.setRollingAmplitude(this.getRollingAmplitude() - 1);
 		}

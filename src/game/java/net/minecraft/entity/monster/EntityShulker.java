@@ -195,6 +195,9 @@ public class EntityShulker extends EntityGolem implements IMob {
 	 * Called to update the entity's position/logic.
 	 */
 	public void onUpdate() {
+		if (!this.isDead) {
+			this.world.tcHardEntities.add(this); // Treasure Client (Lithium): stay counted as an entity you can bump into
+		}
 		super.onUpdate();
 		BlockPos blockpos = (BlockPos) ((Optional) this.dataManager.get(ATTACHED_BLOCK_POS)).orNull();
 
