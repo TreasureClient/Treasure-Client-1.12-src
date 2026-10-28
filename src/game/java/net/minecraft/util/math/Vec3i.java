@@ -46,7 +46,11 @@ public class Vec3i implements Comparable<Vec3i> {
 	}
 
 	public int hashCode() {
-		return (this.getY() + this.getZ() * 31) * 31 + this.getX();
+		// Treasure Client (CensoredASM): spreads positions out much better in hash maps than vanilla's
+		long hash = 3241L;
+		hash = 3457689L * hash + this.getX();
+		hash = 8734625L * hash + this.getY();
+		return (int) (2873465L * hash + this.getZ());
 	}
 
 	public int compareTo(Vec3i p_compareTo_1_) {

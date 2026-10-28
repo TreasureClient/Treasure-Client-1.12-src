@@ -5,11 +5,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.lax1dude.eaglercraft.EagRuntime;
+import net.lax1dude.eaglercraft.Keyboard;
+import net.lax1dude.eaglercraft.Mouse;
+import net.lax1dude.eaglercraft.opengl.GlStateManager;
+import net.minecraft.client.Minecraft;
 import net.peyton.eagler.gui.GuiCredits;
 
 /**
- * Treasure Client: the "Mods" screen on the main menu. Lists the mods built into
- * the client, with their authors and licenses, and lets you turn them on or off.
+ * Treasure Client: the "Mods" screen on the main menu, laid out like Fabric's Mod
+ * Menu: a searchable list on the left, details for the picked mod on the right.
+ * The treasure touches: gem icons, a gold shimmer header and drifting gold dust.
  *
  * Switches are stored by the overlay (Treasure Settings), so changes here are
  * sent to it through the "tcset" storage key ("celeritas=0,via=1"). The overlay
@@ -19,10 +24,7 @@ public class GuiTreasureModList extends GuiScreen {
 
 	private static final int ID_DONE = 0;
 	private static final int ID_CREDITS = 1;
-	private static final int ID_TOGGLE_BASE = 100;
-
-	private static final int PANEL_WIDTH = 320;
-	private static final int ENTRY_HEIGHT = 72;
+	private static final int ID_TOGGLE = 2;
 
 	/** One built-in mod. */
 	private abstract static class Entry {
@@ -62,7 +64,6 @@ public class GuiTreasureModList extends GuiScreen {
 
 	private final GuiScreen parent;
 	private final List<Entry> entries = new ArrayList<>();
-	private final List<GuiButton> toggles = new ArrayList<>();
 
 	public GuiTreasureModList(GuiScreen parent) {
 		this.parent = parent;
@@ -135,6 +136,21 @@ public class GuiTreasureModList extends GuiScreen {
 		this.entries.add(new Entry("TexFix", "Treasure Client, inspired by Speiger", "Built in",
 				"Less memory: after textures load, frees the leftover pixel copies of every texture that never animates.",
 				"texfix") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn §7· built into loading";
+			}
+		});
+		this.entries.add(new Entry("CensoredASM", "Treasure Client, inspired by Rongmario", "Built in",
+				"Less memory and faster lookups: one shared copy of each repeated name (blocks, items, textures, NBT tags), better block position hashing, and no forced memory cleanup when joining a world.",
+				"censoredasm") {
 			boolean setting() {
 				return true;
 			}
@@ -249,35 +265,101 @@ public class GuiTreasureModList extends GuiScreen {
 		});
 	}
 
-	private int panelLeft() {
-		return (this.width - PANEL_WIDTH) / 2;
+	// ---------------- layout ----------------
+
+	private static final int HEADER_H = 34;
+	private static final int ROW_H = 32;
+	/** Gem colors for the mod icons: ruby, emerald, sapphire, amethyst, topaz, aquamarine. */
+	private static final int[] GEMS = { 0xFFD8204F, 0xFF1FB86A, 0xFF2F6FE0, 0xFF9B4DDB, 0xFFF0A020, 0xFF22B8C9 };
+	private static final int GOLD = 0xFFF5C542;
+
+	private GuiTextField search;
+	private GuiButton toggle;
+	private final List<Entry> shown = new ArrayList<>();
+	private Entry selected;
+	private float scroll, scrollTarget;
+	private boolean dragging, dragMoved;
+	private int dragStartY, pressX, pressY;
+	private float dragStartScroll;
+	private long openedAt;
+
+	private int listLeft() {
+		return 8;
 	}
 
-	/** Full-size panels if they fit above the buttons, otherwise compact ones (one description line). */
-	private boolean compact() {
-		return 40 + this.entries.size() * (ENTRY_HEIGHT + 6) > this.height - 34;
+	private int listRight() {
+		return listLeft() + Math.max(130, Math.min(210, (this.width - 24) * 2 / 5));
 	}
 
-	private int entryHeight() {
-		return compact() ? ENTRY_HEIGHT - 16 : ENTRY_HEIGHT;
+	private int searchTop() {
+		return HEADER_H + 6;
 	}
 
-	private int entryTop(int index) {
-		return 40 + index * (entryHeight() + 6);
+	private int listTop() {
+		return searchTop() + 20;
+	}
+
+	private int listBottom() {
+		return this.height - 34;
+	}
+
+	private int detailLeft() {
+		return listRight() + 8;
+	}
+
+	private int detailRight() {
+		return this.width - 8;
+	}
+
+	private int maxScroll() {
+		return Math.max(0, this.shown.size() * ROW_H - (listBottom() - listTop()));
+	}
+
+	private float clampScroll(float s) {
+		return Math.max(0, Math.min(maxScroll(), s));
+	}
+
+	private static String categoryOf(Entry e) {
+		if (e.key.equals("vanillafix")) return "Bug fixes";
+		if (e.key.equals("via")) return "Compatibility";
+		return "Performance";
 	}
 
 	public void initGui() {
+		Keyboard.enableRepeatEvents(true);
+		String q = this.search != null ? this.search.getText() : "";
 		this.buttonList.clear();
-		this.toggles.clear();
-		int left = panelLeft();
-		for (int i = 0; i < this.entries.size(); i++) {
-			GuiButton b = new GuiButton(ID_TOGGLE_BASE + i, left + PANEL_WIDTH - 78, entryTop(i) + 8, 70, 20, "");
-			this.toggles.add(b);
-			this.buttonList.add(b);
+		this.search = new GuiTextField(2, this.fontRendererObj, listLeft() + 1, searchTop() + 1,
+				listRight() - listLeft() - 2, 14);
+		this.search.setMaxStringLength(40);
+		this.search.setText(q);
+		int dw = detailRight() - detailLeft();
+		this.toggle = new GuiButton(ID_TOGGLE, detailLeft() + 10, listBottom() - 28, Math.min(150, dw - 20), 20, "");
+		this.buttonList.add(this.toggle);
+		this.buttonList.add(new GuiButton(ID_CREDITS, this.width / 2 - 154, this.height - 26, 150, 20, "Credits"));
+		this.buttonList.add(new GuiButton(ID_DONE, this.width / 2 + 4, this.height - 26, 150, 20, "Done"));
+		if (this.openedAt == 0L) {
+			this.openedAt = Minecraft.getSystemTime();
 		}
-		this.buttonList.add(new GuiButton(ID_CREDITS, this.width / 2 - 154, this.height - 28, 150, 20, "Credits"));
-		this.buttonList.add(new GuiButton(ID_DONE, this.width / 2 + 4, this.height - 28, 150, 20, "Done"));
+		this.refilter();
 		this.refreshToggles();
+	}
+
+	private void refilter() {
+		String q = this.search == null ? "" : this.search.getText().trim().toLowerCase();
+		this.shown.clear();
+		for (int i = 0; i < this.entries.size(); i++) {
+			Entry e = this.entries.get(i);
+			if (q.isEmpty() || e.name.toLowerCase().contains(q) || e.by.toLowerCase().contains(q)
+					|| e.description.toLowerCase().contains(q) || categoryOf(e).toLowerCase().contains(q)) {
+				this.shown.add(e);
+			}
+		}
+		if (this.selected == null || !this.shown.contains(this.selected)) {
+			this.selected = this.shown.isEmpty() ? null : this.shown.get(0);
+		}
+		this.scrollTarget = clampScroll(this.scrollTarget);
+		this.scroll = clampScroll(this.scroll);
 	}
 
 	private void refreshToggles() {
@@ -286,15 +368,23 @@ public class GuiTreasureModList extends GuiScreen {
 			if (e.pending != null && e.pending == e.setting()) {
 				e.pending = null; // the game has picked up the change
 			}
-			GuiButton b = this.toggles.get(i);
-			b.enabled = e.available() && !e.alwaysOn();
-			b.displayString = e.alwaysOn() ? e.fixedLabel()
+		}
+		Entry e = this.selected;
+		this.toggle.visible = e != null;
+		if (e != null) {
+			this.toggle.enabled = e.available() && !e.alwaysOn();
+			this.toggle.displayString = e.alwaysOn() ? e.fixedLabel()
 					: !e.available() ? "Unavailable" : (e.shownOn() ? "§aEnabled" : "§cDisabled");
 		}
 	}
 
 	public void updateScreen() {
+		this.search.updateCursorCounter();
 		this.refreshToggles();
+	}
+
+	public void onGuiClosed() {
+		Keyboard.enableRepeatEvents(false);
 	}
 
 	protected void actionPerformed(GuiButton button) throws IOException {
@@ -302,8 +392,8 @@ public class GuiTreasureModList extends GuiScreen {
 			this.mc.displayGuiScreen(this.parent);
 		} else if (button.id == ID_CREDITS) {
 			this.mc.displayGuiScreen(new GuiCredits(this, "/assets/eagler/credits.txt"));
-		} else if (button.id >= ID_TOGGLE_BASE && button.id < ID_TOGGLE_BASE + this.entries.size()) {
-			Entry e = this.entries.get(button.id - ID_TOGGLE_BASE);
+		} else if (button.id == ID_TOGGLE && this.selected != null) {
+			Entry e = this.selected;
 			e.pending = !e.shownOn();
 			try {
 				EagRuntime.setStorage("tcset", (e.key + "=" + (e.pending ? 1 : 0))
@@ -314,27 +404,310 @@ public class GuiTreasureModList extends GuiScreen {
 		}
 	}
 
-	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-		this.drawDefaultBackground();
-		this.drawCenteredString(this.fontRendererObj, "Mods", this.width / 2, 16, 0xFFFFFF);
-		this.drawCenteredString(this.fontRendererObj, "§7Built into Treasure Client", this.width / 2, 27, 0xFFFFFF);
-		int left = panelLeft();
+	private void select(Entry e) {
+		if (e != null && e != this.selected) {
+			this.selected = e;
+			this.mc.getSoundHandler().playSound(net.minecraft.client.audio.PositionedSoundRecord
+					.getMasterRecord(net.minecraft.init.SoundEvents.UI_BUTTON_CLICK, 1.4F));
+			this.refreshToggles();
+		}
+	}
+
+	private void ensureVisible(int index) {
+		int top = index * ROW_H;
+		int view = listBottom() - listTop();
+		if (top < this.scrollTarget) this.scrollTarget = top;
+		if (top + ROW_H > this.scrollTarget + view) this.scrollTarget = top + ROW_H - view;
+		this.scrollTarget = clampScroll(this.scrollTarget);
+	}
+
+	protected void keyTyped(char typedChar, int keyCode) throws IOException {
+		if (keyCode == 1) {
+			this.mc.displayGuiScreen(this.parent);
+			return;
+		}
+		if ((keyCode == 200 || keyCode == 208) && !this.shown.isEmpty()) { // up / down arrows
+			int i = Math.max(0, this.shown.indexOf(this.selected)) + (keyCode == 200 ? -1 : 1);
+			i = Math.max(0, Math.min(this.shown.size() - 1, i));
+			this.select(this.shown.get(i));
+			this.ensureVisible(i);
+			return;
+		}
+		if (this.search.textboxKeyTyped(typedChar, keyCode)) {
+			this.refilter();
+			this.refreshToggles();
+		}
+	}
+
+	public void handleMouseInput() throws IOException {
+		super.handleMouseInput();
+		int d = Mouse.getEventDWheel();
+		if (d != 0) {
+			this.scrollTarget = clampScroll(this.scrollTarget - Integer.signum(d) * ROW_H * 1.5f);
+		}
+	}
+
+	private boolean inList(int x, int y) {
+		return x >= listLeft() && x < listRight() && y >= listTop() && y < listBottom();
+	}
+
+	private int rowAt(int y) {
+		int i = (int) Math.floor((y - listTop() + this.scroll) / ROW_H);
+		return i >= 0 && i < this.shown.size() ? i : -1;
+	}
+
+	protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+		super.mouseClicked(mouseX, mouseY, mouseButton);
+		this.search.mouseClicked(mouseX, mouseY, mouseButton);
+		if (mouseButton == 0 && inList(mouseX, mouseY)) {
+			this.dragging = true;
+			this.dragMoved = false;
+			this.dragStartY = mouseY;
+			this.pressX = mouseX;
+			this.pressY = mouseY;
+			this.dragStartScroll = this.scrollTarget;
+		}
+	}
+
+	protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+		super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+		if (this.dragging) {
+			int dy = mouseY - this.dragStartY;
+			if (Math.abs(dy) > 3) this.dragMoved = true;
+			if (this.dragMoved) {
+				this.scrollTarget = this.scroll = clampScroll(this.dragStartScroll - dy);
+			}
+		}
+	}
+
+	protected void mouseReleased(int mouseX, int mouseY, int state) {
+		super.mouseReleased(mouseX, mouseY, state);
+		if (this.dragging && !this.dragMoved) {
+			int i = rowAt(this.pressY);
+			if (i >= 0) this.select(this.shown.get(i));
+		}
+		this.dragging = false;
+	}
+
+	// ---------------- drawing ----------------
+
+	/** drawRect clipped to the list's top and bottom edges. */
+	private void clipRect(int x1, int y1, int x2, int y2, int color) {
+		int top = listTop(), bottom = listBottom();
+		if (y1 < top) y1 = top;
+		if (y2 > bottom) y2 = bottom;
+		if (y2 > y1) drawRect(x1, y1, x2, y2, color);
+	}
+
+	private boolean textFits(int y) {
+		return y >= listTop() && y + 9 <= listBottom();
+	}
+
+	private static int gemColor(Entry e) {
+		return GEMS[(e.name.hashCode() & 0x7FFFFFFF) % GEMS.length];
+	}
+
+	private static int shade(int argb, float f) {
+		int r = Math.min(255, (int) (((argb >> 16) & 255) * f));
+		int g = Math.min(255, (int) (((argb >> 8) & 255) * f));
+		int b = Math.min(255, (int) ((argb & 255) * f));
+		return (argb & 0xFF000000) | (r << 16) | (g << 8) | b;
+	}
+
+	/** A cut-gem icon: gold rim, two-tone facets, a shine, and the mod's first letter. */
+	private void drawGem(int x, int y, int size, Entry e, boolean clip) {
+		int c = gemColor(e);
+		int half = size / 2;
+		if (clip) {
+			clipRect(x, y, x + size, y + size, GOLD);
+			clipRect(x + 1, y + 1, x + size - 1, y + half, shade(c, 1.25f));
+			clipRect(x + 1, y + half, x + size - 1, y + size - 1, shade(c, 0.8f));
+			clipRect(x + 3, y + 3, x + 3 + size / 4, y + 4, 0x90FFFFFF);
+		} else {
+			drawRect(x, y, x + size, y + size, GOLD);
+			drawRect(x + 1, y + 1, x + size - 1, y + half, shade(c, 1.25f));
+			drawRect(x + 1, y + half, x + size - 1, y + size - 1, shade(c, 0.8f));
+			drawRect(x + 3, y + 3, x + 3 + size / 4, y + 4, 0x90FFFFFF);
+		}
+		String letter = e.name.substring(0, 1);
+		int ly = y + (size - 8) / 2;
+		if (!clip || (ly >= listTop() && ly + 8 <= listBottom())) {
+			if (size >= 32) {
+				GlStateManager.pushMatrix();
+				GlStateManager.translate(x + size / 2f, y + size / 2f, 0);
+				GlStateManager.scale(2.0F, 2.0F, 1.0F);
+				this.fontRendererObj.drawStringWithShadow("§l" + letter,
+						-this.fontRendererObj.getStringWidth("§l" + letter) / 2f, -4, 0xFFFFFF);
+				GlStateManager.popMatrix();
+			} else {
+				this.fontRendererObj.drawStringWithShadow("§l" + letter,
+						x + (size - this.fontRendererObj.getStringWidth("§l" + letter)) / 2f + 0.5f, ly, 0xFFFFFF);
+			}
+		}
+	}
+
+	/** A small rounded-looking pill with colored border, used for badges. Returns its width. */
+	private int drawPill(int x, int y, String text, int color) {
+		int w = this.fontRendererObj.getStringWidth(text) + 8;
+		drawRect(x + 1, y, x + w - 1, y + 11, (color & 0x00FFFFFF) | 0x38000000);
+		drawRect(x + 1, y, x + w - 1, y + 1, color);
+		drawRect(x + 1, y + 10, x + w - 1, y + 11, color);
+		drawRect(x, y + 1, x + 1, y + 10, color);
+		drawRect(x + w - 1, y + 1, x + w, y + 10, color);
+		this.fontRendererObj.drawStringWithShadow(text, x + 4, y + 2, color);
+		return w;
+	}
+
+	/** Gold dust drifting up behind everything. */
+	private void drawSparkles(long t) {
+		for (int k = 0; k < 28; k++) {
+			int seed = k * 7919 + 104729;
+			int x = (int) (((seed * 31L) & 0x7FFFFFFF) % Math.max(1, this.width));
+			int speed = 18 + (seed % 23);
+			int y = this.height - (int) ((t / speed + k * 53L) % (this.height + 20)) + 10;
+			float tw = (float) Math.sin(t / 380.0 + k) * 0.5f + 0.5f;
+			int a = (int) (40 + tw * 120);
+			int s = (k % 3 == 0) ? 2 : 1;
+			drawRect(x, y, x + s, y + s, (a << 24) | 0xF5C542);
+		}
+	}
+
+	private void drawHeader(long t) {
+		drawGradientRect(0, 0, this.width, HEADER_H, 0xD0261A04, 0x90100A00);
+		// a soft shimmer sweeping across the header
+		int band = 90;
+		int sx = (int) ((t / 7) % (this.width + band * 2)) - band;
+		for (int i = 0; i < band; i += 6) {
+			float f = 1.0f - Math.abs(i - band / 2f) / (band / 2f);
+			drawRect(sx + i, 0, sx + i + 6, HEADER_H - 1, ((int) (f * 34) << 24) | 0xFFE9A0);
+		}
+		drawGradientRect(0, HEADER_H - 1, this.width, HEADER_H, GOLD, 0xFFB8860B);
+
+		GlStateManager.pushMatrix();
+		GlStateManager.translate(12, 9, 0);
+		GlStateManager.scale(2.0F, 2.0F, 1.0F);
+		this.fontRendererObj.drawStringWithShadow("§lMods", 0, 0, 0xFFD54F);
+		GlStateManager.popMatrix();
+		int tx = 12 + this.fontRendererObj.getStringWidth("§lMods") * 2 + 10;
+		this.fontRendererObj.drawStringWithShadow("§6Treasure Client", tx, 10, 0xFFFFFF);
+		int on = 0;
 		for (int i = 0; i < this.entries.size(); i++) {
 			Entry e = this.entries.get(i);
-			int top = entryTop(i);
-			int h = entryHeight();
-			drawRect(left, top, left + PANEL_WIDTH, top + h, 0xA0000000);
-			drawRect(left, top, left + 2, top + h, (e.alwaysOn() ? e.setting() : e.shownOn()) && e.available() ? 0xFFF5C542 : 0xFF555555);
-			int x = left + 8;
-			this.fontRendererObj.drawStringWithShadow("§l" + e.name, x, top + 8, 0xFFE08A);
-			this.fontRendererObj.drawStringWithShadow("§7by " + e.by + " · " + e.license, x, top + 19, 0xFFFFFF);
-			List<String> lines = this.fontRendererObj.listFormattedStringToWidth(e.description, PANEL_WIDTH - 16);
-			int y = top + 33;
-			for (int l = 0; l < lines.size() && l < (compact() ? 1 : 2); l++) {
-				this.fontRendererObj.drawStringWithShadow(lines.get(l), x, y, 0xDDDDDD);
-				y += 10;
+			if (e.available() && (e.alwaysOn() ? e.setting() : e.shownOn())) on++;
+		}
+		this.fontRendererObj.drawStringWithShadow("§8" + this.entries.size() + " built in · " + on + " active", tx,
+				20, 0xFFFFFF);
+	}
+
+	private void drawList(int mouseX, int mouseY, long t) {
+		int l = listLeft(), r = listRight(), top = listTop(), bottom = listBottom();
+		drawRect(l, top, r, bottom, 0x88000000);
+		int hover = inList(mouseX, mouseY) && !this.dragMoved ? rowAt(mouseY) : -1;
+		for (int i = 0; i < this.shown.size(); i++) {
+			int y = top + i * ROW_H - Math.round(this.scroll);
+			if (y + ROW_H <= top || y >= bottom) continue;
+			Entry e = this.shown.get(i);
+			// rows slide in from the left when the screen opens
+			int slide = (int) Math.max(0, 24 - (t - i * 35) / 8);
+			int x = l + slide;
+			boolean sel = e == this.selected;
+			if (sel) {
+				clipRect(l, y, r, y + ROW_H, 0x50F5C542);
+				clipRect(l, y, l + 2, y + ROW_H, GOLD);
+			} else if (i == hover) {
+				clipRect(l, y, r, y + ROW_H, 0x28FFFFFF);
 			}
-			this.fontRendererObj.drawStringWithShadow(e.status(e.shownOn()), x, top + h - 12, 0xFFFFFF);
+			clipRect(l + 4, y + ROW_H - 1, r - 4, y + ROW_H, 0x18FFFFFF);
+			drawGem(x + 6, y + 5, 22, e, true);
+			int tx = x + 34;
+			int maxW = r - tx - 12;
+			if (textFits(y + 6)) {
+				this.fontRendererObj.drawStringWithShadow(
+						this.fontRendererObj.trimStringToWidth(e.name, maxW), tx, y + 6, sel ? 0xFFE08A : 0xFFFFFF);
+			}
+			if (textFits(y + 17)) {
+				this.fontRendererObj.drawStringWithShadow(
+						this.fontRendererObj.trimStringToWidth("§7" + e.by, maxW), tx, y + 17, 0xFFFFFF);
+			}
+			boolean active = e.available() && (e.alwaysOn() ? e.setting() : e.shownOn());
+			int dot = !e.available() ? 0xFFAA3333 : active ? (e.alwaysOn() ? GOLD : 0xFF55DD66) : 0xFF666666;
+			clipRect(r - 10, y + ROW_H / 2 - 2, r - 6, y + ROW_H / 2 + 2, dot);
+		}
+		if (this.shown.isEmpty()) {
+			this.drawCenteredString(this.fontRendererObj, "§7No mods found", (l + r) / 2, top + 12, 0xFFFFFF);
+		}
+		int max = maxScroll();
+		if (max > 0) {
+			int view = bottom - top;
+			int thumb = Math.max(16, view * view / (view + max));
+			int ty = top + (int) ((view - thumb) * (this.scroll / max));
+			drawRect(r - 3, top, r - 1, bottom, 0x40000000);
+			drawRect(r - 3, ty, r - 1, ty + thumb, 0xC0F5C542);
+		}
+	}
+
+	private void drawDetails() {
+		int l = detailLeft(), r = detailRight(), top = searchTop(), bottom = listBottom();
+		drawRect(l, top, r, bottom, 0x88000000);
+		drawGradientRect(l, top, r, top + 2, GOLD, 0xFFB8860B);
+		Entry e = this.selected;
+		if (e == null) {
+			return;
+		}
+		int x = l + 10;
+		drawGem(x, top + 12, 40, e, false);
+		int nx = x + 50;
+		GlStateManager.pushMatrix();
+		GlStateManager.translate(nx, top + 14, 0);
+		GlStateManager.scale(1.5F, 1.5F, 1.0F);
+		this.fontRendererObj.drawStringWithShadow(
+				this.fontRendererObj.trimStringToWidth("§l" + e.name, (int) ((r - nx - 8) / 1.5f)), 0, 0, 0xFFE08A);
+		GlStateManager.popMatrix();
+		List<String> byLines = this.fontRendererObj.listFormattedStringToWidth("§7by " + e.by, r - nx - 8);
+		for (int i = 0; i < byLines.size() && i < 2; i++) {
+			this.fontRendererObj.drawStringWithShadow(byLines.get(i), nx, top + 30 + i * 10, 0xFFFFFF);
+		}
+
+		// badges
+		int by = top + 60, bx = x;
+		boolean builtIn = e.license.equals("Built in");
+		bx += drawPill(bx, by, builtIn ? "Built in" : e.license, builtIn ? GOLD : 0xFF5FC8E8) + 4;
+		bx += drawPill(bx, by, categoryOf(e), 0xFFB48CFF) + 4;
+		boolean active = e.available() && (e.alwaysOn() ? e.setting() : e.shownOn());
+		String st = !e.available() ? "Unavailable" : e.alwaysOn() ? (active ? "Always on" : "Off") : (active ? "On" : "Off");
+		if (bx + this.fontRendererObj.getStringWidth(st) + 8 > r - 8) {
+			bx = x;
+			by += 14;
+		}
+		drawPill(bx, by, st, !e.available() ? 0xFFE05555 : active ? 0xFF55DD66 : 0xFF999999);
+
+		int dy = by + 18;
+		drawRect(x, dy, r - 10, dy + 1, 0x30F5C542);
+		dy += 7;
+		int maxY = this.toggle.yPosition - 16;
+		List<String> lines = this.fontRendererObj.listFormattedStringToWidth(e.description, r - l - 20);
+		for (int i = 0; i < lines.size() && dy + 9 <= maxY; i++) {
+			this.fontRendererObj.drawStringWithShadow(lines.get(i), x, dy, 0xDDDDDD);
+			dy += 10;
+		}
+		if (dy + 9 <= maxY) {
+			dy += 4;
+			this.fontRendererObj.drawStringWithShadow(e.status(e.shownOn()), x, dy, 0xFFFFFF);
+		}
+	}
+
+	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+		this.scroll += (this.scrollTarget - this.scroll) * 0.35f;
+		if (Math.abs(this.scrollTarget - this.scroll) < 0.5f) this.scroll = this.scrollTarget;
+		long t = Minecraft.getSystemTime() - this.openedAt;
+		this.drawDefaultBackground();
+		this.drawSparkles(t);
+		this.drawHeader(t);
+		this.drawList(mouseX, mouseY, t);
+		this.drawDetails();
+		this.search.drawTextBox();
+		if (this.search.getText().isEmpty() && !this.search.isFocused()) {
+			this.fontRendererObj.drawStringWithShadow("§8Search mods...", listLeft() + 5, searchTop() + 4, 0xFFFFFF);
 		}
 		super.drawScreen(mouseX, mouseY, partialTicks);
 	}
