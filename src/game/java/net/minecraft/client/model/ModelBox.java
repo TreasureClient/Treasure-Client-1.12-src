@@ -122,4 +122,9 @@ public class ModelBox {
 		this.boxName = name;
 		return this;
 	}
+
+	/** Treasure Client: the box faces, for baking chests and beds into the world mesh. */
+	public TexturedQuad[] tcQuads() {
+		return this.quadList;
+	}
 }

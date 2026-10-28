@@ -80,9 +80,19 @@ public class TreasureMods {
 	private static boolean entityCulling = true;
 	public static boolean entityCulling() { return entityCulling; }
 
+	// HUD frame rate: how often the HUD (hotbar, chat, scoreboard...) is redrawn. 0 = every frame. Default 60.
+	private static int hudFps = 60;
+	/** Minimum time between HUD redraws in ms (0 = every frame). */
+	public static long hudRedrawMs() { return hudFps <= 0 ? 0L : 1000L / hudFps - 2L; }
+
 	// VanillaFix: crash recovery and Minecraft bug fixes. Default ON; overlay writes vanillafix=0 to turn it off.
 	private static boolean vanillaFix = true;
 	public static boolean vanillaFix() { return vanillaFix; }
+
+	// Enhanced Block Entities: chests and beds baked into the chunk mesh. Default ON; overlay writes ebe=0 to turn it off.
+	private static boolean ebe = true;
+	private static boolean appliedEbe = true;
+	public static boolean enhancedBlockEntities() { return ebe; }
 
 	// Particle Culling: skip particles outside the view. Default ON; overlay writes pcull=0 to turn it off.
 	private static boolean particleCulling = true;
@@ -264,6 +274,8 @@ public class TreasureMods {
 			entityCulling = true;
 			particleCulling = true;
 			vanillaFix = true;
+			ebe = true;
+			hudFps = 60;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
 			fullbright = false; clearWater = true; satDisplay = false;
@@ -298,6 +310,8 @@ public class TreasureMods {
 				else if (k.equals("celeritas")) celeritas = v.equals("1");
 				else if (k.equals("entcull")) entityCulling = v.equals("1");
 				else if (k.equals("vanillafix")) vanillaFix = v.equals("1");
+				else if (k.equals("ebe")) ebe = v.equals("1");
+				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
 				else if (k.equals("oldAnim")) oldAnim = v.equals("1");
 				else if (k.equals("oaBlock")) oaBlock = v.equals("1");
@@ -337,6 +351,14 @@ public class TreasureMods {
 
 			// switch between the Celeritas and vanilla chunk renderers when the toggle changes
 			try { org.taumc.celeritas.impl.TreasureCeleritas.setEnabled(celeritas); } catch (Throwable t) {}
+
+			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
+			if (ebe != appliedEbe) {
+				appliedEbe = ebe;
+				if (mc.world != null && mc.renderGlobal != null) {
+					try { mc.renderGlobal.loadRenderers(); } catch (Throwable t) {}
+				}
+			}
 
 			// Treasure Client — apply any pending TuffX+ ViaBlocks overrides (modern
 			// blocks streamed by real servers) + the F6 item-NBT dump diagnostic.

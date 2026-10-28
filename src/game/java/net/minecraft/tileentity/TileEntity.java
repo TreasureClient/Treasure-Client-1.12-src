@@ -37,6 +37,10 @@ public abstract class TileEntity {
 	/** the instance of the world the tile entity is in. */
 	protected World world;
 	protected BlockPos pos = BlockPos.ORIGIN;
+	/** Treasure Client (Enhanced Block Entities): the chest lid is moving, so the normal renderer draws it. */
+	public boolean tcBakeAnimating;
+	/** Treasure Client (Enhanced Block Entities): the current chunk mesh has this block baked in. */
+	public boolean tcInMesh;
 	protected boolean tileEntityInvalid;
 	private int blockMetadata = -1;
 

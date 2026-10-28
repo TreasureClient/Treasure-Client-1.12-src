@@ -83,6 +83,7 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 		destroyAnimationCaches();
 		this.mapRegisteredSprites.clear();
 		iconCreatorIn.registerSprites(this);
+		net.minecraft.client.renderer.TCBlockEntities.registerSprites(this); // Treasure Client: Enhanced Block Entities
 		this.initMissingImage();
 		this.deleteGlTexture();
 		this.loadTextureAtlas(resourceManager);
@@ -90,6 +91,7 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 
 	public void loadTextureAtlas(IResourceManager resourceManager) {
 		CustomItems.updateIcons(this);
+		net.minecraft.client.renderer.TCBlockEntities.onAtlasReload();
 		int i = Minecraft.getGLMaximumTextureSize();
 		Stitcher stitcher = new Stitcher(i, i, 0, this.mipmapLevels);
 		this.mapUploadedSprites.clear();
@@ -121,7 +123,8 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 			try {
 				IResource iresource = resourceManager.getResource(resourcelocation);
 				ImageData[] abufferedimage = new ImageData[1 + this.mipmapLevels];
-				abufferedimage[0] = TextureUtil.readBufferedImage(iresource.getInputStream());
+				abufferedimage[0] = net.minecraft.client.renderer.TCBlockEntities.fixSpriteImage(
+						resourcelocation.getResourcePath(), TextureUtil.readBufferedImage(iresource.getInputStream()));
 				AnimationMetadataSection animationmetadatasection = (AnimationMetadataSection) iresource
 						.getMetadata("animation");
 				textureatlassprite.loadSprite(abufferedimage, animationmetadatasection);

@@ -1328,6 +1328,11 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 					|| i == 10 && tileentity instanceof TileEntityShulkerBox
 					|| i == 11 && tileentity instanceof TileEntityBed) {
 				tileentity.readFromNBT(packetIn.getNbtCompound());
+				if (i == 11) {
+					// Treasure Client: beds are baked into the chunk mesh, so re-bake it with the new color
+					BlockPos bp = packetIn.getPos();
+					this.gameController.world.markBlockRangeForRenderUpdate(bp, bp);
+				}
 			}
 
 			if (flag && this.gameController.currentScreen instanceof GuiCommandBlock) {

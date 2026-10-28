@@ -34,6 +34,12 @@ public class GLStateManagerFogService implements FogService {
 
     @Override
     public float getFogCutoff() {
+        // Celeritas skips chunks (and the entities in them) past this distance. Only trust it for
+        // normal linear fog that's turned on: with exp fog (water, lava, clouds) or fog off, the fog
+        // end value is left over from earlier and could hide chunks and entities that should show.
+        if (!TCRenderState.isFogEnabled() || TCRenderState.isFogExp() || TCRenderState.getFogEnd() <= 0.0F) {
+            return Float.MAX_VALUE;
+        }
         return TCRenderState.getFogEnd();
     }
 

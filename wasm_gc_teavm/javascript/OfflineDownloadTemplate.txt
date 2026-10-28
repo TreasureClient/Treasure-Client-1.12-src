@@ -764,9 +764,24 @@ ${classes_js}
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Enhanced Block Entities</b><i>Draw chests and beds as part of the world, which is much faster</i></div><div class="tc-sw on" data-mod="ebe"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>VanillaFix</b><i>Recover from crashes instead of closing the game, plus Minecraft bug fixes</i></div><div class="tc-sw on" data-mod="vanillafix"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>HUD Frame Rate</b><i>How often the hotbar, chat and other HUD parts are redrawn</i></div></div>
+              <div class="tc-cfg tc-cfg-static">
+                <div class="tc-cfg-row"><span>Redraw</span>
+                  <div class="tc-seg" data-seg="hudFps">
+                    <button data-val="20">20 FPS</button>
+                    <button data-val="30">30 FPS</button>
+                    <button data-val="60">60 FPS</button>
+                    <button data-val="0">Every frame</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower can give a few more FPS on slow computers</span></div>
+              </div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Entity Render Distance</b><i>Stop drawing mobs, players, items and chests past this many blocks</i></div></div>
@@ -1541,9 +1556,24 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Enhanced Block Entities</b><i>Draw chests and beds as part of the world, which is much faster</i></div><div class="tc-sw on" data-mod="ebe"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>VanillaFix</b><i>Recover from crashes instead of closing the game, plus Minecraft bug fixes</i></div><div class="tc-sw on" data-mod="vanillafix"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>HUD Frame Rate</b><i>How often the hotbar, chat and other HUD parts are redrawn</i></div></div>
+              <div class="tc-cfg tc-cfg-static">
+                <div class="tc-cfg-row"><span>Redraw</span>
+                  <div class="tc-seg" data-seg="hudFps">
+                    <button data-val="20">20 FPS</button>
+                    <button data-val="30">30 FPS</button>
+                    <button data-val="60">60 FPS</button>
+                    <button data-val="0">Every frame</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower can give a few more FPS on slow computers</span></div>
+              </div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Entity Render Distance</b><i>Stop drawing mobs, players, items and chests past this many blocks</i></div></div>
@@ -1722,7 +1752,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, hudFps:'60', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1843,7 +1873,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'celeritas=' + (state.celeritas === false ? 0 : 1),
           'entcull=' + (state.entcull === false ? 0 : 1),
           'vanillafix=' + (state.vanillafix === false ? 0 : 1),
+          'hudFps=' + (state.hudFps == null ? '60' : state.hudFps),
           'pcull=' + (state.pcull === false ? 0 : 1),
+          'ebe=' + (state.ebe === false ? 0 : 1),
           'oldAnim=' + (state.oldAnim ? 1 : 0),
           'oaBlock=' + (state.oaBlock === false ? 0 : 1),
           'oaNoDip=' + (state.oaNoDip === false ? 0 : 1),
@@ -1992,7 +2024,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix')) return;
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe')) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;
