@@ -2054,7 +2054,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     }
 
     /* ---------- FPS (real: page rAF) + CPS + data-HUD readout loop ---------- */
-    var frames = 0, lastFpsT = performance.now(), fpsVal = 0, lastData = 0, lastHudRead = 0, lastModePoll = 0;
+    var frames = 0, lastFpsT = performance.now(), fpsVal = 0, lastData = 0, lastHudRead = 0, lastModePoll = 0, lastHeapWrite = 0;
     function loop(now) {
       frames++;
       if (now - lastFpsT >= 500) {
@@ -2070,6 +2070,11 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (now - lastHudRead >= 200) { readHudBridge(); lastHudRead = now; applyHudVisibility(); }
       if (now - lastData >= 100) { updateDataHud(); lastData = now; }
       if (now - lastModePoll >= 300) { pollSharedMode(); lastModePoll = now; }
+      // page memory for the game's ".perf" command (Chrome only)
+      if (now - lastHeapWrite >= 1000) {
+        lastHeapWrite = now;
+        try { var pm = performance.memory; if (pm) localStorage.setItem('_eaglercraft_1.12.tcheap', btoa(Math.round(pm.usedJSHeapSize / 1048576) + ',' + Math.round(pm.jsHeapSizeLimit / 1048576))); } catch (e) {}
+      }
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
