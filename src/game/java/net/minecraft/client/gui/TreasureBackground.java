@@ -6,7 +6,6 @@ import net.lax1dude.eaglercraft.opengl.ImageData;
 import net.lax1dude.eaglercraft.opengl.WorldRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.util.ResourceLocation;
@@ -142,29 +141,45 @@ public final class TreasureBackground {
 		if (done != null) {
 			return done;
 		}
-		ResourceLocation result = tex;
-		try {
-			Minecraft mc = Minecraft.getMinecraft();
-			ImageData img;
-			try (java.io.InputStream in = mc.getResourceManager().getResource(tex).getInputStream()) {
-				img = TextureUtil.readBufferedImage(in);
-			}
-			if (img != null) {
-				int[] px = img.pixels.clone();
-				// three box blurs in a row look like a soft gaussian blur
-				int radius = Math.max(2, img.width / 170);
-				for (int pass = 0; pass < 3; ++pass) {
-					boxBlur(px, img.width, img.height, radius, true);
-					boxBlur(px, img.width, img.height, radius, false);
-				}
-				DynamicTexture dyn = new DynamicTexture(new ImageData(img.width, img.height, px, true));
-				result = mc.getTextureManager().getDynamicTextureLocation("tc_bg_blur", dyn);
-			}
-		} catch (Throwable t) {
+		ResourceLocation result = new ResourceLocation("treasure", "bg_blur/" + tex.getResourcePath());
+		if (!Minecraft.getMinecraft().getTextureManager().loadTexture(result, new BlurredTexture(tex))) {
 			result = tex;
 		}
 		BLURRED.put(tex, result);
 		return result;
+	}
+
+	/**
+	 * A theme image blurred and uploaded straight to the GPU. No copy of the
+	 * pixels is kept in memory; after a resource reload it's made again from the
+	 * image file.
+	 */
+	private static final class BlurredTexture extends net.minecraft.client.renderer.texture.AbstractTexture {
+		private final ResourceLocation source;
+
+		BlurredTexture(ResourceLocation source) {
+			this.source = source;
+		}
+
+		public void loadTexture(net.minecraft.client.resources.IResourceManager resourceManager) throws java.io.IOException {
+			this.deleteGlTexture();
+			ImageData img;
+			try (java.io.InputStream in = resourceManager.getResource(this.source).getInputStream()) {
+				img = TextureUtil.readBufferedImage(in);
+			}
+			if (img == null) {
+				throw new java.io.IOException("Could not read " + this.source);
+			}
+			int[] px = img.pixels.clone();
+			// three box blurs in a row look like a soft gaussian blur
+			int radius = Math.max(2, img.width / 170);
+			for (int pass = 0; pass < 3; ++pass) {
+				boxBlur(px, img.width, img.height, radius, true);
+				boxBlur(px, img.width, img.height, radius, false);
+			}
+			TextureUtil.uploadTextureImageAllocate(this.getGlTextureId(), new ImageData(img.width, img.height, px, true),
+					false, false);
+		}
 	}
 
 	/** One box-blur pass along rows (horizontal) or columns, edges clamped, every channel. */

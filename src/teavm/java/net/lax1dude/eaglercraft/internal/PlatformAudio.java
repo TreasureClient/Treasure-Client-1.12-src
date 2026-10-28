@@ -49,6 +49,10 @@ import net.minecraft.util.math.MathHelper;
  * 
  */
 public class PlatformAudio {
+
+	/** Treasure Client: how long an unused decoded sound stays in memory (Memory Saver lowers it). */
+	public static long cacheExpireMillis = 600000l;
+
 	
 	static final Logger logger = LogManager.getLogger("BrowserAudio");
 	
@@ -452,7 +456,7 @@ public class PlatformAudio {
 			cacheFreeTimer = millis;
 			Iterator<BrowserAudioResource> itr = soundCache.values().iterator();
 			while(itr.hasNext()) {
-				if(millis - itr.next().cacheHit > 600000l) { // 10 minutes
+				if(millis - itr.next().cacheHit > cacheExpireMillis) { // Treasure Client: 10 minutes, or 2 with Memory Saver
 					itr.remove();
 				}
 			}

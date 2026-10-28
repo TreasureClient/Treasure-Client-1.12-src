@@ -94,6 +94,18 @@ public class TreasureMods {
 	private static boolean appliedEbe = true;
 	public static boolean enhancedBlockEntities() { return ebe; }
 
+	// Dynamic FPS: lower the frame rate while the game window isn't focused. Default ON; overlay writes dynfps=0.
+	private static boolean dynFps = true;
+	public static boolean dynamicFps() { return dynFps; }
+
+	// Memory Saver: stop the idle singleplayer worker on servers, shorter sound cache. Default ON; overlay writes memsaver=0.
+	private static boolean memSaver = true;
+	public static boolean memorySaver() { return memSaver; }
+
+	// the last settings text we parsed, so unchanged settings aren't parsed again 4x a second
+	private static byte[] lastModsData;
+	private static boolean modsParsedOnce;
+
 	// Particle Culling: skip particles outside the view. Default ON; overlay writes pcull=0 to turn it off.
 	private static boolean particleCulling = true;
 	public static boolean particleCulling() { return particleCulling; }
@@ -266,6 +278,11 @@ public class TreasureMods {
 	private static void reload() {
 		try {
 			byte[] data = EagRuntime.getStorage("tcmods");
+			if (modsParsedOnce && java.util.Arrays.equals(data, lastModsData)) {
+				return; // nothing changed since the last read
+			}
+			modsParsedOnce = true;
+			lastModsData = data;
 			sprint = false; sprintMode = 0; sneak = false;
 			hitboxes = false; hitboxPlayers = true; hitboxMobs = true; hitboxAnimals = true; hitboxOther = false;
 			pauseUnfocused = false;
@@ -275,6 +292,8 @@ public class TreasureMods {
 			particleCulling = true;
 			vanillaFix = true;
 			ebe = true;
+			dynFps = true;
+			memSaver = true;
 			hudFps = 60;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
@@ -311,6 +330,8 @@ public class TreasureMods {
 				else if (k.equals("entcull")) entityCulling = v.equals("1");
 				else if (k.equals("vanillafix")) vanillaFix = v.equals("1");
 				else if (k.equals("ebe")) ebe = v.equals("1");
+				else if (k.equals("dynfps")) dynFps = v.equals("1");
+				else if (k.equals("memsaver")) memSaver = v.equals("1");
 				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
 				else if (k.equals("oldAnim")) oldAnim = v.equals("1");
@@ -341,6 +362,34 @@ public class TreasureMods {
 		}
 	}
 
+	private static long lastWorkerCheck;
+
+	/**
+	 * Memory Saver: once you're on a server, stop the singleplayer worker if it's
+	 * sitting idle. It's a whole second copy of the game (its own memory and CPU)
+	 * that only singleplayer needs; clicking Singleplayer starts it again.
+	 */
+	private static void applyMemorySaver(Minecraft mc) {
+		net.lax1dude.eaglercraft.internal.PlatformAudio.cacheExpireMillis = memSaver ? 120000L : 600000L;
+		if (!memSaver || mc.world == null) {
+			return;
+		}
+		long now = EagRuntime.steadyTimeMillis();
+		if (now - lastWorkerCheck < 5000L) {
+			return;
+		}
+		lastWorkerCheck = now;
+		try {
+			if (!net.lax1dude.eaglercraft.sp.SingleplayerServerController.isWorldRunning()
+					&& net.lax1dude.eaglercraft.sp.SingleplayerServerController.isIntegratedServerWorkerAlive()
+					&& net.lax1dude.eaglercraft.sp.SingleplayerServerController.isReady()
+					&& net.lax1dude.eaglercraft.sp.SingleplayerServerController.canKillWorker()) {
+				net.lax1dude.eaglercraft.sp.SingleplayerServerController.killWorker();
+			}
+		} catch (Throwable t) {
+		}
+	}
+
 	public static void tick(Minecraft mc) {
 		try {
 			if (mc == null || mc.gameSettings == null) return;
@@ -351,6 +400,9 @@ public class TreasureMods {
 
 			// switch between the Celeritas and vanilla chunk renderers when the toggle changes
 			try { org.taumc.celeritas.impl.TreasureCeleritas.setEnabled(celeritas); } catch (Throwable t) {}
+
+			// Memory Saver
+			applyMemorySaver(mc);
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
 			if (ebe != appliedEbe) {
