@@ -147,7 +147,7 @@ public class RenderChunk {
 					}
 				}
 
-				BlockRenderLayer blockrenderlayer1 = block.getBlockLayer();
+				BlockRenderLayer blockrenderlayer1 = net.minecraft.block.TCLeafCulling.layer(block, iblockstate, regionrendercache, blockpos$mutableblockpos); // Treasure Client (Leaf Culling)
 				int j = blockrenderlayer1.ordinal();
 
 				if (block.getDefaultState().getRenderType() != EnumBlockRenderType.INVISIBLE) {

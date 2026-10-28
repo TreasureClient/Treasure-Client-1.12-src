@@ -344,6 +344,7 @@ public class RenderManager {
 	}
 
 	public boolean shouldRender(Entity entityIn, ICamera camera, double camX, double camY, double camZ) {
+		if (net.minecraft.client.renderer.TCExtra.hidden(entityIn)) return false; // Treasure Client (Celeritas Extra)
 		Render<Entity> render = this.<Entity>getEntityRenderObject(entityIn);
 		return render != null && render.shouldRender(entityIn, camera, camX, camY, camZ);
 	}

@@ -48,6 +48,11 @@ public class GuiTreasureModList extends GuiScreen {
 			return false;
 		}
 
+		/** Button text for entries with no switch. */
+		String fixedLabel() {
+			return "§aAlways on";
+		}
+
 		abstract String status(boolean on);
 
 		boolean shownOn() {
@@ -140,6 +145,41 @@ public class GuiTreasureModList extends GuiScreen {
 
 			String status(boolean on) {
 				return "§aOn §7· built into loading";
+			}
+		});
+		this.entries.add(new Entry("Celeritas Extra", "Sumire-Labs", "LGPL-3.0",
+				"Extra switches for animations, particles, sky, weather, item frames, armor stands, paintings, beacon beams, enchanting books, pistons and toasts. Set them with the gear in Treasure Settings.",
+				"cextra") {
+			boolean setting() {
+				return net.minecraft.client.renderer.TCExtra.enabled();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
+		this.entries.add(new Entry("Celeritas Leaf Culling", "Karnatour (fork of Sodium Leaf Culling)", "MIT",
+				"With fancy leaves, skips leaf faces hidden inside trees. Pick Hollow, Solid Aggressive or Solid in Treasure Settings.",
+				"leafCull") {
+			boolean setting() {
+				return TreasureMods.leafCulling() != net.minecraft.block.TCLeafCulling.OFF;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String fixedLabel() {
+				return "Set in Settings";
+			}
+
+			String status(boolean on) {
+				switch (TreasureMods.leafCulling()) {
+				case net.minecraft.block.TCLeafCulling.HOLLOW: return "§aHollow";
+				case net.minecraft.block.TCLeafCulling.SOLID_AGGRESSIVE: return "§aSolid Aggressive";
+				case net.minecraft.block.TCLeafCulling.SOLID: return "§aSolid";
+				default: return "§7Off";
+				}
 			}
 		});
 		this.entries.add(new Entry("Lithium", "CaffeineMC", "LGPL-3.0",
@@ -248,7 +288,7 @@ public class GuiTreasureModList extends GuiScreen {
 			}
 			GuiButton b = this.toggles.get(i);
 			b.enabled = e.available() && !e.alwaysOn();
-			b.displayString = e.alwaysOn() ? "§aAlways on"
+			b.displayString = e.alwaysOn() ? e.fixedLabel()
 					: !e.available() ? "Unavailable" : (e.shownOn() ? "§aEnabled" : "§cDisabled");
 		}
 	}
@@ -284,7 +324,7 @@ public class GuiTreasureModList extends GuiScreen {
 			int top = entryTop(i);
 			int h = entryHeight();
 			drawRect(left, top, left + PANEL_WIDTH, top + h, 0xA0000000);
-			drawRect(left, top, left + 2, top + h, (e.alwaysOn() || e.shownOn()) && e.available() ? 0xFFF5C542 : 0xFF555555);
+			drawRect(left, top, left + 2, top + h, (e.alwaysOn() ? e.setting() : e.shownOn()) && e.available() ? 0xFFF5C542 : 0xFF555555);
 			int x = left + 8;
 			this.fontRendererObj.drawStringWithShadow("§l" + e.name, x, top + 8, 0xFFE08A);
 			this.fontRendererObj.drawStringWithShadow("§7by " + e.by + " · " + e.license, x, top + 19, 0xFFFFFF);

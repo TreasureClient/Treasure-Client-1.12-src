@@ -105,7 +105,7 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
 
                         // Treasure Client: same as vanilla RenderChunk, each block draws into its one layer
                         if (blockState.getRenderType() != EnumBlockRenderType.INVISIBLE) {
-                            var buffer = buildContext.getBufferForLayer(block.getBlockLayer());
+                            var buffer = buildContext.getBufferForLayer(net.minecraft.block.TCLeafCulling.layer(block, blockState, slice, blockPos)); // Treasure Client (Leaf Culling)
                             dispatcher.renderBlock(blockState, blockPos, slice, buffer);
                         }
 

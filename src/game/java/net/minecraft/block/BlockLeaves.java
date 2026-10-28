@@ -244,6 +244,11 @@ public abstract class BlockLeaves extends Block {
 
 	public boolean shouldSideBeRendered(IBlockState blockState, IBlockAccess blockAccess, BlockPos pos,
 			EnumFacing side) {
+		// Treasure Client: Celeritas Leaf Culling
+		if (this.leavesFancy && TCLeafCulling.mode != TCLeafCulling.OFF
+				&& TCLeafCulling.cullSide(blockAccess, pos, side)) {
+			return false;
+		}
 		return !this.leavesFancy && blockAccess.getBlockState(pos.offset(side)).getBlock() == this ? false
 				: super.shouldSideBeRendered(blockState, blockAccess, pos, side);
 	}

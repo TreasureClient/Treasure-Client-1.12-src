@@ -1284,6 +1284,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	}
 
 	private void addRainParticles() {
+		if (!TCExtra.rainSplash) return; // Treasure Client (Celeritas Extra)
 		float f = this.mc.world.getRainStrength(1.0F);
 
 		if (!this.mc.gameSettings.fancyGraphics) {
@@ -1362,6 +1363,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	 * Render rain and snow
 	 */
 	protected void renderRainSnow(float partialTicks) {
+		if (!TCExtra.weather) return; // Treasure Client (Celeritas Extra)
 		float f = this.mc.world.getRainStrength(partialTicks);
 
 		if (f > 0.0F) {

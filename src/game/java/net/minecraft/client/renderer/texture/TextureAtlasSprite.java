@@ -21,6 +21,7 @@ import net.minecraft.util.ResourceLocation;
 
 public class TextureAtlasSprite {
 	private final String iconName;
+	public int tcAnimGroup = -1; // Treasure Client (Celeritas Extra)
 	protected List<int[][]> framesTextureData = Lists.<int[][]>newArrayList();
 	private AnimationMetadataSection animationMetadata;
 	protected boolean rotated;

@@ -92,6 +92,9 @@ public class TreasureMods {
 	// Enhanced Block Entities: chests and beds baked into the chunk mesh. Default ON; overlay writes ebe=0 to turn it off.
 	private static boolean ebe = true;
 	private static boolean appliedEbe = true;
+	// Celeritas Leaf Culling mode (TCLeafCulling.OFF/HOLLOW/SOLID_AGGRESSIVE/SOLID). Default SOLID, like the original mod.
+	private static int leafCull = net.minecraft.block.TCLeafCulling.SOLID;
+	public static int leafCulling() { return leafCull; }
 	public static boolean enhancedBlockEntities() { return ebe; }
 
 	// Dynamic FPS: lower the frame rate while the game window isn't focused. Default ON; overlay writes dynfps=0.
@@ -314,6 +317,8 @@ public class TreasureMods {
 			lowFire = false; lowFireH = 0.40f;
 			lowShield = false; lowShieldAmt = 0.30f;
 			smallTotem = false; totemScaleV = 0.40f;
+			net.minecraft.client.renderer.TCExtra.reset();
+			leafCull = net.minecraft.block.TCLeafCulling.SOLID;
 			if (data != null && data.length > 0) {
 				String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
 				String[] parts = s.split(",");
@@ -367,8 +372,11 @@ public class TreasureMods {
 				else if (k.equals("lowShieldA")) { try { lowShieldAmt = clamp01(Integer.parseInt(v) / 100.0f, 0.0f, 0.6f); } catch (Throwable t) {} }
 				else if (k.equals("smallTotem")) smallTotem = v.equals("1");
 				else if (k.equals("totemScale")) { try { totemScaleV = clamp01(Integer.parseInt(v) / 100.0f, 0.1f, 1.0f); } catch (Throwable t) {} }
+				else if (k.equals("leafCull")) leafCull = net.minecraft.block.TCLeafCulling.parseMode(v);
+				else net.minecraft.client.renderer.TCExtra.parse(k, v);
 				}
 			}
+			net.minecraft.client.renderer.TCExtra.apply();
 		} catch (Throwable t) {
 			// leave defaults
 		}
@@ -418,6 +426,14 @@ public class TreasureMods {
 			net.minecraft.util.TCLithium.enabled = lithium;
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
+			// Leaf Culling mode changed: rebuild chunk meshes with the new leaf faces
+			if (leafCull != net.minecraft.block.TCLeafCulling.mode) {
+				net.minecraft.block.TCLeafCulling.mode = leafCull;
+				if (mc.world != null && mc.renderGlobal != null) {
+					try { mc.renderGlobal.loadRenderers(); } catch (Throwable t) {}
+				}
+			}
+
 			if (ebe != appliedEbe) {
 				appliedEbe = ebe;
 				if (mc.world != null && mc.renderGlobal != null) {

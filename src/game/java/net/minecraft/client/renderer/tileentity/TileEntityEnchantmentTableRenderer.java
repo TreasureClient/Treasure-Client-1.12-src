@@ -15,6 +15,7 @@ public class TileEntityEnchantmentTableRenderer extends TileEntitySpecialRendere
 
 	public void func_192841_a(TileEntityEnchantmentTable p_192841_1_, double p_192841_2_, double p_192841_4_,
 			double p_192841_6_, float p_192841_8_, int p_192841_9_, float p_192841_10_) {
+		if (!net.minecraft.client.renderer.TCExtra.enchantBook) return; // Treasure Client (Celeritas Extra)
 		GlStateManager.pushMatrix();
 		GlStateManager.translate((float) p_192841_2_ + 0.5F, (float) p_192841_4_ + 0.75F, (float) p_192841_6_ + 0.5F);
 		float f = (float) p_192841_1_.tickCount + p_192841_8_;

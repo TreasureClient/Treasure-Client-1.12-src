@@ -22,6 +22,7 @@ public class GuiToast extends Gui {
 	}
 
 	public void func_191783_a(ScaledResolution p_191783_1_) {
+		if (!net.minecraft.client.renderer.TCExtra.toasts) return; // Treasure Client (Celeritas Extra)
 		if (!this.field_191790_f.gameSettings.hideGUI) {
 			RenderHelper.disableStandardItemLighting();
 
@@ -63,6 +64,7 @@ public class GuiToast extends Gui {
 	}
 
 	public void func_192988_a(IToast p_192988_1_) {
+		if (!net.minecraft.client.renderer.TCExtra.toasts) return; // Treasure Client (Celeritas Extra)
 		this.field_191792_h.add(p_192988_1_);
 	}
 
