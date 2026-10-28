@@ -353,6 +353,10 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 						"[KB] knockback debug " + (net.minecraft.client.network.NetHandlerPlayClient.tcKbDebug ? "ON" : "OFF")));
 				return;
 			}
+			if (tcCmd.equalsIgnoreCase(".perf")) {
+				net.minecraft.client.TCPerfStats.print(this.mc);
+				return;
+			}
 			if (tcCmd.equalsIgnoreCase(".viablocks")) {
 				this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
 						net.minecraft.client.network.TuffViaBlocks.status()));
