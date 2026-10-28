@@ -52,6 +52,15 @@ public class BlockStateContainer {
 	private final ImmutableSortedMap<String, IProperty<?>> properties;
 	private final ImmutableList<IBlockState> validStates;
 
+	// Treasure Client (FoamFix): instead of every state keeping its own table of
+	// "this state with property P set to V", the states sit in one array laid out
+	// like a multi-dimensional grid (one axis per property), so a neighbouring
+	// state is found with a little arithmetic.
+	private final IProperty<?>[] tcProps;
+	private final List<Comparable<?>>[] tcValues;
+	private final int[] tcStrides;
+	private final BlockStateContainer.StateImplementation[] tcStates;
+
 	public BlockStateContainer(Block blockIn, IProperty<?>... properties) {
 		this.block = blockIn;
 		Map<String, IProperty<?>> map = Maps.<String, IProperty<?>>newHashMap();
@@ -62,20 +71,34 @@ public class BlockStateContainer {
 		}
 
 		this.properties = ImmutableSortedMap.copyOf(map);
-		Map<Map<IProperty<?>, Comparable<?>>, BlockStateContainer.StateImplementation> map2 = Maps.<Map<IProperty<?>, Comparable<?>>, BlockStateContainer.StateImplementation>newLinkedHashMap();
 		List<BlockStateContainer.StateImplementation> list1 = Lists.<BlockStateContainer.StateImplementation>newArrayList();
+
+		// Treasure Client (FoamFix): the grid layout (see tcStates)
+		int n = this.properties.size();
+		this.tcProps = this.properties.values().toArray(new IProperty<?>[n]);
+		this.tcValues = new List[n];
+		this.tcStrides = new int[n];
+		int total = 1;
+		for (int i = n - 1; i >= 0; --i) {
+			this.tcValues[i] = new java.util.ArrayList<Comparable<?>>(this.tcProps[i].getAllowedValues());
+			this.tcStrides[i] = total;
+			total *= this.tcValues[i].size();
+		}
+		this.tcStates = new BlockStateContainer.StateImplementation[total];
 
 		for (List<Comparable<?>> list : Cartesian.cartesianProduct(this.getAllowedValues())) {
 			Map<IProperty<?>, Comparable<?>> map1 = MapPopulator
 					.<IProperty<?>, Comparable<?>>createMap(this.properties.values(), list);
 			BlockStateContainer.StateImplementation blockstatecontainer$stateimplementation = new BlockStateContainer.StateImplementation(
 					blockIn, ImmutableMap.copyOf(map1));
-			map2.put(map1, blockstatecontainer$stateimplementation);
+			int index = 0;
+			for (int i = 0; i < n; ++i) {
+				index += this.tcValues[i].indexOf(map1.get(this.tcProps[i])) * this.tcStrides[i];
+			}
+			blockstatecontainer$stateimplementation.tcContainer = this;
+			blockstatecontainer$stateimplementation.tcIndex = index;
+			this.tcStates[index] = blockstatecontainer$stateimplementation;
 			list1.add(blockstatecontainer$stateimplementation);
-		}
-
-		for (BlockStateContainer.StateImplementation blockstatecontainer$stateimplementation1 : list1) {
-			blockstatecontainer$stateimplementation1.buildPropertyValueTable(map2);
 		}
 
 		this.validStates = ImmutableList.<IBlockState>copyOf(list1);
@@ -134,6 +157,25 @@ public class BlockStateContainer {
 				.add("properties", Iterables.transform(this.properties.values(), GET_NAME_FUNC)).toString();
 	}
 
+	/** Treasure Client (FoamFix): the state at {@code index} with {@code property} set to {@code value}, or null if not allowed. */
+	@Nullable
+	private IBlockState tcWith(int index, IProperty<?> property, Object value) {
+		for (int i = 0; i < this.tcProps.length; ++i) {
+			IProperty<?> p = this.tcProps[i];
+			if (p == property || p.equals(property)) {
+				List<Comparable<?>> values = this.tcValues[i];
+				int to = values.indexOf(value);
+				if (to < 0) {
+					return null;
+				}
+				int stride = this.tcStrides[i];
+				int from = (index / stride) % values.size();
+				return this.tcStates[index + (to - from) * stride];
+			}
+		}
+		return null;
+	}
+
 	@Nullable
 	public IProperty<?> getProperty(String propertyName) {
 		return (IProperty) this.properties.get(propertyName);
@@ -142,7 +184,9 @@ public class BlockStateContainer {
 	static class StateImplementation extends BlockStateBase {
 		private final Block block;
 		private final ImmutableMap<IProperty<?>, Comparable<?>> properties;
-		private ImmutableTable<IProperty<?>, Comparable<?>, IBlockState> propertyValueTable;
+		// Treasure Client (FoamFix): position in the container's state grid, replacing the per-state table
+		private BlockStateContainer tcContainer;
+		private int tcIndex;
 
 		private StateImplementation(Block blockIn, ImmutableMap<IProperty<?>, Comparable<?>> propertiesIn) {
 			this.block = blockIn;
@@ -173,7 +217,7 @@ public class BlockStateContainer {
 			} else if (comparable == value) {
 				return this;
 			} else {
-				IBlockState iblockstate = (IBlockState) this.propertyValueTable.get(property, value);
+				IBlockState iblockstate = this.tcContainer.tcWith(this.tcIndex, property, value);
 
 				if (iblockstate == null) {
 					throw new IllegalArgumentException("Cannot set property " + property + " to " + value + " on block "
@@ -198,37 +242,6 @@ public class BlockStateContainer {
 
 		public int hashCode() {
 			return this.properties.hashCode();
-		}
-
-		public void buildPropertyValueTable(
-				Map<Map<IProperty<?>, Comparable<?>>, BlockStateContainer.StateImplementation> map) {
-			if (this.propertyValueTable != null) {
-				throw new IllegalStateException();
-			} else {
-				Table<IProperty<?>, Comparable<?>, IBlockState> table = HashBasedTable
-						.<IProperty<?>, Comparable<?>, IBlockState>create();
-				UnmodifiableIterator unmodifiableiterator = this.properties.entrySet().iterator();
-
-				while (unmodifiableiterator.hasNext()) {
-					Entry<IProperty<?>, Comparable<?>> entry = (Entry) unmodifiableiterator.next();
-					IProperty<?> iproperty = (IProperty) entry.getKey();
-
-					for (Comparable<?> comparable : iproperty.getAllowedValues()) {
-						if (comparable != entry.getValue()) {
-							table.put(iproperty, comparable,
-									map.get(this.getPropertiesWithValue(iproperty, comparable)));
-						}
-					}
-				}
-
-				this.propertyValueTable = ImmutableTable.copyOf(table);
-			}
-		}
-
-		private Map<IProperty<?>, Comparable<?>> getPropertiesWithValue(IProperty<?> property, Comparable<?> value) {
-			Map<IProperty<?>, Comparable<?>> map = Maps.<IProperty<?>, Comparable<?>>newHashMap(this.properties);
-			map.put(property, value);
-			return map;
 		}
 
 		public Material getMaterial() {

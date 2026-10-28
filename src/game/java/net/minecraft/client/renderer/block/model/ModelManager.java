@@ -20,6 +20,7 @@ public class ModelManager implements IResourceManagerReloadListener {
 	public void onResourceManagerReload(IResourceManager resourceManager) {
 		ModelBakery modelbakery = new ModelBakery(resourceManager, this.texMap, this.modelProvider);
 		this.modelRegistry = modelbakery.setupModelRegistry();
+		TCModelDedup.dedupe(this.modelRegistry); // Treasure Client (FoamFix)
 		this.defaultModel = this.modelRegistry.getObject(ModelBakery.MODEL_MISSING);
 		this.modelProvider.reloadModels();
 	}
