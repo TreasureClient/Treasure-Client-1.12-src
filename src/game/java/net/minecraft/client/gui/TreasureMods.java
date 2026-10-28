@@ -102,6 +102,10 @@ public class TreasureMods {
 	private static boolean iFast = true;
 	public static boolean immediatelyFast() { return iFast; }
 
+	// Lithium: collision, chunk lookup and block entity list speedups. Default ON; overlay writes lithium=0.
+	private static boolean lithium = true;
+	public static boolean lithium() { return lithium; }
+
 	// Memory Saver: stop the idle singleplayer worker on servers, shorter sound cache. Default ON; overlay writes memsaver=0.
 	private static boolean memSaver = true;
 	public static boolean memorySaver() { return memSaver; }
@@ -298,6 +302,7 @@ public class TreasureMods {
 			ebe = true;
 			dynFps = true;
 			iFast = true;
+			lithium = true;
 			memSaver = true;
 			hudFps = 60;
 			entityDistance = 0;
@@ -337,6 +342,7 @@ public class TreasureMods {
 				else if (k.equals("ebe")) ebe = v.equals("1");
 				else if (k.equals("dynfps")) dynFps = v.equals("1");
 				else if (k.equals("ifast")) iFast = v.equals("1");
+				else if (k.equals("lithium")) lithium = v.equals("1");
 				else if (k.equals("memsaver")) memSaver = v.equals("1");
 				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
@@ -409,6 +415,7 @@ public class TreasureMods {
 
 			// Memory Saver
 			applyMemorySaver(mc);
+			net.minecraft.util.TCLithium.enabled = lithium;
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
 			if (ebe != appliedEbe) {

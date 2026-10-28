@@ -78,6 +78,8 @@ public abstract class World implements IBlockAccess {
 	public final List<TileEntity> tickableTileEntities = Lists.<TileEntity>newArrayList();
 	private final List<TileEntity> addedTileEntityList = Lists.<TileEntity>newArrayList();
 	private final List<TileEntity> tileEntitiesToBeRemoved = Lists.<TileEntity>newArrayList();
+	/** Treasure Client (Lithium): loaded boats, minecarts and shulkers, the only entities with collision boxes. */
+	public final java.util.Set<Entity> tcHardEntities = new java.util.HashSet<Entity>();
 	public final List<EntityPlayer> playerEntities = Lists.<EntityPlayer>newArrayList();
 	public final List<Entity> weatherEffects = Lists.<Entity>newArrayList();
 	protected final IntHashMap<Entity> entitiesById = new IntHashMap<Entity>();
@@ -1028,12 +1030,16 @@ public abstract class World implements IBlockAccess {
 	}
 
 	protected void onEntityAdded(Entity entityIn) {
+		if (net.minecraft.util.TCLithium.hasHardCollision(entityIn)) {
+			this.tcHardEntities.add(entityIn);
+		}
 		for (int i = 0; i < this.eventListeners.size(); ++i) {
 			((IWorldEventListener) this.eventListeners.get(i)).onEntityAdded(entityIn);
 		}
 	}
 
 	protected void onEntityRemoved(Entity entityIn) {
+		this.tcHardEntities.remove(entityIn);
 		for (int i = 0; i < this.eventListeners.size(); ++i) {
 			((IWorldEventListener) this.eventListeners.get(i)).onEntityRemoved(entityIn);
 		}
@@ -1161,7 +1167,8 @@ public abstract class World implements IBlockAccess {
 		List<AxisAlignedBB> list = Lists.<AxisAlignedBB>newArrayList();
 		this.func_191504_a(entityIn, aabb, false, list);
 
-		if (entityIn != null) {
+		// Treasure Client (Lithium): with no boats, minecarts or shulkers loaded, no entity has a box to bump into
+		if (entityIn != null && (!net.minecraft.util.TCLithium.enabled || !this.tcHardEntities.isEmpty())) {
 			List<Entity> list1 = this.getEntitiesWithinAABBExcludingEntity(entityIn, aabb.expandXyz(0.25D));
 
 			for (int i = 0; i < list1.size(); ++i) {
@@ -1445,7 +1452,7 @@ public abstract class World implements IBlockAccess {
 			}
 		}
 
-		this.loadedEntityList.removeAll(this.unloadedEntityList);
+		net.minecraft.util.TCLithium.removeAll(this.loadedEntityList, this.unloadedEntityList); // Treasure Client (Lithium): one pass
 
 		for (int k = 0; k < this.unloadedEntityList.size(); ++k) {
 			Entity entity1 = this.unloadedEntityList.get(k);
@@ -1501,16 +1508,19 @@ public abstract class World implements IBlockAccess {
 		}
 
 		if (!this.tileEntitiesToBeRemoved.isEmpty()) {
-			this.tickableTileEntities.removeAll(this.tileEntitiesToBeRemoved);
-			this.loadedTileEntityList.removeAll(this.tileEntitiesToBeRemoved);
+			// Treasure Client (Lithium): one pass instead of searching the list once per removed block entity
+			java.util.Set<TileEntity> tcRemove = new java.util.HashSet<TileEntity>(this.tileEntitiesToBeRemoved);
+			net.minecraft.util.TCLithium.removeAll(this.tickableTileEntities, tcRemove);
+			net.minecraft.util.TCLithium.removeAll(this.loadedTileEntityList, tcRemove);
 			this.tileEntitiesToBeRemoved.clear();
 		}
 
 		this.processingLoadedTiles = true;
-		Iterator<TileEntity> iterator = this.tickableTileEntities.iterator();
+		// Treasure Client (Lithium): invalid block entities are collected and removed in one pass after the loop
+		java.util.Set<TileEntity> tcInvalid = null;
 
-		while (iterator.hasNext()) {
-			TileEntity tileentity = iterator.next();
+		for (int tcIdx = 0, tcCount = this.tickableTileEntities.size(); tcIdx < tcCount; ++tcIdx) {
+			TileEntity tileentity = this.tickableTileEntities.get(tcIdx);
 
 			if (!tileentity.isInvalid() && tileentity.hasWorldObj()) {
 				BlockPos blockpos = tileentity.getPos();
@@ -1529,13 +1539,20 @@ public abstract class World implements IBlockAccess {
 			}
 
 			if (tileentity.isInvalid()) {
-				iterator.remove();
-				this.loadedTileEntityList.remove(tileentity);
+				if (tcInvalid == null) {
+					tcInvalid = new java.util.HashSet<TileEntity>();
+				}
+				tcInvalid.add(tileentity);
 
 				if (this.isBlockLoaded(tileentity.getPos())) {
 					this.getChunkFromBlockCoords(tileentity.getPos()).removeTileEntity(tileentity.getPos());
 				}
 			}
+		}
+
+		if (tcInvalid != null) {
+			net.minecraft.util.TCLithium.removeAll(this.tickableTileEntities, tcInvalid);
+			net.minecraft.util.TCLithium.removeAll(this.loadedTileEntityList, tcInvalid);
 		}
 
 		this.processingLoadedTiles = false;

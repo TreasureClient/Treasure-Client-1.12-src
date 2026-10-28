@@ -39,8 +39,27 @@ public class ChunkProviderClient implements IChunkProvider {
 	 * Unload chunk from ChunkProviderClient's hashmap. Called in response to a
 	 * Packet50PreChunk with its mode field set to false
 	 */
+	// Treasure Client (Lithium): the last chunk looked up, since the same one is asked for many times in a row
+	private long tcLastKey;
+	private Chunk tcLastChunk;
+
+	private Chunk tcLookup(int x, int z) {
+		long key = ChunkPos.asLong(x, z);
+		Chunk c = this.tcLastChunk;
+		if (c != null && this.tcLastKey == key) {
+			return c;
+		}
+		c = this.chunkMapping.get(key);
+		if (c != null && net.minecraft.util.TCLithium.enabled) {
+			this.tcLastKey = key;
+			this.tcLastChunk = c;
+		}
+		return c;
+	}
+
 	public void unloadChunk(int x, int z) {
 		Chunk chunk = this.provideChunk(x, z);
+		this.tcLastChunk = null;
 
 		if (!chunk.isEmpty()) {
 			chunk.onChunkUnload();
@@ -55,7 +74,7 @@ public class ChunkProviderClient implements IChunkProvider {
 
 	@Nullable
 	public Chunk getLoadedChunk(int x, int z) {
-		return (Chunk) this.chunkMapping.get(ChunkPos.asLong(x, z));
+		return this.tcLookup(x, z);
 	}
 
 	/**
@@ -63,6 +82,7 @@ public class ChunkProviderClient implements IChunkProvider {
 	 */
 	public Chunk loadChunk(int chunkX, int chunkZ) {
 		Chunk chunk = new Chunk(this.worldObj, chunkX, chunkZ);
+		this.tcLastChunk = null;
 		this.chunkMapping.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
 		chunk.setChunkLoaded(true);
 		if (this.worldObj instanceof WorldClient) {
@@ -73,7 +93,7 @@ public class ChunkProviderClient implements IChunkProvider {
 	}
 
 	public Chunk provideChunk(int x, int z) {
-		Chunk chunk = this.chunkMapping.get(ChunkPos.asLong(x, z));
+		Chunk chunk = this.tcLookup(x, z);
 		return chunk == null ? this.blankChunk : chunk;
 	}
 

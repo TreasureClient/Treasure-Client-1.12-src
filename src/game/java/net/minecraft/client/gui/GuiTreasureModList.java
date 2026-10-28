@@ -107,6 +107,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("Lithium", "CaffeineMC", "LGPL-3.0",
+				"Faster collisions, chunk lookups and block entity lists, with the same results. Also speeds up singleplayer.",
+				"lithium") {
+			boolean setting() {
+				return TreasureMods.lithium();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("ImmediatelyFast", "RaphiMC", "LGPL-3.0",
 				"Cheaper name labels and signs: no rebuilding each name and re-measuring each sign line every frame, and no sign text past 32 blocks.",
 				"ifast") {

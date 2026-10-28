@@ -259,6 +259,9 @@ public class EntityBoat extends Entity {
 	 * Called to update the entity's position/logic.
 	 */
 	public void onUpdate() {
+		if (!this.isDead) {
+			this.world.tcHardEntities.add(this); // Treasure Client (Lithium): stay counted as an entity you can bump into
+		}
 		this.previousStatus = this.status;
 		this.status = this.getBoatStatus();
 
