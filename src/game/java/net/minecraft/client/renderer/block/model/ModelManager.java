@@ -21,6 +21,7 @@ public class ModelManager implements IResourceManagerReloadListener {
 		ModelBakery modelbakery = new ModelBakery(resourceManager, this.texMap, this.modelProvider);
 		this.modelRegistry = modelbakery.setupModelRegistry();
 		TCModelDedup.dedupe(this.modelRegistry); // Treasure Client (FoamFix)
+		net.minecraft.client.renderer.texture.TCTexFix.sweep(this.texMap); // Treasure Client (TexFix)
 		this.defaultModel = this.modelRegistry.getObject(ModelBakery.MODEL_MISSING);
 		this.modelProvider.reloadModels();
 	}
