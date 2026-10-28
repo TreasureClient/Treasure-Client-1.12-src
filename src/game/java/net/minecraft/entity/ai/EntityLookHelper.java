@@ -26,6 +26,12 @@ public class EntityLookHelper {
 	private double posY;
 	private double posZ;
 
+	// Treasure Client (inspired by AI Improvements): the last direction worked out and
+	// its angles. Mobs usually keep looking at something that hasn't moved relative to
+	// them, so the square root and two arctangents can be skipped.
+	private double tcDx = Double.NaN, tcDy, tcDz;
+	private float tcYaw, tcPitch;
+
 	public EntityLookHelper(EntityLiving entitylivingIn) {
 		this.entity = entitylivingIn;
 	}
@@ -71,9 +77,20 @@ public class EntityLookHelper {
 			double d0 = this.posX - this.entity.posX;
 			double d1 = this.posY - (this.entity.posY + (double) this.entity.getEyeHeight());
 			double d2 = this.posZ - this.entity.posZ;
-			double d3 = (double) MathHelper.sqrt(d0 * d0 + d2 * d2);
-			float f = (float) (MathHelper.atan2(d2, d0) * (180D / Math.PI)) - 90.0F;
-			float f1 = (float) (-(MathHelper.atan2(d1, d3) * (180D / Math.PI)));
+			float f, f1;
+			if (d0 == this.tcDx && d1 == this.tcDy && d2 == this.tcDz) {
+				f = this.tcYaw;
+				f1 = this.tcPitch;
+			} else {
+				double d3 = (double) MathHelper.sqrt(d0 * d0 + d2 * d2);
+				f = (float) (MathHelper.atan2(d2, d0) * (180D / Math.PI)) - 90.0F;
+				f1 = (float) (-(MathHelper.atan2(d1, d3) * (180D / Math.PI)));
+				this.tcDx = d0;
+				this.tcDy = d1;
+				this.tcDz = d2;
+				this.tcYaw = f;
+				this.tcPitch = f1;
+			}
 			this.entity.rotationPitch = this.updateRotation(this.entity.rotationPitch, f1, this.deltaLookPitch);
 			this.entity.rotationYawHead = this.updateRotation(this.entity.rotationYawHead, f, this.deltaLookYaw);
 		} else {

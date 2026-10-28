@@ -1213,6 +1213,26 @@ public class Minecraft implements IThreadListener {
 	/**
 	 * Called when user clicked he's mouse right button (place)
 	 */
+	/**
+	 * Treasure Client: the server decides when food is finished, usually a tick or two
+	 * after the animation ends on screen. Letting go of right-click at the end of the
+	 * animation sent "stop eating" first and the golden apple was not eaten. When the
+	 * food is (nearly) done on screen, hold the release back for up to a second so the
+	 * server can finish it. Bows and shields still release right away.
+	 */
+	private boolean tcHoldEatRelease() {
+		ItemStack s = this.player.getActiveItemStack();
+		if (s.func_190926_b()) {
+			return false;
+		}
+		net.minecraft.item.EnumAction a = s.getItemUseAction();
+		if (a != net.minecraft.item.EnumAction.EAT && a != net.minecraft.item.EnumAction.DRINK) {
+			return false;
+		}
+		int left = this.player.getItemInUseCount();
+		return left <= 3 && left > -20;
+	}
+
 	private void rightClickMouse() {
 		if (!this.playerController.getIsHittingBlock()) {
 			this.rightClickDelayTimer = 4;
@@ -1771,7 +1791,7 @@ public class Minecraft implements IThreadListener {
 		}
 
 		if (this.player.isHandActive()) {
-			if (!this.gameSettings.keyBindUseItem.isKeyDown()) {
+			if (!this.gameSettings.keyBindUseItem.isKeyDown() && !this.tcHoldEatRelease()) {
 				this.playerController.onStoppedUsingItem(this.player);
 			}
 
