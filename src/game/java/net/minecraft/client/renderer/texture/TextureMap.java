@@ -280,6 +280,14 @@ public class TextureMap extends AbstractTexture implements ITickableTextureObjec
 		boolean any = false;
 		for (int j = 0, l = this.listAnimatedSprites.size(); j < l; ++j) {
 			TextureAtlasSprite s = this.listAnimatedSprites.get(j);
+			// Treasure Client (Celeritas Extra): animation switches
+			if (s.tcAnimGroup < 0) {
+				s.tcAnimGroup = net.minecraft.client.renderer.TCExtra.classify(s.getIconName());
+			}
+			if (!net.minecraft.client.renderer.TCExtra.animates(s.tcAnimGroup)) {
+				s.tcCopy = false;
+				continue;
+			}
 			s.updateAnimation();
 			if (TCAnimTracker.isVisible(s)) {
 				if (s.tcStale) {

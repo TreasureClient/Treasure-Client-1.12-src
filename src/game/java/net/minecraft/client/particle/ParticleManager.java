@@ -399,6 +399,7 @@ public class ParticleManager {
 	}
 
 	public void addBlockDestroyEffects(BlockPos pos, IBlockState state) {
+		if (!net.minecraft.client.renderer.TCExtra.breakParticles) return; // Treasure Client (Celeritas Extra)
 		if (state.getMaterial() != Material.AIR) {
 			state = state.getActualState(this.worldObj, pos);
 			int i = 4;
@@ -423,6 +424,7 @@ public class ParticleManager {
 	 * Adds block hit particles for the specified block
 	 */
 	public void addBlockHitEffects(BlockPos pos, EnumFacing side) {
+		if (!net.minecraft.client.renderer.TCExtra.hitParticles) return; // Treasure Client (Celeritas Extra)
 		IBlockState iblockstate = this.worldObj.getBlockState(pos);
 
 		if (iblockstate.getRenderType() != EnumBlockRenderType.INVISIBLE) {

@@ -24,6 +24,7 @@ public class TileEntityPistonRenderer extends TileEntitySpecialRenderer<TileEnti
 
 	public void func_192841_a(TileEntityPiston p_192841_1_, double p_192841_2_, double p_192841_4_, double p_192841_6_,
 			float p_192841_8_, int p_192841_9_, float p_192841_10_) {
+		if (!net.minecraft.client.renderer.TCExtra.pistons) return; // Treasure Client (Celeritas Extra)
 		BlockPos blockpos = p_192841_1_.getPos();
 		IBlockState iblockstate = p_192841_1_.getPistonState();
 		Block block = iblockstate.getBlock();

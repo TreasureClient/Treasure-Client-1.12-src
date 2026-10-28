@@ -1175,6 +1175,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 	}
 
 	public void renderSky(float partialTicks, int pass) {
+		if (!TCExtra.sky) return; // Treasure Client (Celeritas Extra)
 		if (this.mc.world.provider.getDimensionType().getId() == 1) {
 			this.renderSkyEnd();
 		} else if (this.mc.world.provider.isSurfaceWorld()) {
@@ -1260,14 +1261,16 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			GlStateManager.color(1.0F, 1.0F, 1.0F, f16);
 			GlStateManager.rotate(-90.0F, 0.0F, 1.0F, 0.0F);
 			GlStateManager.rotate(this.theWorld.getCelestialAngle(partialTicks) * 360.0F, 1.0F, 0.0F, 0.0F);
-			this.renderEngine.bindTexture(SUN_TEXTURES);
-			GlStateManager.callList(glSunList);
-			this.renderEngine.bindTexture(MOON_PHASES_TEXTURES);
-			GlStateManager.callList(getMoonList(this.theWorld.getMoonPhase()));
+			if (TCExtra.sunMoon) { // Treasure Client (Celeritas Extra)
+				this.renderEngine.bindTexture(SUN_TEXTURES);
+				GlStateManager.callList(glSunList);
+				this.renderEngine.bindTexture(MOON_PHASES_TEXTURES);
+				GlStateManager.callList(getMoonList(this.theWorld.getMoonPhase()));
+			}
 			GlStateManager.disableTexture2D();
 			float f15 = this.theWorld.getStarBrightness(partialTicks) * f16;
 
-			if (f15 > 0.0F) {
+			if (f15 > 0.0F && TCExtra.stars) { // Treasure Client (Celeritas Extra)
 				GlStateManager.color(f15, f15, f15, f15);
 
 				GlStateManager.callList(this.starGLCallList);
