@@ -66,6 +66,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 			return;
 		}
 
+		net.minecraft.client.TCLagMonitor.packets += pkts.size(); // Treasure Client: lag monitor
 		for(int i = 0, l = pkts.size(); i < l; ++i) {
 			IWebSocketFrame next = pkts.get(i);
 			++debugPacketCounter;
