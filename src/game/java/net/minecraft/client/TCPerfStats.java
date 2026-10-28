@@ -136,7 +136,7 @@ public final class TCPerfStats {
 	}
 
 	/** Used and max page memory in MB, shared by the overlay (Chrome only), or null. */
-	private static long[] pageMemory() {
+	static long[] pageMemory() {
 		try {
 			byte[] b = EagRuntime.getStorage("tcheap");
 			if (b == null) {
