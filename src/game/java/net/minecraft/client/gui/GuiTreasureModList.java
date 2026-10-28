@@ -163,6 +163,32 @@ public class GuiTreasureModList extends GuiScreen {
 				return "§aOn §7· built into loading";
 			}
 		});
+		this.entries.add(new Entry("BetterFps", "Treasure Client, inspired by Guichaguri", "Built in",
+				"Faster sine and cosine math from a small table (the same numbers as OptiFine's Fast Math, so anticheats accept it), and hoppers with a solid block on top stop searching for dropped items.",
+				"bfmath") {
+			boolean setting() {
+				return TreasureMods.betterFpsMath();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off §8(hoppers stay fast)";
+			}
+		});
+		this.entries.add(new Entry("AI Improvements", "Treasure Client, inspired by QueenOfMissiles", "Built in",
+				"Mobs reuse their last head-turn angles while what they look at hasn't moved, skipping costly math. Mobs only run in singleplayer, so this speeds up singleplayer worlds.",
+				"aiimprove") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn §7· singleplayer";
+			}
+		});
 		this.entries.add(new Entry("Celeritas Extra", "Sumire-Labs", "LGPL-3.0",
 				"Extra switches for animations, particles, sky, weather, item frames, armor stands, paintings, beacon beams, enchanting books, pistons and toasts. Set them with the gear in Treasure Settings.",
 				"cextra") {

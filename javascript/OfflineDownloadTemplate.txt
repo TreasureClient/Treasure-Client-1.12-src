@@ -760,6 +760,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>ImmediatelyFast</b><i>Cheaper name labels and signs, which lobbies are full of</i></div><div class="tc-sw on" data-mod="ifast"><i></i></div></div>
               <div class="tc-row"><div class="tc-lab"><b>Dynamic FPS</b><i>Drop to 10 FPS while another window is focused, so your device stays cool</i></div><div class="tc-sw on" data-mod="dynfps"><i></i></div></div>
               <div class="tc-row"><div class="tc-lab"><b>Memory Saver</b><i>Stop idle singleplayer on servers and free unused sounds sooner</i></div><div class="tc-sw on" data-mod="memsaver"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>BetterFps</b><i>Faster math for angles, same numbers as OptiFine Fast Math</i></div><div class="tc-sw on" data-mod="bfmath"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Celeritas Extra</b><i>Turn off animations, particles, sky parts and more for extra FPS</i></div><button class="tc-gear" data-gear="cecfg" aria-label="Settings">⚙</button><div class="tc-sw on" data-mod="cextra"><i></i></div></div>
@@ -992,7 +993,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', hudFps:'60', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', hudFps:'60', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1120,6 +1121,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'ifast=' + (state.ifast === false ? 0 : 1),
           'dynfps=' + (state.dynfps === false ? 0 : 1),
           'memsaver=' + (state.memsaver === false ? 0 : 1),
+          'bfmath=' + (state.bfmath === false ? 0 : 1),
           'cextra=' + (state.cextra === false ? 0 : 1),
           'ceAnim=' + (state.ceAnim === false ? 0 : 1),
           'ceAnimWater=' + (state.ceAnimWater === false ? 0 : 1),
@@ -1290,7 +1292,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra')) return;
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra' && kv[0] !== 'bfmath')) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;

@@ -159,6 +159,7 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 	/** The amount of time an entity has been in a Portal the previous tick */
 	public float prevTimeInPortal;
 	private boolean handActive;
+	private int tcUseStartTick = -1000; // Treasure Client: when the current item use started
 	private EnumHand activeHand;
 	private boolean rowingBoat;
 	private boolean autoJumpEnabled = true;
@@ -643,6 +644,7 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 			super.setActiveHand(hand);
 			this.handActive = true;
 			this.activeHand = hand;
+			this.tcUseStartTick = this.ticksExisted;
 		}
 	}
 
@@ -669,7 +671,10 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 
 			if (flag && !this.handActive) {
 				this.setActiveHand(enumhand);
-			} else if (!flag && this.handActive) {
+			} else if (!flag && this.handActive && this.ticksExisted - this.tcUseStartTick >= 10) {
+				// Treasure Client: a "stopped using" flag that arrives right after we start
+				// eating again is the server's late message about the previous apple.
+				// Acting on it cancelled back-to-back golden apples.
 				this.resetActiveHand();
 			}
 		}

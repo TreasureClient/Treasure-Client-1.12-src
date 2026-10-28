@@ -11,6 +11,12 @@ public class MathHelper {
 	 * steps of 2*PI / 65536.
 	 */
 	private static final float[] SIN_TABLE = new float[65536];
+	// Treasure Client (BetterFps): a 4096-entry table, same values as OptiFine's Fast Math
+	// so server anticheats that know OptiFine accept it. 16 KB instead of 256 KB stays in
+	// the CPU cache. Turned on by the client only; singleplayer's server stays vanilla.
+	public static boolean tcFastMath = false;
+	private static final float[] SIN_TABLE_FAST = new float[4096];
+	private static final float RAD_TO_INDEX_FAST = (float) ((double) Math.round(651.8986469044033D * 1.0E8D) / 1.0E8D);
 	private static final EaglercraftRandom RANDOM = new EaglercraftRandom();
 
 	/**
@@ -31,6 +37,7 @@ public class MathHelper {
 	 * sin looked up in a table
 	 */
 	public static float sin(float value) {
+		if (tcFastMath) return SIN_TABLE_FAST[(int) (value * RAD_TO_INDEX_FAST) & 4095];
 		return SIN_TABLE[(int) (value * 10430.378F) & 65535];
 	}
 
@@ -38,6 +45,7 @@ public class MathHelper {
 	 * cos looked up in the sin table with the appropriate offset
 	 */
 	public static float cos(float value) {
+		if (tcFastMath) return SIN_TABLE_FAST[(int) (value * RAD_TO_INDEX_FAST + 1024.0F) & 4095];
 		return SIN_TABLE[(int) (value * 10430.378F + 16384.0F) & 65535];
 	}
 
@@ -550,6 +558,9 @@ public class MathHelper {
 	static {
 		for (int i = 0; i < 65536; ++i) {
 			SIN_TABLE[i] = (float) Math.sin((double) i * 3.14159265358979323846 * 2.0D / 65536.0D);
+		}
+		for (int i = 0; i < 4096; ++i) {
+			SIN_TABLE_FAST[i] = (float) ((double) Math.round(Math.sin((double) i * Math.PI * 2.0D / 4096.0D) * 1.0E8D) / 1.0E8D);
 		}
 
 		MULTIPLY_DE_BRUIJN_BIT_POSITION = new int[] { 0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 31, 27,

@@ -266,6 +266,11 @@ public class TileEntityHopper extends TileEntityLockableLoot implements IHopper,
 		return true;
 	}
 
+	private static boolean tcTopBlocked(TileEntityHopper hopper) {
+		net.minecraft.block.state.IBlockState state = hopper.getWorld().getBlockState(hopper.getPos().up());
+		return state.isOpaqueCube() || state.isFullCube();
+	}
+
 	public static boolean captureDroppedItems(IHopper hopper) {
 		IInventory iinventory = getHopperInventory(hopper);
 
@@ -294,6 +299,10 @@ public class TileEntityHopper extends TileEntityLockableLoot implements IHopper,
 					}
 				}
 			}
+		} else if (hopper instanceof TileEntityHopper && tcTopBlocked((TileEntityHopper) hopper)) {
+			// Treasure Client (BetterFps fast hopper): a solid block on top means no items can
+			// be lying there, so skip searching for dropped items
+			return false;
 		} else {
 			for (EntityItem entityitem : getCaptureItems(hopper.getWorld(), hopper.getXPos(), hopper.getYPos(),
 					hopper.getZPos())) {

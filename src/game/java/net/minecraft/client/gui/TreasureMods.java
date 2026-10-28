@@ -92,6 +92,9 @@ public class TreasureMods {
 	// Enhanced Block Entities: chests and beds baked into the chunk mesh. Default ON; overlay writes ebe=0 to turn it off.
 	private static boolean ebe = true;
 	private static boolean appliedEbe = true;
+	// BetterFps fast math (OptiFine-compatible sine table). Default ON; overlay writes bfmath=0 to turn it off.
+	private static boolean bfMath = true;
+	public static boolean betterFpsMath() { return bfMath; }
 	// Celeritas Leaf Culling mode (TCLeafCulling.OFF/HOLLOW/SOLID_AGGRESSIVE/SOLID). Default SOLID, like the original mod.
 	private static int leafCull = net.minecraft.block.TCLeafCulling.SOLID;
 	public static int leafCulling() { return leafCull; }
@@ -307,6 +310,7 @@ public class TreasureMods {
 			iFast = true;
 			lithium = true;
 			memSaver = true;
+			bfMath = true;
 			hudFps = 60;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
@@ -349,6 +353,7 @@ public class TreasureMods {
 				else if (k.equals("ifast")) iFast = v.equals("1");
 				else if (k.equals("lithium")) lithium = v.equals("1");
 				else if (k.equals("memsaver")) memSaver = v.equals("1");
+				else if (k.equals("bfmath")) bfMath = v.equals("1");
 				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
 				else if (k.equals("oldAnim")) oldAnim = v.equals("1");
@@ -424,6 +429,7 @@ public class TreasureMods {
 			// Memory Saver
 			applyMemorySaver(mc);
 			net.minecraft.util.TCLithium.enabled = lithium;
+			net.minecraft.util.math.MathHelper.tcFastMath = bfMath;
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
 			// Leaf Culling mode changed: rebuild chunk meshes with the new leaf faces
