@@ -84,7 +84,7 @@ public abstract class Render<T extends Entity> {
 
 	protected void renderName(T entity, double x, double y, double z) {
 		if (this.canRenderName(entity)) {
-			this.renderLivingLabel(entity, entity.getDisplayName().getFormattedText(), x, y, z, 64);
+			this.renderLivingLabel(entity, net.minecraft.client.renderer.TCFastText.labelText(entity), x, y, z, 64);
 		}
 	}
 

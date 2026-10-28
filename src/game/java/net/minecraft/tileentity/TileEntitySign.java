@@ -19,6 +19,9 @@ import net.minecraft.util.text.event.ClickEvent;
 import net.minecraft.world.World;
 
 public class TileEntitySign extends TileEntity {
+	/** Treasure Client (ImmediatelyFast): each line's text as drawn, and the text it was made from. */
+	public String[] tcLine;
+	public net.minecraft.util.text.ITextComponent[] tcLineFrom;
 	public final ITextComponent[] signText = new ITextComponent[] { new TextComponentString(""),
 			new TextComponentString(""), new TextComponentString(""), new TextComponentString("") };
 

@@ -78,13 +78,12 @@ public class TileEntitySignRenderer extends TileEntitySpecialRenderer<TileEntity
 		GlStateManager.depthMask(false);
 		int i = 0;
 
-		if (p_192841_9_ < 0) {
+		// Treasure Client (ImmediatelyFast): skip unreadably far text, reuse each line's layout
+		double tcDistSq = p_192841_2_ * p_192841_2_ + p_192841_4_ * p_192841_4_ + p_192841_6_ * p_192841_6_;
+		if (p_192841_9_ < 0 && net.minecraft.client.renderer.TCFastText.drawSignText(tcDistSq)) {
 			for (int j = 0; j < p_192841_1_.signText.length; ++j) {
 				if (p_192841_1_.signText[j] != null) {
-					ITextComponent itextcomponent = p_192841_1_.signText[j];
-					List<ITextComponent> list = GuiUtilRenderComponents.splitText(itextcomponent, 90, fontrenderer,
-							false, true);
-					String s = list != null && !list.isEmpty() ? ((ITextComponent) list.get(0)).getFormattedText() : "";
+					String s = net.minecraft.client.renderer.TCFastText.signLine(p_192841_1_, j, fontrenderer);
 
 					if (j == p_192841_1_.lineBeingEdited) {
 						s = "> " + s + " <";
