@@ -1024,7 +1024,11 @@ public class Minecraft implements IThreadListener {
 		} else {
 			this.gameSettings.enableVsync = false;
 		}
-		if (!this.gameSettings.enableVsync && this.isFramerateLimitBelowMax()) {
+		if (net.minecraft.client.gui.TreasureMods.dynamicFps() && !Display.isActive()) {
+			// Treasure Client: Dynamic FPS, 10 FPS while another window is focused
+			Display.setVSync(false);
+			Display.update(10);
+		} else if (!this.gameSettings.enableVsync && this.isFramerateLimitBelowMax()) {
 			Display.update(this.getLimitFramerate());
 		} else {
 			Display.update(0);

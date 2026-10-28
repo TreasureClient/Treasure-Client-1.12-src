@@ -29,6 +29,16 @@ import net.minecraft.potion.PotionEffect;
 public class TreasureHud {
 
 	private static long lastPush = 0L;
+	private static String lastPushed = null;
+
+	/** Writes the HUD text only when it changed (each storage write costs the browser real work). */
+	private static void push(String s) {
+		if (s.equals(lastPushed)) {
+			return;
+		}
+		lastPushed = s;
+		EagRuntime.setStorage("tchud", s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+	}
 
 	public static void tick(Minecraft mc) {
 		try {
@@ -40,7 +50,7 @@ public class TreasureHud {
 
 			EntityPlayer player = mc.player;
 			if (player == null) {
-				EagRuntime.setStorage("tchud", "active=0".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+				push("active=0");
 				return;
 			}
 
@@ -115,7 +125,7 @@ public class TreasureHud {
 				}
 			} catch (Throwable t) { sb.append("held=-\n"); }
 
-			EagRuntime.setStorage("tchud", sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			push(sb.toString());
 		} catch (Throwable t) {
 			// never let HUD reporting break the game loop
 		}

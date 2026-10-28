@@ -107,6 +107,28 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("Dynamic FPS", "juliand665", "MIT",
+				"Drops to 10 FPS while another window is focused, so the game doesn't heat up your device in the background.",
+				"dynfps") {
+			boolean setting() {
+				return TreasureMods.dynamicFps();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
+		this.entries.add(new Entry("Memory Saver", "Treasure Client", "Built in",
+				"Stops the idle singleplayer engine while you're on a server and frees unused sounds after 2 minutes instead of 10.",
+				"memsaver") {
+			boolean setting() {
+				return TreasureMods.memorySaver();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("VanillaFix", "DimensionalDevelopment", "MIT",
 				"Recovers from crashes instead of closing the game, and fixes Minecraft bugs (menus in portals, camera in grass, a memory leak).",
 				"vanillafix") {
