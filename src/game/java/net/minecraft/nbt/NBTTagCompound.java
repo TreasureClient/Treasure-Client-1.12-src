@@ -498,7 +498,7 @@ public class NBTTagCompound extends NBTBase {
 	}
 
 	private static String readKey(DataInput input, NBTSizeTracker sizeTracker) throws IOException {
-		return input.readUTF();
+		return net.minecraft.util.TCCanon.of(input.readUTF()); // Treasure Client (CensoredASM): shared tag names
 	}
 
 	static NBTBase readNBT(byte id, String key, DataInput input, int depth, NBTSizeTracker sizeTracker)

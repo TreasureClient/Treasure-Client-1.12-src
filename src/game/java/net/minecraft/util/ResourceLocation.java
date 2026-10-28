@@ -20,9 +20,10 @@ public class ResourceLocation implements Comparable<ResourceLocation> {
 	public static final int CACHED_POINTER_EAGLER_MESH = 2;
 
 	protected ResourceLocation(int unused, String... resourceName) {
+		// Treasure Client (CensoredASM): share one copy of each domain and path string
 		this.resourceDomain = org.apache.commons.lang3.StringUtils.isEmpty(resourceName[0]) ? "minecraft"
-				: resourceName[0].toLowerCase();
-		this.resourcePath = resourceName[1].toLowerCase();
+				: TCCanon.of(resourceName[0].toLowerCase());
+		this.resourcePath = TCCanon.of(resourceName[1].toLowerCase());
 		Validate.notNull(this.resourcePath);
 	}
 

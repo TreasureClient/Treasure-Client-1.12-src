@@ -27,7 +27,7 @@ public class LockCode {
 	public static LockCode fromNBT(NBTTagCompound nbt) {
 		if (nbt.hasKey("Lock", 8)) {
 			String s = nbt.getString("Lock");
-			return new LockCode(s);
+			return s.isEmpty() ? EMPTY_CODE : new LockCode(s); // Treasure Client (CensoredASM)
 		} else {
 			return EMPTY_CODE;
 		}

@@ -56,7 +56,7 @@ public class TextureAtlasSprite {
 	protected TextureAnimationCache animationCache = null;
 
 	protected TextureAtlasSprite(String spriteName) {
-		this.iconName = spriteName;
+		this.iconName = net.minecraft.util.TCCanon.of(spriteName); // Treasure Client (CensoredASM)
 	}
 
 	protected static TextureAtlasSprite makeAtlasSprite(ResourceLocation spriteResourceLocation) {

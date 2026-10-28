@@ -1966,7 +1966,7 @@ public class Minecraft implements IThreadListener {
 			this.player = null;
 		}
 
-		System.gc();
+		// Treasure Client (CensoredASM): no forced garbage collection on world load
 		this.systemTime = 0L;
 	}
 
