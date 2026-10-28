@@ -19,6 +19,11 @@ public class MultipartBakedModel implements IBakedModel {
 	protected final ItemCameraTransforms cameraTransforms;
 	protected final ItemOverrideList overrides;
 
+	/** Treasure Client (FoamFix): the part models, for model deduplication. */
+	Map<Predicate<IBlockState>, IBakedModel> tcSelectors() {
+		return this.selectors;
+	}
+
 	public MultipartBakedModel(Map<Predicate<IBlockState>, IBakedModel> selectorsIn) {
 		this.selectors = selectorsIn;
 		IBakedModel ibakedmodel = selectorsIn.values().iterator().next();

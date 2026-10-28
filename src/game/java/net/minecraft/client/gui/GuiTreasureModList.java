@@ -43,6 +43,11 @@ public class GuiTreasureModList extends GuiScreen {
 			return true;
 		}
 
+		/** Built into how the game loads, so it has no switch. */
+		boolean alwaysOn() {
+			return false;
+		}
+
 		abstract String status(boolean on);
 
 		boolean shownOn() {
@@ -105,6 +110,21 @@ public class GuiTreasureModList extends GuiScreen {
 
 			String status(boolean on) {
 				return on ? "§aOn" : "§7Off";
+			}
+		});
+		this.entries.add(new Entry("FoamFix", "Treasure Client, inspired by asie", "Built in",
+				"Less memory and a faster start: block states share one compact lookup instead of a table each, and identical model faces are stored once.",
+				"foamfix") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn §7· built into loading";
 			}
 		});
 		this.entries.add(new Entry("Lithium", "CaffeineMC", "LGPL-3.0",
@@ -212,8 +232,9 @@ public class GuiTreasureModList extends GuiScreen {
 				e.pending = null; // the game has picked up the change
 			}
 			GuiButton b = this.toggles.get(i);
-			b.enabled = e.available();
-			b.displayString = !e.available() ? "Unavailable" : (e.shownOn() ? "§aEnabled" : "§cDisabled");
+			b.enabled = e.available() && !e.alwaysOn();
+			b.displayString = e.alwaysOn() ? "§aAlways on"
+					: !e.available() ? "Unavailable" : (e.shownOn() ? "§aEnabled" : "§cDisabled");
 		}
 	}
 
@@ -248,7 +269,7 @@ public class GuiTreasureModList extends GuiScreen {
 			int top = entryTop(i);
 			int h = entryHeight();
 			drawRect(left, top, left + PANEL_WIDTH, top + h, 0xA0000000);
-			drawRect(left, top, left + 2, top + h, e.shownOn() && e.available() ? 0xFFF5C542 : 0xFF555555);
+			drawRect(left, top, left + 2, top + h, (e.alwaysOn() || e.shownOn()) && e.available() ? 0xFFF5C542 : 0xFF555555);
 			int x = left + 8;
 			this.fontRendererObj.drawStringWithShadow("§l" + e.name, x, top + 8, 0xFFE08A);
 			this.fontRendererObj.drawStringWithShadow("§7by " + e.by + " · " + e.license, x, top + 19, 0xFFFFFF);

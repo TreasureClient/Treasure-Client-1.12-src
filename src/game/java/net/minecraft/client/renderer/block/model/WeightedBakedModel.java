@@ -15,6 +15,11 @@ public class WeightedBakedModel implements IBakedModel {
 	private final List<WeightedBakedModel.WeightedModel> models;
 	private final IBakedModel baseModel;
 
+	/** Treasure Client (FoamFix): the models this picks from, for model deduplication. */
+	List<WeightedBakedModel.WeightedModel> tcModels() {
+		return this.models;
+	}
+
 	public WeightedBakedModel(List<WeightedBakedModel.WeightedModel> modelsIn) {
 		this.models = modelsIn;
 		this.totalWeight = WeightedRandom.getTotalWeight(modelsIn);
