@@ -117,6 +117,11 @@ public class TileEntityRendererDispatcher {
 	}
 
 	public void renderTileEntity(TileEntity tileentityIn, float partialTicks, int destroyStage) {
+		// Treasure Client: Enhanced Block Entities, this block is already drawn in the chunk mesh
+		// (break cracks still come through here, with destroyStage >= 0)
+		if (destroyStage == -1 && net.minecraft.client.renderer.TCBlockEntities.skipRenderer(tileentityIn)) {
+			return;
+		}
 		if (tileentityIn.getDistanceSq(this.entityX, this.entityY, this.entityZ) < tileentityIn
 				.getMaxRenderDistanceSquared()
 				&& (destroyStage != -1 || net.minecraft.client.renderer.TCEntityCulling.isVisible(tileentityIn))) {

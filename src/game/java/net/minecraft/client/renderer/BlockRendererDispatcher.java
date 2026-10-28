@@ -67,7 +67,9 @@ public class BlockRendererDispatcher implements IResourceManagerReloadListener {
 					break;
 
 				case ENTITYBLOCK_ANIMATED:
-					res = false;
+					// Treasure Client: Enhanced Block Entities bakes chests and beds into the chunk mesh
+					res = net.minecraft.client.renderer.TCBlockEntities.renderBlock(this.blockModelRenderer, blockAccess,
+							state, pos, worldRendererIn);
 					break;
 
 				case LIQUID:

@@ -564,7 +564,10 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 					boolean shouldRender = this.renderManager.shouldRender(entity2, camera, d0, d1, d2)
 							|| entity2.isRidingOrBeingRiddenBy(this.mc.player);
 
-					if (shouldRender && org.taumc.celeritas.impl.TreasureCeleritas.isEntityVisible(entity2)
+					// Players are never hidden by Celeritas' chunk check: in PvP a missing player is
+					// much worse than a few extra draws (they could vanish at a distance before)
+					if (shouldRender && (entity2 instanceof EntityPlayer
+							|| org.taumc.celeritas.impl.TreasureCeleritas.isEntityVisible(entity2))
 							&& TCEntityCulling.isVisible(entity2)) {
 						boolean flag1 = this.mc.getRenderViewEntity() instanceof EntityLivingBase
 								? ((EntityLivingBase) this.mc.getRenderViewEntity()).isPlayerSleeping()

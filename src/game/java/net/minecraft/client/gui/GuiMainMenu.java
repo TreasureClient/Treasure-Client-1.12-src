@@ -544,60 +544,10 @@ public class GuiMainMenu extends GuiScreen {
 	 * whole screen (behind the buttons), the same way the panorama blit does.
 	 */
 	private void drawBgTexture(ResourceLocation tex) {
-		GlStateManager.disableDepth();
-		GlStateManager.depthMask(false);
-		GlStateManager.enableTexture2D();
-		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		this.mc.getTextureManager().bindTexture(tex);
-		// Linear filtering so the stretched/blurred photo isn't nearest-neighbor
-		// pixelated (3553=GL_TEXTURE_2D, 10241/10240=MIN/MAG, 9729=GL_LINEAR).
-		EaglercraftGPU.glTexParameteri(3553, 10241, 9729);
-		EaglercraftGPU.glTexParameteri(3553, 10240, 9729);
-
-		// Slow horizontal pan (eases left <-> right) with a slight zoom, so the
-		// sampled sub-rect always drifts within the image and never shows an edge.
-		float t = (float) Minecraft.getSystemTime();
-		float zoom = 0.82F;
-		float margin = 1.0F - zoom;
-		float panX = (MathHelper.sin(t / 9000.0F) * 0.5F + 0.5F) * margin; // 0..margin
-		float panY = margin * 0.5F; // vertically centered
-		float u0 = panX, u1 = panX + zoom;
-		float v0 = panY, v1 = panY + zoom;
-
-		// Cheap multi-tap "blur": an opaque base plus 8 low-alpha copies at small
-		// screen-space offsets, so the background reads as soft/blurred — no shaders.
-		GlStateManager.enableBlend();
-		GlStateManager.blendFunc(770, 771); // GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
-		// Larger radius + two concentric rings of samples (16 taps) give a soft,
-		// smooth gaussian-like blur instead of the old blocky 8-tap pass.
-		float r = Math.max(3.0F, this.width / 150.0F);
-		blitBg(u0, v0, u1, v1, 0.0F, 0.0F, 255);
-		float[][] ring = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
-				{ 0.7F, 0.7F }, { -0.7F, -0.7F }, { 0.7F, -0.7F }, { -0.7F, 0.7F } };
-		for (int i = 0; i < ring.length; i++) {
-			// inner ring (stronger) then a wider outer ring (fainter) for softness
-			blitBg(u0, v0, u1, v1, ring[i][0] * r, ring[i][1] * r, 42);
-			blitBg(u0, v0, u1, v1, ring[i][0] * r * 2.2F, ring[i][1] * r * 2.2F, 24);
-		}
-		GlStateManager.disableBlend();
-
-		GlStateManager.depthMask(true);
-		GlStateManager.enableDepth();
+		// pre-blurred once and drawn in one pass (see TreasureBackground.drawBlurredBg)
+		TreasureBackground.drawBlurredBg(tex, this.width, this.height, this.zLevel);
 	}
 
-	/** Draw the full-screen background quad with a tex sub-rect, pixel offset and alpha. */
-	private void blitBg(float u0, float v0, float u1, float v1, float ox, float oy, int a) {
-		Tessellator tessellator = Tessellator.getInstance();
-		WorldRenderer bufferbuilder = tessellator.getBuffer();
-		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
-		double z = (double) this.zLevel;
-		double x0 = ox, y0 = oy, x1 = this.width + ox, y1 = this.height + oy;
-		bufferbuilder.pos(x0, y1, z).tex((double) u0, (double) v1).color(255, 255, 255, a).endVertex();
-		bufferbuilder.pos(x1, y1, z).tex((double) u1, (double) v1).color(255, 255, 255, a).endVertex();
-		bufferbuilder.pos(x1, y0, z).tex((double) u1, (double) v0).color(255, 255, 255, a).endVertex();
-		bufferbuilder.pos(x0, y0, z).tex((double) u0, (double) v0).color(255, 255, 255, a).endVertex();
-		tessellator.draw();
-	}
 
 	/** Treasure Client: the chest logo texture for the active theme. */
 	private ResourceLocation activeLogo() {

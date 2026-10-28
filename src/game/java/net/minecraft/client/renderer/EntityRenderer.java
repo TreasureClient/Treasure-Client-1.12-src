@@ -947,7 +947,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					this.setupOverlayRendering();
 					GlStateManager.alphaFunc(RealOpenGLEnums.GL_GREATER, 0.1F);
 					long framebufferAge = this.overlayFramebuffer.getAge();
-					if (framebufferAge == -1l || framebufferAge > (Minecraft.getDebugFPS() < 25 ? 125l : 75l)) {
+					// Treasure Client: the HUD is drawn into a cached image and redrawn at the "HUD frame rate"
+					// setting (Eaglercraft used a fixed 8-13 FPS, which looked choppy)
+					if (framebufferAge == -1l || framebufferAge >= net.minecraft.client.gui.TreasureMods.hudRedrawMs()) {
 						this.overlayFramebuffer.beginRender(mc.displayWidth, mc.displayHeight);
 						GlStateManager.colorMask(true, true, true, true);
 						GlStateManager.clearColor(0.0f, 0.0f, 0.0f, 0.0f);

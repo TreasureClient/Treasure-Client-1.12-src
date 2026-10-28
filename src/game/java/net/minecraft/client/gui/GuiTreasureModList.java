@@ -96,6 +96,17 @@ public class GuiTreasureModList extends GuiScreen {
 						+ net.minecraft.client.renderer.TCEntityCulling.culledTiles + " block entities hidden";
 			}
 		});
+		this.entries.add(new Entry("Enhanced Block Entities", "FoundationGames", "LGPL-3.0",
+				"Draws chests, ender chests and beds as part of the world instead of one by one every frame. Chests switch back while their lid moves.",
+				"ebe") {
+			boolean setting() {
+				return TreasureMods.enhancedBlockEntities();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("VanillaFix", "DimensionalDevelopment", "MIT",
 				"Recovers from crashes instead of closing the game, and fixes Minecraft bugs (menus in portals, camera in grass, a memory leak).",
 				"vanillafix") {
