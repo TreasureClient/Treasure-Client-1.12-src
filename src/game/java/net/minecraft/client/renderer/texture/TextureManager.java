@@ -173,4 +173,9 @@ public class TextureManager implements ITickable, IResourceManagerReloadListener
             }
         }
 	}
+
+	/** Treasure Client: number of loaded textures, for the ".perf" readout. */
+	public int tcCount() {
+		return this.mapTextureObjects.size();
+	}
 }

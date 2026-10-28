@@ -513,4 +513,13 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
         this.playerUpdate = false;
         return flag;
     }
+
+	/** Treasure Client: sizes for the ".perf" readout. */
+	public int tcEntitySetSize() {
+		return this.entityList.size();
+	}
+
+	public int tcSpawnQueueSize() {
+		return this.entitySpawnQueue.size();
+	}
 }
