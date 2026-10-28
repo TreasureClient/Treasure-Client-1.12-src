@@ -98,6 +98,10 @@ public class TreasureMods {
 	private static boolean dynFps = true;
 	public static boolean dynamicFps() { return dynFps; }
 
+	// ImmediatelyFast: cheaper name labels and sign text. Default ON; overlay writes ifast=0 to turn it off.
+	private static boolean iFast = true;
+	public static boolean immediatelyFast() { return iFast; }
+
 	// Memory Saver: stop the idle singleplayer worker on servers, shorter sound cache. Default ON; overlay writes memsaver=0.
 	private static boolean memSaver = true;
 	public static boolean memorySaver() { return memSaver; }
@@ -293,6 +297,7 @@ public class TreasureMods {
 			vanillaFix = true;
 			ebe = true;
 			dynFps = true;
+			iFast = true;
 			memSaver = true;
 			hudFps = 60;
 			entityDistance = 0;
@@ -331,6 +336,7 @@ public class TreasureMods {
 				else if (k.equals("vanillafix")) vanillaFix = v.equals("1");
 				else if (k.equals("ebe")) ebe = v.equals("1");
 				else if (k.equals("dynfps")) dynFps = v.equals("1");
+				else if (k.equals("ifast")) iFast = v.equals("1");
 				else if (k.equals("memsaver")) memSaver = v.equals("1");
 				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
 				else if (k.equals("pcull")) particleCulling = v.equals("1");

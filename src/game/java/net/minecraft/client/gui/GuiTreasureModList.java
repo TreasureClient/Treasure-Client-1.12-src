@@ -107,6 +107,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("ImmediatelyFast", "RaphiMC", "LGPL-3.0",
+				"Cheaper name labels and signs: no rebuilding each name and re-measuring each sign line every frame, and no sign text past 32 blocks.",
+				"ifast") {
+			boolean setting() {
+				return TreasureMods.immediatelyFast();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("Dynamic FPS", "juliand665", "MIT",
 				"Drops to 10 FPS while another window is focused, so the game doesn't heat up your device in the background.",
 				"dynfps") {

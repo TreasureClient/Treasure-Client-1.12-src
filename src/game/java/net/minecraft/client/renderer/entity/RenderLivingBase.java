@@ -358,7 +358,7 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 			float f = entity.isSneaking() ? 32.0F : 64.0F;
 
 			if (d0 < (double) (f * f)) {
-				String s = entity.getDisplayName().getFormattedText();
+				String s = net.minecraft.client.renderer.TCFastText.labelText(entity);
 				GlStateManager.alphaFunc(516, 0.1F);
 				this.renderEntityName(entity, x, y, z, s, d0);
 			}
