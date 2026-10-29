@@ -759,6 +759,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
               <div class="tc-row"><div class="tc-lab"><b>Particle Core</b><i>Cheaper particle movement and fewer leftover particles</i></div><div class="tc-sw on" data-mod="pcore"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>C2ME</b><i>Smoother chunk loading: big bursts from the server load over a few ticks instead of freezing</i></div><div class="tc-sw on" data-mod="c2me"><i></i></div></div>
               <div class="tc-row"><div class="tc-lab"><b>Enhanced Block Entities</b><i>Draw chests and beds as part of the world, which is much faster</i></div><div class="tc-sw on" data-mod="ebe"><i></i></div></div>
               <div class="tc-row"><div class="tc-lab"><b>Lithium</b><i>Faster collisions, chunk lookups and block entity lists, same results</i></div><div class="tc-sw on" data-mod="lithium"><i></i></div></div>
               <div class="tc-row"><div class="tc-lab"><b>ImmediatelyFast</b><i>Fewer draw calls for the HUD, plus cheaper name labels and signs</i></div><div class="tc-sw on" data-mod="ifast"><i></i></div></div>
@@ -823,7 +824,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>Pause When Unfocused</b><i>Stop rendering when the tab loses focus</i></div><div class="tc-sw" data-mod="pauseUnfocused"><i></i></div></div>
             </div>
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Dynamic Resolution</b><i>Lowers the resolution a little when frames get slow, like when your device heats up <span class="tc-dynres-now"></span></i></div><div class="tc-sw on" data-mod="dynres"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Dynamic Resolution</b><i>Lowers the resolution a little when frames get slow, like when your device heats up <span class="tc-dynres-now"></span></i></div><div class="tc-sw" data-mod="dynResOn"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Render Resolution</b><i>Render the world at lower resolution for more FPS</i></div></div>
@@ -986,7 +987,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, dynfov:false, dynres:true, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1109,6 +1110,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'vanillafix=' + (state.vanillafix === false ? 0 : 1),
           'pcull=' + (state.pcull === false ? 0 : 1),
           'pcore=' + (state.pcore === false ? 0 : 1),
+          'c2me=' + (state.c2me === false ? 0 : 1),
           'dynfov=' + (state.dynfov ? 1 : 0),
           'ebe=' + (state.ebe === false ? 0 : 1),
           'lithium=' + (state.lithium === false ? 0 : 1),
@@ -1116,7 +1118,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'dynfps=' + (state.dynfps === false ? 0 : 1),
           'memsaver=' + (state.memsaver === false ? 0 : 1),
           'bfmath=' + (state.bfmath === false ? 0 : 1),
-          'dynres=' + (state.dynres === false ? 0 : 1),
+          'dynres=' + (state.dynResOn ? 1 : 0),
           'cextra=' + (state.cextra === false ? 0 : 1),
           'ceAnim=' + (state.ceAnim === false ? 0 : 1),
           'ceAnimWater=' + (state.ceAnimWater === false ? 0 : 1),
@@ -1287,7 +1289,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra' && kv[0] !== 'bfmath' && kv[0] !== 'dynres' && kv[0] !== 'pcore')) return;
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra' && kv[0] !== 'bfmath' && kv[0] !== 'dynResOn' && kv[0] !== 'pcore' && kv[0] !== 'c2me')) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;
@@ -1577,7 +1579,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       try {
         var v = Math.max(30, Math.min(100, parseInt(state.resolutionScale, 10) || 100));
         // Dynamic Resolution may hold it lower for now (dynScale is 100 when it isn't)
-        var dynOn = state.dynres !== false && typeof dynScale === 'number' && dynScale < v;
+        var dynOn = !!state.dynResOn && typeof dynScale === 'number' && dynScale < v;
         if (dynOn) v = dynScale;
         try { $$('.tc-dynres-now').forEach(function (el) { el.textContent = dynOn ? '(now ' + v + '%)' : ''; }); } catch (e) {}
         localStorage.setItem('_eaglercraft_1.12.tcres', btoa(String(v)));
@@ -1862,7 +1864,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     }
     function dynResTick() {
       var user = Math.max(30, Math.min(100, parseInt(state.resolutionScale, 10) || 100));
-      if (state.dynres === false) { if (dynScale !== 100) { dynScale = 100; applyResolutionScale(); } return; }
+      if (!state.dynResOn) { if (dynScale !== 100) { dynScale = 100; applyResolutionScale(); } return; }
       var raw = null; try { raw = localStorage.getItem('_eaglercraft_1.12.tcframe'); } catch (e) {}
       if (!raw) return;
       var p; try { p = atob(raw).split(','); } catch (e) { return; }
