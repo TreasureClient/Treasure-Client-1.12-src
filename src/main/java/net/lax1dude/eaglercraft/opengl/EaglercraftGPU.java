@@ -118,6 +118,11 @@ public class EaglercraftGPU {
 	}
 	
 	private static DisplayList currentList = null;
+
+	/** Treasure Client: true while a display list is being recorded (HUD batching stays off). */
+	static boolean tcCompilingList() {
+		return currentList != null;
+	}
 	private static ByteBuffer displayListBuffer = EagRuntime.allocateByteBuffer(0x100000);
 
 	public static void glNewList(int target, int op) {
@@ -243,6 +248,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void glCallList(int displayList) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		DisplayList dp = mapDisplayListsGL.get(displayList);
 		if(dp == null) {
 			throw new NullPointerException("Tried to call a display list that does not exist: " + displayList);
@@ -520,6 +526,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void drawArrays(int mode, int first, int count) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(emulatedVAOs) {
 			if(currentVertexArray == null) {
 				logger.warn("Skipping draw call with emulated VAO because no known VAO is bound!");
@@ -531,6 +538,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void drawElements(int mode, int count, int type, int offset) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(emulatedVAOs) {
 			if(currentVertexArray == null) {
 				logger.warn("Skipping draw call with emulated VAO because no known VAO is bound!");
@@ -542,6 +550,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void drawArraysInstanced(int mode, int first, int count, int instances) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(emulatedVAOs) {
 			if(currentVertexArray == null) {
 				logger.warn("Skipping instanced draw call with emulated VAO because no known VAO is bound!");
@@ -553,6 +562,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void drawElementsInstanced(int mode, int count, int type, int offset, int instances) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(emulatedVAOs) {
 			if(currentVertexArray == null) {
 				logger.warn("Skipping instanced draw call with emulated VAO because no known VAO is bound!");
@@ -731,6 +741,7 @@ public class EaglercraftGPU {
 	public static final int ATTRIB_LIGHTMAP = 8;
 	
 	public static void renderBuffer(ByteBuffer buffer, int attrib, int mode, int count) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(currentList != null) {
 			if(currentList.attribs == -1) {
 				currentList.attribs = attrib;
@@ -773,6 +784,7 @@ public class EaglercraftGPU {
 	private static int lastCount = 0;
 
 	public static void renderAgain() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(lastRender == null) {
 			throw new UnsupportedOperationException("Cannot render the same verticies twice while generating display list");
 		}
@@ -880,6 +892,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void drawHighPoly(HighPolyMesh mesh) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched HUD quads first, in order
 		if(mesh.vertexCount == 0 || mesh.indexCount == 0 || mesh.vertexArray == null) {
 			return;
 		}

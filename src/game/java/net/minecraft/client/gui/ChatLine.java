@@ -22,6 +22,17 @@ public class ChatLine {
 		return this.lineString;
 	}
 
+	// Treasure Client (No Chat Lag): the line's colored text, worked out once instead of every frame
+	private String tcFormatted;
+
+	public String tcFormattedText() {
+		String s = this.tcFormatted;
+		if (s == null) {
+			s = this.tcFormatted = this.lineString.getFormattedText();
+		}
+		return s;
+	}
+
 	public int getUpdatedCounter() {
 		return this.updateCounterCreated;
 	}

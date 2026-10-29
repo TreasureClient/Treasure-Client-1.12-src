@@ -176,6 +176,37 @@ public class BlockStateContainer {
 		return null;
 	}
 
+	/** Treasure Client (FerriteCore): position of a property in the grid, or -1. */
+	private int tcFind(IProperty<?> property) {
+		IProperty<?>[] props = this.tcProps;
+		for (int i = 0; i < props.length; ++i) {
+			if (props[i] == property) {
+				return i;
+			}
+		}
+		for (int i = 0; i < props.length; ++i) {
+			if (props[i].equals(property)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/** Treasure Client (FerriteCore): a state's value for grid axis i, worked out from its position. */
+	private Comparable<?> tcValueAt(int index, int i) {
+		List<Comparable<?>> values = this.tcValues[i];
+		return values.get((index / this.tcStrides[i]) % values.size());
+	}
+
+	/** Treasure Client (FerriteCore): the property map of a state, built when asked for (rarely needed). */
+	private ImmutableMap<IProperty<?>, Comparable<?>> tcMap(int index) {
+		ImmutableMap.Builder<IProperty<?>, Comparable<?>> b = ImmutableMap.builder();
+		for (int i = 0; i < this.tcProps.length; ++i) {
+			b.put(this.tcProps[i], this.tcValueAt(index, i));
+		}
+		return b.build();
+	}
+
 	@Nullable
 	public IProperty<?> getProperty(String propertyName) {
 		return (IProperty) this.properties.get(propertyName);
@@ -183,22 +214,29 @@ public class BlockStateContainer {
 
 	static class StateImplementation extends BlockStateBase {
 		private final Block block;
-		private final ImmutableMap<IProperty<?>, Comparable<?>> properties;
-		// Treasure Client (FoamFix): position in the container's state grid, replacing the per-state table
+		// Treasure Client (FoamFix): position in the container's state grid, replacing the per-state table.
+		// Treasure Client (FerriteCore): the state no longer keeps its own property map either; values
+		// come from the grid position (faster than a map lookup, and one less map per block state).
 		private BlockStateContainer tcContainer;
 		private int tcIndex;
+		private final int tcHash;
 
 		private StateImplementation(Block blockIn, ImmutableMap<IProperty<?>, Comparable<?>> propertiesIn) {
 			this.block = blockIn;
-			this.properties = propertiesIn;
+			this.tcHash = propertiesIn.hashCode(); // same hash as before, worked out once
 		}
 
 		public Collection<IProperty<?>> getPropertyNames() {
-			return Collections.<IProperty<?>>unmodifiableCollection(this.properties.keySet());
+			return Collections.<IProperty<?>>unmodifiableCollection(this.tcContainer.properties.values());
+		}
+
+		private Comparable<?> tcGet(IProperty<?> property) {
+			int i = this.tcContainer.tcFind(property);
+			return i < 0 ? null : this.tcContainer.tcValueAt(this.tcIndex, i);
 		}
 
 		public <T extends Comparable<T>> T getValue(IProperty<T> property) {
-			Comparable<?> comparable = (Comparable) this.properties.get(property);
+			Comparable<?> comparable = this.tcGet(property);
 
 			if (comparable == null) {
 				throw new IllegalArgumentException(
@@ -209,7 +247,7 @@ public class BlockStateContainer {
 		}
 
 		public <T extends Comparable<T>, V extends T> IBlockState withProperty(IProperty<T> property, V value) {
-			Comparable<?> comparable = (Comparable) this.properties.get(property);
+			Comparable<?> comparable = this.tcGet(property);
 
 			if (comparable == null) {
 				throw new IllegalArgumentException(
@@ -229,7 +267,7 @@ public class BlockStateContainer {
 		}
 
 		public ImmutableMap<IProperty<?>, Comparable<?>> getProperties() {
-			return this.properties;
+			return this.tcContainer.tcMap(this.tcIndex);
 		}
 
 		public Block getBlock() {
@@ -241,7 +279,7 @@ public class BlockStateContainer {
 		}
 
 		public int hashCode() {
-			return this.properties.hashCode();
+			return this.tcHash;
 		}
 
 		public Material getMaterial() {

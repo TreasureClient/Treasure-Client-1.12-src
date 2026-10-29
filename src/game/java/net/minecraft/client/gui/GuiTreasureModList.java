@@ -107,6 +107,17 @@ public class GuiTreasureModList extends GuiScreen {
 						+ net.minecraft.client.renderer.TCEntityCulling.culledTiles + " block entities hidden";
 			}
 		});
+		this.entries.add(new Entry("Particle Core", "Treasure Client, inspired by fzzyhmstrs", "Built in",
+				"Cheaper particles: far away particles move without checking for blocks, still particles skip the check, and at most 2048 of each kind are kept. Also fixes particles never landing on the ground.",
+				"pcore") {
+			boolean setting() {
+				return TreasureMods.particleCore();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("Enhanced Block Entities", "FoundationGames", "LGPL-3.0",
 				"Draws chests, ender chests and beds as part of the world instead of one by one every frame. Chests switch back while their lid moves.",
 				"ebe") {
@@ -116,6 +127,36 @@ public class GuiTreasureModList extends GuiScreen {
 
 			String status(boolean on) {
 				return on ? "§aOn" : "§7Off";
+			}
+		});
+		this.entries.add(new Entry("FerriteCore", "Treasure Client, inspired by malte0811", "Built in",
+				"Block states stop keeping their own property map: values are read from their place in a shared grid, which is faster than a map lookup and saves one map per block state.",
+				"ferritecore") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn §7· built into loading";
+			}
+		});
+		this.entries.add(new Entry("No Chat Lag", "Treasure Client, inspired by noahvdaa", "Built in",
+				"No stutter from busy chat: each chat line's colored text is worked out once instead of every frame, and logging new messages no longer runs slow text patterns.",
+				"nochatlag") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn";
 			}
 		});
 		this.entries.add(new Entry("FoamFix", "Treasure Client, inspired by asie", "Built in",
@@ -247,7 +288,7 @@ public class GuiTreasureModList extends GuiScreen {
 			}
 		});
 		this.entries.add(new Entry("ImmediatelyFast", "RaphiMC", "LGPL-3.0",
-				"Cheaper name labels and signs: no rebuilding each name and re-measuring each sign line every frame, and no sign text past 32 blocks.",
+				"Fewer draw calls for the HUD: hearts, hunger, armor and hotbar pieces that share a texture are drawn together in one go, and the HUD is drawn straight to the screen instead of through an extra full-screen image. Also cheaper name labels and signs, and no sign text past 32 blocks.",
 				"ifast") {
 			boolean setting() {
 				return TreasureMods.immediatelyFast();

@@ -360,6 +360,12 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 			f = abstractclientplayer.getFovModifier();
 		}
 
+		// Treasure Client: Dynamic FOV off (the default) keeps the view still when sprinting,
+		// flying, with Speed or Slowness, or drawing a bow
+		if (!net.minecraft.client.gui.TreasureMods.dynamicFov()) {
+			f = 1.0F;
+		}
+
 		this.fovModifierHandPrev = this.fovModifierHand;
 		this.fovModifierHand += (f - this.fovModifierHand) * 0.5F;
 
@@ -943,29 +949,12 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 //                    }
 				}
 				final boolean b = !this.mc.gameSettings.hideGUI || this.mc.currentScreen != null;
-				if(b) {
+				if (b) {
+					// Treasure Client: the HUD is drawn straight onto the screen every frame, like vanilla.
+					// Eaglercraft drew it into a separate full-screen image and then copied that over the
+					// world, which cost the graphics chip two extra full-screen passes each frame.
 					this.setupOverlayRendering();
 					GlStateManager.alphaFunc(RealOpenGLEnums.GL_GREATER, 0.1F);
-					long framebufferAge = this.overlayFramebuffer.getAge();
-					// Treasure Client: the HUD is drawn into a cached image and redrawn at the "HUD frame rate"
-					// setting (Eaglercraft used a fixed 8-13 FPS, which looked choppy)
-					if (framebufferAge == -1l || framebufferAge >= net.minecraft.client.gui.TreasureMods.hudRedrawMs()) {
-						long tcHud = net.minecraft.client.TCLagMonitor.now();
-						this.overlayFramebuffer.beginRender(mc.displayWidth, mc.displayHeight);
-						GlStateManager.colorMask(true, true, true, true);
-						GlStateManager.clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-						GlStateManager.clear(RealOpenGLEnums.GL_COLOR_BUFFER_BIT | RealOpenGLEnums.GL_DEPTH_BUFFER_BIT);
-						GlStateManager.enableOverlayFramebufferBlending();
-						if (b) {
-							this.func_190563_a(i1, j1, partialTicks);
-							this.mc.ingameGUI.renderGameOverlay(partialTicks);
-						}
-						GlStateManager.disableOverlayFramebufferBlending();
-						this.overlayFramebuffer.endRender();
-						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
-					}
-				}
-				if (b) {
 					GlStateManager.disableLighting();
 					GlStateManager.enableBlend();
 					if (Minecraft.isFancyGraphicsEnabled()) {
@@ -976,20 +965,17 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					this.mc.ingameGUI.renderAttackIndicator(partialTicks, scaledresolution);
 					GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA,
 							RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA, RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
-					GlStateManager.bindTexture(this.overlayFramebuffer.getTexture());
-					GlStateManager.enableBlend();
-					GlStateManager.blendFunc(RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
-					GlStateManager.disableAlpha();
-					GlStateManager.disableDepth();
-					GlStateManager.depthMask(false);
-					Tessellator tessellator = Tessellator.getInstance();
-					WorldRenderer worldrenderer = tessellator.getWorldRenderer();
-					worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
-					worldrenderer.pos(0.0D, (double) i1, -90.0D).tex(0.0D, 0.0D).endVertex();
-					worldrenderer.pos((double) l, (double) i1, -90.0D).tex(1.0D, 0.0D).endVertex();
-					worldrenderer.pos((double) l, 0.0D, -90.0D).tex(1.0D, 1.0D).endVertex();
-					worldrenderer.pos(0.0D, 0.0D, -90.0D).tex(0.0D, 1.0D).endVertex();
-					tessellator.draw();
+					GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+					GlStateManager.enableAlpha();
+					long tcHud = net.minecraft.client.TCLagMonitor.now();
+					net.lax1dude.eaglercraft.opengl.TCHudBatch.begin(); // ImmediatelyFast HUD batching
+					try {
+						this.func_190563_a(i1, j1, partialTicks);
+						this.mc.ingameGUI.renderGameOverlay(partialTicks);
+					} finally {
+						net.lax1dude.eaglercraft.opengl.TCHudBatch.end();
+					}
+					net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					GlStateManager.depthMask(true);
 					GlStateManager.enableDepth();
 					GlStateManager.disableBlend();

@@ -80,10 +80,10 @@ public class TreasureMods {
 	private static boolean entityCulling = true;
 	public static boolean entityCulling() { return entityCulling; }
 
-	// HUD frame rate: how often the HUD (hotbar, chat, scoreboard...) is redrawn. 0 = every frame. Default 60.
-	private static int hudFps = 60;
-	/** Minimum time between HUD redraws in ms (0 = every frame). */
-	public static long hudRedrawMs() { return hudFps <= 0 ? 0L : 1000L / hudFps - 2L; }
+	// Dynamic FOV: zoom the view when sprinting, flying, with Speed or drawing a bow. Default OFF
+	// (overlay writes dynfov=1 to turn it on), like OptiFine's Dynamic FOV option.
+	private static boolean dynFov = false;
+	public static boolean dynamicFov() { return dynFov; }
 
 	// VanillaFix: crash recovery and Minecraft bug fixes. Default ON; overlay writes vanillafix=0 to turn it off.
 	private static boolean vanillaFix = true;
@@ -126,6 +126,9 @@ public class TreasureMods {
 	// Particle Culling: skip particles outside the view. Default ON; overlay writes pcull=0 to turn it off.
 	private static boolean particleCulling = true;
 	public static boolean particleCulling() { return particleCulling; }
+	// Particle Core: cheaper particle movement and a lower particle cap. Default ON (overlay writes pcore=0).
+	private static boolean pCore = true;
+	public static boolean particleCore() { return pCore; }
 
 	// Entity render distance in blocks (mobs, players, items, chests, signs...). 0 = off (vanilla).
 	private static int entityDistance = 0;
@@ -307,6 +310,7 @@ public class TreasureMods {
 			celeritas = true;
 			entityCulling = true;
 			particleCulling = true;
+			pCore = true;
 			vanillaFix = true;
 			ebe = true;
 			dynFps = true;
@@ -315,7 +319,7 @@ public class TreasureMods {
 			memSaver = true;
 			bfMath = true;
 			dynRes = true;
-			hudFps = 60;
+			dynFov = false;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
 			fullbright = false; clearWater = true; satDisplay = false;
@@ -359,8 +363,9 @@ public class TreasureMods {
 				else if (k.equals("memsaver")) memSaver = v.equals("1");
 				else if (k.equals("bfmath")) bfMath = v.equals("1");
 				else if (k.equals("dynres")) dynRes = v.equals("1");
-				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
+				else if (k.equals("dynfov")) dynFov = v.equals("1");
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
+				else if (k.equals("pcore")) pCore = v.equals("1");
 				else if (k.equals("oldAnim")) oldAnim = v.equals("1");
 				else if (k.equals("oaBlock")) oaBlock = v.equals("1");
 				else if (k.equals("oaNoDip")) oaNoDip = v.equals("1");
@@ -434,6 +439,8 @@ public class TreasureMods {
 			// Memory Saver
 			applyMemorySaver(mc);
 			net.minecraft.util.TCLithium.enabled = lithium;
+			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(iFast);
+			net.minecraft.client.particle.TCParticleCore.enabled = pCore;
 			net.minecraft.util.math.MathHelper.tcFastMath = bfMath;
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds

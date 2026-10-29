@@ -132,6 +132,12 @@ public class Gui {
 	 * Draws a textured rectangle at the current z-value.
 	 */
 	public void drawTexturedModalRect(int x, int y, int textureX, int textureY, int width, int height) {
+		// Treasure Client (ImmediatelyFast): collect HUD icons and draw them together
+		if (net.lax1dude.eaglercraft.opengl.TCHudBatch.texQuad(x, y, x + width, y + height, this.zLevel, (float) textureX * 0.00390625F,
+				(float) textureY * 0.00390625F, (float) (textureX + width) * 0.00390625F,
+				(float) (textureY + height) * 0.00390625F)) {
+			return;
+		}
 		float f = 0.00390625F;
 		float f1 = 0.00390625F;
 		Tessellator tessellator = Tessellator.getInstance();
@@ -160,6 +166,11 @@ public class Gui {
 	 * TextureManager
 	 */
 	public void drawTexturedModalRect(float xCoord, float yCoord, int minU, int minV, int maxU, int maxV) {
+		if (net.lax1dude.eaglercraft.opengl.TCHudBatch.texQuad(xCoord, yCoord, xCoord + (float) maxU, yCoord + (float) maxV, this.zLevel,
+				(float) minU * 0.00390625F, (float) minV * 0.00390625F, (float) (minU + maxU) * 0.00390625F,
+				(float) (minV + maxV) * 0.00390625F)) {
+			return;
+		}
 		float f = 0.00390625F;
 		float f1 = 0.00390625F;
 		Tessellator tessellator = Tessellator.getInstance();
@@ -186,6 +197,10 @@ public class Gui {
 	 */
 	public void drawTexturedModalRect(int xCoord, int yCoord, TextureAtlasSprite textureSprite, int widthIn,
 			int heightIn) {
+		if (net.lax1dude.eaglercraft.opengl.TCHudBatch.texQuad(xCoord, yCoord, xCoord + widthIn, yCoord + heightIn, this.zLevel, textureSprite.getMinU(),
+				textureSprite.getMinV(), textureSprite.getMaxU(), textureSprite.getMaxV())) {
+			return;
+		}
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
 		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
@@ -208,6 +223,10 @@ public class Gui {
 			float textureWidth, float textureHeight) {
 		float f = 1.0F / textureWidth;
 		float f1 = 1.0F / textureHeight;
+		if (net.lax1dude.eaglercraft.opengl.TCHudBatch.texQuad(x, y, x + width, y + height, 0.0D, u * f, v * f1, (u + (float) width) * f,
+				(v + (float) height) * f1)) {
+			return;
+		}
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
 		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
@@ -229,6 +248,10 @@ public class Gui {
 			int height, float tileWidth, float tileHeight) {
 		float f = 1.0F / tileWidth;
 		float f1 = 1.0F / tileHeight;
+		if (net.lax1dude.eaglercraft.opengl.TCHudBatch.texQuad(x, y, x + width, y + height, 0.0D, u * f, v * f1, (u + (float) uWidth) * f,
+				(v + (float) vHeight) * f1)) {
+			return;
+		}
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
 		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
