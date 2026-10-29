@@ -656,6 +656,24 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 		return this.handActive;
 	}
 
+	/**
+	 * Treasure Client: only the server finishes food. If its "done eating" message never
+	 * arrives (or was skipped as a late message), the client kept "eating" forever:
+	 * crumbs but no animation, and no new bite while right-click was held. A second
+	 * after the food should have finished, stop waiting so the next bite can start.
+	 */
+	protected void updateActiveHand() {
+		super.updateActiveHand();
+
+		if (this.handActive && this.getItemInUseCount() <= -20) {
+			net.minecraft.item.EnumAction a = this.getActiveItemStack().getItemUseAction();
+
+			if (a == net.minecraft.item.EnumAction.EAT || a == net.minecraft.item.EnumAction.DRINK) {
+				this.resetActiveHand();
+			}
+		}
+	}
+
 	public void resetActiveHand() {
 		super.resetActiveHand();
 		this.handActive = false;

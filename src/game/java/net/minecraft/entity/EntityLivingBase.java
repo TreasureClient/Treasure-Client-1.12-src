@@ -2493,8 +2493,11 @@ public abstract class EntityLivingBase extends Entity {
 			// Treasure Client: modern servers often re-send the held item's slot (a new
 			// but equal stack) while you draw a bow or eat. 1.12 compared the exact
 			// object and cancelled the use. Like modern Minecraft, keep going as long
-			// as it's still the same item, and follow the new stack.
-			if (itemstack != this.activeItemStack && this.world.isRemote && !itemstack.func_190926_b()
+			// as it's still the same item, and follow the new stack. Once the use has run
+			// out (food finished on screen), a new stack means the server finished it, so
+			// stop like vanilla does and let the next right-click start a new bite.
+			if (itemstack != this.activeItemStack && this.world.isRemote && this.activeItemStackUseCount > 0
+					&& !itemstack.func_190926_b()
 					&& !this.activeItemStack.func_190926_b() && itemstack.getItem() == this.activeItemStack.getItem()) {
 				this.activeItemStack = itemstack;
 			}
