@@ -636,6 +636,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			net.minecraft.client.renderer.entity.Render.tcEndFireBatch();
 
 			RenderHelper.enableStandardItemLighting();
+			long tcT = net.minecraft.client.TCLagMonitor.now(); // Treasure Client: lag monitor timing
 
 			if (org.taumc.celeritas.impl.TreasureCeleritas.isActive()) {
 				org.taumc.celeritas.impl.TreasureCeleritas.renderTileEntities(this.damagedBlocks, partialTicks);
@@ -693,6 +694,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			}
 
 			this.postRenderDamagedBlocks();
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.BLOCK_ENTS, tcT);
 			this.mc.entityRenderer.disableLightmap();
 		}
 	}
