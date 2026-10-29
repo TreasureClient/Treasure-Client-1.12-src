@@ -22,6 +22,25 @@ public class TCLagMonitor {
 	/** Server packets handled; the network code adds to this. */
 	public static int packets;
 
+	// parts of the drawing time, timed by the renderers each frame
+	public static final int TERRAIN = 0, ENTITIES = 1, BLOCK_ENTS = 2, NAME_TAGS = 3, PARTICLES = 4, HUD = 5,
+			SKY = 6, OTHER = 7, PARTS = 8;
+	private static final String[] PART_NAMES = { "terrain", "entities", "block ents", "name tags", "particles",
+			"HUD", "sky", "other" };
+	private static final long[] cur = new long[PARTS];
+	private static final long[][] mPartAll = new long[MINUTES][PARTS]; // all frames, ns
+	private static final long[][] mPartSpike = new long[MINUTES][PARTS]; // spike frames, ns
+
+	/** Current time for timing a part. */
+	public static long now() {
+		return EagRuntime.nanoTime();
+	}
+
+	/** Adds the time since startNs to a part of this frame's drawing. */
+	public static void add(int part, long startNs) {
+		cur[part] += EagRuntime.nanoTime() - startNs;
+	}
+
 	private static long start = -1L, lastEnd = -1L, lastHeapRead;
 	private static int lastChunks;
 	private static int curMinute = -1;
@@ -35,8 +54,9 @@ public class TCLagMonitor {
 	private static final long[] mDraw = new long[MINUTES];
 	private static int heapNow = -1;
 
-	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap
-	private static final int[][] ring = new int[RING][9];
+	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
+	// biggest drawing part, its ms
+	private static final int[][] ring = new int[RING][11];
 	private static int ringPos, ringCount;
 
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
@@ -50,10 +70,16 @@ public class TCLagMonitor {
 		if (start < 0L) {
 			start = now;
 			lastEnd = now;
+			clearParts();
 			return;
 		}
 		long total = now - lastEnd;
 		lastEnd = now;
+		// entities were timed including the block entities and name tags inside them
+		cur[ENTITIES] = Math.max(0L, cur[ENTITIES] - cur[BLOCK_ENTS] - cur[NAME_TAGS]);
+		long timed = 0L;
+		for (int k = 0; k < OTHER; k++) timed += cur[k];
+		cur[OTHER] = Math.max(0L, drawNs - timed);
 		if (now - lastHeapRead > 5000L) {
 			lastHeapRead = now;
 			long[] h = TCPerfStats.pageMemory();
@@ -61,6 +87,7 @@ public class TCLagMonitor {
 		}
 		int minute = (int) ((now - start) / 60000L);
 		if (minute >= MINUTES) {
+			clearParts();
 			return; // two hours is plenty of history
 		}
 		if (minute != curMinute) {
@@ -69,6 +96,7 @@ public class TCLagMonitor {
 		mFrames[minute]++;
 		mMs[minute] += total;
 		mHeap[minute] = heapNow;
+		for (int k = 0; k < PARTS; k++) mPartAll[minute][k] += cur[k];
 		int logic = (int) (logicNs / 1000000L), draw = (int) (drawNs / 1000000L);
 		int browser = (int) Math.max(0L, total - logic - draw);
 		if (total >= SPIKE_MS) {
@@ -88,9 +116,39 @@ public class TCLagMonitor {
 			r[6] = pkts;
 			r[7] = chunkDelta;
 			r[8] = heapNow;
+			int big = 0;
+			for (int k = 0; k < PARTS; k++) {
+				mPartSpike[minute][k] += cur[k];
+				if (cur[k] > cur[big]) big = k;
+			}
+			r[9] = big;
+			r[10] = (int) (cur[big] / 1000000L);
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
+		clearParts();
+	}
+
+	private static void clearParts() {
+		for (int k = 0; k < PARTS; k++) cur[k] = 0L;
+	}
+
+	/** "terrain 6.1 · entities 2.0 ..." as ms per frame (perFrame) or % of the total. */
+	private static String partLine(long[] sum, long frames, boolean perFrame) {
+		long all = 0L;
+		for (int k = 0; k < PARTS; k++) all += sum[k];
+		StringBuilder sb = new StringBuilder();
+		for (int k = 0; k < PARTS; k++) {
+			if (sb.length() > 0) sb.append(" §7· ");
+			sb.append("§f").append(PART_NAMES[k]).append(' ');
+			if (perFrame) {
+				long tenths = frames > 0 ? sum[k] / 100000L / frames : 0L;
+				sb.append(tenths / 10).append('.').append(tenths % 10);
+			} else {
+				sb.append(all > 0 ? sum[k] * 100L / all : 0L).append('%');
+			}
+		}
+		return sb.toString();
 	}
 
 	private static void say(Minecraft mc, String s) {
@@ -137,13 +195,28 @@ public class TCLagMonitor {
 			say(mc, "§7Spike time, last 5 min: §flogic " + (l * 100 / sum) + "% §7· §fdrawing " + (d * 100 / sum)
 					+ "% §7· §fbrowser/GPU " + (b * 100 / sum) + "%");
 		}
+		// what the drawing time is made of, last 5 minutes
+		long[] all = new long[PARTS], spk = new long[PARTS];
+		long frames = 0L;
+		for (int m = Math.max(0, last - 4); m <= last; m++) {
+			frames += mFrames[m];
+			for (int k = 0; k < PARTS; k++) {
+				all[k] += mPartAll[m][k];
+				spk[k] += mPartSpike[m][k];
+			}
+		}
+		say(mc, "§7Drawing, ms per frame, last 5 min: " + partLine(all, frames, true));
+		if (sum > 0) {
+			say(mc, "§7Drawing in spikes, last 5 min: " + partLine(spk, 0L, false));
+		}
 		if (ringCount > 0) {
 			say(mc, "§7Last spikes (time: total = logic + drawing + browser/GPU · packets · chunk rebuilds):");
 			for (int i = 0; i < ringCount; i++) {
 				int[] r = ring[(ringPos - 1 - i + RING * 2) % RING];
 				say(mc, "§8 " + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7= " + r[3] + " + "
 						+ r[4] + " + " + r[5] + " §8· " + r[6] + " pkts · " + r[7] + " chunks"
-						+ (r[8] > 0 ? " · " + r[8] + "MB" : ""));
+						+ (r[8] > 0 ? " · " + r[8] + "MB" : "") + " · most: " + PART_NAMES[r[9]] + " " + r[10]
+						+ "ms");
 			}
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));
@@ -179,6 +252,12 @@ public class TCLagMonitor {
 		if (l >= d) {
 			return trend + "Most spike time is game logic (server packets, entities, world updates).";
 		}
-		return trend + "Most spike time is drawing the frame (too much on screen).";
+		long[] spk = new long[PARTS];
+		for (int m = Math.max(0, last - 4); m <= last; m++) {
+			for (int k = 0; k < PARTS; k++) spk[k] += mPartSpike[m][k];
+		}
+		int big = 0;
+		for (int k = 0; k < PARTS; k++) if (spk[k] > spk[big]) big = k;
+		return trend + "Most spike time is drawing the frame, mostly " + PART_NAMES[big] + ".";
 	}
 }

@@ -950,6 +950,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					// Treasure Client: the HUD is drawn into a cached image and redrawn at the "HUD frame rate"
 					// setting (Eaglercraft used a fixed 8-13 FPS, which looked choppy)
 					if (framebufferAge == -1l || framebufferAge >= net.minecraft.client.gui.TreasureMods.hudRedrawMs()) {
+						long tcHud = net.minecraft.client.TCLagMonitor.now();
 						this.overlayFramebuffer.beginRender(mc.displayWidth, mc.displayHeight);
 						GlStateManager.colorMask(true, true, true, true);
 						GlStateManager.clearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -961,6 +962,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						}
 						GlStateManager.disableOverlayFramebufferBlending();
 						this.overlayFramebuffer.endRender();
+						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
 				}
 				if (b) {
@@ -1145,6 +1147,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		double d2 = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * (double) partialTicks;
 		icamera.setPosition(d0, d1, d2);
 
+		long tcT = net.minecraft.client.TCLagMonitor.now(); // Treasure Client: lag monitor timing
 		if (this.mc.gameSettings.renderDistanceChunks >= 4) {
 			this.setupFog(-1, partialTicks);
 			GlStateManager.matrixMode(5889);
@@ -1165,6 +1168,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		if (entity.posY + (double) entity.getEyeHeight() < 128.0D) {
 			this.renderCloudsCheck(renderglobal, partialTicks, pass, d0, d1, d2);
 		}
+		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SKY, tcT);
+		tcT = net.minecraft.client.TCLagMonitor.now();
 
 		this.setupFog(0, partialTicks);
 		this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
@@ -1189,13 +1194,16 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
 		GlStateManager.shadeModel(7424);
 		GlStateManager.alphaFunc(RealOpenGLEnums.GL_GREATER, 0.1F);
+		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.TERRAIN, tcT);
 
 		if (!this.debugView) {
 			GlStateManager.matrixMode(5888);
 			GlStateManager.popMatrix();
 			GlStateManager.pushMatrix();
 			RenderHelper.enableStandardItemLighting();
+			tcT = net.minecraft.client.TCLagMonitor.now();
 			renderglobal.renderEntities(entity, icamera, partialTicks);
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.ENTITIES, tcT);
 			RenderHelper.disableStandardItemLighting();
 			this.disableLightmap();
 		}
@@ -1224,12 +1232,14 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.disableBlend();
 
 		if (!this.debugView) {
+			tcT = net.minecraft.client.TCLagMonitor.now();
 			this.enableLightmap();
 			particlemanager.renderLitParticles(entity, partialTicks);
 			RenderHelper.disableStandardItemLighting();
 			this.setupFog(0, partialTicks);
 			particlemanager.renderParticles(entity, partialTicks);
 			this.disableLightmap();
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.PARTICLES, tcT);
 		}
 
 		GlStateManager.depthMask(false);
@@ -1247,7 +1257,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.depthMask(false);
 		this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 		GlStateManager.shadeModel(7425);
+		tcT = net.minecraft.client.TCLagMonitor.now();
 		renderglobal.renderBlockLayer(BlockRenderLayer.TRANSLUCENT, (double) partialTicks, pass, entity);
+		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.TERRAIN, tcT);
 		GlStateManager.shadeModel(7424);
 		GlStateManager.depthMask(true);
 		GlStateManager.enableCull();
@@ -1255,7 +1267,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.disableFog();
 
 		if (entity.posY + (double) entity.getEyeHeight() >= 128.0D) {
+			tcT = net.minecraft.client.TCLagMonitor.now();
 			this.renderCloudsCheck(renderglobal, partialTicks, pass, d0, d1, d2);
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SKY, tcT);
 		}
 
 		if (this.renderHand) {
