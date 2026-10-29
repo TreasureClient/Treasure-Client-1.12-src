@@ -174,6 +174,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off §8(hoppers stay fast)";
 			}
 		});
+		this.entries.add(new Entry("Dynamic Resolution", "Treasure Client", "Built in",
+				"When frames get slow from drawing, like when your device heats up, the world is drawn at a slightly lower resolution so the graphics chip has less to do. It goes back up once things are smooth again. It never goes below 70% or below your own Render Resolution setting, and it ignores lag that comes from the server.",
+				"dynres") {
+			boolean setting() {
+				return TreasureMods.dynamicResolution();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn §7· adjusts by itself" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("AI Improvements", "Treasure Client, inspired by QueenOfMissiles", "Built in",
 				"Mobs reuse their last head-turn angles while what they look at hasn't moved, skipping costly math. Mobs only run in singleplayer, so this speeds up singleplayer worlds.",
 				"aiimprove") {

@@ -1110,6 +1110,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>Pause When Unfocused</b><i>Stop rendering when the tab loses focus</i></div><div class="tc-sw" data-mod="pauseUnfocused"><i></i></div></div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Dynamic Resolution</b><i>Lowers the resolution a little when frames get slow, like when your device heats up <span class="tc-dynres-now"></span></i></div><div class="tc-sw on" data-mod="dynres"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Render Resolution</b><i>Render the world at lower resolution for more FPS</i></div></div>
               <div class="tc-cfg tc-cfg-static">
                 <div class="tc-cfg-row"><span>Scale</span><div class="tc-slider"><input type="range" min="30" max="100" step="5" data-mod="resolutionScale"><span class="tc-val">100</span></div></div>
@@ -1270,7 +1273,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', hudFps:'60', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, dynres:true, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', hudFps:'60', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1399,6 +1402,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'dynfps=' + (state.dynfps === false ? 0 : 1),
           'memsaver=' + (state.memsaver === false ? 0 : 1),
           'bfmath=' + (state.bfmath === false ? 0 : 1),
+          'dynres=' + (state.dynres === false ? 0 : 1),
           'cextra=' + (state.cextra === false ? 0 : 1),
           'ceAnim=' + (state.ceAnim === false ? 0 : 1),
           'ceAnimWater=' + (state.ceAnimWater === false ? 0 : 1),
@@ -1569,7 +1573,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra' && kv[0] !== 'bfmath')) return;
+            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra' && kv[0] !== 'bfmath' && kv[0] !== 'dynres')) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;
@@ -1724,7 +1728,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         showVal();
         state[key] = parseInt(sl.value, 10); save();
         if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
-        else if (key === 'resolutionScale') applyResolutionScale();
+        else if (key === 'resolutionScale') { dynScale = 100; applyResolutionScale(); }
         else applyHud();
       });
     });
@@ -1858,6 +1862,10 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       // it sizes the framebuffer. 100 = native, lower = fewer pixels = higher FPS.
       try {
         var v = Math.max(30, Math.min(100, parseInt(state.resolutionScale, 10) || 100));
+        // Dynamic Resolution may hold it lower for now (dynScale is 100 when it isn't)
+        var dynOn = state.dynres !== false && typeof dynScale === 'number' && dynScale < v;
+        if (dynOn) v = dynScale;
+        try { $$('.tc-dynres-now').forEach(function (el) { el.textContent = dynOn ? '(now ' + v + '%)' : ''; }); } catch (e) {}
         localStorage.setItem('_eaglercraft_1.12.tcres', btoa(String(v)));
         // Fire a resize so the engine recomputes its framebuffer size immediately
         // (reportWindowSize only runs on resize) — makes the slider apply live.
@@ -2125,6 +2133,50 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       ctx.globalAlpha = 0.18; ctx.fillStyle = a1; ctx.fill(); ctx.globalAlpha = 1;
     }
 
+    /* ---------- Dynamic Resolution ----------
+       The game writes "fps,logic%,fps limit,in world,seq" to tcframe once a second.
+       While frames stay slow and the time isn't game logic (server lag), the render
+       resolution steps down 10% (never below 70% or the Render Resolution setting,
+       and never so far that the auto GUI scale would change). It steps back up after
+       a stretch of smooth frames; if it keeps bouncing, it waits longer each time. */
+    var dynScale = 100, dynLow = 0, dynHigh = 0, dynHold = 0, dynRaiseNeed = 20, dynSinceRaise = 999, lastDynTick = 0, lastFrameSeq = null;
+    function dynGuiScaleAt(pct) {
+      var r = (window.devicePixelRatio || 1) * pct / 100;
+      var w = Math.floor(window.innerWidth * r), h = Math.floor(window.innerHeight * r), k = 1;
+      while (k < 8 && w / (k + 1) >= 320 && h / (k + 1) >= 240) k++;
+      return k;
+    }
+    function dynResTick() {
+      var user = Math.max(30, Math.min(100, parseInt(state.resolutionScale, 10) || 100));
+      if (state.dynres === false) { if (dynScale !== 100) { dynScale = 100; applyResolutionScale(); } return; }
+      var raw = null; try { raw = localStorage.getItem('_eaglercraft_1.12.tcframe'); } catch (e) {}
+      if (!raw) return;
+      var p; try { p = atob(raw).split(','); } catch (e) { return; }
+      if (p.length < 5 || p[4] === lastFrameSeq) return; // no new report (game paused or loading)
+      lastFrameSeq = p[4];
+      var fps = +p[0], logic = +p[1], limit = +p[2], inWorld = p[3] === '1';
+      dynSinceRaise++;
+      if (!inWorld || document.hidden || !document.hasFocus()) { dynLow = 0; dynHigh = 0; return; }
+      if (dynHold > 0) { dynHold--; return; }
+      var cap = Math.min(limit > 0 ? limit : 60, 60);
+      var lowFps = Math.round(cap * 0.7), highFps = Math.round(cap * 0.92);
+      if (fps < lowFps && logic < 50) { dynLow++; dynHigh = 0; }
+      else if (fps >= highFps) { dynHigh++; dynLow = 0; }
+      else { dynLow = 0; dynHigh = 0; }
+      var cur = Math.min(user, dynScale), floor = Math.min(user, 70);
+      if (dynLow >= 3 && cur > floor) {
+        var next = Math.max(floor, cur - 10);
+        dynLow = 0;
+        if (dynGuiScaleAt(next) === dynGuiScaleAt(user)) {
+          if (dynSinceRaise < 40) dynRaiseNeed = Math.min(160, dynRaiseNeed * 2); // dropped right after going up: wait longer next time
+          dynScale = next; dynHold = 4; applyResolutionScale();
+        }
+      } else if (dynHigh >= dynRaiseNeed && dynScale < 100) {
+        dynScale = dynScale + 10 >= user ? 100 : dynScale + 10;
+        dynHigh = 0; dynHold = 4; dynSinceRaise = 0; applyResolutionScale();
+      }
+    }
+
     /* ---------- FPS (real: page rAF) + CPS + data-HUD readout loop ---------- */
     var frames = 0, lastFpsT = performance.now(), fpsVal = 0, lastData = 0, lastHudRead = 0, lastModePoll = 0, lastHeapWrite = 0;
     function loop(now) {
@@ -2142,6 +2194,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (now - lastHudRead >= 200) { readHudBridge(); lastHudRead = now; applyHudVisibility(); }
       if (now - lastData >= 100) { updateDataHud(); lastData = now; }
       if (now - lastModePoll >= 300) { pollSharedMode(); lastModePoll = now; }
+      if (now - lastDynTick >= 1000) { lastDynTick = now; try { dynResTick(); } catch (e) {} }
       // page memory for the game's ".perf" command (Chrome only)
       if (now - lastHeapWrite >= 1000) {
         lastHeapWrite = now;
