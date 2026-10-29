@@ -95,8 +95,8 @@ public class TreasureMods {
 	// BetterFps fast math (OptiFine-compatible sine table). Default ON; overlay writes bfmath=0 to turn it off.
 	private static boolean bfMath = true;
 	public static boolean betterFpsMath() { return bfMath; }
-	// Dynamic Resolution (run by the overlay). Default ON; read here for the Mods screen.
-	private static boolean dynRes = true;
+	// Dynamic Resolution (run by the overlay). Default OFF; read here for the Mods screen.
+	private static boolean dynRes = false;
 	public static boolean dynamicResolution() { return dynRes; }
 	// Celeritas Leaf Culling mode (TCLeafCulling.OFF/HOLLOW/SOLID_AGGRESSIVE/SOLID). Default SOLID, like the original mod.
 	private static int leafCull = net.minecraft.block.TCLeafCulling.SOLID;
@@ -129,6 +129,9 @@ public class TreasureMods {
 	// Particle Core: cheaper particle movement and a lower particle cap. Default ON (overlay writes pcore=0).
 	private static boolean pCore = true;
 	public static boolean particleCore() { return pCore; }
+	// C2ME smooth chunk loading: spread big server packet bursts over a few ticks. Default ON (c2me=0 turns off).
+	private static boolean c2me = true;
+	public static boolean c2me() { return c2me; }
 
 	// Entity render distance in blocks (mobs, players, items, chests, signs...). 0 = off (vanilla).
 	private static int entityDistance = 0;
@@ -311,6 +314,7 @@ public class TreasureMods {
 			entityCulling = true;
 			particleCulling = true;
 			pCore = true;
+			c2me = true;
 			vanillaFix = true;
 			ebe = true;
 			dynFps = true;
@@ -318,7 +322,7 @@ public class TreasureMods {
 			lithium = true;
 			memSaver = true;
 			bfMath = true;
-			dynRes = true;
+			dynRes = false;
 			dynFov = false;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
@@ -366,6 +370,7 @@ public class TreasureMods {
 				else if (k.equals("dynfov")) dynFov = v.equals("1");
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
 				else if (k.equals("pcore")) pCore = v.equals("1");
+				else if (k.equals("c2me")) c2me = v.equals("1");
 				else if (k.equals("oldAnim")) oldAnim = v.equals("1");
 				else if (k.equals("oaBlock")) oaBlock = v.equals("1");
 				else if (k.equals("oaNoDip")) oaNoDip = v.equals("1");
@@ -441,6 +446,7 @@ public class TreasureMods {
 			net.minecraft.util.TCLithium.enabled = lithium;
 			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(iFast);
 			net.minecraft.client.particle.TCParticleCore.enabled = pCore;
+			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me;
 			net.minecraft.util.math.MathHelper.tcFastMath = bfMath;
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds

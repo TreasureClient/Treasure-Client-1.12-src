@@ -63,13 +63,8 @@ public class PacketBuffer extends ByteBuf {
 	 * were to be read/written using readVarIntFromBuffer or writeVarIntToBuffer
 	 */
 	public static int getVarIntSize(int input) {
-		for (int i = 1; i < 5; ++i) {
-			if ((input & -1 << i * 7) == 0) {
-				return i;
-			}
-		}
-
-		return 5;
+		// Treasure Client (Krypton): from the count of leading zero bits instead of a loop
+		return (31 - Integer.numberOfLeadingZeros(input)) / 7 + 1;
 	}
 
 	public void writeByteArray(byte[] array) {
@@ -113,6 +108,26 @@ public class PacketBuffer extends ByteBuf {
 	 * should be read.
 	 */
 	public int readVarIntFromBuffer() {
+		// Treasure Client (Krypton): read straight from the packet's bytes when at least 5 are left,
+		// instead of a bounds-checked readByte call per byte
+		ByteBuf b = this.buf;
+		if (b.hasArray()) {
+			int r = b.readerIndex();
+			if (b.writerIndex() - r >= 5) {
+				byte[] a = b.array();
+				int p = b.arrayOffset() + r;
+				int v = 0;
+				for (int k = 0; k < 5; ++k) {
+					byte b0 = a[p + k];
+					v |= (b0 & 127) << k * 7;
+					if ((b0 & 128) == 0) {
+						b.readerIndex(r + k + 1);
+						return v;
+					}
+				}
+				throw new RuntimeException("VarInt too big");
+			}
+		}
 		int i = 0;
 		int j = 0;
 
@@ -167,6 +182,15 @@ public class PacketBuffer extends ByteBuf {
 	 * are expected to have values below 128.
 	 */
 	public PacketBuffer writeVarIntToBuffer(int input) {
+		// Treasure Client (Krypton): most values fit in one or two bytes, write those in one call
+		if ((input & -128) == 0) {
+			this.writeByte(input);
+			return this;
+		}
+		if ((input & -16384) == 0) {
+			this.writeShort((input & 127 | 128) << 8 | (input >>> 7));
+			return this;
+		}
 		while ((input & -128) != 0) {
 			this.writeByte(input & 127 | 128);
 			input >>>= 7;
@@ -271,7 +295,15 @@ public class PacketBuffer extends ByteBuf {
 		} else if (i < 0) {
 			throw new DecoderException("The received encoded string buffer length is less than zero! Weird string!");
 		} else {
-			String s = new String(this.readBytes(i).array(), StandardCharsets.UTF_8);
+			// Treasure Client (Krypton): decode the text where it is instead of copying it out first
+			String s;
+			ByteBuf b = this.buf;
+			if (b.hasArray() && b.readableBytes() >= i) {
+				s = new String(b.array(), b.arrayOffset() + b.readerIndex(), i, StandardCharsets.UTF_8);
+				b.skipBytes(i);
+			} else {
+				s = new String(this.readBytes(i).array(), StandardCharsets.UTF_8);
+			}
 			if (s.length() > maxLength) {
 				throw new DecoderException(
 						"The received string length is longer than maximum allowed (" + i + " > " + maxLength + ")");

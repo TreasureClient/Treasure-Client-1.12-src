@@ -52,14 +52,36 @@ public class NoiseGeneratorImproved extends NoiseGenerator {
 		return p_76311_3_ + p_76311_1_ * (p_76311_5_ - p_76311_3_);
 	}
 
-	public final double grad2(int p_76309_1_, double p_76309_2_, double p_76309_4_) {
-		int i = p_76309_1_ & 15;
-		return GRAD_2X[i] * p_76309_2_ + GRAD_2Z[i] * p_76309_4_;
+	// Treasure Client (C2ME-style math): the gradient tables only hold 1, -1 and 0, so add or subtract
+	// directly instead of three table reads and multiplies. Same results (worlds stay the same per seed).
+	public final double grad2(int p_76309_1_, double x, double z) {
+		switch (p_76309_1_ & 15) {
+		case 0: case 2: case 12: return x;
+		case 1: case 3: case 14: return -x;
+		case 4: return x + z;
+		case 5: return -x + z;
+		case 6: return x - z;
+		case 7: return -x - z;
+		case 8: case 9: case 13: return z;
+		default: return -z; // 10, 11, 15
+		}
 	}
 
-	public final double grad(int p_76310_1_, double p_76310_2_, double p_76310_4_, double p_76310_6_) {
-		int i = p_76310_1_ & 15;
-		return GRAD_X[i] * p_76310_2_ + GRAD_Y[i] * p_76310_4_ + GRAD_Z[i] * p_76310_6_;
+	public final double grad(int p_76310_1_, double x, double y, double z) {
+		switch (p_76310_1_ & 15) {
+		case 0: case 12: return x + y;
+		case 1: case 14: return -x + y;
+		case 2: return x - y;
+		case 3: return -x - y;
+		case 4: return x + z;
+		case 5: return -x + z;
+		case 6: return x - z;
+		case 7: return -x - z;
+		case 8: return y + z;
+		case 9: case 13: return -y + z;
+		case 10: return y - z;
+		default: return -y - z; // 11, 15
+		}
 	}
 
 	/**

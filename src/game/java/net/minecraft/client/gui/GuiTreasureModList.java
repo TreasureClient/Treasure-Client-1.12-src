@@ -107,6 +107,32 @@ public class GuiTreasureModList extends GuiScreen {
 						+ net.minecraft.client.renderer.TCEntityCulling.culledTiles + " block entities hidden";
 			}
 		});
+		this.entries.add(new Entry("Krypton", "Treasure Client, inspired by astei", "Built in",
+				"Faster packet reading: numbers in packets are read straight from the packet's bytes, and text is decoded where it is instead of being copied out first. Same results, less work for every packet.",
+				"krypton") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn";
+			}
+		});
+		this.entries.add(new Entry("C2ME", "Treasure Client, inspired by ishland", "Built in",
+				"Smoother chunk loading: when a server sends a big burst of chunks and entities (like joining a game), about 8 ms of it is handled per tick instead of all at once, so the world loads in over a few ticks without a freeze. Singleplayer world generation also uses faster noise math (same worlds).",
+				"c2me") {
+			boolean setting() {
+				return TreasureMods.c2me();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off §8(world generation math stays on)";
+			}
+		});
 		this.entries.add(new Entry("Particle Core", "Treasure Client, inspired by fzzyhmstrs", "Built in",
 				"Cheaper particles: far away particles move without checking for blocks, still particles skip the check, and at most 2048 of each kind are kept. Also fixes particles never landing on the ground.",
 				"pcore") {
@@ -216,8 +242,8 @@ public class GuiTreasureModList extends GuiScreen {
 			}
 		});
 		this.entries.add(new Entry("Dynamic Resolution", "Treasure Client", "Built in",
-				"When frames get slow from drawing, like when your device heats up, the world is drawn at a slightly lower resolution so the graphics chip has less to do. It goes back up once things are smooth again. It never goes below 70% or below your own Render Resolution setting, and it ignores lag that comes from the server.",
-				"dynres") {
+				"When frames get slow from drawing, like when your device heats up, the world is drawn at a slightly lower resolution so the graphics chip has less to do. It goes back up once things are smooth again. Off by default. It never goes below 70% or below your own Render Resolution setting, and it ignores lag that comes from the server.",
+				"dynResOn") {
 			boolean setting() {
 				return TreasureMods.dynamicResolution();
 			}

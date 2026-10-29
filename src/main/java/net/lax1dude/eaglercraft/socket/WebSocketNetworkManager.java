@@ -34,6 +34,20 @@ public class WebSocketNetworkManager extends NetworkManager {
 
 	protected final IWebSocketClient webSocketClient;
 
+	/**
+	 * Treasure Client (C2ME smooth chunk loading): when the server sends a big
+	 * burst (joining a game sends hundreds of chunk and entity packets at once),
+	 * only about 8 ms of packets are handled per game tick and the rest wait for
+	 * the next tick, in the same order. The world loads in over a few ticks
+	 * instead of freezing the game for a moment. Very big backlogs, and anything
+	 * before you are in a world, are still handled all at once. Set from the
+	 * "c2me" setting.
+	 */
+	public static boolean tcSpreadBursts = true;
+	private static final long TC_BUDGET_NS = 8000000L;
+	private static final int TC_MAX_BACKLOG = 2000;
+	private final java.util.ArrayDeque<IWebSocketFrame> tcBacklog = new java.util.ArrayDeque<IWebSocketFrame>();
+
 	public WebSocketNetworkManager(IWebSocketClient webSocketClient) {
 		super(webSocketClient.getCurrentURI());
 		this.webSocketClient = webSocketClient;
@@ -62,13 +76,20 @@ public class WebSocketNetworkManager extends NetworkManager {
 		}
 		List<IWebSocketFrame> pkts = webSocketClient.getNextBinaryFrames();
 
-		if(pkts == null) {
+		if(pkts != null) {
+			net.minecraft.client.TCLagMonitor.packets += pkts.size(); // Treasure Client: lag monitor
+			tcBacklog.addAll(pkts);
+		}
+		if(tcBacklog.isEmpty()) {
 			return;
 		}
 
-		net.minecraft.client.TCLagMonitor.packets += pkts.size(); // Treasure Client: lag monitor
-		for(int i = 0, l = pkts.size(); i < l; ++i) {
-			IWebSocketFrame next = pkts.get(i);
+		boolean spread = tcSpreadBursts && isChannelOpen() && tcBacklog.size() < TC_MAX_BACKLOG
+				&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient;
+		long deadline = spread ? net.lax1dude.eaglercraft.EagRuntime.nanoTime() + TC_BUDGET_NS : 0L;
+		int handled = 0;
+		IWebSocketFrame next;
+		while((next = tcBacklog.poll()) != null) {
 			++debugPacketCounter;
 			try {
 				byte[] asByteArray = next.getByteArray();
@@ -104,6 +125,11 @@ public class WebSocketNetworkManager extends NetworkManager {
 			}catch(Throwable t) {
 				logger.error("Failed to process websocket frame {}! It'll be skipped for debug purposes.", debugPacketCounter);
 				logger.error(t);
+			}
+			// at least 16 packets per tick, then stop once this tick's time is used up
+			if(spread && ++handled >= 16 && (handled & 3) == 0
+					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() > deadline) {
+				break;
 			}
 		}
 	}
