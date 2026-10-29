@@ -47,8 +47,6 @@ public class ParticleManager {
 	private final Map<Integer, IParticleFactory> particleTypes = Maps.<Integer, IParticleFactory>newHashMap();
 	private final List<Particle> queueEntityFX = Lists.<Particle>newArrayList();
 
-	/** Treasure Client: most particles kept per layer (vanilla 16384). */
-	private static final int MAX_PARTICLES_PER_LAYER = 8192;
 
 	private final Minecraft mc;
 
@@ -196,7 +194,7 @@ public class ParticleManager {
 			for (int j = 0; j < 4; ++j) {
 				for (int k = 0; k < 2; ++k) {
 					List<Particle> layer = this.fxLayers[j][k];
-					int over = layer.size() - MAX_PARTICLES_PER_LAYER;
+					int over = layer.size() - TCParticleCore.maxPerLayer(); // Treasure Client (Particle Core)
 					if (over > 0) {
 						layer.subList(0, over).clear();
 					}

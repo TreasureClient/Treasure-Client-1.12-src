@@ -233,10 +233,12 @@ public class GlStateManager {
 	}
 
 	public static void disableAlpha() {
+		if(stateAlphaTest != false) TCHudBatch.flushIfPending();
 		stateAlphaTest = false;
 	}
 
 	public static void enableAlpha() {
+		if(stateAlphaTest != true) TCHudBatch.flushIfPending();
 		stateAlphaTest = true;
 	}
 
@@ -244,15 +246,18 @@ public class GlStateManager {
 		if(func != GL_GREATER) {
 			throw new UnsupportedOperationException("Only GL_GREATER alphaFunc is supported");
 		}else {
+			if(stateAlphaTestRef != ref) TCHudBatch.flushIfPending();
 			stateAlphaTestRef = ref;
 		}
 	}
 
 	public static void enableLighting() {
+		if(stateLighting != true) TCHudBatch.flushIfPending();
 		stateLighting = true;
 	}
 
 	public static void disableLighting() {
+		if(stateLighting != false) TCHudBatch.flushIfPending();
 		stateLighting = false;
 	}
 
@@ -311,14 +316,14 @@ public class GlStateManager {
 
 	public static void disableDepth() {
 		if(stateDepthTest) {
-			_wglDisable(GL_DEPTH_TEST);
+			TCHudBatch.flushIfPending(); _wglDisable(GL_DEPTH_TEST);
 			stateDepthTest = false;
 		}
 	}
 
 	public static void enableDepth() {
 		if(!stateDepthTest) {
-			_wglEnable(GL_DEPTH_TEST);
+			TCHudBatch.flushIfPending(); _wglEnable(GL_DEPTH_TEST);
 			stateDepthTest = true;
 		}
 	}
@@ -367,28 +372,28 @@ public class GlStateManager {
 			break;
 		}
 		if(rev != stateDepthFunc) {
-			_wglDepthFunc(rev);
+			TCHudBatch.flushIfPending(); _wglDepthFunc(rev);
 			stateDepthFunc = rev;
 		}
 	}
 
 	public static void depthMask(boolean flagIn) {
 		if(flagIn != stateDepthMask) {
-			_wglDepthMask(flagIn);
+			TCHudBatch.flushIfPending(); _wglDepthMask(flagIn);
 			stateDepthMask = flagIn;
 		}
 	}
 
 	public static void disableBlend() {
 		if(stateBlend) {
-			if(stateGlobalBlend) _wglDisable(GL_BLEND);
+			TCHudBatch.flushIfPending(); if(stateGlobalBlend) _wglDisable(GL_BLEND);
 			stateBlend = false;
 		}
 	}
 
 	public static void enableBlend() {
 		if(!stateBlend) {
-			if(stateGlobalBlend) _wglEnable(GL_BLEND);
+			TCHudBatch.flushIfPending(); if(stateGlobalBlend) _wglEnable(GL_BLEND);
 			stateBlend = true;
 		}
 	}
@@ -415,7 +420,7 @@ public class GlStateManager {
 		int srcBits = (srcFactor | (srcFactor << 16));
 		int dstBits = (dstFactor | (dstFactor << 16));
 		if(srcBits != stateBlendSRC || dstBits != stateBlendDST) {
-			_wglBlendFunc(srcFactor, dstFactor);
+			TCHudBatch.flushIfPending(); _wglBlendFunc(srcFactor, dstFactor);
 			stateBlendSRC = srcBits;
 			stateBlendDST = dstBits;
 		}
@@ -429,7 +434,7 @@ public class GlStateManager {
 		int srcBits = (srcFactor | (srcFactorAlpha << 16));
 		int dstBits = (dstFactor | (dstFactorAlpha << 16));
 		if(srcBits != stateBlendSRC || dstBits != stateBlendDST) {
-			_wglBlendFuncSeparate(srcFactor, dstFactor, srcFactorAlpha, dstFactorAlpha);
+			TCHudBatch.flushIfPending(); _wglBlendFuncSeparate(srcFactor, dstFactor, srcFactorAlpha, dstFactorAlpha);
 			stateBlendSRC = srcBits;
 			stateBlendDST = dstBits;
 		}
@@ -460,10 +465,12 @@ public class GlStateManager {
 	}
 
 	public static void enableShaderBlendAdd() {
+		TCHudBatch.flushIfPending();
 		stateEnableShaderBlendColor = true;
 	}
 
 	public static void disableShaderBlendAdd() {
+		TCHudBatch.flushIfPending();
 		stateEnableShaderBlendColor = false;
 	}
 
@@ -478,10 +485,12 @@ public class GlStateManager {
 	}
 
 	public static void enableFog() {
+		if(stateFog != true) TCHudBatch.flushIfPending();
 		stateFog = true;
 	}
 
 	public static void disableFog() {
+		if(stateFog != false) TCHudBatch.flushIfPending();
 		stateFog = false;
 	}
 
@@ -507,28 +516,28 @@ public class GlStateManager {
 
 	public static void enableCull() {
 		if(!stateCull) {
-			_wglEnable(GL_CULL_FACE);
+			TCHudBatch.flushIfPending(); _wglEnable(GL_CULL_FACE);
 			stateCull = true;
 		}
 	}
 
 	public static void disableCull() {
 		if(stateCull) {
-			_wglDisable(GL_CULL_FACE);
+			TCHudBatch.flushIfPending(); _wglDisable(GL_CULL_FACE);
 			stateCull = false;
 		}
 	}
 
 	public static void cullFace(int mode) {
 		if(stateCullFace != mode) {
-			_wglCullFace(mode);
+			TCHudBatch.flushIfPending(); _wglCullFace(mode);
 			stateCullFace = mode;
 		}
 	}
 
 	public static void enablePolygonOffset() {
 		if(!statePolygonOffset) {
-			_wglEnable(GL_POLYGON_OFFSET_FILL);
+			TCHudBatch.flushIfPending(); _wglEnable(GL_POLYGON_OFFSET_FILL);
 			statePolygonOffset = true;
 		}
 	}
@@ -561,10 +570,12 @@ public class GlStateManager {
 	}
 
 	public static void enableTexGen() {
+		if(stateTexGen != true) TCHudBatch.flushIfPending();
 		stateTexGen = true;
 	}
 
 	public static void disableTexGen() {
+		if(stateTexGen != false) TCHudBatch.flushIfPending();
 		stateTexGen = false;
 	}
 
@@ -586,16 +597,19 @@ public class GlStateManager {
 	public static void setActiveTexture(int texture) {
 		int textureIdx = texture - GL_TEXTURE0;
 		if(textureIdx != activeTexture) {
+			TCHudBatch.flushIfPending();
 			_wglActiveTexture(texture);
 			activeTexture = textureIdx;
 		}
 	}
 
 	public static void enableTexture2D() {
+		if(!stateTexture[activeTexture]) TCHudBatch.flushIfPending();
 		stateTexture[activeTexture] = true;
 	}
 
 	public static void disableTexture2D() {
+		if(stateTexture[activeTexture]) TCHudBatch.flushIfPending();
 		stateTexture[activeTexture] = false;
 	}
 	
@@ -651,6 +665,7 @@ public class GlStateManager {
 
 	public static void bindTexture(int texture) {
 		if(texture != boundTexture[activeTexture]) {
+			TCHudBatch.flushIfPending();
 			_wglBindTexture(GL_TEXTURE_2D, EaglercraftGPU.mapTexturesGL.get(texture));
 			boundTexture[activeTexture] = texture;
 		}
@@ -691,7 +706,7 @@ public class GlStateManager {
 
 	public static void viewport(int x, int y, int w, int h) {
 		if(viewportX != x || viewportY != y || viewportW != w || viewportH != h) {
-			_wglViewport(x, y, w, h);
+			TCHudBatch.flushIfPending(); _wglViewport(x, y, w, h);
 			viewportX = x;
 			viewportY = y;
 			viewportW = w;
@@ -702,7 +717,7 @@ public class GlStateManager {
 	public static void colorMask(boolean red, boolean green, boolean blue, boolean alpha) {
 		int bits = (red ? 1 : 0) | (green ? 2 : 0) | (blue ? 4 : 0) | (alpha ? 8 : 0);
 		if(bits != colorMaskBits) {
-			_wglColorMask(red, green, blue, alpha);
+			TCHudBatch.flushIfPending(); _wglColorMask(red, green, blue, alpha);
 			colorMaskBits = bits;
 		}
 	}
@@ -726,6 +741,7 @@ public class GlStateManager {
 	}
 
 	public static void clear(int mask) {
+		TCHudBatch.flushIfPending();
 		_wglClear(mask);
 	}
 

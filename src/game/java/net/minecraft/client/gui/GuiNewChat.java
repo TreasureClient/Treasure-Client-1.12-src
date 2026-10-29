@@ -72,7 +72,7 @@ public class GuiNewChat extends Gui {
 								int i2 = 0;
 								int j2 = -i1 * 9;
 								drawRect(-2, j2 - 9, 0 + k + 4, j2, l1 / 2 << 24);
-								String s = chatline.getChatComponent().getFormattedText();
+								String s = chatline.tcFormattedText(); // Treasure Client (No Chat Lag)
 								GlStateManager.enableBlend();
 								this.mc.fontRendererObj.drawStringWithShadow(s, 0.0F, (float) (j2 - 8),
 										16777215 + (l1 << 24));
@@ -126,8 +126,9 @@ public class GuiNewChat extends Gui {
 	 */
 	public void printChatMessageWithOptionalDeletion(ITextComponent chatComponent, int chatLineId) {
 		this.setChatLine(chatComponent, chatLineId, this.mc.ingameGUI.getUpdateCounter(), false);
+		// Treasure Client (No Chat Lag): plain replace instead of two regular expressions per message
 		LOGGER.info("[CHAT] {}",
-				(Object) chatComponent.getUnformattedText().replaceAll("\r", "\\\\r").replaceAll("\n", "\\\\n"));
+				(Object) chatComponent.getUnformattedText().replace("\r", "\\r").replace("\n", "\\n"));
 	}
 
 	private void setChatLine(ITextComponent chatComponent, int chatLineId, int updateCounter, boolean displayOnly) {

@@ -322,8 +322,10 @@ public class Particle {
 
 	public void moveEntity(double x, double y, double z) {
 		double d0 = y;
+		double origX = x;
+		double origZ = z;
 
-		if (this.canCollide) {
+		if (this.canCollide && !TCParticleCore.skipCollision(this, x, y, z)) {
 			List<AxisAlignedBB> list = this.worldObj.getCollisionBoxes((Entity) null,
 					this.getEntityBoundingBox().addCoord(x, y, z));
 
@@ -349,13 +351,15 @@ public class Particle {
 		}
 
 		this.resetPositionToBB();
-		this.isCollided = y != y && d0 < 0.0D;
+		// Treasure Client: compare with the motion before collisions, like vanilla (the decompiled code
+		// compared each value with itself, so particles never landed and never stopped at walls)
+		this.isCollided = d0 != y && d0 < 0.0D;
 
-		if (x != x) {
+		if (origX != x) {
 			this.motionX = 0.0D;
 		}
 
-		if (z != z) {
+		if (origZ != z) {
 			this.motionZ = 0.0D;
 		}
 	}
