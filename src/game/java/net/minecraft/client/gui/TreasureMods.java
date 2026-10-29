@@ -95,6 +95,9 @@ public class TreasureMods {
 	// BetterFps fast math (OptiFine-compatible sine table). Default ON; overlay writes bfmath=0 to turn it off.
 	private static boolean bfMath = true;
 	public static boolean betterFpsMath() { return bfMath; }
+	// Dynamic Resolution (run by the overlay). Default ON; read here for the Mods screen.
+	private static boolean dynRes = true;
+	public static boolean dynamicResolution() { return dynRes; }
 	// Celeritas Leaf Culling mode (TCLeafCulling.OFF/HOLLOW/SOLID_AGGRESSIVE/SOLID). Default SOLID, like the original mod.
 	private static int leafCull = net.minecraft.block.TCLeafCulling.SOLID;
 	public static int leafCulling() { return leafCull; }
@@ -311,6 +314,7 @@ public class TreasureMods {
 			lithium = true;
 			memSaver = true;
 			bfMath = true;
+			dynRes = true;
 			hudFps = 60;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
@@ -354,6 +358,7 @@ public class TreasureMods {
 				else if (k.equals("lithium")) lithium = v.equals("1");
 				else if (k.equals("memsaver")) memSaver = v.equals("1");
 				else if (k.equals("bfmath")) bfMath = v.equals("1");
+				else if (k.equals("dynres")) dynRes = v.equals("1");
 				else if (k.equals("hudFps")) { try { hudFps = Integer.parseInt(v); } catch (NumberFormatException e) { hudFps = 60; } }
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
 				else if (k.equals("oldAnim")) oldAnim = v.equals("1");

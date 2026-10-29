@@ -42,6 +42,9 @@ public class TCLagMonitor {
 	}
 
 	private static long start = -1L, lastEnd = -1L, lastHeapRead;
+	// Dynamic Resolution: frames and logic time over the last second, written for the overlay
+	private static long winStart = -1L, winLogicNs;
+	private static int winFrames, winSeq;
 	private static int lastChunks;
 	private static int curMinute = -1;
 	private static final int[] mFrames = new int[MINUTES];
@@ -75,6 +78,7 @@ public class TCLagMonitor {
 		}
 		long total = now - lastEnd;
 		lastEnd = now;
+		reportWindow(now, logicNs);
 		// entities were timed including the block entities and name tags inside them
 		cur[ENTITIES] = Math.max(0L, cur[ENTITIES] - cur[BLOCK_ENTS] - cur[NAME_TAGS]);
 		long timed = 0L;
@@ -127,6 +131,38 @@ public class TCLagMonitor {
 			if (ringCount < RING) ringCount++;
 		}
 		clearParts();
+	}
+
+	/**
+	 * Once a second, writes "fps,logic%,fps limit,in world,seq" to the "tcframe" storage key.
+	 * The overlay's Dynamic Resolution reads it to lower the render resolution when
+	 * frames get slow from drawing (a hot device), not from server lag.
+	 */
+	private static void reportWindow(long now, long logicNs) {
+		if (winStart < 0L) {
+			winStart = now;
+			return;
+		}
+		winFrames++;
+		winLogicNs += logicNs;
+		long ms = now - winStart;
+		if (ms < 1000L) {
+			return;
+		}
+		Minecraft mc = Minecraft.getMinecraft();
+		int fps = (int) (winFrames * 1000L / ms);
+		int logicPct = (int) Math.min(100L, winLogicNs / 10000L / ms);
+		int limit = mc.getLimitFramerate();
+		boolean inWorld = mc.world != null && mc.player != null;
+		try {
+			EagRuntime.setStorage("tcframe",
+					(fps + "," + logicPct + "," + limit + "," + (inWorld ? 1 : 0) + "," + (++winSeq))
+							.getBytes("UTF-8"));
+		} catch (Throwable t) {
+		}
+		winStart = now;
+		winFrames = 0;
+		winLogicNs = 0L;
 	}
 
 	private static void clearParts() {
