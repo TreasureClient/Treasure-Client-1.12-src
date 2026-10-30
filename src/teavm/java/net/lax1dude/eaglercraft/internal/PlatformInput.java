@@ -157,6 +157,24 @@ public class PlatformInput {
 	private static double mouseDX = 0.0D;
 	private static double mouseDY = 0.0D;
 	private static double mouseDWheel = 0.0D;
+
+	// Treasure Client: Chrome sometimes reports one huge, made-up mouse movement while
+	// the pointer is locked, which snaps your view somewhere random. A single move far
+	// bigger than the recent ones is dropped; a second big move in a row is kept, so
+	// real fast flicks still work.
+	private static float tcRecentMove = 0.0f;
+	private static boolean tcDroppedMove = false;
+
+	private static boolean tcAcceptMove(double dx, double dy) {
+		float m = (float) Math.max(Math.abs(dx), Math.abs(dy));
+		if (m > 200.0f && m > 12.0f * (tcRecentMove + 5.0f) && !tcDroppedMove) {
+			tcDroppedMove = true;
+			return false;
+		}
+		tcDroppedMove = false;
+		tcRecentMove = tcRecentMove * 0.6f + m * 0.4f;
+		return true;
+	}
 	private static boolean enableRepeatEvents = true;
 	private static boolean isWindowFocused = true;
 	private static boolean isMouseOverWindow = true;
@@ -318,7 +336,7 @@ public class PlatformInput {
 				evt.stopPropagation();
 				mouseX = (int)(getOffsetX(evt, touchOffsetXTeaVM) * windowDPI);
 				mouseY = windowHeight - (int)(getOffsetY(evt, touchOffsetYTeaVM) * windowDPI) - 1;
-				if(pointerLockFlag) {
+				if(pointerLockFlag && tcAcceptMove(evt.getMovementX(), evt.getMovementY())) {
 					mouseDX += evt.getMovementX();
 					mouseDY += -evt.getMovementY();
 				}

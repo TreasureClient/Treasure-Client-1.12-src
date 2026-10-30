@@ -71,14 +71,22 @@ public class TreasureMods {
 	private static boolean via = true;
 	public static boolean viaEnabled() { return via; }
 
+	// Performance modpack: one switch for all ported performance mods. Default ON; overlay
+	// writes perfpack=0 to turn it off, which runs the game like vanilla. The single mods'
+	// own settings are kept (Video Settings shows and changes them) and come back when it's on.
+	private static boolean perfPack = true;
+	public static boolean performanceModpack() { return perfPack; }
+
 	// Celeritas: the faster chunk renderer (WASM only). Default ON; overlay writes celeritas=0 to turn it off.
 	private static boolean celeritas = true;
 	/** The Celeritas setting saved by the overlay (the Mods screen shows and changes it). */
 	public static boolean celeritasSetting() { return celeritas; }
+	/** Whether Celeritas should actually run right now (its setting and the modpack switch). */
+	public static boolean celeritasActive() { return perfPack && celeritas; }
 
 	// Entity Culling: skip mobs/block entities hidden behind walls. Default ON; overlay writes entcull=0 to turn it off.
 	private static boolean entityCulling = true;
-	public static boolean entityCulling() { return entityCulling; }
+	public static boolean entityCulling() { return perfPack && entityCulling; }
 
 	// Dynamic FOV: zoom the view when sprinting, flying, with Speed or drawing a bow. Default OFF
 	// (overlay writes dynfov=1 to turn it on), like OptiFine's Dynamic FOV option.
@@ -87,37 +95,37 @@ public class TreasureMods {
 
 	// VanillaFix: crash recovery and Minecraft bug fixes. Default ON; overlay writes vanillafix=0 to turn it off.
 	private static boolean vanillaFix = true;
-	public static boolean vanillaFix() { return vanillaFix; }
+	public static boolean vanillaFix() { return perfPack && vanillaFix; }
 
 	// Enhanced Block Entities: chests and beds baked into the chunk mesh. Default ON; overlay writes ebe=0 to turn it off.
 	private static boolean ebe = true;
 	private static boolean appliedEbe = true;
 	// BetterFps fast math (OptiFine-compatible sine table). Default ON; overlay writes bfmath=0 to turn it off.
 	private static boolean bfMath = true;
-	public static boolean betterFpsMath() { return bfMath; }
+	public static boolean betterFpsMath() { return perfPack && bfMath; }
 	// Dynamic Resolution (run by the overlay). Default OFF; read here for the Mods screen.
 	private static boolean dynRes = false;
 	public static boolean dynamicResolution() { return dynRes; }
 	// Celeritas Leaf Culling mode (TCLeafCulling.OFF/HOLLOW/SOLID_AGGRESSIVE/SOLID). Default SOLID, like the original mod.
 	private static int leafCull = net.minecraft.block.TCLeafCulling.SOLID;
-	public static int leafCulling() { return leafCull; }
-	public static boolean enhancedBlockEntities() { return ebe; }
+	public static int leafCulling() { return perfPack ? leafCull : net.minecraft.block.TCLeafCulling.OFF; }
+	public static boolean enhancedBlockEntities() { return perfPack && ebe; }
 
 	// Dynamic FPS: lower the frame rate while the game window isn't focused. Default ON; overlay writes dynfps=0.
 	private static boolean dynFps = true;
-	public static boolean dynamicFps() { return dynFps; }
+	public static boolean dynamicFps() { return perfPack && dynFps; }
 
 	// ImmediatelyFast: cheaper name labels and sign text. Default ON; overlay writes ifast=0 to turn it off.
 	private static boolean iFast = true;
-	public static boolean immediatelyFast() { return iFast; }
+	public static boolean immediatelyFast() { return perfPack && iFast; }
 
 	// Lithium: collision, chunk lookup and block entity list speedups. Default ON; overlay writes lithium=0.
 	private static boolean lithium = true;
-	public static boolean lithium() { return lithium; }
+	public static boolean lithium() { return perfPack && lithium; }
 
 	// Memory Saver: stop the idle singleplayer worker on servers, shorter sound cache. Default ON; overlay writes memsaver=0.
 	private static boolean memSaver = true;
-	public static boolean memorySaver() { return memSaver; }
+	public static boolean memorySaver() { return perfPack && memSaver; }
 
 	// the last settings text we parsed, so unchanged settings aren't parsed again 4x a second
 	private static byte[] lastModsData;
@@ -125,20 +133,21 @@ public class TreasureMods {
 
 	// Particle Culling: skip particles outside the view. Default ON; overlay writes pcull=0 to turn it off.
 	private static boolean particleCulling = true;
-	public static boolean particleCulling() { return particleCulling; }
+	public static boolean particleCulling() { return perfPack && particleCulling; }
 	// Particle Core: cheaper particle movement and a lower particle cap. Default ON (overlay writes pcore=0).
 	private static boolean pCore = true;
-	public static boolean particleCore() { return pCore; }
+	public static boolean particleCore() { return perfPack && pCore; }
 	// C2ME smooth chunk loading: spread big server packet bursts over a few ticks. Default ON (c2me=0 turns off).
 	private static boolean c2me = true;
-	public static boolean c2me() { return c2me; }
+	public static boolean c2me() { return perfPack && c2me; }
 
 	// Entity render distance in blocks (mobs, players, items, chests, signs...). 0 = off (vanilla).
 	private static int entityDistance = 0;
-	public static int entityDistance() { return entityDistance; }
+	public static int entityDistance() { return perfPack ? entityDistance : 0; }
 
 	// 1.7 Animations (Render): master switch off by default, parts on by default
-	private static boolean oldAnim = false, oaBlock = true, oaNoDip = true, oaUseSwing = true, oaArmor = true;
+	private static boolean oldAnim = false, oaBlock = true, oaNoDip = true, oaUseSwing = true, oaArmor = true, oaHitSwing = true;
+	public static boolean oaHitSwing() { return oaHitSwing; }
 	public static boolean oldAnim() { return oldAnim; }
 	public static boolean oaBlock() { return oaBlock; }
 	public static boolean oaNoDip() { return oaNoDip; }
@@ -298,6 +307,28 @@ public class TreasureMods {
 		} catch (Throwable t) {}
 	}
 
+	/**
+	 * The value saved for a setting, as the user chose it (the Performance modpack switch
+	 * doesn't change it). Used by Video Settings to show the mods' own settings.
+	 */
+	public static String userSetting(String key, String def) {
+		byte[] data = lastModsData;
+		if (data == null || data.length == 0) {
+			return def;
+		}
+		String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+		String prefix = key + "=";
+		int at = s.startsWith(prefix) ? 0 : s.indexOf("," + prefix);
+		if (at < 0) {
+			return def;
+		}
+		if (at > 0) {
+			at++;
+		}
+		int end = s.indexOf(',', at);
+		return s.substring(at + prefix.length(), end < 0 ? s.length() : end);
+	}
+
 	private static void reload() {
 		try {
 			byte[] data = EagRuntime.getStorage("tcmods");
@@ -310,6 +341,7 @@ public class TreasureMods {
 			hitboxes = false; hitboxPlayers = true; hitboxMobs = true; hitboxAnimals = true; hitboxOther = false;
 			pauseUnfocused = false;
 			via = true; // default ON unless the overlay explicitly says via=0
+			perfPack = true;
 			celeritas = true;
 			entityCulling = true;
 			particleCulling = true;
@@ -325,7 +357,7 @@ public class TreasureMods {
 			dynRes = false;
 			dynFov = false;
 			entityDistance = 0;
-			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true;
+			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true; oaHitSwing = true;
 			fullbright = false; clearWater = true; satDisplay = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
 			tierTagger = false; ttMode = "highest";
@@ -358,6 +390,7 @@ public class TreasureMods {
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
 				else if (k.equals("via")) via = v.equals("1");
 				else if (k.equals("celeritas")) celeritas = v.equals("1");
+				else if (k.equals("perfpack")) perfPack = v.equals("1");
 				else if (k.equals("entcull")) entityCulling = v.equals("1");
 				else if (k.equals("vanillafix")) vanillaFix = v.equals("1");
 				else if (k.equals("ebe")) ebe = v.equals("1");
@@ -376,6 +409,7 @@ public class TreasureMods {
 				else if (k.equals("oaNoDip")) oaNoDip = v.equals("1");
 				else if (k.equals("oaUseSwing")) oaUseSwing = v.equals("1");
 				else if (k.equals("oaArmor")) oaArmor = v.equals("1");
+				else if (k.equals("oaHitSwing")) oaHitSwing = v.equals("1");
 				else if (k.equals("fullbright")) fullbright = v.equals("1");
 				else if (k.equals("clearWater")) clearWater = v.equals("1");
 				else if (k.equals("satDisplay")) satDisplay = v.equals("1");
@@ -396,6 +430,7 @@ public class TreasureMods {
 				else net.minecraft.client.renderer.TCExtra.parse(k, v);
 				}
 			}
+			net.minecraft.client.renderer.TCExtra.packOn = perfPack;
 			net.minecraft.client.renderer.TCExtra.apply();
 		} catch (Throwable t) {
 			// leave defaults
@@ -410,6 +445,7 @@ public class TreasureMods {
 	 * that only singleplayer needs; clicking Singleplayer starts it again.
 	 */
 	private static void applyMemorySaver(Minecraft mc) {
+		boolean memSaver = memorySaver();
 		net.lax1dude.eaglercraft.internal.PlatformAudio.cacheExpireMillis = memSaver ? 120000L : 600000L;
 		if (!memSaver || mc.world == null) {
 			return;
@@ -439,27 +475,27 @@ public class TreasureMods {
 			if (now - lastLoad > 250L) { reload(); lastLoad = now; }
 
 			// switch between the Celeritas and vanilla chunk renderers when the toggle changes
-			try { org.taumc.celeritas.impl.TreasureCeleritas.setEnabled(celeritas); } catch (Throwable t) {}
+			try { org.taumc.celeritas.impl.TreasureCeleritas.setEnabled(celeritasActive()); } catch (Throwable t) {}
 
 			// Memory Saver
 			applyMemorySaver(mc);
-			net.minecraft.util.TCLithium.enabled = lithium;
-			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(iFast);
-			net.minecraft.client.particle.TCParticleCore.enabled = pCore;
-			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me;
-			net.minecraft.util.math.MathHelper.tcFastMath = bfMath;
+			net.minecraft.util.TCLithium.enabled = lithium();
+			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(immediatelyFast());
+			net.minecraft.client.particle.TCParticleCore.enabled = particleCore();
+			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me();
+			net.minecraft.util.math.MathHelper.tcFastMath = betterFpsMath();
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
 			// Leaf Culling mode changed: rebuild chunk meshes with the new leaf faces
-			if (leafCull != net.minecraft.block.TCLeafCulling.mode) {
-				net.minecraft.block.TCLeafCulling.mode = leafCull;
+			if (leafCulling() != net.minecraft.block.TCLeafCulling.mode) {
+				net.minecraft.block.TCLeafCulling.mode = leafCulling();
 				if (mc.world != null && mc.renderGlobal != null) {
 					try { mc.renderGlobal.loadRenderers(); } catch (Throwable t) {}
 				}
 			}
 
-			if (ebe != appliedEbe) {
-				appliedEbe = ebe;
+			if (enhancedBlockEntities() != appliedEbe) {
+				appliedEbe = enhancedBlockEntities();
 				if (mc.world != null && mc.renderGlobal != null) {
 					try { mc.renderGlobal.loadRenderers(); } catch (Throwable t) {}
 				}
