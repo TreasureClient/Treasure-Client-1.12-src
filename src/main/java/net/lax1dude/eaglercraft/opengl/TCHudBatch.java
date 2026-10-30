@@ -1,5 +1,8 @@
 package net.lax1dude.eaglercraft.opengl;
 
+import net.lax1dude.eaglercraft.internal.IBufferGL;
+import net.lax1dude.eaglercraft.internal.IProgramGL;
+import net.lax1dude.eaglercraft.internal.IVertexArrayGL;
 import net.lax1dude.eaglercraft.vector.Matrix4f;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 
@@ -48,17 +51,38 @@ public final class TCHudBatch {
 	/** Start of the HUD. */
 	public static void begin() {
 		active = enabled;
+		InstancedFontRenderer.tcBatching = enabled;
 	}
 
 	/** End of the HUD: draws whatever is left. */
 	public static void end() {
 		flushIfPending();
 		active = false;
+		InstancedFontRenderer.tcBatching = false;
 	}
 
+	/**
+	 * Draws collected HUD quads and text. This can run inside another draw call after it
+	 * has bound its own shader and buffers, so those are put back afterwards.
+	 */
 	public static void flushIfPending() {
-		if (count > 0 && !flushing) {
-			flush();
+		if ((count > 0 || InstancedFontRenderer.tcPending) && !flushing) {
+			IProgramGL prog = EaglercraftGPU.currentShaderProgram;
+			IVertexArrayGL vao = EaglercraftGPU.currentVertexArray;
+			IBufferGL buf = EaglercraftGPU.currentArrayBuffer;
+			if (count > 0) {
+				flush();
+			}
+			InstancedFontRenderer.tcFlushBatch();
+			if (prog != null) {
+				EaglercraftGPU.bindGLShaderProgram(prog);
+			}
+			if (vao != null) {
+				EaglercraftGPU.bindGLVertexArray(vao);
+			}
+			if (buf != null) {
+				EaglercraftGPU.bindGLArrayBuffer(buf);
+			}
 		}
 	}
 
@@ -70,6 +94,9 @@ public final class TCHudBatch {
 			double v0, double u1, double v1) {
 		if (!active || flushing || !GlStateManager.stateTexture[0] || !canBatch()) {
 			return false;
+		}
+		if (InstancedFontRenderer.tcPending) {
+			flushIfPending(); // text collected before this quad is drawn first
 		}
 		int c = packColor(GlStateManager.stateColorR, GlStateManager.stateColorG, GlStateManager.stateColorB,
 				GlStateManager.stateColorA);
