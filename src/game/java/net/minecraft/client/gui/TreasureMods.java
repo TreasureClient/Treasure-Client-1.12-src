@@ -481,6 +481,7 @@ public class TreasureMods {
 			applyMemorySaver(mc);
 			net.minecraft.util.TCLithium.enabled = lithium();
 			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(immediatelyFast());
+			net.lax1dude.eaglercraft.opengl.TCModelBatch.setEnabled(immediatelyFast());
 			net.minecraft.client.particle.TCParticleCore.enabled = particleCore();
 			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me();
 			net.minecraft.util.math.MathHelper.tcFastMath = betterFpsMath();

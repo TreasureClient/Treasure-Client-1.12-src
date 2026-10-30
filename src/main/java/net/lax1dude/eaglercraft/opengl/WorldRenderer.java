@@ -443,6 +443,12 @@ public class WorldRenderer {
 		this.byteBuffer.putInt(j1 + i1 * 3, l);
 	}
 
+	/** Treasure Client: sets the current vertex's normal from an already packed int (x | y << 8 | z << 16). */
+	public WorldRenderer tcNormalPacked(int packed) {
+		this.byteBuffer.putInt(this.vertexCount * this.vertexFormat.attribStride + this.vertexFormat.attribNormalOffset, packed);
+		return this;
+	}
+
 	/**
 	 * set normal of current vertex
 	 */

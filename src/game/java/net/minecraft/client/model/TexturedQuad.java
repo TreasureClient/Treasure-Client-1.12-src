@@ -44,6 +44,41 @@ public class TexturedQuad {
 	 * Draw this primitve. This is typically called only once as the generated
 	 * drawing instructions are saved by the renderer and reused later.
 	 */
+	/**
+	 * Treasure Client (entity model batching): writes this quad's 4 vertices as
+	 * x, y, z, u, v, nx, ny, nz into d, matching what {@link #draw} puts in the
+	 * display list (including the display list's whole-number normals).
+	 */
+	public int tcWrite(float[] d, int off, float scale) {
+		Vec3d vec3d = this.vertexPositions[1].vector3D.subtractReverse(this.vertexPositions[0].vector3D);
+		Vec3d vec3d1 = this.vertexPositions[1].vector3D.subtractReverse(this.vertexPositions[2].vector3D);
+		Vec3d vec3d2 = vec3d1.crossProduct(vec3d).normalize();
+		float f = (float) vec3d2.xCoord;
+		float f1 = (float) vec3d2.yCoord;
+		float f2 = (float) vec3d2.zCoord;
+
+		if (this.invertNormal) {
+			f = -f;
+			f1 = -f1;
+			f2 = -f2;
+		}
+		// WorldRenderer.normal() stores (int) n * 127, so only whole numbers survive
+		float nx = (float) (int) f, ny = (float) (int) f1, nz = (float) (int) f2;
+
+		for (int i = 0; i < 4; ++i) {
+			PositionTextureVertex v = this.vertexPositions[i];
+			d[off++] = (float) (v.vector3D.xCoord * (double) scale);
+			d[off++] = (float) (v.vector3D.yCoord * (double) scale);
+			d[off++] = (float) (v.vector3D.zCoord * (double) scale);
+			d[off++] = v.texturePositionX;
+			d[off++] = v.texturePositionY;
+			d[off++] = nx;
+			d[off++] = ny;
+			d[off++] = nz;
+		}
+		return off;
+	}
+
 	public void draw(WorldRenderer renderer, float scale) {
 		Vec3d vec3d = this.vertexPositions[1].vector3D.subtractReverse(this.vertexPositions[0].vector3D);
 		Vec3d vec3d1 = this.vertexPositions[1].vector3D.subtractReverse(this.vertexPositions[2].vector3D);

@@ -199,6 +199,7 @@ public class GlStateManager {
 	}
 	
 	public static void pushLightCoords() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		int push = stateLightsStackPointer + 1;
 		if(push < stateLightsStack.length) {
 			Vector4f[] copyFrom = stateLightsStack[stateLightsStackPointer];
@@ -223,6 +224,7 @@ public class GlStateManager {
 	}
 
 	public static void popLightCoords() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		if(stateLightsStackPointer > 0) {
 			--stateLightsStackPointer;
 		}else {
@@ -262,10 +264,12 @@ public class GlStateManager {
 	}
 
 	public static void enableExtensionPipeline() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateUseExtensionPipeline = true;
 	}
 
 	public static void disableExtensionPipeline() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateUseExtensionPipeline = false;
 	}
 
@@ -276,6 +280,7 @@ public class GlStateManager {
 	private static final Vector4f paramVector4 = new Vector4f();
 	public static void enableMCLight(int light, float diffuse, double dirX,
 			double dirY, double dirZ, double dirW) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		if(dirW != 0.0) throw new IllegalArgumentException("dirW must be 0.0!");
 		paramVector4.x = (float)dirX;
 		paramVector4.y = (float)dirY;
@@ -295,11 +300,13 @@ public class GlStateManager {
 	}
 
 	public static void disableMCLight(int light) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateLightsEnabled[stateLightsStackPointer][light] = false;
 		++stateLightingSerial[stateLightsStackPointer];
 	}
 	
 	public static void setMCLightAmbient(float r, float g, float b) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateLightingAmbientR = r;
 		stateLightingAmbientG = g;
 		stateLightingAmbientB = b;
@@ -307,10 +314,12 @@ public class GlStateManager {
 	}
 
 	public static void enableColorMaterial() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateMaterial = true;
 	}
 
 	public static void disableColorMaterial() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateMaterial = false;
 	}
 
@@ -449,6 +458,7 @@ public class GlStateManager {
 	}
 
 	public static void setShaderBlendSrc(float r, float g, float b, float a) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateShaderBlendSrcColorR = r;
 		stateShaderBlendSrcColorG = g;
 		stateShaderBlendSrcColorB = b;
@@ -457,6 +467,7 @@ public class GlStateManager {
 	}
 
 	public static void setShaderBlendAdd(float r, float g, float b, float a) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateShaderBlendAddColorR = r;
 		stateShaderBlendAddColorG = g;
 		stateShaderBlendAddColorB = b;
@@ -475,6 +486,7 @@ public class GlStateManager {
 	}
 
 	public static void setBlendConstants(float r, float g, float b, float a) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		if(r != blendConstantR || g != blendConstantG || b != blendConstantB || a != blendConstantA) {
 			_wglBlendColor(r, g, b, a);
 			blendConstantR = r;
@@ -495,21 +507,25 @@ public class GlStateManager {
 	}
 
 	public static void setFog(int param) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateFogEXP = param == GL_EXP;
 		++stateFogSerial;
 	}
 
 	public static void setFogDensity(float param) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateFogDensity = param;
 		++stateFogSerial;
 	}
 
 	public static void setFogStart(float param) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateFogStart = param;
 		++stateFogSerial;
 	}
 
 	public static void setFogEnd(float param) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		stateFogEnd = param;
 		++stateFogSerial;
 	}
@@ -543,6 +559,7 @@ public class GlStateManager {
 	}
 
 	public static void disablePolygonOffset() {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		if(statePolygonOffset) {
 			_wglDisable(GL_POLYGON_OFFSET_FILL);
 			statePolygonOffset = false;
@@ -550,6 +567,7 @@ public class GlStateManager {
 	}
 
 	public static void doPolygonOffset(float factor, float units) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		if(factor != statePolygonOffsetFactor || units != statePolygonOffsetUnits) {
 			_wglPolygonOffset(-factor, units);
 			statePolygonOffsetFactor = factor;
@@ -580,11 +598,13 @@ public class GlStateManager {
 	}
 
 	public static void texGen(GlStateManager.TexGen coord, int source) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		coord.source = source;
 		++stateTexGenSerial;
 	}
 
 	public static void func_179105_a(GlStateManager.TexGen coord, int plane, FloatBuffer vector) {
+		TCHudBatch.flushIfPending(); // Treasure Client: draw batched quads first, in order
 		coord.plane = plane;
 		coord.vector.load(vector);
 		if(plane == GL_EYE_PLANE) {
@@ -614,12 +634,18 @@ public class GlStateManager {
 	}
 	
 	public static void texCoords2D(float x, float y) {
+		if(x != textureCoordsX[activeTexture] || y != textureCoordsY[activeTexture]) {
+			TCHudBatch.flushIfPending(); // Treasure Client: lightmap coords change (per entity)
+		}
 		textureCoordsX[activeTexture] = x;
 		textureCoordsY[activeTexture] = y;
 		++textureCoordsAccessSerial[activeTexture];
 	}
 	
 	public static void texCoords2DDirect(int tex, float x, float y) {
+		if(x != textureCoordsX[tex] || y != textureCoordsY[tex]) {
+			TCHudBatch.flushIfPending(); // Treasure Client: lightmap coords change (per entity)
+		}
 		textureCoordsX[tex] = x;
 		textureCoordsY[tex] = y;
 		++textureCoordsAccessSerial[tex];
@@ -747,6 +773,9 @@ public class GlStateManager {
 	}
 
 	public static void matrixMode(int mode) {
+		if(mode == GL_TEXTURE && stateMatrixMode != GL_TEXTURE) {
+			TCHudBatch.flushIfPending(); // Treasure Client: texture matrix changes affect batched quads
+		}
 		stateMatrixMode = mode;
 	}
 

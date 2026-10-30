@@ -117,6 +117,18 @@ public class ModelRenderer {
 		this.rotationPointZ = rotationPointZIn;
 	}
 
+	// Treasure Client (entity model batching): this part's vertices, built with the display list
+	private float[] tcBatchData;
+	private int tcBatchQuads;
+
+	/** Draws this part's own boxes: added to the entity batch when possible, else the display list. */
+	private void tcDrawPart() {
+		if (this.tcBatchData == null
+				|| !net.lax1dude.eaglercraft.opengl.TCModelBatch.add(this.tcBatchData, this.tcBatchQuads)) {
+			GlStateManager.callList(this.displayList);
+		}
+	}
+
 	public void render(float scale) {
 		if (!this.isHidden) {
 			if (this.showModel) {
@@ -128,7 +140,7 @@ public class ModelRenderer {
 
 				if (this.rotateAngleX == 0.0F && this.rotateAngleY == 0.0F && this.rotateAngleZ == 0.0F) {
 					if (this.rotationPointX == 0.0F && this.rotationPointY == 0.0F && this.rotationPointZ == 0.0F) {
-						GlStateManager.callList(this.displayList);
+						this.tcDrawPart();
 
 						if (this.childModels != null) {
 							for (int k = 0; k < this.childModels.size(); ++k) {
@@ -138,7 +150,7 @@ public class ModelRenderer {
 					} else {
 						GlStateManager.translate(this.rotationPointX * scale, this.rotationPointY * scale,
 								this.rotationPointZ * scale);
-						GlStateManager.callList(this.displayList);
+						this.tcDrawPart();
 
 						if (this.childModels != null) {
 							for (int j = 0; j < this.childModels.size(); ++j) {
@@ -156,7 +168,7 @@ public class ModelRenderer {
 
 					GlStateManager.rotateZYXRad(this.rotateAngleX, this.rotateAngleY, this.rotateAngleZ);
 
-					GlStateManager.callList(this.displayList);
+					this.tcDrawPart();
 
 					if (this.childModels != null) {
 						for (int i = 0; i < this.childModels.size(); ++i) {
@@ -185,7 +197,7 @@ public class ModelRenderer {
 
 				GlStateManager.rotateZYXRad(this.rotateAngleX, this.rotateAngleY, this.rotateAngleZ);
 
-				GlStateManager.callList(this.displayList);
+				this.tcDrawPart();
 				GlStateManager.popMatrix();
 			}
 		}
@@ -230,6 +242,31 @@ public class ModelRenderer {
 
 		EaglercraftGPU.glEndList();
 		this.compiled = true;
+
+		// Treasure Client (entity model batching): keep the same vertices for the batch
+		int quads = 0;
+		for (int i = 0; i < this.cubeList.size(); ++i) {
+			TexturedQuad[] q = ((ModelBox) this.cubeList.get(i)).tcQuads();
+			for (int j = 0; j < q.length; ++j) {
+				if (q[j] != null) {
+					++quads;
+				}
+			}
+		}
+		if (quads > 0) {
+			float[] data = new float[quads * 4 * 8];
+			int off = 0;
+			for (int i = 0; i < this.cubeList.size(); ++i) {
+				TexturedQuad[] q = ((ModelBox) this.cubeList.get(i)).tcQuads();
+				for (int j = 0; j < q.length; ++j) {
+					if (q[j] != null) {
+						off = q[j].tcWrite(data, off, scale);
+					}
+				}
+			}
+			this.tcBatchData = data;
+			this.tcBatchQuads = quads;
+		}
 	}
 
 	/**
