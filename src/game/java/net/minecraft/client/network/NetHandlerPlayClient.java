@@ -408,13 +408,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.gameSettings.sendSettingsToServer();
 		this.netManager.sendPacket(new CPacketCustomPayload("MC|Brand",
 				(new PacketBuffer(Unpooled.buffer())).writeString(ClientBrandRetriever.getClientModName())));
-		// Treasure Client — announce ViaBlocks support so an Option-A server/proxy
-		// can send our modern block-state ids (data source).
-		TreasureViaHandshake.sendHandshake(this.netManager);
-		// Treasure Client — TuffX+ ViaBlocks: register + opt in so a TuffX+ backend
-		// (e.g. arch.mc) streams modern blocks we render from our own registry.
-		TuffViaBlocks.onJoin(this.netManager);
-		ViaEntitiesClient.onJoin(this.netManager);
+		// Treasure Client — ViaVersion handshakes (TuffX+ blocks, entities, TC|ViaBlocks)
+		// are sent only once the server lists their channel (TCServerChannels).
+		TCServerChannels.onJoin();
 		WebViewOverlayController.setPacketSendCallback(this::webViewSendHandler);
 	}
 
@@ -1142,7 +1138,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.setDimensionAndSpawnPlayer(packetIn.getDimensionID());
 		this.gameController.playerController.setGameType(packetIn.getGameType());
 		// Treasure Client — a proxy server switch only sends a respawn: opt in to TuffX+ again
-		TuffViaBlocks.onRespawn(this.netManager);
+		TCServerChannels.onRespawn(this.netManager);
 	}
 
 	/**
@@ -1875,6 +1871,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			String s = packetbuffer3.readStringFromBuffer(32767);
 			String s1 = packetbuffer3.readStringFromBuffer(256);
 			this.gameController.getSoundHandler().stop(s1, SoundCategory.getByName(s));
+		} else if ("REGISTER".equals(packetIn.getChannelName())) {
+			// Treasure Client — the server's plugin channels: send only the handshakes it supports
+			TCServerChannels.onRegister(packetIn.getBufferData(), this.netManager);
 		} else if (TreasureViaHandshake.CHANNEL.equals(packetIn.getChannelName())) {
 			// Treasure Client — server acknowledged ViaBlocks support (data source).
 			TreasureViaHandshake.handleServer(packetIn.getBufferData());

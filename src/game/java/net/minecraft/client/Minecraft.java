@@ -917,6 +917,29 @@ public class Minecraft implements IThreadListener {
 	/**
 	 * Called repeatedly from run()
 	 */
+	/**
+	 * Treasure Client: handles waiting server packets every frame, not only in
+	 * game ticks (vanilla also handles them each frame). Uses what is left of the
+	 * frame's packet time, so big bursts are spread over frames.
+	 */
+	private void tcPumpPackets() {
+		if (this.world == null || this.player == null || this.player.connection == null) {
+			return;
+		}
+		net.minecraft.network.NetworkManager nm = this.player.connection.getNetworkManager();
+		if (!(nm instanceof net.lax1dude.eaglercraft.socket.WebSocketNetworkManager) || !nm.isChannelOpen()
+				|| !((net.lax1dude.eaglercraft.socket.WebSocketNetworkManager) nm).tcHasBacklog()) {
+			return;
+		}
+		try {
+			nm.processReceivedPackets();
+		} catch (IOException ex) {
+			net.minecraft.network.NetworkManager.logger.fatal("Unhandled IOException was thrown while processing multiplayer packets!");
+			net.minecraft.network.NetworkManager.logger.fatal(ex);
+			nm.closeChannel(new net.minecraft.util.text.TextComponentString("Exception thrown: " + ex.toString()));
+		}
+	}
+
 	private void runGameLoop() throws IOException {
 		if (Display.isCloseRequested()) {
 			this.shutdown();
@@ -926,6 +949,7 @@ public class Minecraft implements IThreadListener {
 		// (not a Video Setting). When enabled and the window isn't focused, skip the
 		// expensive world render and yield briefly so the tab stops burning GPU.
 		// Ticks still run so nothing desyncs; only rendering is skipped.
+		net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcFrameStart(); // Treasure Client: packet time per frame
 		if (net.minecraft.client.gui.TreasureMods.pauseWhenUnfocused() && !Display.isActive()) {
 			this.timer.updateTimer();
 			for (int j = 0; j < this.timer.elapsedTicks; ++j) {
@@ -949,6 +973,7 @@ public class Minecraft implements IThreadListener {
 		for (int j = 0; j < this.timer.elapsedTicks; ++j) {
 			this.runTick();
 		}
+		this.tcPumpPackets();
 
 		long i1 = EagRuntime.nanoTime() - l;
 		this.checkGLError("Pre render");

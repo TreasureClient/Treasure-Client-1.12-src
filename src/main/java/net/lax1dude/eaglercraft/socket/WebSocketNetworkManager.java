@@ -37,16 +37,42 @@ public class WebSocketNetworkManager extends NetworkManager {
 	/**
 	 * Treasure Client (C2ME smooth chunk loading): when the server sends a big
 	 * burst (joining a game sends hundreds of chunk and entity packets at once),
-	 * only about 8 ms of packets are handled per game tick and the rest wait for
-	 * the next tick, in the same order. The world loads in over a few ticks
-	 * instead of freezing the game for a moment. Very big backlogs, and anything
-	 * before you are in a world, are still handled all at once. Set from the
-	 * "c2me" setting.
+	 * only a few ms of packets are handled per frame and the rest wait for the
+	 * next frame, in the same order. The world loads in over a few frames
+	 * instead of freezing the game for a moment.
+	 *
+	 * The time limit is per frame, not per game tick: a slow frame that runs
+	 * several ticks to catch up used to get the full limit for each one, which
+	 * itself caused spikes. Packets are also handled every frame (like vanilla,
+	 * which runs them as scheduled tasks each frame), so the small limit still
+	 * keeps up. The limit grows when packets pile up, so the game never falls
+	 * far behind the server. Anything before you are in a world is handled all
+	 * at once. Set from the "c2me" setting.
 	 */
 	public static boolean tcSpreadBursts = true;
-	private static final long TC_BUDGET_NS = 8000000L;
-	private static final int TC_MAX_BACKLOG = 2000;
+	private static final int TC_MAX_BACKLOG = 4000;
+	private static final int TC_MIN_PER_FRAME = 8;
+	private static long tcFrameUsedNs;
+	private static int tcFrameHandled;
 	private final java.util.ArrayDeque<IWebSocketFrame> tcBacklog = new java.util.ArrayDeque<IWebSocketFrame>();
+
+	/** Called at the start of every frame: resets this frame's packet time. */
+	public static void tcFrameStart() {
+		tcFrameUsedNs = 0L;
+		tcFrameHandled = 0;
+	}
+
+	/** Packet time allowed per frame, more when packets are piling up. */
+	private static long tcBudgetNs(int backlog) {
+		if (backlog < 200) return 4000000L;
+		if (backlog < 1000) return 8000000L;
+		return 16000000L;
+	}
+
+	/** True while packets are waiting for a later frame. */
+	public boolean tcHasBacklog() {
+		return !tcBacklog.isEmpty() || webSocketClient.availableBinaryFrames() > 0;
+	}
 
 	public WebSocketNetworkManager(IWebSocketClient webSocketClient) {
 		super(webSocketClient.getCurrentURI());
@@ -86,13 +112,18 @@ public class WebSocketNetworkManager extends NetworkManager {
 
 		boolean spread = tcSpreadBursts && isChannelOpen() && tcBacklog.size() < TC_MAX_BACKLOG
 				&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient;
-		long deadline = spread ? net.lax1dude.eaglercraft.EagRuntime.nanoTime() + TC_BUDGET_NS : 0L;
+		long start = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
+		long deadline = start + tcBudgetNs(tcBacklog.size()) - tcFrameUsedNs;
+		if (spread && tcFrameHandled >= TC_MIN_PER_FRAME && start >= deadline) {
+			return; // this frame's packet time is used up
+		}
 		int handled = 0;
 		IWebSocketFrame next;
 		while((next = tcBacklog.poll()) != null) {
 			++debugPacketCounter;
 			long tcT = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
 			int tcPart = net.minecraft.client.TCLagMonitor.L_OTHER_PKTS;
+			Object tcPkt = null;
 			try {
 				byte[] asByteArray = next.getByteArray();
 				ByteBuf nettyBuffer = Unpooled.buffer(asByteArray, asByteArray.length);
@@ -118,6 +149,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 				}
 				
 				tcPart = net.minecraft.client.TCLagMonitor.packetPart(pkt);
+				tcPkt = pkt;
 				try {
 					pkt.processPacket(nethandler);
 				}catch(Throwable t) {
@@ -130,12 +162,16 @@ public class WebSocketNetworkManager extends NetworkManager {
 				logger.error(t);
 			}
 			net.minecraft.client.TCLagMonitor.addLogic(tcPart, tcT); // Treasure Client: lag monitor
-			// at least 16 packets per tick, then stop once this tick's time is used up
-			if(spread && ++handled >= 16 && (handled & 3) == 0
+			net.minecraft.client.TCLagMonitor.addPacketType(tcPkt, net.lax1dude.eaglercraft.EagRuntime.nanoTime() - tcT);
+			// at least a few packets per frame, then stop once this frame's time is used up
+			++handled;
+			if(spread && tcFrameHandled + handled >= TC_MIN_PER_FRAME
 					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() > deadline) {
 				break;
 			}
 		}
+		tcFrameHandled += handled;
+		tcFrameUsedNs += net.lax1dude.eaglercraft.EagRuntime.nanoTime() - start;
 	}
 
 	public void sendPacket(Packet pkt) {

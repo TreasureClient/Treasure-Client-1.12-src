@@ -53,12 +53,16 @@ public final class ViaEntitiesClient {
 	}
 
 	// ---- join / registration ------------------------------------------------
-	public static void onJoin(NetworkManager nm) {
+	/** Called on JoinGame. The handshake waits for the server's REGISTER (TCServerChannels). */
+	public static void reset() {
+		palette.clear();
+	}
+
+	static void sendHandshake(NetworkManager nm) {
 		if (!net.minecraft.client.gui.TreasureMods.viaEnabled()) {
 			return;
 		}
 		try {
-			palette.clear();
 			byte[] reg = (DATA_CHANNEL + "\u0000" + HANDSHAKE_CHANNEL)
 					.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 			nm.sendPacket(new CPacketCustomPayload(REGISTER_CHANNEL,

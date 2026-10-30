@@ -147,24 +147,11 @@ public class ExtendedBlockStorage {
 	}
 
 	public void removeInvalidBlocks() {
-		this.blockRefCount = 0;
-		this.tickRefCount = 0;
-
-		for (int i = 0; i < 16; ++i) {
-			for (int j = 0; j < 16; ++j) {
-				for (int k = 0; k < 16; ++k) {
-					Block block = this.get(i, j, k).getBlock();
-
-					if (block != Blocks.AIR) {
-						++this.blockRefCount;
-
-						if (block.getTickRandomly()) {
-							++this.tickRefCount;
-						}
-					}
-				}
-			}
-		}
+		// Treasure Client: count per palette entry instead of per block (see tcCountBlocks)
+		int[] counts = new int[2];
+		this.data.tcCountBlocks(counts);
+		this.blockRefCount = counts[0];
+		this.tickRefCount = counts[1];
 	}
 
 	public BlockStateContainer getData() {
