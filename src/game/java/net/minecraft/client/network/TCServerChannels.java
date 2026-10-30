@@ -32,12 +32,16 @@ public final class TCServerChannels {
 	}
 
 	/**
-	 * Called on Respawn (a BungeeCord server switch only sends a respawn). The new
-	 * server sends its own REGISTER; until then, opt in again only where the
-	 * channel is already known to be supported.
+	 * Called on Respawn: dying, changing worlds, or a proxy server switch (which
+	 * only sends a respawn). Nothing is sent here: the old server's channel list
+	 * may not match the new server (re-sending the handshake to a server that
+	 * never listed it got players kicked by LPX on arch.mc). A new server sends
+	 * its own REGISTER, which starts the handshakes again; a death or world
+	 * change on the same server sends none, so nothing is repeated.
 	 */
 	public static void onRespawn(NetworkManager nm) {
-		TuffViaBlocks.onRespawn(nm, channels.contains(TuffViaBlocks.HANDSHAKE_CHANNEL));
+		channels.clear();
+		TuffViaBlocks.onRespawn(nm, false);
 	}
 
 	/** The server listed the plugin channels it listens on (NUL-separated names). */
