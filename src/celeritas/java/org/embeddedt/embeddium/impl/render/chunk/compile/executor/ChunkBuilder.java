@@ -367,10 +367,20 @@ public class ChunkBuilder {
             return;
         }
 
+        // Treasure Client: stop after the frame's build time is used up and leave the rest for
+        // the next frame. The number of builds per frame comes from their average cost, so a
+        // group of heavy chunks could otherwise take 40 ms in one frame (a lag spike).
+        long deadline = System.nanoTime() + (long) MAIN_THREAD_BUDGET_NANOS;
+        int ran = 0;
         while (!this.queue.isEmpty()) {
+            if (ran > 0 && System.nanoTime() > deadline) {
+                break;
+            }
             var job = Objects.requireNonNull(this.queue.pollJob());
             executeJobWithLocalContext(job);
+            ++ran;
         }
+        net.minecraft.client.renderer.chunk.RenderChunk.renderChunksUpdated += ran; // for the .lag report
     }
 
     public boolean isBuildQueueEmpty() {
