@@ -435,6 +435,15 @@ public class ItemRenderer {
 				// Treasure Client — modern spear jab (STAB swing) instead of the normal swing
 				this.transformSideFirstPerson(enumhandside, p_187457_7_);
 				SpearAnimations.firstPersonAttack(p_187457_5_, flag1 ? 1 : -1);
+			} else if (flag && p_187457_5_ > 0.0F && TCOldAnimations.swingType != TCOldAnimations.SWING_NORMAL
+					&& TCOldAnimations.hitSwingOn()) {
+				// Treasure Client — 1.7 Animations: sweep = sideways slash, sprint hit = forward stab
+				this.transformSideFirstPerson(enumhandside, p_187457_7_);
+				if (TCOldAnimations.swingType == TCOldAnimations.SWING_SWEEP) {
+					TCOldAnimations.sweepFirstPerson(flag1 ? 1 : -1, p_187457_5_);
+				} else {
+					TCOldAnimations.stabFirstPerson(flag1 ? 1 : -1, p_187457_5_);
+				}
 			} else {
 				float f = -0.4F * MathHelper.sin(MathHelper.sqrt(p_187457_5_) * (float) Math.PI);
 				float f1 = 0.2F * MathHelper.sin(MathHelper.sqrt(p_187457_5_) * ((float) Math.PI * 2F));
@@ -629,11 +638,13 @@ public class ItemRenderer {
 			this.equippedProgressOffHand = MathHelper.clamp(this.equippedProgressOffHand - 0.4F, 0.0F, 1.0F);
 		} else {
 			float f = entityplayersp.getCooledAttackStrength(1.0F);
-			// Treasure Client — 1.7 Animations "no dip": no lowering after hits, and a
-			// server update of the same item in the same slot doesn't replay the equip animation
+			// Treasure Client — 1.7 Animations "small dip": after a hit the item lowers only a
+			// little (a third of vanilla) and rises as the cooldown refills, and a server update
+			// of the same item in the same slot doesn't replay the equip animation
 			boolean noDip = TCOldAnimations.noDipOn();
+			float dipTarget = f * f * f;
 			if (noDip) {
-				f = 1.0F;
+				dipTarget = 1.0F - 0.3F * (1.0F - dipTarget);
 				if (this.itemStackMainHand != itemstack && entityplayersp.inventory.currentItem == this.tcLastSlot
 						&& tcSameItem(this.itemStackMainHand, itemstack)) {
 					this.itemStackMainHand = itemstack;
@@ -644,7 +655,7 @@ public class ItemRenderer {
 			}
 			this.tcLastSlot = entityplayersp.inventory.currentItem;
 			this.equippedProgressMainHand += MathHelper
-					.clamp((Objects.equals(this.itemStackMainHand, itemstack) ? f * f * f : 0.0F)
+					.clamp((Objects.equals(this.itemStackMainHand, itemstack) ? dipTarget : 0.0F)
 							- this.equippedProgressMainHand, -0.4F, 0.4F);
 			this.equippedProgressOffHand += MathHelper.clamp(
 					(float) (Objects.equals(this.itemStackOffHand, itemstack1) ? 1 : 0) - this.equippedProgressOffHand,

@@ -673,10 +673,11 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               </div>
             </div>
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>1.7 Animations</b><i>Old-school sword blocking, no hit dip, punch while eating</i></div><button class="tc-gear" data-gear="oacfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="oldAnim"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>1.7 Animations</b><i>Old-school sword blocking, small hit dip, sweep and sprint hit swings</i></div><button class="tc-gear" data-gear="oacfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="oldAnim"><i></i></div></div>
               <div class="tc-cfg" data-cfg="oacfg">
                 <div class="tc-cfg-row"><span>Sword blocking (1.8 servers, hold right-click)</span><div class="tc-sw on" data-mod="oaBlock" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>No item dip on hit / update</span><div class="tc-sw on" data-mod="oaNoDip" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Small item dip on hit (shows the cooldown)</span><div class="tc-sw on" data-mod="oaNoDip" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Sweep = sideways slash, sprint hit = forward stab</span><div class="tc-sw on" data-mod="oaHitSwing" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Swing while eating / bow</span><div class="tc-sw on" data-mod="oaUseSwing" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Red armor on hit</span><div class="tc-sw on" data-mod="oaArmor" style="margin-left:auto;"><i></i></div></div>
               </div>
@@ -754,68 +755,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           <!-- perf -->
           <div class="tc-panel" data-panel="perf" data-group="perf">
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Entity Culling</b><i>Skip drawing mobs, chests and signs hidden behind walls</i></div><div class="tc-sw on" data-mod="entcull"><i></i></div></div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Particle Culling</b><i>Skip particles behind you or off screen</i></div><div class="tc-sw on" data-mod="pcull"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Particle Core</b><i>Cheaper particle movement and fewer leftover particles</i></div><div class="tc-sw on" data-mod="pcore"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>C2ME</b><i>Smoother chunk loading: big bursts from the server load over a few ticks instead of freezing</i></div><div class="tc-sw on" data-mod="c2me"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Enhanced Block Entities</b><i>Draw chests and beds as part of the world, which is much faster</i></div><div class="tc-sw on" data-mod="ebe"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Lithium</b><i>Faster collisions, chunk lookups and block entity lists, same results</i></div><div class="tc-sw on" data-mod="lithium"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>ImmediatelyFast</b><i>Fewer draw calls for the HUD, plus cheaper name labels and signs</i></div><div class="tc-sw on" data-mod="ifast"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Dynamic FPS</b><i>Drop to 10 FPS while another window is focused, so your device stays cool</i></div><div class="tc-sw on" data-mod="dynfps"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Memory Saver</b><i>Stop idle singleplayer on servers and free unused sounds sooner</i></div><div class="tc-sw on" data-mod="memsaver"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>BetterFps</b><i>Faster math for angles, same numbers as OptiFine Fast Math</i></div><div class="tc-sw on" data-mod="bfmath"><i></i></div></div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Celeritas Extra</b><i>Turn off animations, particles, sky parts and more for extra FPS</i></div><button class="tc-gear" data-gear="cecfg" aria-label="Settings">⚙</button><div class="tc-sw on" data-mod="cextra"><i></i></div></div>
-              <div class="tc-cfg" data-cfg="cecfg">
-                <div class="tc-cfg-row"><span>All texture animations</span><div class="tc-sw on" data-mod="ceAnim" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Water animation</span><div class="tc-sw on" data-mod="ceAnimWater" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Lava animation</span><div class="tc-sw on" data-mod="ceAnimLava" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Fire animation</span><div class="tc-sw on" data-mod="ceAnimFire" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Nether portal animation</span><div class="tc-sw on" data-mod="ceAnimPortal" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Magma, sea lantern and prismarine animation</span><div class="tc-sw on" data-mod="ceAnimBlock" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Rain splash particles</span><div class="tc-sw on" data-mod="ceRainSplash" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Block break particles</span><div class="tc-sw on" data-mod="ceBreakFx" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Block mining particles</span><div class="tc-sw on" data-mod="ceHitFx" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Sky</span><div class="tc-sw on" data-mod="ceSky" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Stars</span><div class="tc-sw on" data-mod="ceStars" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Sun and moon</span><div class="tc-sw on" data-mod="ceSunMoon" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Rain and snow</span><div class="tc-sw on" data-mod="ceWeather" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Item frames</span><div class="tc-sw on" data-mod="ceFrames" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Armor stands</span><div class="tc-sw on" data-mod="ceStands" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Paintings</span><div class="tc-sw on" data-mod="cePaintings" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Beacon beams</span><div class="tc-sw on" data-mod="ceBeacon" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Enchanting table book</span><div class="tc-sw on" data-mod="ceEnchBook" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Piston movement</span><div class="tc-sw on" data-mod="cePiston" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span>Toast pop-ups (advancements, recipes)</span><div class="tc-sw on" data-mod="ceToasts" style="margin-left:auto;"><i></i></div></div>
-                <div class="tc-cfg-row"><span></span><span class="tc-hint">Everything starts on. Switch off what you don't need</span></div>
-              </div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Leaf Culling</b><i>Skip leaf faces hidden inside trees (fancy graphics only)</i></div></div>
-              <div class="tc-cfg tc-cfg-static">
-                <div class="tc-cfg-row"><span>Mode</span>
-                  <div class="tc-seg" data-seg="leafCull">
-                    <button data-val="off">Off</button>
-                    <button data-val="hollow">Hollow</button>
-                    <button data-val="aggressive">Solid Aggressive</button>
-                    <button data-val="solid">Solid</button>
-                  </div>
-                </div>
-                <div class="tc-cfg-row"><span></span><span class="tc-hint">Hollow = most FPS · Solid = looks like normal fancy leaves</span></div>
-              </div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>VanillaFix</b><i>Recover from crashes instead of closing the game, plus Minecraft bug fixes</i></div><div class="tc-sw on" data-mod="vanillafix"><i></i></div></div>
-            </div>
-            <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Entity Render Distance</b><i>Stop drawing mobs, players, items and chests past this many blocks</i></div></div>
-              <div class="tc-cfg tc-cfg-static">
-                <div class="tc-cfg-row"><span>Distance</span><div class="tc-slider"><input type="range" min="0" max="128" step="8" value="0" data-mod="entDist"><span class="tc-val">Off</span></div></div>
-                <div class="tc-cfg-row"><span></span><span class="tc-hint">Off = vanilla. Lower = higher FPS in crowded places</span></div>
-              </div>
+              <div class="tc-row"><div class="tc-lab"><b>Performance modpack</b><i>All of our ported performance mods: Celeritas, Entity Culling, Lithium, ImmediatelyFast, C2ME, FerriteCore and more. Change each one in Options &rarr; Video Settings</i></div><div class="tc-sw on" data-mod="perfpack"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>No Particles</b><i>Disable all particles for more FPS</i></div><div class="tc-sw" data-mod="noParticles"><i></i></div></div>
@@ -987,7 +927,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1146,6 +1086,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'oaNoDip=' + (state.oaNoDip === false ? 0 : 1),
           'oaUseSwing=' + (state.oaUseSwing === false ? 0 : 1),
           'oaArmor=' + (state.oaArmor === false ? 0 : 1),
+          'oaHitSwing=' + (state.oaHitSwing === false ? 0 : 1),
+          'perfpack=' + (state.perfpack === false ? 0 : 1),
           'fullbright=' + (state.fullbright ? 1 : 0),
           'clearWater=' + (state.clearWater === false ? 0 : 1),
           'satDisplay=' + (state.satDisplay ? 1 : 0),
@@ -1289,7 +1231,17 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var changed = false;
           atob(req).split(',').forEach(function (pair) {
             var kv = pair.split('=');
-            if (kv.length !== 2 || (kv[0] !== 'celeritas' && kv[0] !== 'via' && kv[0] !== 'entcull' && kv[0] !== 'pcull' && kv[0] !== 'vanillafix' && kv[0] !== 'ebe' && kv[0] !== 'lithium' && kv[0] !== 'ifast' && kv[0] !== 'dynfps' && kv[0] !== 'memsaver' && kv[0] !== 'cextra' && kv[0] !== 'bfmath' && kv[0] !== 'dynResOn' && kv[0] !== 'pcore' && kv[0] !== 'c2me')) return;
+            if (kv.length !== 2) return;
+            if (kv[0] === 'leafCull') {
+              if (['off', 'hollow', 'aggressive', 'solid'].indexOf(kv[1]) < 0) return;
+              state.leafCull = kv[1]; changed = true; return;
+            }
+            if (kv[0] === 'entDist') {
+              var n = parseInt(kv[1], 10);
+              if (!(n >= 0 && n <= 256)) return;
+              state.entDist = n; changed = true; return;
+            }
+            if (['celeritas','via','entcull','pcull','vanillafix','ebe','lithium','ifast','dynfps','memsaver','cextra','bfmath','dynResOn','pcore','c2me','perfpack','ceAnim','ceAnimWater','ceAnimLava','ceAnimFire','ceAnimPortal','ceAnimBlock','ceRainSplash','ceBreakFx','ceHitFx','ceSky','ceStars','ceSunMoon','ceWeather','ceFrames','ceStands','cePaintings','ceBeacon','ceEnchBook','cePiston','ceToasts'].indexOf(kv[0]) < 0) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;

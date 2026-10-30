@@ -14,6 +14,8 @@ public class TCExtra {
 			"ceFrames", "ceStands", "cePaintings", "ceBeacon", "ceEnchBook", "cePiston", "ceToasts" };
 
 	private static boolean master = true;
+	/** False while the Performance modpack switch is off: everything shows as vanilla. */
+	public static boolean packOn = true;
 	private static final boolean[] raw = new boolean[KEYS.length];
 
 	public static boolean animations = true, animWater = true, animLava = true, animFire = true, animPortal = true,
@@ -52,7 +54,7 @@ public class TCExtra {
 	}
 
 	private static boolean get(int i) {
-		return !master || raw[i];
+		return !(master && packOn) || raw[i];
 	}
 
 	public static void apply() {
@@ -79,7 +81,7 @@ public class TCExtra {
 	}
 
 	public static boolean enabled() {
-		return master;
+		return master && packOn;
 	}
 
 	// sprite animation groups, same split as Celeritas Extra

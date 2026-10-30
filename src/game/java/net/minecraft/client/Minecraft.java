@@ -1186,10 +1186,13 @@ public class Minecraft implements IThreadListener {
 				}
 				switch (this.objectMouseOver.typeOfHit) {
 				case ENTITY:
+					// Treasure Client — 1.7 Animations: pick the swing for a sweep or sprint hit
+					net.minecraft.client.renderer.TCOldAnimations.classifyHit(this.player);
 					this.playerController.attackEntity(this.player, this.objectMouseOver.entityHit);
 					break;
 
 				case BLOCK:
+					net.minecraft.client.renderer.TCOldAnimations.swingType = 0;
 					BlockPos blockpos = this.objectMouseOver.getBlockPos();
 
 					if (this.world.getBlockState(blockpos).getMaterial() != Material.AIR) {
@@ -1198,6 +1201,7 @@ public class Minecraft implements IThreadListener {
 					}
 
 				case MISS:
+					net.minecraft.client.renderer.TCOldAnimations.swingType = 0;
 					if (this.playerController.isNotCreative()) {
 						this.leftClickCounter = 10;
 					}
