@@ -236,11 +236,14 @@ public class ModelRenderer {
 		EaglercraftGPU.glNewList(this.displayList, 4864);
 		WorldRenderer bufferbuilder = Tessellator.getInstance().getBuffer();
 
-		for (int i = 0; i < this.cubeList.size(); ++i) {
-			((ModelBox) this.cubeList.get(i)).render(bufferbuilder, scale);
+		try {
+			for (int i = 0; i < this.cubeList.size(); ++i) {
+				((ModelBox) this.cubeList.get(i)).render(bufferbuilder, scale);
+			}
+		} finally {
+			// Treasure Client: always close the list, so an error can't leave every later draw going into it
+			EaglercraftGPU.glEndList();
 		}
-
-		EaglercraftGPU.glEndList();
 		this.compiled = true;
 
 		// Treasure Client (entity model batching): keep the same vertices for the batch

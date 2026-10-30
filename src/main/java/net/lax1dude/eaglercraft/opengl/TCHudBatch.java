@@ -69,7 +69,7 @@ public final class TCHudBatch {
 		if (TCModelBatch.count > 0) {
 			TCModelBatch.flushIfPending(); // entity model batch (same hooks)
 		}
-		if ((count > 0 || InstancedFontRenderer.tcPending) && !flushing) {
+		if ((count > 0 || InstancedFontRenderer.tcPending) && !flushing && !EaglercraftGPU.tcCompilingList()) {
 			IProgramGL prog = EaglercraftGPU.currentShaderProgram;
 			IVertexArrayGL vao = EaglercraftGPU.currentVertexArray;
 			IBufferGL buf = EaglercraftGPU.currentArrayBuffer;

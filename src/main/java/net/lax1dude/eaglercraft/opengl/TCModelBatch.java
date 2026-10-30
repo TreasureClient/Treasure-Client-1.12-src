@@ -134,7 +134,9 @@ public final class TCModelBatch {
 	 * has bound its own shader and buffers, so those are put back afterwards.
 	 */
 	public static void flushIfPending() {
-		if (count == 0 || flushing) {
+		// never draw into a display list being built (it would mix vertex formats and break it);
+		// glNewList flushes first, so the batch waits only until the list is done
+		if (count == 0 || flushing || EaglercraftGPU.tcCompilingList()) {
 			return;
 		}
 		IProgramGL prog = EaglercraftGPU.currentShaderProgram;
