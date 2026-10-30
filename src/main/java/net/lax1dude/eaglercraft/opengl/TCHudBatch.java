@@ -114,7 +114,7 @@ public final class TCHudBatch {
 		if (GlStateManager.activeTexture != 0 || GlStateManager.stateLighting || GlStateManager.stateFog
 				|| GlStateManager.stateTexture[1] || GlStateManager.stateTexGen
 				|| GlStateManager.stateEnableShaderBlendColor || GlStateManager.stateUseExtensionPipeline
-				|| GlStateManager.statePolygonOffset || GlStateManager.stateEnableOverlayFramebufferBlending
+				|| GlStateManager.statePolygonOffset
 				|| GlStateManager.textureMatrixStackPointer[0] != 0 || EaglercraftGPU.tcCompilingList()) {
 			return false;
 		}

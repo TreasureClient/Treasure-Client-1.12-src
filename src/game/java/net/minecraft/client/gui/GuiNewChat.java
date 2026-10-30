@@ -27,6 +27,11 @@ public class GuiNewChat extends Gui {
 		this.mc = mcIn;
 	}
 
+	/** Treasure Client: the tick the newest shown chat line arrived at (HUD cache). */
+	public int tcNewestLineCounter() {
+		return this.drawnChatLines.isEmpty() ? Integer.MIN_VALUE : this.drawnChatLines.get(0).getUpdatedCounter();
+	}
+
 	public void drawChat(int updateCounter) {
 		if (this.mc.gameSettings.chatVisibility != EntityPlayer.EnumChatVisibility.HIDDEN) {
 			int i = this.getLineCount();
@@ -108,6 +113,7 @@ public class GuiNewChat extends Gui {
 	 * Clears the chat.
 	 */
 	public void clearChatMessages(boolean p_146231_1_) {
+		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
 		this.drawnChatLines.clear();
 		this.chatLines.clear();
 
@@ -132,6 +138,7 @@ public class GuiNewChat extends Gui {
 	}
 
 	private void setChatLine(ITextComponent chatComponent, int chatLineId, int updateCounter, boolean displayOnly) {
+		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
 		if (chatLineId != 0) {
 			this.deleteChatLine(chatLineId);
 		}
@@ -164,6 +171,7 @@ public class GuiNewChat extends Gui {
 	}
 
 	public void refreshChat() {
+		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
 		this.drawnChatLines.clear();
 		this.resetScroll();
 
@@ -192,6 +200,7 @@ public class GuiNewChat extends Gui {
 	 * Resets the chat scroll (executed when the GUI is closed, among others)
 	 */
 	public void resetScroll() {
+		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
 		this.scrollPos = 0;
 		this.isScrolled = false;
 	}
@@ -200,6 +209,7 @@ public class GuiNewChat extends Gui {
 	 * Scrolls the chat by the given number of lines.
 	 */
 	public void scroll(int amount) {
+		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
 		this.scrollPos += amount;
 		int i = this.drawnChatLines.size();
 
@@ -275,6 +285,7 @@ public class GuiNewChat extends Gui {
 	 * finds and deletes a Chat line by ID
 	 */
 	public void deleteChatLine(int id) {
+		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
 		Iterator<ChatLine> iterator = this.drawnChatLines.iterator();
 
 		while (iterator.hasNext()) {

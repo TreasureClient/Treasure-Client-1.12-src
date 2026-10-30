@@ -154,6 +154,113 @@ public class GuiIngame extends Gui {
 		this.titleFadeOut = 20;
 	}
 
+	/**
+	 * Treasure Client: a number that changes whenever anything this HUD shows from the
+	 * player's own state changes, or Long.MIN_VALUE when something on it animates every
+	 * frame. TCHudCache uses it to decide when the HUD has to be drawn again.
+	 */
+	public long tcHudSignature() {
+		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
+		GameSettings gs = this.mc.gameSettings;
+		if (p == null || this.mc.world == null || this.mc.currentScreen != null || gs.showDebugInfo
+				|| this.titlesTimer > 0 || this.recordPlayingUpFor > 0 || gs.showSubtitles || p.timeInPortal > 0.0F
+				|| p.prevTimeInPortal > 0.0F || p.getSleepTimer() > 0 || p.isRidingHorse()
+				|| this.mc.entityRenderer.tcItemActivationShowing() || gs.keyBindPlayerList.isKeyDown()
+				|| this.mc.playerController.isSpectator()) {
+			return Long.MIN_VALUE;
+		}
+		boolean perTick = false;
+		long h = 1469598103934665603L;
+		h = tcMix(h, this.mc.displayWidth);
+		h = tcMix(h, this.mc.displayHeight);
+		h = tcMix(h, gs.guiScale);
+		h = tcMix(h, gs.thirdPersonView);
+		h = tcMix(h, gs.attackIndicator);
+		h = tcMix(h, this.mc.playerController.getCurrentGameType().ordinal());
+		// hotbar and offhand
+		h = tcMix(h, p.inventory.currentItem);
+		for (int k = 0; k <= 9; ++k) {
+			ItemStack s = k < 9 ? p.inventory.getStackInSlot(k) : p.getHeldItemOffhand();
+			if (s.func_190926_b()) {
+				h = tcMix(h, -1);
+				continue;
+			}
+			if (s.func_190921_D() > 0) {
+				return Long.MIN_VALUE; // item pick-up pop, animated every frame
+			}
+			h = tcMix(h, Item.getIdFromItem(s.getItem()));
+			h = tcMix(h, s.func_190916_E());
+			h = tcMix(h, s.getItemDamage());
+			if (s.hasEffect()) {
+				perTick = true; // enchantment glint moves
+			}
+		}
+		// health, food, armor, air, XP
+		float health = p.getHealth();
+		float absorb = p.getAbsorptionAmount();
+		h = tcMix(h, Float.floatToIntBits(health));
+		h = tcMix(h, Float.floatToIntBits(p.getMaxHealth()));
+		h = tcMix(h, Float.floatToIntBits(absorb));
+		h = tcMix(h, this.playerHealth);
+		h = tcMix(h, this.lastPlayerHealth);
+		h = tcMix(h, p.getTotalArmorValue());
+		h = tcMix(h, p.getFoodStats().getFoodLevel());
+		float sat = p.getFoodStats().getSaturationLevel();
+		h = tcMix(h, Float.floatToIntBits(sat));
+		h = tcMix(h, p.isInsideOfMaterial(Material.WATER) ? p.getAir() : 300);
+		h = tcMix(h, p.experienceLevel);
+		h = tcMix(h, (int) (p.experience * 182.0F));
+		h = tcMix(h, this.mc.world.getWorldInfo().isHardcoreModeEnabled() ? 1 : 0);
+		if (this.healthUpdateCounter > (long) this.updateCounter || health + absorb <= 4.0F || sat <= 0.0F
+				|| p.isPotionActive(MobEffects.REGENERATION) || this.remainingHighlightTicks > 0) {
+			perTick = true; // blinking or shaking hearts, regeneration wave, shaking food, item name fade
+		}
+		Entity mount = p.getRidingEntity();
+		if (mount instanceof EntityLivingBase) {
+			h = tcMix(h, Float.floatToIntBits(((EntityLivingBase) mount).getHealth()));
+		}
+		// potion icons (they blink when about to run out)
+		for (PotionEffect e : p.getActivePotionEffects()) {
+			h = tcMix(h, Potion.getIdFromPotion(e.getPotion()));
+			h = tcMix(h, e.getAmplifier());
+			h = tcMix(h, (e.getIsAmbient() ? 1 : 0) | (e.doesShowParticles() ? 2 : 0));
+			if (e.getDuration() <= 200) {
+				perTick = true;
+			}
+		}
+		// attack cooldown icon next to the hotbar
+		if (gs.attackIndicator == 2 && p.getCooledAttackStrength(0.0F) < 1.0F) {
+			perTick = true;
+		}
+		// chat lines fade out over ticks
+		if (this.persistantChatGUI.tcNewestLineCounter() > this.updateCounter - 200) {
+			perTick = true;
+		}
+		// the always-on FPS / position line in the corner
+		if (gs.hudFps) {
+			h = tcMix(h, this.mc.renderGlobal.getDebugInfoShort().hashCode());
+			if (net.lax1dude.eaglercraft.sp.SingleplayerServerController.isWorldRunning()) {
+				h = tcMix(h, net.lax1dude.eaglercraft.sp.SingleplayerServerController.getTPS().hashCode());
+			}
+		}
+		if (gs.hudCoords) {
+			Entity e = this.mc.getRenderViewEntity();
+			if (e != null) {
+				h = tcMix(h, MathHelper.floor(e.posX));
+				h = tcMix(h, MathHelper.floor(e.getEntityBoundingBox().minY));
+				h = tcMix(h, MathHelper.floor(e.posZ));
+			}
+		}
+		if (perTick) {
+			h = tcMix(h, this.updateCounter);
+		}
+		return h == Long.MIN_VALUE ? 0L : h;
+	}
+
+	private static long tcMix(long h, int v) {
+		return (h ^ v) * 1099511628211L;
+	}
+
 	public void renderGameOverlay(float partialTicks) {
 		ScaledResolution scaledresolution = mc.scaledResolution;
 		int i = scaledresolution.getScaledWidth();

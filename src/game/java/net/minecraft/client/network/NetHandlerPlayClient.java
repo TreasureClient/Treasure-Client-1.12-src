@@ -1611,6 +1611,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 
 	@SuppressWarnings("incomplete-switch")
 	public void handleTitle(SPacketTitle packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		SPacketTitle.Type spackettitle$type = packetIn.getType();
 		String s = null;
 		String s1 = null;
@@ -1640,6 +1641,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	}
 
 	public void handlePlayerListHeaderFooter(SPacketPlayerListHeaderFooter packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		this.gameController.ingameGUI.getTabList()
 				.setHeader(packetIn.getHeader().getFormattedText().isEmpty() ? null : packetIn.getHeader());
 		this.gameController.ingameGUI.getTabList()
@@ -1799,6 +1801,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	}
 
 	public void handleUpdateEntityNBT(SPacketUpdateBossInfo packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		this.gameController.ingameGUI.getBossOverlay().read(packetIn);
 	}
 
@@ -1897,6 +1900,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * update an objectives' displayname
 	 */
 	public void handleScoreboardObjective(SPacketScoreboardObjective packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 
 		if (packetIn.getAction() == 0) {
@@ -1921,6 +1925,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * objective
 	 */
 	public void handleUpdateScore(SPacketUpdateScore packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 		ScoreObjective scoreobjective = scoreboard.getObjective(packetIn.getObjectiveName());
 
@@ -1941,6 +1946,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * position (list, sidebar, below name)
 	 */
 	public void handleDisplayObjective(SPacketDisplayObjective packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 
 		if (packetIn.getName().isEmpty()) {
@@ -1957,6 +1963,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * displayname/prefix/suffix and/or whether friendly fire is enabled
 	 */
 	public void handleTeams(SPacketTeams packetIn) {
+		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 		ScorePlayerTeam scoreplayerteam;
 
