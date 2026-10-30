@@ -397,6 +397,7 @@ public class EaglercraftGPU {
 	}
 
 	public static void glFog(int param, FloatBuffer valueBuffer) {
+		TCHudBatch.flushIfPending(); // Treasure Client: fog color affects batched quads
 		int pos = valueBuffer.position();
 		switch(param) {
 		case GL_FOG_COLOR:

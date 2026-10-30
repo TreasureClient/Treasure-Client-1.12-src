@@ -66,6 +66,9 @@ public final class TCHudBatch {
 	 * has bound its own shader and buffers, so those are put back afterwards.
 	 */
 	public static void flushIfPending() {
+		if (TCModelBatch.count > 0) {
+			TCModelBatch.flushIfPending(); // entity model batch (same hooks)
+		}
 		if ((count > 0 || InstancedFontRenderer.tcPending) && !flushing) {
 			IProgramGL prog = EaglercraftGPU.currentShaderProgram;
 			IVertexArrayGL vao = EaglercraftGPU.currentVertexArray;
