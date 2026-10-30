@@ -71,6 +71,53 @@ public class BlockStateContainer implements IBlockStatePaletteResizer {
 		return this.get(getIndex(x, y, z));
 	}
 
+	/**
+	 * Treasure Client: counts non-air blocks (out[0]) and randomly ticking blocks
+	 * (out[1]). With a small palette it counts how often each palette entry is
+	 * used, then checks each kind of block once, instead of looking up all 4096
+	 * blocks one by one. Same result, much less work when chunks arrive.
+	 */
+	public void tcCountBlocks(int[] out) {
+		int nonAir = 0;
+		int ticking = 0;
+		if (this.palette != REGISTRY_BASED_PALETTE) {
+			int[] counts = new int[1 << this.bits];
+			BitArray st = this.storage;
+			for (int i = 0; i < 4096; ++i) {
+				++counts[st.getAt(i)];
+			}
+			for (int id = 0; id < counts.length; ++id) {
+				int c = counts[id];
+				if (c == 0) {
+					continue;
+				}
+				IBlockState state = this.palette.getBlockState(id);
+				if (state == null) {
+					continue; // unknown entries read as air
+				}
+				Block block = state.getBlock();
+				if (block != Blocks.AIR) {
+					nonAir += c;
+					if (block.getTickRandomly()) {
+						ticking += c;
+					}
+				}
+			}
+		} else {
+			for (int i = 0; i < 4096; ++i) {
+				Block block = this.get(i).getBlock();
+				if (block != Blocks.AIR) {
+					++nonAir;
+					if (block.getTickRandomly()) {
+						++ticking;
+					}
+				}
+			}
+		}
+		out[0] = nonAir;
+		out[1] = ticking;
+	}
+
 	protected IBlockState get(int index) {
 		IBlockState iblockstate = this.palette.getBlockState(this.storage.getAt(index));
 		return iblockstate == null ? AIR_BLOCK_STATE : iblockstate;

@@ -74,12 +74,11 @@ public final class TuffViaBlocks {
 
 	// ---- join / registration ------------------------------------------------
 
-	/** Called on JoinGame: reset everything and opt in. */
-	public static void onJoin(NetworkManager nm) {
+	/** Called on JoinGame: reset everything. The handshake waits for the server's REGISTER (TCServerChannels). */
+	public static void reset() {
 		palette.clear();
 		pending.clear();
 		statMessages = statTrailers = statApplied = statUnknown = 0;
-		sendHandshake(nm);
 	}
 
 	/**
@@ -87,12 +86,14 @@ public final class TuffViaBlocks {
 	 * opt in again for the new server. The palette stays (a new TuffX+ server
 	 * sends a fresh INIT_PALETTE; the same server ignores a repeat handshake).
 	 */
-	public static void onRespawn(NetworkManager nm) {
+	public static void onRespawn(NetworkManager nm, boolean supported) {
 		pending.clear();
-		sendHandshake(nm);
+		if (supported) {
+			sendHandshake(nm);
+		}
 	}
 
-	private static void sendHandshake(NetworkManager nm) {
+	static void sendHandshake(NetworkManager nm) {
 		if (!net.minecraft.client.gui.TreasureMods.viaEnabled() || nm == null) {
 			return;
 		}

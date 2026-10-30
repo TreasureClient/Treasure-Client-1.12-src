@@ -45,6 +45,52 @@ public class TCLagMonitor {
 		lcur[part] += EagRuntime.nanoTime() - startNs;
 	}
 
+	// time per server packet type: {total ns, count, ns in spike frames, ns this frame}
+	private static final java.util.HashMap<Class<?>, long[]> pktTypes = new java.util.HashMap<Class<?>, long[]>();
+	private static final java.util.ArrayList<long[]> pktTouched = new java.util.ArrayList<long[]>();
+
+	/** Adds the time spent reading and handling one server packet to its type. */
+	public static void addPacketType(Object p, long ns) {
+		if (p == null) {
+			return;
+		}
+		Class<?> c = p.getClass();
+		long[] st = pktTypes.get(c);
+		if (st == null) {
+			st = new long[4];
+			pktTypes.put(c, st);
+		}
+		st[0] += ns;
+		st[1]++;
+		if (st[3] == 0L) {
+			pktTouched.add(st);
+		}
+		st[3] += ns + 1L; // +1 so a 0 ns packet still counts as touched
+	}
+
+	/** The packet types that took the most time (in spikes if there were any), slowest first. */
+	private static String slowestPackets(boolean spikes) {
+		java.util.ArrayList<java.util.Map.Entry<Class<?>, long[]>> list =
+				new java.util.ArrayList<java.util.Map.Entry<Class<?>, long[]>>(pktTypes.entrySet());
+		final int key = spikes ? 2 : 0;
+		java.util.Collections.sort(list, new java.util.Comparator<java.util.Map.Entry<Class<?>, long[]>>() {
+			public int compare(java.util.Map.Entry<Class<?>, long[]> a, java.util.Map.Entry<Class<?>, long[]> b) {
+				return Long.compare(b.getValue()[key], a.getValue()[key]);
+			}
+		});
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < Math.min(5, list.size()); i++) {
+			long[] st = list.get(i).getValue();
+			if (st[key] <= 0L) break;
+			String name = list.get(i).getKey().getSimpleName();
+			if (name.startsWith("SPacket")) name = name.substring(7);
+			if (sb.length() > 0) sb.append(" §7· ");
+			sb.append("§f").append(name).append(" §7").append(st[key] / 1000000L).append("ms, ").append(st[1])
+					.append("x, ").append(st[1] > 0 ? st[0] / st[1] / 1000L : 0L).append("µs each");
+		}
+		return sb.length() > 0 ? sb.toString() : "§7none";
+	}
+
 	/** Which logic part handling this server packet counts as. */
 	public static int packetPart(Object p) {
 		if (p instanceof net.minecraft.network.play.server.SPacketChunkData
@@ -187,6 +233,10 @@ public class TCLagMonitor {
 				mLPartSpike[minute][k] += lcur[k];
 				if (lcur[k] > lcur[lbig]) lbig = k;
 			}
+			for (int k = 0, n = pktTouched.size(); k < n; k++) {
+				long[] st = pktTouched.get(k);
+				st[2] += st[3];
+			}
 			r[11] = lbig;
 			r[12] = (int) (lcur[lbig] / 1000000L);
 			ringPos = (ringPos + 1) % RING;
@@ -230,6 +280,8 @@ public class TCLagMonitor {
 	private static void clearParts() {
 		for (int k = 0; k < PARTS; k++) cur[k] = 0L;
 		for (int k = 0; k < LPARTS; k++) lcur[k] = 0L;
+		for (int k = 0, n = pktTouched.size(); k < n; k++) pktTouched.get(k)[3] = 0L;
+		pktTouched.clear();
 	}
 
 	/** "terrain 6.1 · entities 2.0 ..." as ms per frame (perFrame) or % of the total. */
@@ -322,6 +374,10 @@ public class TCLagMonitor {
 		say(mc, "§7Logic, ms per frame, last 5 min: " + partLine(lall, frames, true, LPART_NAMES));
 		if (sum > 0) {
 			say(mc, "§7Logic in spikes, last 5 min: " + partLine(lspk, 0L, false, LPART_NAMES));
+		}
+		if (!pktTypes.isEmpty()) {
+			say(mc, "§7Slowest packets, whole session: " + slowestPackets(false));
+			say(mc, "§7Slowest packets in spikes: " + slowestPackets(true));
 		}
 		if (ringCount > 0) {
 			say(mc, "§7Last spikes (time: total = logic + drawing + browser/GPU · packets · chunk rebuilds):");
