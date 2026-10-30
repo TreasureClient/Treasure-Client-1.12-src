@@ -126,6 +126,8 @@ public class EaglercraftGPU {
 	private static ByteBuffer displayListBuffer = EagRuntime.allocateByteBuffer(0x100000);
 
 	public static void glNewList(int target, int op) {
+		// Treasure Client: draw batched quads now, so they never end up inside the new display list
+		TCHudBatch.flushIfPending();
 		if(currentList != null) {
 			throw new IllegalStateException("A display list is already being compiled you eagler!");
 		}
