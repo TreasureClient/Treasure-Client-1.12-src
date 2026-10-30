@@ -347,9 +347,9 @@ ${classes_js}
 /* 1.1: mods laid out as cards in a responsive grid (wide, not tall) */
 .tc-panel.active { display: block; }
 .tc-panels { width: 100%; min-width: 0; overflow: hidden; }
-.tc-panel { columns: 2; column-gap: 24px; }
+.tc-panel { columns: 2; column-gap: 32px; }
 .tc-mod { border: 1px solid var(--tc-card-bord); border-radius: 12px;
-  background: var(--tc-card-bg); padding: 6px 14px; margin: 0 0 24px;
+  background: var(--tc-card-bg); padding: 8px 14px; margin: 0 0 36px;
   box-shadow: 0 0 10px -2px var(--tc-card-glow), inset 0 1px 0 rgba(255,235,170,0.06);
   break-inside: avoid; -webkit-column-break-inside: avoid;
   transition: box-shadow var(--tc-med) var(--tc-ease), border-color var(--tc-fast); }
