@@ -681,6 +681,7 @@ public class GlStateManager {
 	public static void quickBindTexture(int unit, int texture) {
 		int unitBase = unit - GL_TEXTURE0;
 		if(texture != boundTexture[unitBase]) {
+			TCHudBatch.flushIfPending();
 			if(unitBase != activeTexture) {
 				_wglActiveTexture(unit);
 			}

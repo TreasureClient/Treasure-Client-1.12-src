@@ -84,7 +84,7 @@ public class EaglerFontRenderer extends FontRenderer {
 
 	private void renderStringAtPos0(String parString1, boolean parFlag) {
 		renderEngine.bindTexture(locationFontTexture);
-		InstancedFontRenderer.begin();
+		InstancedFontRenderer.begin(parFlag); // Treasure Client: lets HUD text be batched
 
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer worldrenderer = tessellator.getWorldRenderer();

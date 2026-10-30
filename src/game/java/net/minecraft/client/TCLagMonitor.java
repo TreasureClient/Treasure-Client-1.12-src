@@ -31,6 +31,57 @@ public class TCLagMonitor {
 	private static final long[][] mPartAll = new long[MINUTES][PARTS]; // all frames, ns
 	private static final long[][] mPartSpike = new long[MINUTES][PARTS]; // spike frames, ns
 
+	// parts of the logic time (game ticks), timed by the tick code and the network code
+	public static final int L_CHUNK_PKTS = 0, L_ENTITY_PKTS = 1, L_OTHER_PKTS = 2, L_ENTITIES = 3, L_WORLD = 4,
+			L_PARTICLES = 5, L_OTHER = 6, LPARTS = 7;
+	private static final String[] LPART_NAMES = { "chunk packets", "entity packets", "other packets",
+			"entity updates", "world updates", "particles", "other" };
+	private static final long[] lcur = new long[LPARTS];
+	private static final long[][] mLPartAll = new long[MINUTES][LPARTS];
+	private static final long[][] mLPartSpike = new long[MINUTES][LPARTS];
+
+	/** Adds the time since startNs to a part of this frame's logic. */
+	public static void addLogic(int part, long startNs) {
+		lcur[part] += EagRuntime.nanoTime() - startNs;
+	}
+
+	/** Which logic part handling this server packet counts as. */
+	public static int packetPart(Object p) {
+		if (p instanceof net.minecraft.network.play.server.SPacketChunkData
+				|| p instanceof net.minecraft.network.play.server.SPacketUnloadChunk
+				|| p instanceof net.minecraft.network.play.server.SPacketBlockChange
+				|| p instanceof net.minecraft.network.play.server.SPacketMultiBlockChange
+				|| p instanceof net.minecraft.network.play.server.SPacketUpdateTileEntity
+				|| p instanceof net.minecraft.network.play.server.SPacketBlockAction
+				|| p instanceof net.minecraft.network.play.server.SPacketBlockBreakAnim
+				|| p instanceof net.minecraft.network.play.server.SPacketExplosion) {
+			return L_CHUNK_PKTS;
+		}
+		if (p instanceof net.minecraft.network.play.server.SPacketEntity
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityTeleport
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityVelocity
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityMetadata
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityHeadLook
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityEquipment
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityProperties
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityStatus
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityEffect
+				|| p instanceof net.minecraft.network.play.server.SPacketRemoveEntityEffect
+				|| p instanceof net.minecraft.network.play.server.SPacketDestroyEntities
+				|| p instanceof net.minecraft.network.play.server.SPacketSpawnObject
+				|| p instanceof net.minecraft.network.play.server.SPacketSpawnMob
+				|| p instanceof net.minecraft.network.play.server.SPacketSpawnPlayer
+				|| p instanceof net.minecraft.network.play.server.SPacketSpawnExperienceOrb
+				|| p instanceof net.minecraft.network.play.server.SPacketSpawnPainting
+				|| p instanceof net.minecraft.network.play.server.SPacketSetPassengers
+				|| p instanceof net.minecraft.network.play.server.SPacketEntityAttach
+				|| p instanceof net.minecraft.network.play.server.SPacketCollectItem
+				|| p instanceof net.minecraft.network.play.server.SPacketAnimation) {
+			return L_ENTITY_PKTS;
+		}
+		return L_OTHER_PKTS;
+	}
+
 	/** Current time for timing a part. */
 	public static long now() {
 		return EagRuntime.nanoTime();
@@ -58,8 +109,8 @@ public class TCLagMonitor {
 	private static int heapNow = -1;
 
 	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
-	// biggest drawing part, its ms
-	private static final int[][] ring = new int[RING][11];
+	// biggest drawing part, its ms, biggest logic part, its ms
+	private static final int[][] ring = new int[RING][13];
 	private static int ringPos, ringCount;
 
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
@@ -84,6 +135,9 @@ public class TCLagMonitor {
 		long timed = 0L;
 		for (int k = 0; k < OTHER; k++) timed += cur[k];
 		cur[OTHER] = Math.max(0L, drawNs - timed);
+		long ltimed = 0L;
+		for (int k = 0; k < L_OTHER; k++) ltimed += lcur[k];
+		lcur[L_OTHER] = Math.max(0L, logicNs - ltimed);
 		if (now - lastHeapRead > 5000L) {
 			lastHeapRead = now;
 			long[] h = TCPerfStats.pageMemory();
@@ -101,6 +155,7 @@ public class TCLagMonitor {
 		mMs[minute] += total;
 		mHeap[minute] = heapNow;
 		for (int k = 0; k < PARTS; k++) mPartAll[minute][k] += cur[k];
+		for (int k = 0; k < LPARTS; k++) mLPartAll[minute][k] += lcur[k];
 		int logic = (int) (logicNs / 1000000L), draw = (int) (drawNs / 1000000L);
 		int browser = (int) Math.max(0L, total - logic - draw);
 		if (total >= SPIKE_MS) {
@@ -127,6 +182,13 @@ public class TCLagMonitor {
 			}
 			r[9] = big;
 			r[10] = (int) (cur[big] / 1000000L);
+			int lbig = 0;
+			for (int k = 0; k < LPARTS; k++) {
+				mLPartSpike[minute][k] += lcur[k];
+				if (lcur[k] > lcur[lbig]) lbig = k;
+			}
+			r[11] = lbig;
+			r[12] = (int) (lcur[lbig] / 1000000L);
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
@@ -167,16 +229,21 @@ public class TCLagMonitor {
 
 	private static void clearParts() {
 		for (int k = 0; k < PARTS; k++) cur[k] = 0L;
+		for (int k = 0; k < LPARTS; k++) lcur[k] = 0L;
 	}
 
 	/** "terrain 6.1 · entities 2.0 ..." as ms per frame (perFrame) or % of the total. */
 	private static String partLine(long[] sum, long frames, boolean perFrame) {
+		return partLine(sum, frames, perFrame, PART_NAMES);
+	}
+
+	private static String partLine(long[] sum, long frames, boolean perFrame, String[] names) {
 		long all = 0L;
-		for (int k = 0; k < PARTS; k++) all += sum[k];
+		for (int k = 0; k < sum.length; k++) all += sum[k];
 		StringBuilder sb = new StringBuilder();
-		for (int k = 0; k < PARTS; k++) {
+		for (int k = 0; k < sum.length; k++) {
 			if (sb.length() > 0) sb.append(" §7· ");
-			sb.append("§f").append(PART_NAMES[k]).append(' ');
+			sb.append("§f").append(names[k]).append(' ');
 			if (perFrame) {
 				long tenths = frames > 0 ? sum[k] / 100000L / frames : 0L;
 				sb.append(tenths / 10).append('.').append(tenths % 10);
@@ -245,6 +312,17 @@ public class TCLagMonitor {
 		if (sum > 0) {
 			say(mc, "§7Drawing in spikes, last 5 min: " + partLine(spk, 0L, false));
 		}
+		long[] lall = new long[LPARTS], lspk = new long[LPARTS];
+		for (int m = Math.max(0, last - 4); m <= last; m++) {
+			for (int k = 0; k < LPARTS; k++) {
+				lall[k] += mLPartAll[m][k];
+				lspk[k] += mLPartSpike[m][k];
+			}
+		}
+		say(mc, "§7Logic, ms per frame, last 5 min: " + partLine(lall, frames, true, LPART_NAMES));
+		if (sum > 0) {
+			say(mc, "§7Logic in spikes, last 5 min: " + partLine(lspk, 0L, false, LPART_NAMES));
+		}
 		if (ringCount > 0) {
 			say(mc, "§7Last spikes (time: total = logic + drawing + browser/GPU · packets · chunk rebuilds):");
 			for (int i = 0; i < ringCount; i++) {
@@ -252,7 +330,7 @@ public class TCLagMonitor {
 				say(mc, "§8 " + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7= " + r[3] + " + "
 						+ r[4] + " + " + r[5] + " §8· " + r[6] + " pkts · " + r[7] + " chunks"
 						+ (r[8] > 0 ? " · " + r[8] + "MB" : "") + " · most: " + PART_NAMES[r[9]] + " " + r[10]
-						+ "ms");
+						+ "ms, " + LPART_NAMES[r[11]] + " " + r[12] + "ms");
 			}
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));
@@ -286,7 +364,13 @@ public class TCLagMonitor {
 			return trend + "Most spike time is the browser/GPU (garbage collection, GPU work or the device slowing down when hot).";
 		}
 		if (l >= d) {
-			return trend + "Most spike time is game logic (server packets, entities, world updates).";
+			long[] lspk = new long[LPARTS];
+			for (int m = Math.max(0, last - 4); m <= last; m++) {
+				for (int k = 0; k < LPARTS; k++) lspk[k] += mLPartSpike[m][k];
+			}
+			int lbig = 0;
+			for (int k = 0; k < LPARTS; k++) if (lspk[k] > lspk[lbig]) lbig = k;
+			return trend + "Most spike time is game logic, mostly " + LPART_NAMES[lbig] + ".";
 		}
 		long[] spk = new long[PARTS];
 		for (int m = Math.max(0, last - 4); m <= last; m++) {

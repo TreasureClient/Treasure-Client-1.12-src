@@ -232,6 +232,36 @@ public class InstancedFontRenderer {
 	private static int widthCalcMost = Integer.MAX_VALUE;
 	private static int heightCalcMost = Integer.MAX_VALUE;
 
+	// Treasure Client: HUD text batching (part of the ImmediatelyFast port). While the HUD
+	// is drawn, strings that use the same matrix and shadow setting are collected and
+	// drawn with one upload and one draw call, instead of one of each per string.
+	// TCHudBatch draws the collected text before anything else draws or changes.
+	static boolean tcBatching;
+	public static boolean tcPending;
+	private static boolean tcFlushing, tcPendingShadow;
+	private static int tcPendModelPtr, tcPendModelSerial, tcPendProjPtr, tcPendProjSerial;
+	private static float tcPendCharW, tcPendCharH, tcPendCoordW, tcPendCoordH;
+	private static final Matrix4f tcPendMatrix = new Matrix4f();
+
+	/** Starts a string; shadow says whether it will be drawn with a shadow. */
+	public static void begin(boolean shadow) {
+		if (tcPending) {
+			boolean fog = GlStateManager.stateFog && GlStateManager.stateFogDensity > 0.0f;
+			int mp = GlStateManager.modelMatrixStackPointer, pp = GlStateManager.projectionMatrixStackPointer;
+			if (!tcBatching || fog || shadow != tcPendingShadow || mp != tcPendModelPtr || pp != tcPendProjPtr
+					|| GlStateManager.modelMatrixStackAccessSerial[mp] != tcPendModelSerial
+					|| GlStateManager.projectionMatrixStackAccessSerial[pp] != tcPendProjSerial
+					|| charactersDrawn > CHARACTER_LIMIT - 1024 || boldCharactersDrawn > CHARACTER_LIMIT - 1024) {
+				TCHudBatch.flushIfPending();
+			} else {
+				return; // same settings: keep adding to the collected text
+			}
+		} else if (tcBatching) {
+			TCHudBatch.flushIfPending(); // keep the drawing order: earlier HUD quads first
+		}
+		begin();
+	}
+
 	public static void begin() {
 		fontDataBuffer.clear();
 		charactersDrawn = 0;
@@ -253,6 +283,71 @@ public class InstancedFontRenderer {
 		if (charactersDrawn == 0 && boldCharactersDrawn == 0) {
 			return;
 		}
+		if (tcBatching && !tcFlushing && !fogEnabled && GlStateManager.stateColorR == 1.0f
+				&& GlStateManager.stateColorG == 1.0f && GlStateManager.stateColorB == 1.0f
+				&& GlStateManager.stateColorA == 1.0f) {
+			if (!tcPending) {
+				tcPending = true;
+				tcPendingShadow = shadow;
+				tcPendCharW = charWidth;
+				tcPendCharH = charHeight;
+				tcPendCoordW = charCoordWidth;
+				tcPendCoordH = charCoordHeight;
+				int mp = GlStateManager.modelMatrixStackPointer, pp = GlStateManager.projectionMatrixStackPointer;
+				tcPendModelPtr = mp;
+				tcPendProjPtr = pp;
+				tcPendModelSerial = GlStateManager.modelMatrixStackAccessSerial[mp];
+				tcPendProjSerial = GlStateManager.projectionMatrixStackAccessSerial[pp];
+				Matrix4f.mul(GlStateManager.projectionMatrixStack[pp], GlStateManager.modelMatrixStack[mp],
+						tcPendMatrix);
+				return;
+			}
+			if (shadow == tcPendingShadow && charWidth == tcPendCharW && charHeight == tcPendCharH
+					&& charCoordWidth == tcPendCoordW && charCoordHeight == tcPendCoordH) {
+				return;
+			}
+		}
+		if (tcPending) {
+			// can't join the collected text (shouldn't happen): draw it all with these settings
+			tcPending = false;
+		}
+		tcDraw(charWidth, charHeight, charCoordWidth, charCoordHeight, shadow);
+	}
+
+	/** Draws the collected HUD text, with the settings it was collected under. */
+	static void tcFlushBatch() {
+		if (!tcPending || tcFlushing) {
+			return;
+		}
+		tcFlushing = true;
+		tcPending = false;
+		try {
+			// draw with the matrix the text was collected under, then forget the cached one
+			matrixCopyBuffer.clear();
+			tcPendMatrix.store(matrixCopyBuffer);
+			matrixCopyBuffer.flip();
+			EaglercraftGPU.bindGLShaderProgram(shaderProgram);
+			_wglUniformMatrix4fv(u_matrixTransform, false, matrixCopyBuffer);
+			stateModelMatrixSerial = -1;
+			stateProjectionMatrixSerial = -1;
+			tcDrawWithMatrixSet = true;
+			tcDraw(tcPendCharW, tcPendCharH, tcPendCoordW, tcPendCoordH, tcPendingShadow);
+		} finally {
+			tcDrawWithMatrixSet = false;
+			stateModelMatrixSerial = -1;
+			stateProjectionMatrixSerial = -1;
+			charactersDrawn = 0;
+			boldCharactersDrawn = 0;
+			fontDataBuffer.clear();
+			fontBoldDataBuffer.clear();
+			tcFlushing = false;
+		}
+	}
+
+	private static boolean tcDrawWithMatrixSet;
+
+	private static void tcDraw(float charWidth, float charHeight, float charCoordWidth, float charCoordHeight,
+			boolean shadow) {
 		EaglercraftGPU.bindGLShaderProgram(shaderProgram);
 
 		if (charWidth != charWidthValue || charHeight != charHeightValue) {
@@ -271,7 +366,7 @@ public class InstancedFontRenderer {
 		int serial1 = GlStateManager.modelMatrixStackAccessSerial[ptr1];
 		int ptr2 = GlStateManager.projectionMatrixStackPointer;
 		int serial2 = GlStateManager.projectionMatrixStackAccessSerial[ptr2];
-		if (stateModelMatrixSerial != serial1 || stateProjectionMatrixSerial != serial2) {
+		if (!tcDrawWithMatrixSet && (stateModelMatrixSerial != serial1 || stateProjectionMatrixSerial != serial2)) {
 			stateModelMatrixSerial = serial1;
 			stateProjectionMatrixSerial = serial2;
 			Matrix4f.mul(GlStateManager.projectionMatrixStack[ptr2], GlStateManager.modelMatrixStack[ptr1], tmpMatrix);
@@ -281,7 +376,25 @@ public class InstancedFontRenderer {
 			_wglUniformMatrix4fv(u_matrixTransform, false, matrixCopyBuffer);
 		}
 
-		if (!fogEnabled) {
+		if (tcDrawWithMatrixSet) {
+			// collected HUD text is always drawn in plain white (its colors are per character)
+			if (stateColorR != 1.0f || stateColorG != 1.0f || stateColorB != 1.0f || stateColorA != 1.0f) {
+				_wglUniform4f(u_color4f, 1.0f, 1.0f, 1.0f, 1.0f);
+				stateColorR = 1.0f;
+				stateColorG = 1.0f;
+				stateColorB = 1.0f;
+				stateColorA = 1.0f;
+			}
+			stateColorSerial = -1;
+			if (stateColorBiasR != 0.0f || stateColorBiasG != 0.0f || stateColorBiasB != 0.0f
+					|| stateColorBiasA != 0.0f) {
+				_wglUniform4f(u_colorBias4f, 0.0f, 0.0f, 0.0f, 0.0f);
+				stateColorBiasR = 0.0f;
+				stateColorBiasG = 0.0f;
+				stateColorBiasB = 0.0f;
+				stateColorBiasA = 0.0f;
+			}
+		} else if (!fogEnabled) {
 			int serial = GlStateManager.stateColorSerial;
 			if (stateColorSerial != serial) {
 				stateColorSerial = serial;

@@ -1495,7 +1495,9 @@ public class Minecraft implements IThreadListener {
 					this.world.setLastLightningBolt(this.world.getLastLightningBolt() - 1);
 				}
 
+				long tcT = TCLagMonitor.now();
 				this.world.updateEntities();
+				TCLagMonitor.addLogic(TCLagMonitor.L_ENTITIES, tcT);
 			}
 			this.eagskullCommand.tick();
 		}
@@ -1510,6 +1512,7 @@ public class Minecraft implements IThreadListener {
 				this.world.setAllowedSpawnTypes(this.world.getDifficulty() != EnumDifficulty.PEACEFUL, true);
 				this.field_193035_aW.func_193303_d();
 
+				long tcT = TCLagMonitor.now();
 				try {
 					this.world.tick();
 				} catch (Throwable throwable2) {
@@ -1524,6 +1527,7 @@ public class Minecraft implements IThreadListener {
 
 					throw new ReportedException(crashreport2);
 				}
+				TCLagMonitor.addLogic(TCLagMonitor.L_WORLD, tcT);
 			}
 
 			if (!this.isGamePaused && this.world != null) {
@@ -1532,7 +1536,9 @@ public class Minecraft implements IThreadListener {
 			}
 
 			if (!this.isGamePaused) {
+				long tcT = TCLagMonitor.now();
 				this.effectRenderer.updateEffects();
+				TCLagMonitor.addLogic(TCLagMonitor.L_PARTICLES, tcT);
 			}
 		} else if (this.myNetworkManager != null) {
 			this.myNetworkManager.processReceivedPackets();

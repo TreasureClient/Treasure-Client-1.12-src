@@ -91,6 +91,8 @@ public class WebSocketNetworkManager extends NetworkManager {
 		IWebSocketFrame next;
 		while((next = tcBacklog.poll()) != null) {
 			++debugPacketCounter;
+			long tcT = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
+			int tcPart = net.minecraft.client.TCLagMonitor.L_OTHER_PKTS;
 			try {
 				byte[] asByteArray = next.getByteArray();
 				ByteBuf nettyBuffer = Unpooled.buffer(asByteArray, asByteArray.length);
@@ -115,6 +117,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 					throw new IOException("Failed to read packet type '" + pkt.getClass().getSimpleName() + "'", t);
 				}
 				
+				tcPart = net.minecraft.client.TCLagMonitor.packetPart(pkt);
 				try {
 					pkt.processPacket(nethandler);
 				}catch(Throwable t) {
@@ -126,6 +129,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 				logger.error("Failed to process websocket frame {}! It'll be skipped for debug purposes.", debugPacketCounter);
 				logger.error(t);
 			}
+			net.minecraft.client.TCLagMonitor.addLogic(tcPart, tcT); // Treasure Client: lag monitor
 			// at least 16 packets per tick, then stop once this tick's time is used up
 			if(spread && ++handled >= 16 && (handled & 3) == 0
 					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() > deadline) {
