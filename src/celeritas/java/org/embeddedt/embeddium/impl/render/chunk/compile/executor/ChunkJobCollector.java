@@ -32,6 +32,8 @@ public class ChunkJobCollector {
             return;
         }
 
+        builder.tcFinishPaused(); // Treasure Client: a paused build must finish before we wait on it
+
         for (var job : this.submitted) {
             // Don't try to steal jobs that already started (cancelled jobs are harmless to steal)
             if (job.isStarted()) {

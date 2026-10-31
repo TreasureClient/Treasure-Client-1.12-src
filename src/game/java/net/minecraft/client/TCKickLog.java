@@ -13,10 +13,13 @@ import net.minecraft.network.play.client.CPacketUseEntity;
  * Treasure Client: remembers the last packets the game sent to the server. When the
  * server kicks you, the disconnect screen shows them, so a "suspicious packets" kick
  * can be traced to the packet that caused it. ".kicklog" shows the last one again.
+ * Server teleports, world changes, damage and getting stuck inside a block are logged
+ * too. A proxy kick back to the lobby (a chat message, not a disconnect) is caught from
+ * the chat and the log is printed in chat right away.
  */
 public class TCKickLog {
 
-	private static final int SIZE = 64;
+	private static final int SIZE = 200;
 	private static final String[] names = new String[SIZE];
 	private static final long[] times = new long[SIZE];
 	private static int head, count;
@@ -31,6 +34,15 @@ public class TCKickLog {
 		} catch (Throwable t) {
 			n = "?";
 		}
+		add("> " + n);
+	}
+
+	/** Something the server did (or that happened to you), shown with a "<" in the log. */
+	public static void event(String what) {
+		add("< " + what);
+	}
+
+	private static void add(String n) {
 		names[head] = n;
 		times[head] = EagRuntime.steadyTimeMillis();
 		head = (head + 1) % SIZE;
@@ -63,7 +75,7 @@ public class TCKickLog {
 		int start = (head - count + SIZE) % SIZE;
 		for (int k = 0; k < count; ++k) {
 			int i = (start + k) % SIZE;
-			if (now - times[i] > 3000L) continue; // only the last 3 seconds
+			if (now - times[i] > 6000L) continue; // only the last 6 seconds
 			if (names[i].equals(prev)) {
 				++repeat;
 				continue;
@@ -74,7 +86,7 @@ public class TCKickLog {
 			repeat = 1;
 		}
 		if (prev != null) out.add(line(prev, prevT, now, repeat));
-		while (out.size() > 14) out.remove(0);
+		while (out.size() > 24) out.remove(0);
 		count = 0;
 		lastKick = out;
 		return out;
@@ -83,6 +95,22 @@ public class TCKickLog {
 	private static String line(String n, long t, long now, int repeat) {
 		long ms = now - t;
 		return "-" + (ms / 1000L) + "." + ((ms / 100L) % 10L) + "s  " + n + (repeat > 1 ? " x" + repeat : "");
+	}
+
+	/** Called for every chat message: a "You were kicked from ..." message saves and prints the log. */
+	public static void chat(Minecraft mc, String text) {
+		if (text == null || !text.toLowerCase().startsWith("you were kicked") || count == 0) {
+			return;
+		}
+		List<String> lines = snapshot();
+		if (lines.isEmpty()) {
+			return;
+		}
+		mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
+				"\u00a76[Kick log] \u00a77what happened before the kick (screenshot this for Treasure Client):"));
+		for (String l : lines) {
+			mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString("\u00a77" + l));
+		}
 	}
 
 	public static List<String> last() {

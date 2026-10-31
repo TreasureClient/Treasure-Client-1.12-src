@@ -47,14 +47,15 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
         this.renderContext = context;
     }
 
+    // Treasure Client: a build can pause between layers and continue next frame (see ChunkBuilder.tcDeadlineNs)
+    private MinecraftBuiltRenderSectionData<TextureAtlasSprite, TileEntity> tcRenderData;
+    private VisGraph tcOccluder;
+    private BlockPos tcPos;
+    private int tcNextY = Integer.MIN_VALUE;
+
     @Override
     public ChunkBuildOutput execute(ChunkBuildContext context, CancellationToken cancellationToken) {
         VintageChunkBuildContext buildContext = (VintageChunkBuildContext)context;
-        MinecraftBuiltRenderSectionData<TextureAtlasSprite, TileEntity> renderData = new MinecraftBuiltRenderSectionData<>();
-        VisGraph occluder = new VisGraph();
-
-        ChunkBuildBuffers buffers = buildContext.buffers;
-        buffers.init(renderData, this.render.getSectionIndex());
 
         int minX = this.render.getOriginX();
         int minY = this.render.getOriginY();
@@ -64,20 +65,40 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
         int maxY = minY + 16;
         int maxZ = minZ + 16;
 
-        // Initialise with minX/minY/minZ so initial getBlockState crash context is correct
-        BlockPos blockPos = new BlockPos(minX, minY, minZ);
+        ChunkBuildBuffers buffers = buildContext.buffers;
 
-        buildContext.getWorldSlice().copyData(this.renderContext);
+        if (this.tcNextY == Integer.MIN_VALUE) {
+            this.tcRenderData = new MinecraftBuiltRenderSectionData<>();
+            this.tcOccluder = new VisGraph();
+            buffers.init(this.tcRenderData, this.render.getSectionIndex());
+            // Initialise with minX/minY/minZ so initial getBlockState crash context is correct
+            this.tcPos = new BlockPos(minX, minY, minZ);
+            buildContext.getWorldSlice().copyData(this.renderContext);
+            buildContext.setupTranslation(minX, minY, minZ);
+            this.tcNextY = minY;
+        }
+
+        MinecraftBuiltRenderSectionData<TextureAtlasSprite, TileEntity> renderData = this.tcRenderData;
+        VisGraph occluder = this.tcOccluder;
+        BlockPos blockPos = this.tcPos;
 
         WorldSlice slice = buildContext.getWorldSlice();
 
         var dispatcher = Minecraft.getMinecraft().getBlockRendererDispatcher();
 
-        buildContext.setupTranslation(minX, minY, minZ);
+        int startY = this.tcNextY;
+        long deadline = org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcDeadlineNs;
 
         try {
-            for (int y = minY; y < maxY; y++) {
+            for (int y = startY; y < maxY; y++) {
                 if (cancellationToken.isCancelled()) {
+                    return null;
+                }
+
+                // Treasure Client: out of build time for this frame: stop here and continue next frame
+                if (y != startY && deadline != 0L && System.nanoTime() > deadline) {
+                    this.tcNextY = y;
+                    org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
                     return null;
                 }
 

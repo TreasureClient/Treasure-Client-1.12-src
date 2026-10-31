@@ -641,10 +641,17 @@ public class TreasureMods {
 						if (mc.player != null && mc.currentScreen == null) {
 							mc.displayInGameMenu();
 						}
+					} else if (pz[0] == 3) {
+						// Right Shift screen / mod menu: freeze the game without the pause menu
+						EagRuntime.setStorage("tcpause", new byte[] { 0 });
+						if (mc.player != null && mc.currentScreen == null) {
+							mc.displayGuiScreen(new GuiTreasureFreeze());
+						}
 					} else if (pz[0] == 2) {
 						EagRuntime.setStorage("tcpause", new byte[] { 0 });
 						// close our in-game menu and return to the world
-						if (mc.player != null && mc.currentScreen instanceof net.minecraft.client.gui.GuiIngameMenu) {
+						if (mc.player != null && (mc.currentScreen instanceof net.minecraft.client.gui.GuiIngameMenu
+								|| mc.currentScreen instanceof GuiTreasureFreeze)) {
 							mc.displayGuiScreen((net.minecraft.client.gui.GuiScreen) null);
 						}
 					}

@@ -765,6 +765,10 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 
 	public void handlePlayerPosLook(SPacketPlayerPosLook packetIn) {
 		EntityPlayer entityplayer = this.gameController.player;
+		if (entityplayer != null) { // Treasure Client: kick log
+			net.minecraft.client.TCKickLog.event("Teleport " + tcXyz(packetIn.getX(), packetIn.getY(), packetIn.getZ())
+					+ (packetIn.getFlags().isEmpty() ? "" : " (relative)") + " from " + tcXyz(entityplayer.posX, entityplayer.posY, entityplayer.posZ));
+		}
 		double d0 = packetIn.getX();
 		double d1 = packetIn.getY();
 		double d2 = packetIn.getZ();
@@ -946,6 +950,10 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleChat(SPacketChat packetIn) {
 		this.gameController.ingameGUI.func_191742_a(packetIn.func_192590_c(), packetIn.getChatComponent());
+		try {
+			net.minecraft.client.TCKickLog.chat(this.gameController, packetIn.getChatComponent().getUnformattedText()); // Treasure Client: kick log
+		} catch (Throwable t) {
+		}
 	}
 
 	/**
@@ -1109,7 +1117,14 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		}
 	}
 
+	private static String tcXyz(double x, double y, double z) {
+		return Math.round(x * 10.0D) / 10.0D + " " + Math.round(y * 10.0D) / 10.0D + " " + Math.round(z * 10.0D) / 10.0D;
+	}
+
 	public void handleUpdateHealth(SPacketUpdateHealth packetIn) {
+		if (this.gameController.player != null && packetIn.getHealth() < this.gameController.player.getHealth()) {
+			net.minecraft.client.TCKickLog.event("Damage, health " + packetIn.getHealth()); // Treasure Client: kick log
+		}
 		this.gameController.player.setPlayerSPHealth(packetIn.getHealth());
 		this.gameController.player.getFoodStats().setFoodLevel(packetIn.getFoodLevel());
 		this.gameController.player.getFoodStats().setFoodSaturationLevel(packetIn.getSaturationLevel());
@@ -1121,6 +1136,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	}
 
 	public void handleRespawn(SPacketRespawn packetIn) {
+		net.minecraft.client.TCKickLog.event("Respawn / world change"); // Treasure Client: kick log
 		if (packetIn.getDimensionID() != this.gameController.player.dimension) {
 			this.doneLoadingTerrain = false;
 			Scoreboard scoreboard = this.clientWorldController.getScoreboard();

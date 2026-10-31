@@ -45,6 +45,11 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT>
             try {
                 var output = this.task.execute(context, this);
 
+                // Treasure Client: the build paused to continue next frame; no result yet
+                if (ChunkBuilder.tcPaused) {
+                    return;
+                }
+
                 // A null output means the task was cancelled while executing
                 if (output != null) {
                     result = new ChunkJobResult.Success<>(output, System.nanoTime() - startTime);
