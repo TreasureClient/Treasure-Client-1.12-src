@@ -507,6 +507,19 @@ public class TreasureMods {
 	}
 
 	private static long lastWorkerCheck, workerIdleSince;
+	private static String lastKeys;
+
+	/** Tells the overlay the Treasure Settings and Zoom keys chosen in Options > Controls. */
+	private static void publishKeys(Minecraft mc) {
+		String k = "menu=" + mc.gameSettings.keyBindTreasureMenu.getKeyCode() + ",zoom="
+				+ mc.gameSettings.keyBindTreasureZoom.getKeyCode();
+		if (!k.equals(lastKeys)) {
+			lastKeys = k;
+			try {
+				EagRuntime.setStorage("tckeys", k.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			} catch (Throwable t) {}
+		}
+	}
 
 	/**
 	 * Memory Saver: once you're on a server, stop the singleplayer worker if it's
@@ -556,6 +569,7 @@ public class TreasureMods {
 
 			// Memory Saver
 			applyMemorySaver(mc);
+			publishKeys(mc);
 			net.minecraft.util.TCLithium.enabled = lithium();
 			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(immediatelyFast() && hudBatch);
 			net.lax1dude.eaglercraft.opengl.TCModelBatch.setEnabled(immediatelyFast() && modelBatch);

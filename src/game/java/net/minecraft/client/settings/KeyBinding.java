@@ -152,5 +152,6 @@ public class KeyBinding implements Comparable<KeyBinding> {
 		field_193627_d.put("key.categories.multiplayer", Integer.valueOf(5));
 		field_193627_d.put("key.categories.ui", Integer.valueOf(6));
 		field_193627_d.put("key.categories.misc", Integer.valueOf(7));
+		field_193627_d.put("Treasure Client", Integer.valueOf(8));
 	}
 }
