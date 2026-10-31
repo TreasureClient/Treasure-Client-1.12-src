@@ -147,6 +147,20 @@ public class TreasureMods {
 
 	// 1.7 Animations (Render): master switch off by default, parts on by default
 	private static boolean oldAnim = false, oaBlock = true, oaNoDip = true, oaUseSwing = true, oaArmor = true, oaHitSwing = true;
+	// Treasure Client: Treasure Animations
+	private static boolean tAnim = false, taPunch = true, taDraw = true, taSway = true, taBlockHit = true;
+	private static int taStyle = 0, taSpeed = 100, taParticles = 1;
+	private static boolean taTotemFx = true, taHitFx = true;
+	public static int taParticles() { return taParticles; }
+	public static boolean taTotemFx() { return tAnim && taParticles != 0 && taTotemFx; }
+	public static boolean taHitFx() { return taHitFx; }
+	public static boolean treasureAnim() { return tAnim; }
+	public static boolean taPunch() { return taPunch; }
+	public static boolean taDraw() { return taDraw; }
+	public static boolean taSway() { return taSway; }
+	public static boolean taBlockHit() { return taBlockHit; }
+	public static int taStyle() { return taStyle; }
+	public static int taSpeed() { return taSpeed; }
 	public static boolean oaHitSwing() { return oaHitSwing; }
 	public static boolean oldAnim() { return oldAnim; }
 	public static boolean oaBlock() { return oaBlock; }
@@ -434,6 +448,8 @@ public class TreasureMods {
 			dynFov = false;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true; oaHitSwing = true;
+			tAnim = false; taPunch = true; taDraw = true; taSway = true; taBlockHit = true; taStyle = 0; taSpeed = 100;
+			taParticles = 1; taTotemFx = true; taHitFx = true;
 			fullbright = false; clearWater = true; satDisplay = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
 			tierTagger = false; ttMode = "highest";
@@ -487,6 +503,16 @@ public class TreasureMods {
 				else if (k.equals("oaUseSwing")) oaUseSwing = v.equals("1");
 				else if (k.equals("oaArmor")) oaArmor = v.equals("1");
 				else if (k.equals("oaHitSwing")) oaHitSwing = v.equals("1");
+				else if (k.equals("tAnim")) tAnim = v.equals("1");
+				else if (k.equals("taPunch")) taPunch = v.equals("1");
+				else if (k.equals("taDraw")) taDraw = v.equals("1");
+				else if (k.equals("taSway")) taSway = v.equals("1");
+				else if (k.equals("taBlockHit")) taBlockHit = v.equals("1");
+				else if (k.equals("taStyle")) taStyle = v.equals("slash") ? 1 : v.equals("spin") ? 2 : v.equals("smooth") ? 3 : 0;
+				else if (k.equals("taParticles")) taParticles = v.equals("off") ? 0 : v.equals("rainbow") ? 2 : v.equals("frost") ? 3 : v.equals("ember") ? 4 : 1;
+				else if (k.equals("taTotemFx")) taTotemFx = v.equals("1");
+				else if (k.equals("taHitFx")) taHitFx = v.equals("1");
+				else if (k.equals("taSpeed")) { try { taSpeed = Math.max(50, Math.min(200, Integer.parseInt(v))); } catch (Throwable t) {} }
 				else if (k.equals("fullbright")) fullbright = v.equals("1");
 				else if (k.equals("clearWater")) clearWater = v.equals("1");
 				else if (k.equals("satDisplay")) satDisplay = v.equals("1");
@@ -657,6 +683,8 @@ public class TreasureMods {
 					}
 				}
 			} catch (Throwable t) {}
+
+			net.minecraft.client.renderer.TCTreasureAnimations.tick(mc); // Treasure Animations swing speed
 
 			// only drive the game while actually in a world with no screen open
 			boolean active = (mc.player != null && mc.currentScreen == null);

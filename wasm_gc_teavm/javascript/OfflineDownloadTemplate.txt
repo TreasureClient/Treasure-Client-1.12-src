@@ -713,6 +713,35 @@ ${classes_js}
               </div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Treasure Animations</b><i>Our own swing styles, hit punch, draw twirl, sway and particles for 1.8 and 1.12 servers</i></div><button class="tc-gear" data-gear="tacfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="tAnim"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="tacfg">
+                <div class="tc-cfg-row"><span>Swing style</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="taStyle">
+                    <button data-val="treasure">Treasure</button>
+                    <button data-val="slash">Slash</button>
+                    <button data-val="spin">Spin</button>
+                    <button data-val="smooth">Smooth</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Swing speed (100 = normal)</span><div class="tc-slider"><input type="range" min="50" max="200" step="10" value="100" data-mod="taSpeed"><span class="tc-val">100</span></div></div>
+                <div class="tc-cfg-row"><span>Hit punch (item kicks back when you hit)</span><div class="tc-sw on" data-mod="taPunch" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Draw twirl (new items spin into your hand)</span><div class="tc-sw on" data-mod="taDraw" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Sway (item leans when you turn)</span><div class="tc-sw on" data-mod="taSway" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Block-hit bounce (1.8 servers, needs 1.7 sword blocking)</span><div class="tc-sw on" data-mod="taBlockHit" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Particles</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="taParticles">
+                    <button data-val="off">Off</button>
+                    <button data-val="treasure">Treasure</button>
+                    <button data-val="rainbow">Rainbow</button>
+                    <button data-val="frost">Frost</button>
+                    <button data-val="ember">Ember</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Totem pops (recolor + ring and spiral burst)</span><div class="tc-sw on" data-mod="taTotemFx" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Hit sparkles (burst where your hit lands)</span><div class="tc-sw on" data-mod="taHitFx" style="margin-left:auto;"><i></i></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Hit Color</b><i>Change the red flash when players and mobs get hurt</i></div><button class="tc-gear" data-gear="hitcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="hitColorOn"><i></i></div></div>
               <div class="tc-cfg" data-cfg="hitcfg">
                 <div class="tc-cfg-row"><span>Color</span>
@@ -1558,6 +1587,35 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               </div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Treasure Animations</b><i>Our own swing styles, hit punch, draw twirl, sway and particles for 1.8 and 1.12 servers</i></div><button class="tc-gear" data-gear="tacfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="tAnim"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="tacfg">
+                <div class="tc-cfg-row"><span>Swing style</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="taStyle">
+                    <button data-val="treasure">Treasure</button>
+                    <button data-val="slash">Slash</button>
+                    <button data-val="spin">Spin</button>
+                    <button data-val="smooth">Smooth</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Swing speed (100 = normal)</span><div class="tc-slider"><input type="range" min="50" max="200" step="10" value="100" data-mod="taSpeed"><span class="tc-val">100</span></div></div>
+                <div class="tc-cfg-row"><span>Hit punch (item kicks back when you hit)</span><div class="tc-sw on" data-mod="taPunch" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Draw twirl (new items spin into your hand)</span><div class="tc-sw on" data-mod="taDraw" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Sway (item leans when you turn)</span><div class="tc-sw on" data-mod="taSway" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Block-hit bounce (1.8 servers, needs 1.7 sword blocking)</span><div class="tc-sw on" data-mod="taBlockHit" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Particles</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="taParticles">
+                    <button data-val="off">Off</button>
+                    <button data-val="treasure">Treasure</button>
+                    <button data-val="rainbow">Rainbow</button>
+                    <button data-val="frost">Frost</button>
+                    <button data-val="ember">Ember</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Totem pops (recolor + ring and spiral burst)</span><div class="tc-sw on" data-mod="taTotemFx" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Hit sparkles (burst where your hit lands)</span><div class="tc-sw on" data-mod="taHitFx" style="margin-left:auto;"><i></i></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Hit Color</b><i>Change the red flash when players and mobs get hurt</i></div><button class="tc-gear" data-gear="hitcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="hitColorOn"><i></i></div></div>
               <div class="tc-cfg" data-cfg="hitcfg">
                 <div class="tc-cfg-row"><span>Color</span>
@@ -1793,7 +1851,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1953,6 +2011,16 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'oaUseSwing=' + (state.oaUseSwing === false ? 0 : 1),
           'oaArmor=' + (state.oaArmor === false ? 0 : 1),
           'oaHitSwing=' + (state.oaHitSwing === false ? 0 : 1),
+          'tAnim=' + (state.tAnim ? 1 : 0),
+          'taStyle=' + (state.taStyle || 'treasure'),
+          'taSpeed=' + (state.taSpeed || 100),
+          'taPunch=' + (state.taPunch === false ? 0 : 1),
+          'taDraw=' + (state.taDraw === false ? 0 : 1),
+          'taSway=' + (state.taSway === false ? 0 : 1),
+          'taBlockHit=' + (state.taBlockHit === false ? 0 : 1),
+          'taParticles=' + (state.taParticles || 'treasure'),
+          'taTotemFx=' + (state.taTotemFx === false ? 0 : 1),
+          'taHitFx=' + (state.taHitFx === false ? 0 : 1),
           'perfpack=' + (state.perfpack === false ? 0 : 1),
           'fullbright=' + (state.fullbright ? 1 : 0),
           'clearWater=' + (state.clearWater === false ? 0 : 1),
@@ -2265,6 +2333,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         tntTimer: '<rect x="4" y="8" width="16" height="12" rx="1"/><path d="M4 12h16M4 16h16M12 8V5l3-2"/>',
         crosshair: '<circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
         hitboxes: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
+        tAnim: '<path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/><path d="M5 16l.6 1.4 1.4.6-1.4.6L5 20l-.6-1.4L3 18l1.4-.6z"/>',
         oldAnim: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
         hitColorOn: '<path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.4 1-2.4 2.4-2.4H18a3 3 0 0 0 3-3c0-5-4-11-9-11z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>',
         tierTagger: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
@@ -2397,7 +2466,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       sl.addEventListener('input', function () {
         showVal();
         state[key] = parseInt(sl.value, 10); save();
-        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale') writeModsToEngine(); // engine-backed sliders
+        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale' || key === 'taSpeed') writeModsToEngine(); // engine-backed sliders
         else if (key === 'resolutionScale') { dynScale = 100; applyResolutionScale(); }
         else applyHud();
       });

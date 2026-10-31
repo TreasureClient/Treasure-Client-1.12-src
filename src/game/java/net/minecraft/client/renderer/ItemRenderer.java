@@ -359,7 +359,11 @@ public class ItemRenderer {
 			if (flag && TCOldAnimations.isSwordBlocking(p_187457_1_)) {
 				// Treasure Client — 1.7 Animations: sword block pose; it still swings (block-hitting)
 				this.transformSideFirstPerson(enumhandside, p_187457_7_);
-				this.transformFirstPerson(enumhandside, p_187457_5_);
+				if (TCTreasureAnimations.blockHitOn()) {
+					TCTreasureAnimations.blockHit(flag1 ? 1 : -1, p_187457_5_); // Treasure Animations bounce
+				} else {
+					this.transformFirstPerson(enumhandside, p_187457_5_);
+				}
 				TCOldAnimations.swordBlockFirstPerson(flag1 ? 1 : -1);
 			} else if (p_187457_1_.isHandActive() && p_187457_1_.getItemInUseCount() > 0
 					&& p_187457_1_.getActiveHand() == p_187457_4_) {
@@ -444,6 +448,10 @@ public class ItemRenderer {
 				} else {
 					TCOldAnimations.stabFirstPerson(flag1 ? 1 : -1, p_187457_5_);
 				}
+			} else if (flag && TCTreasureAnimations.on()) {
+				// Treasure Client — Treasure Animations: our own swing styles, hit punch, draw twirl, sway
+				this.transformSideFirstPerson(enumhandside, p_187457_7_);
+				TCTreasureAnimations.firstPerson(flag1 ? 1 : -1, p_187457_5_);
 			} else {
 				float f = -0.4F * MathHelper.sin(MathHelper.sqrt(p_187457_5_) * (float) Math.PI);
 				float f1 = 0.2F * MathHelper.sin(MathHelper.sqrt(p_187457_5_) * ((float) Math.PI * 2F));
@@ -663,6 +671,9 @@ public class ItemRenderer {
 		}
 
 		if (this.equippedProgressMainHand < 0.1F) {
+			if (this.itemStackMainHand.getItem() != itemstack.getItem() && !itemstack.func_190926_b()) {
+				TCTreasureAnimations.onDraw(); // Treasure Animations: twirl the new item in
+			}
 			this.itemStackMainHand = itemstack;
 		}
 

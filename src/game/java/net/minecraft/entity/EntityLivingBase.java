@@ -1431,7 +1431,22 @@ public abstract class EntityLivingBase extends Entity {
 	 * {@link #swingProgress} to provide a progress indicator. Takes dig speed
 	 * enchantments into account.
 	 */
+	/** Treasure Client (Treasure Animations): swing speed for our own player, 100 = normal. */
+	public static Object tcSwingEntity;
+	public static int tcSwingPct = 100;
+
 	private int getArmSwingAnimationEnd() {
+		int tcEnd = this.tcArmSwingAnimationEnd();
+		if (this == tcSwingEntity && tcSwingPct != 100 && tcSwingPct > 0) {
+			ItemStack tcHeld = this.getHeldItemMainhand();
+			if (!(tcHeld.getItem() instanceof net.minecraft.item.ItemSpear)) {
+				return Math.max(2, Math.min(24, Math.round((float) tcEnd * 100.0F / (float) tcSwingPct)));
+			}
+		}
+		return tcEnd;
+	}
+
+	private int tcArmSwingAnimationEnd() {
 		// Treasure Client — a modern spear jab lasts its attack duration
 		ItemStack tcMain = this.getHeldItemMainhand();
 		if (this.swingingHand == EnumHand.MAIN_HAND && tcMain.getItem() instanceof net.minecraft.item.ItemSpear) {
