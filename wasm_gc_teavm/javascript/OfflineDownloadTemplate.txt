@@ -758,7 +758,6 @@ ${classes_js}
                 <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" data-mod="zoomLevel"><span class="tc-val">30</span></div></div>
                 <div class="tc-cfg-row"><span>Smooth Zoom</span><div class="tc-sw" data-mod="smoothZoom" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Zoom Speed</span><div class="tc-slider"><input type="range" min="1" max="20" step="1" data-mod="zoomSpeed"><span class="tc-val">8</span></div></div>
-                <div class="tc-cfg-row"><span>Hold key</span><button class="tc-keybind" data-bindkey="zoom">C</button></div>
                 <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower strength = closer zoom · higher speed = snappier</span></div>
               </div>
             </div>
@@ -811,12 +810,6 @@ ${classes_js}
               <div class="tc-row"><div class="tc-lab"><b>Password Hider</b><i>Hide your password when typing /login, /register, etc.</i></div><div class="tc-sw" data-mod="pwHide"><i></i></div></div>
             </div>
             <div class="tc-sep"></div>
-            <div class="tc-seclabel">Keybind Manager</div>
-            <div class="tc-note">Click a bind, then press a key. The Treasure Settings key can be changed but not removed.</div>
-            <div class="tc-kb-row"><div class="tc-lab"><b>Treasure Settings</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
-            <div class="tc-kb-warn" id="tc-kb-warn"></div>
-            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Treasure Settings key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
-            <div class="tc-sep"></div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Menu Animations</b><i>Smooth open / close &amp; hover transitions</i></div><div class="tc-sw on" data-mod="guiAnim"><i></i></div></div>
             </div>
@@ -853,9 +846,7 @@ ${classes_js}
         </div>
       </div>
       <div class="tc-foot">
-        <span class="tc-foot-label">Open menu with</span>
-        <button class="tc-keybind" data-bindkey="menu">Right Shift</button>
-        <span class="tc-foot-hint">Rebindable · manage all keys in Other Mods ▸ Keybind Manager</span>
+        <span class="tc-foot-hint">Change the menu and zoom keys in Options &#9656; Controls &#9656; Treasure Client</span>
         <span class="tc-spacer"></span>
         <button class="tc-done" id="tc-done">Done</button>
       </div>
@@ -1260,6 +1251,73 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 .tc-te-save { color: var(--bg0); background: linear-gradient(180deg,var(--a-1),var(--a-2)); border-color: transparent; }
 .tc-te-reset, .tc-te-cancel { color: var(--dim); background: transparent; }
 
+/* ===== 1.3: modules as tiles (icon, name, Options, Enabled/Disabled), click a tile to toggle ===== */
+#tc-root #tc-gui-panel { width: min(1180px, 96vw); height: min(720px, 93vh); }
+#tc-root .tc-panel.active, #tc-root .tc-body.searching .tc-panel.tc-search-hit { display: grid; }
+#tc-root .tc-panel { columns: auto; grid-template-columns: repeat(auto-fill, minmax(164px, 1fr)); gap: 14px; align-items: stretch; }
+#tc-root .tc-panel > :not(.tc-tile) { grid-column: 1 / -1; margin: 0; }
+#tc-root .tc-panel { grid-auto-flow: row dense; }
+#tc-root .tc-body.searching .tc-panel:not(.tc-search-hit) { display: none !important; }
+/* "All": every category's tiles flow as one grid, packed so no holes are left */
+#tc-root .tc-panels.tc-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(164px, 1fr)); gap: 14px; grid-auto-flow: row dense; align-items: stretch; }
+#tc-root .tc-panels.tc-all > :not(.tc-panel) { grid-column: 1 / -1; } /* category buttons get their own row */
+#tc-root .tc-body:not(.searching) .tc-panels.tc-all > .tc-panel.active,
+#tc-root .tc-body.searching .tc-panels.tc-all > .tc-panel.tc-search-hit { display: contents; }
+#tc-root .tc-panels.tc-all .tc-panel > .tc-sep, #tc-root .tc-panels.tc-all .tc-panel > .tc-seclabel,
+#tc-root .tc-panels.tc-all .tc-panel > .tc-note { display: none; }
+#tc-root .tc-mod.tc-tile { margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 176px; overflow: hidden;
+  border: 1px solid var(--tc-card-bord, var(--bord)); border-radius: 12px; background: var(--tc-card-bg, var(--panel));
+  box-shadow: 0 0 10px -4px var(--tc-card-glow, var(--glow)); cursor: pointer; user-select: none;
+  transition: transform var(--tc-fast) var(--tc-ease), border-color var(--tc-fast), box-shadow var(--tc-med) var(--tc-ease); }
+#tc-root .tc-mod.tc-tile:hover { transform: translateY(-2px); border-color: var(--a-2); box-shadow: 0 8px 22px -10px var(--tc-card-glow, var(--glow)); }
+#tc-root .tc-mod.tc-tile:active { transform: translateY(0) scale(0.985); }
+#tc-root .tc-tile > .tc-row { flex: 1 1 auto; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  gap: 8px; padding: 18px 12px 12px; margin: 0; border: 0; border-radius: 0; background: none !important; }
+#tc-root .tc-tile-ico { width: 42px; height: 42px; color: var(--txt); opacity: 0.55; transition: color var(--tc-fast), opacity var(--tc-fast), transform var(--tc-med) var(--tc-ease); }
+#tc-root .tc-tile-ico svg { width: 100%; height: 100%; display: block; }
+#tc-root .tc-tile.tc-on .tc-tile-ico { color: var(--a-1); opacity: 1; filter: drop-shadow(0 0 8px var(--glow)); }
+#tc-root .tc-mod.tc-tile:hover .tc-tile-ico { transform: scale(1.08); }
+#tc-root .tc-tile .tc-lab { align-items: center; gap: 4px; }
+#tc-root .tc-tile .tc-lab b { font-size: 14.5px; }
+#tc-root .tc-tile .tc-lab i { font-size: 11px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#tc-root .tc-tile > .tc-cfg { display: none !important; }
+/* slider modules (Render Resolution): a double-width tile with the slider under the text */
+#tc-root .tc-mod.tc-tile.tc-tile-wide { grid-column: span 2; cursor: default; }
+#tc-root .tc-mod.tc-tile.tc-tile-wide:active { transform: translateY(-2px); }
+#tc-root .tc-mod.tc-tile.tc-tile-wide > .tc-row { flex: 0 0 auto; padding: 18px 16px 6px; }
+#tc-root .tc-mod.tc-tile.tc-tile-wide .tc-tile-ico { opacity: 1; color: var(--a-1); }
+#tc-root .tc-mod.tc-tile.tc-tile-wide > .tc-cfg { display: block !important; max-height: none; opacity: 1; overflow: visible; padding: 4px 16px 16px; }
+#tc-root .tc-tile-wide .tc-cfg-row { justify-content: center; gap: 10px; padding: 4px 0; border: 0; }
+#tc-root .tc-tile-wide .tc-cfg-row > span:first-child:not(.tc-hint) { display: none; }
+#tc-root .tc-tile-wide .tc-slider { flex: 0 1 240px; margin: 0; }
+#tc-root .tc-tile-wide .tc-hint { font-size: 10.5px; }
+/* corner controls: round gear (top left), ON/OFF pill (top right) */
+#tc-root .tc-mod.tc-tile { position: relative; }
+#tc-root .tc-tile > .tc-row { padding: 34px 12px 18px; }
+#tc-root .tc-tile-foot { position: absolute; top: 9px; left: 9px; right: 9px; display: flex; align-items: center; pointer-events: none; }
+#tc-root .tc-tile-foot > * { pointer-events: auto; }
+#tc-root .tc-tile-foot .tc-gear { margin: 0; width: 26px; height: 26px; padding: 0; border-radius: 50%; font-size: 13px; line-height: 1;
+  border: 1px solid color-mix(in srgb, var(--bord) 80%, transparent); background: rgba(0,0,0,0.25); color: var(--dim);
+  opacity: 0.75; transition: opacity var(--tc-fast), color var(--tc-fast), border-color var(--tc-fast), transform var(--tc-med) var(--tc-ease); }
+#tc-root .tc-mod.tc-tile:hover .tc-tile-foot .tc-gear { opacity: 1; }
+#tc-root .tc-tile-foot .tc-gear:hover { color: var(--a-1); border-color: var(--a-2); transform: rotate(60deg); }
+#tc-root .tc-tile-foot .tc-sw { margin: 0 0 0 auto; width: auto; min-width: 42px; height: 20px; padding: 0 9px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--bord) 80%, transparent); background: rgba(0,0,0,0.30); box-shadow: none;
+  display: flex; align-items: center; justify-content: center; transition: background var(--tc-fast), border-color var(--tc-fast), box-shadow var(--tc-med); }
+#tc-root .tc-tile-foot .tc-sw i { display: none; }
+#tc-root .tc-tile-foot .tc-sw::after { content: 'Off'; color: var(--dim); font: 800 9.5px 'Outfit', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; }
+#tc-root .tc-tile-foot .tc-sw.on { background: linear-gradient(180deg, var(--a-1), var(--a-2)); border-color: transparent; box-shadow: 0 0 10px -2px var(--glow); }
+#tc-root .tc-tile-foot .tc-sw.on::after { content: 'On'; color: var(--bg0); }
+#tc-root .tc-tile-foot .tc-sw:hover { filter: brightness(1.12); box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-2) 22%, transparent); }
+/* enabled tiles light up: tinted border and a glowing accent line along the bottom */
+#tc-root .tc-mod.tc-tile::after { content: ''; position: absolute; left: 18%; right: 18%; bottom: 0; height: 3px; border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, transparent, var(--a-1), transparent); opacity: 0; transform: scaleX(0.4);
+  transition: opacity var(--tc-med) var(--tc-ease), transform var(--tc-med) var(--tc-ease); }
+#tc-root .tc-mod.tc-tile.tc-on::after { opacity: 1; transform: none; box-shadow: 0 0 12px var(--glow); }
+#tc-root .tc-mod.tc-tile.tc-on { border-color: color-mix(in srgb, var(--a-2) 55%, var(--tc-card-bord, var(--bord)));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--a-2) 9%, transparent), transparent 60%), var(--tc-card-bg, var(--panel)); }
+#tc-root .tc-mod.tc-tile:not(.tc-on) .tc-lab b { color: color-mix(in srgb, var(--txt) 70%, transparent); }
+
     `;
   function ensureStyle() {
     if (document.getElementById('tc-root-style')) return;
@@ -1526,7 +1584,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
                 <div class="tc-cfg-row"><span>Strength</span><div class="tc-slider"><input type="range" min="10" max="80" step="5" data-mod="zoomLevel"><span class="tc-val">30</span></div></div>
                 <div class="tc-cfg-row"><span>Smooth Zoom</span><div class="tc-sw" data-mod="smoothZoom" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Zoom Speed</span><div class="tc-slider"><input type="range" min="1" max="20" step="1" data-mod="zoomSpeed"><span class="tc-val">8</span></div></div>
-                <div class="tc-cfg-row"><span>Hold key</span><button class="tc-keybind" data-bindkey="zoom">C</button></div>
                 <div class="tc-cfg-row"><span></span><span class="tc-hint">Lower strength = closer zoom · higher speed = snappier</span></div>
               </div>
             </div>
@@ -1579,12 +1636,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>Password Hider</b><i>Hide your password when typing /login, /register, etc.</i></div><div class="tc-sw" data-mod="pwHide"><i></i></div></div>
             </div>
             <div class="tc-sep"></div>
-            <div class="tc-seclabel">Keybind Manager</div>
-            <div class="tc-note">Click a bind, then press a key. The Treasure Settings key can be changed but not removed.</div>
-            <div class="tc-kb-row"><div class="tc-lab"><b>Treasure Settings</b><i>Open / close this menu</i></div><button class="tc-keybind tc-kb-required" data-bindkey="menu">Right Shift</button></div>
-            <div class="tc-kb-warn" id="tc-kb-warn"></div>
-            <div class="tc-cfg-row" style="margin-top:10px"><span>Reset Treasure Settings key</span><button class="tc-apply tc-btn-xs" id="tc-kb-default">Reset to Right Shift</button></div>
-            <div class="tc-sep"></div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Menu Animations</b><i>Smooth open / close &amp; hover transitions</i></div><div class="tc-sw on" data-mod="guiAnim"><i></i></div></div>
             </div>
@@ -1621,9 +1672,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         </div>
       </div>
       <div class="tc-foot">
-        <span class="tc-foot-label">Open menu with</span>
-        <button class="tc-keybind" data-bindkey="menu">Right Shift</button>
-        <span class="tc-foot-hint">Rebindable · manage all keys in Other Mods ▸ Keybind Manager</span>
+        <span class="tc-foot-hint">Change the menu and zoom keys in Options &#9656; Controls &#9656; Treasure Client</span>
         <span class="tc-spacer"></span>
         <button class="tc-done" id="tc-done">Done</button>
       </div>
@@ -1989,8 +2038,45 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         ttNext();
       } catch (e) {}
     }
+    // Minecraft (LWJGL) key number -> browser key name; 0 = unbound, undefined = can't map
+    function tcLwjglToCode(n) {
+      if (n === 0) return null;
+      if (!tcLwjglToCode.t) {
+        var t = {}, i;
+        var row = function (start, names) { for (i = 0; i < names.length; i++) t[start + i] = names[i]; };
+        row(1, ['Escape','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal','Backspace','Tab',
+          'KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight','Enter','ControlLeft',
+          'KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Backquote','ShiftLeft','Backslash',
+          'KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash','ShiftRight','NumpadMultiply','AltLeft','Space','CapsLock',
+          'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','NumLock','ScrollLock','Numpad7','Numpad8','Numpad9','NumpadSubtract',
+          'Numpad4','Numpad5','Numpad6','NumpadAdd','Numpad1','Numpad2','Numpad3','Numpad0','NumpadDecimal']);
+        t[87] = 'F11'; t[88] = 'F12'; t[156] = 'NumpadEnter'; t[157] = 'ControlRight'; t[181] = 'NumpadDivide'; t[184] = 'AltRight';
+        t[199] = 'Home'; t[200] = 'ArrowUp'; t[201] = 'PageUp'; t[203] = 'ArrowLeft'; t[205] = 'ArrowRight'; t[207] = 'End';
+        t[208] = 'ArrowDown'; t[209] = 'PageDown'; t[210] = 'Insert'; t[211] = 'Delete'; t[219] = 'MetaLeft'; t[220] = 'MetaRight';
+        tcLwjglToCode.t = t;
+      }
+      return tcLwjglToCode.t[n];
+    }
     function pollSharedMode() {
       tierPoll();
+      // The Treasure Settings and Zoom keys are set in the game's Options > Controls;
+      // the game writes them to tckeys as Minecraft key numbers.
+      try {
+        var kraw = localStorage.getItem('_eaglercraft_1.12.tckeys');
+        if (kraw && kraw !== pollSharedMode._keys) {
+          pollSharedMode._keys = kraw;
+          var kv = {};
+          atob(kraw).split(',').forEach(function (pr) { var q = pr.split('='); if (q.length === 2) kv[q[0]] = parseInt(q[1], 10); });
+          var kch = false;
+          [['menu', 'menuKeyCode', 'menuKeyLabel'], ['zoom', 'zoomKeyCode', 'zoomKeyLabel']].forEach(function (b) {
+            if (!(b[0] in kv)) return;
+            var code = tcLwjglToCode(kv[b[0]]);
+            if (code === undefined || state[b[1]] === code) return; // mouse buttons can't be read here: keep the old key
+            state[b[1]] = code; state[b[2]] = code ? labelFor(code) : 'Unbound'; kch = true;
+          });
+          if (kch) save();
+        }
+      } catch (e) {}
       // Java main menu "Mod Menu" button sets tcopen=1 to ask us to open. This is
       // the always-available way in, so an unbound hotkey can never lock you out.
       try {
@@ -2119,6 +2205,97 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     $$('.tc-view').forEach(function (b) { b.addEventListener('click', function () { tcSetView(b.dataset.view); }); });
     tcSetView('modules');
 
+    /* ---------- 1.3: modules as tiles — icon above the name, click the tile to turn it on/off ---------- */
+    (function () {
+      var I = {
+        coords: '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>',
+        direction: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+        satDisplay: '<path d="M15 4a5 5 0 0 1 0 10l-4 .5-3.5 3.5a1.8 1.8 0 1 1-2.5-2.5L8.5 12 9 8a5 5 0 0 1 6-4z"/>',
+        armorStatus: '<path d="M8 3L4 5v5h3v11h10V10h3V5l-4-2c-.6 1.5-2 2.5-4 2.5S8.6 4.5 8 3z"/>',
+        potionEffects: '<path d="M10 3h4M10.5 3v5l-5 9a2.5 2.5 0 0 0 2.2 4h8.6a2.5 2.5 0 0 0 2.2-4l-5-9V3"/><path d="M7.5 14h9"/>',
+        heldItem: '<path d="M19 3l2 2-11 11-3-3z"/><path d="M5 15l4 4M3 21l3-3"/>',
+        keystrokes: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>',
+        cps: '<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6"/>',
+        fps: '<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/>',
+        ping: '<path d="M5 20v-3M10 20v-7M15 20V9M20 20V5"/>',
+        fpsGraph: '<path d="M3 20h18"/><path d="M4 16l5-6 4 4 7-8"/>',
+        perfMonitor: '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
+        fullbright: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+        noHurtCam: '<path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3"/><path d="M3 3l18 18"/>',
+        dynfov: '<path d="M3 18L12 6l9 12"/><path d="M7 18a5 5 0 0 1 10 0"/>',
+        tntTimer: '<rect x="4" y="8" width="16" height="12" rx="1"/><path d="M4 12h16M4 16h16M12 8V5l3-2"/>',
+        crosshair: '<circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
+        hitboxes: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
+        oldAnim: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
+        hitColorOn: '<path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.4 1-2.4 2.4-2.4H18a3 3 0 0 0 3-3c0-5-4-11-9-11z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>',
+        tierTagger: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+        lowFire: '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 1 1 1.5 2 1.5 3 1-2 1.5-4 1.5-8z"/>',
+        lowShield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+        smallTotem: '<circle cx="12" cy="6" r="3"/><path d="M8 11h8l-1 4H9zM6 11l-3 3M18 11l3 3M10 15v6M14 15v6"/>',
+        zoom: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5M11 8v6M8 11h6"/>',
+        perfpack: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+        noParticles: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><path d="M3 3l18 18"/>',
+        pauseUnfocused: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
+        dynResOn: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M9 10h6M13 8l2 2-2 2"/>',
+        toggleSprint: '<circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 3v3M6 12l3-4 4 1 3 3h3M11 15l-1-5"/><path d="M2 9h4M3 13h3"/>',
+        toggleSneak: '<circle cx="12" cy="5" r="2"/><path d="M12 7v6l-4 3v4M12 13l4 3v4M8 10h8"/>',
+        via: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+        pwHide: '<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/><path d="M4 4l16 16"/>',
+        guiAnim: '<path d="M5 19L15 9l2-2M13 5l1-2 1 2 2 1-2 1-1 2-1-2-2-1zM18 12l.7-1.3L20 10l-1.3-.7L18 8l-.7 1.3L16 10l1.3.7z"/>'
+      };
+      var DEF = '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>';
+      // "All" lays every category's tiles out as one grid (see .tc-panels.tc-all)
+      var panelsEl = $('.tc-panels');
+      function markAll() {
+        var act = $('.tc-cat.active');
+        if (panelsEl) panelsEl.classList.toggle('tc-all', !act || act.dataset.cat === 'all');
+      }
+      $$('.tc-cat').forEach(function (b) { b.addEventListener('click', markAll); });
+      markAll();
+      // the HUD Editor is opened from the side tab, so hide its box in the module list
+      // (its button stays in the page: the side tab clicks it)
+      var hudEdit = $('#tc-hud-edit');
+      var hudBox = hudEdit && hudEdit.closest('.tc-mod');
+      if (hudBox) hudBox.style.display = 'none';
+      // slider modules: a wide tile, icon and name on top, the slider below
+      var WIDE = { resolutionScale: '<rect x="3" y="5" width="18" height="13" rx="2"/><path d="M7 9h3M7 9v3M17 14h-3M17 14v-3M9 21h6"/>' };
+      $$('.tc-panel > .tc-mod').forEach(function (box) {
+        var sl = box.querySelector(':scope > .tc-cfg input[type="range"][data-mod]');
+        var row = box.querySelector(':scope > .tc-row');
+        if (!sl || !row || !WIDE[sl.dataset.mod] || box.querySelector(':scope > .tc-row .tc-sw')) return;
+        box.classList.add('tc-tile', 'tc-tile-wide');
+        var ico = document.createElement('div');
+        ico.className = 'tc-tile-ico';
+        ico.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + WIDE[sl.dataset.mod] + '</svg>';
+        row.insertBefore(ico, row.firstChild);
+      });
+      $$('.tc-panel > .tc-mod').forEach(function (box) {
+        if (box.classList.contains('tc-tile')) return;
+        var row = box.querySelector(':scope > .tc-row');
+        var sw = row && row.querySelector(':scope > .tc-sw[data-mod]');
+        if (!sw) return; // boxes without an on/off switch stay as full-width boxes
+        box.classList.add('tc-tile');
+        var ico = document.createElement('div');
+        ico.className = 'tc-tile-ico';
+        ico.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + (I[sw.dataset.mod] || DEF) + '</svg>';
+        row.insertBefore(ico, row.firstChild);
+        var foot = document.createElement('div');
+        foot.className = 'tc-tile-foot';
+        var gear = row.querySelector(':scope > .tc-gear');
+        if (gear) { gear.textContent = '\u2699'; gear.title = 'Options'; foot.appendChild(gear); }
+        foot.appendChild(sw);
+        box.appendChild(foot);
+        function sync() { box.classList.toggle('tc-on', sw.classList.contains('on')); }
+        sync();
+        try { new MutationObserver(sync).observe(sw, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
+        // click anywhere on the tile to turn the module on or off
+        box.addEventListener('click', function (e) {
+          if (e.target.closest('.tc-gear, .tc-sw, .tc-cfg, input, select, textarea, a')) return;
+          sw.click();
+        });
+      });
+    })();
+
     /* ---------- reliable mouse-wheel scrolling ----------
        The Eaglercraft game canvas also listens for wheel events and can eat the
        scroll. Intercept the wheel on WINDOW in the CAPTURE phase (so we run
@@ -2212,7 +2389,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     }
     subBack.addEventListener('click', closeSubPage);
     $$('.tc-gear[data-gear]').forEach(function (g) {
-      var row = g.closest('.tc-row');
+      var row = g.closest('.tc-row') || (g.closest('.tc-mod') ? g.closest('.tc-mod').querySelector('.tc-row') : null); // tiles move the gear out of the row
       var nameEl = row ? row.querySelector('.tc-lab b') : null;
       var modName = nameEl ? nameEl.textContent : 'Settings';
       g.addEventListener('click', function (e) { e.stopPropagation(); openSubPage(g.dataset.gear, modName); });
@@ -2772,9 +2949,14 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       // If the user is typing in one of our text fields, the key belongs to the
       // field — don't treat it as a hotkey (so e.g. a search containing the menu
       // key doesn't close the menu, and letters aren't eaten).
+      // Mod Menu open/close. Works even while the search box has focus, unless the
+      // menu key types a character (then it belongs in the box).
+      if (state.menuKeyCode && e.code === state.menuKeyCode && (!tcIsTypingTarget(e) || !e.key || e.key.length !== 1)) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (tcIsTypingTarget(e)) { try { e.target.blur(); } catch (er) {} }
+        toggleGui(); return;
+      }
       if (tcIsTypingTarget(e)) return;
-      // Mod Menu open/close
-      if (state.menuKeyCode && e.code === state.menuKeyCode) { e.preventDefault(); e.stopImmediatePropagation(); toggleGui(); return; }
       if (e.code === 'Escape' && gui.classList.contains('open')) { e.preventDefault(); closeGui(); }
     }, true);
 

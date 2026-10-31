@@ -134,6 +134,9 @@ public class GameSettings {
 	public KeyBinding keyBindSmoothCamera = new KeyBinding("key.smoothCamera", 0, "key.categories.misc");
 	public KeyBinding keyBindSpectatorOutlines = new KeyBinding("key.spectatorOutlines", 0, "key.categories.misc");
 	public KeyBinding field_194146_ao = new KeyBinding("key.advancements", 38, "key.categories.misc");
+	/** Treasure Client: keys for the overlay, set here and passed to it through the "tckeys" storage key. */
+	public KeyBinding keyBindTreasureMenu = new KeyBinding("Open Treasure Settings", 54, "Treasure Client");
+	public KeyBinding keyBindTreasureZoom = new KeyBinding("Zoom (hold)", 46, "Treasure Client");
 	public KeyBinding[] keyBindsHotbar = new KeyBinding[] {
 			new KeyBinding("key.hotbar.1", 2, "key.categories.inventory"),
 			new KeyBinding("key.hotbar.2", 3, "key.categories.inventory"),
@@ -200,7 +203,8 @@ public class GameSettings {
 						this.keyBindDrop, this.keyBindInventory, this.keyBindChat, this.keyBindPlayerList,
 						this.keyBindPickBlock, this.keyBindCommand, this.keyBindScreenshot,
 						this.keyBindTogglePerspective, this.keyBindSmoothCamera, this.keyBindSpectatorOutlines,
-						this.keyBindSwapHands, this.field_193629_ap, this.field_193630_aq, this.field_194146_ao },
+						this.keyBindSwapHands, this.field_193629_ap, this.field_193630_aq, this.field_194146_ao,
+						this.keyBindTreasureMenu, this.keyBindTreasureZoom },
 				this.keyBindsHotbar);
 		this.difficulty = EnumDifficulty.NORMAL;
 		this.lastServer = "";
@@ -220,7 +224,8 @@ public class GameSettings {
 						this.keyBindDrop, this.keyBindInventory, this.keyBindChat, this.keyBindPlayerList,
 						this.keyBindPickBlock, this.keyBindCommand, this.keyBindScreenshot,
 						this.keyBindTogglePerspective, this.keyBindSmoothCamera, this.keyBindSpectatorOutlines,
-						this.keyBindSwapHands, this.field_193629_ap, this.field_193630_aq, this.field_194146_ao },
+						this.keyBindSwapHands, this.field_193629_ap, this.field_193630_aq, this.field_194146_ao,
+						this.keyBindTreasureMenu, this.keyBindTreasureZoom },
 				this.keyBindsHotbar);
 		this.difficulty = EnumDifficulty.NORMAL;
 		this.lastServer = "";
