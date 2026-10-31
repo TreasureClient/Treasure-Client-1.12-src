@@ -623,6 +623,7 @@ public abstract class GuiContainer extends GuiScreen {
 		}
 
 		this.checkHotbarKeys(keyCode);
+		this.tcSwapOffhand(keyCode);
 
 		if (this.theSlot != null && this.theSlot.getHasStack()) {
 			if (keyCode == this.mc.gameSettings.keyBindPickBlock.getKeyCode()) {
@@ -638,6 +639,35 @@ public abstract class GuiContainer extends GuiScreen {
 	 * hotbar) has been pressed. If so, it swaps the given items. Returns true if a
 	 * hotbar key was pressed.
 	 */
+	/**
+	 * Treasure Client: like newer versions, the swap-hands key (F) swaps the hovered
+	 * inventory item with your offhand. 1.12 servers don't know the newer "swap with
+	 * offhand" click, so it is done with three normal clicks (pick up, put in the
+	 * offhand, put the old offhand item back), which every server accepts.
+	 */
+	private void tcSwapOffhand(int keyCode) {
+		if (keyCode != this.mc.gameSettings.keyBindSwapHands.getKeyCode() || this.theSlot == null
+				|| !(this.inventorySlots instanceof net.minecraft.inventory.ContainerPlayer)
+				|| !this.mc.player.inventory.getItemStack().func_190926_b()) {
+			return;
+		}
+		Slot slot = this.theSlot;
+		// only the main inventory and hotbar (not armor, crafting or the offhand itself)
+		if (slot.inventory != this.mc.player.inventory || slot.slotNumber < 9 || slot.slotNumber > 44) {
+			return;
+		}
+		final int offhand = 45;
+		boolean offhandHasItem = this.inventorySlots.getSlot(offhand).getHasStack();
+		if (!slot.getHasStack() && !offhandHasItem) {
+			return;
+		}
+		this.handleMouseClick(slot, slot.slotNumber, 0, ClickType.PICKUP);
+		this.handleMouseClick(this.inventorySlots.getSlot(offhand), offhand, 0, ClickType.PICKUP);
+		if (!this.mc.player.inventory.getItemStack().func_190926_b()) {
+			this.handleMouseClick(slot, slot.slotNumber, 0, ClickType.PICKUP);
+		}
+	}
+
 	protected boolean checkHotbarKeys(int keyCode) {
 		if (this.mc.player.inventory.getItemStack().func_190926_b() && this.theSlot != null) {
 			for (int i = 0; i < 9; ++i) {
