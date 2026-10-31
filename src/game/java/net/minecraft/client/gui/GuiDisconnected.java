@@ -16,6 +16,8 @@ public class GuiDisconnected extends GuiScreen {
 	private List<String> multilineMessage;
 	private final GuiScreen parentScreen;
 	private int textHeight;
+	/** Treasure Client: the packets sent just before the kick. */
+	private final List<String> tcKickLog = net.minecraft.client.TCKickLog.snapshot();
 
 	public GuiDisconnected(GuiScreen screen, String reasonLocalizationKey, ITextComponent chatComp) {
 		this.parentScreen = screen;
@@ -73,6 +75,21 @@ public class GuiDisconnected extends GuiScreen {
 		}
 
 		super.drawScreen(mouseX, mouseY, partialTicks);
+
+		// Treasure Client: show the last packets sent before the kick (newest at the bottom)
+		if (!this.tcKickLog.isEmpty()) {
+			int y = Math.min(this.height / 2 + this.textHeight / 2 + this.fontRendererObj.FONT_HEIGHT, this.height - 30) + 30;
+			int lineH = 9;
+			int room = (this.height - 4 - y) / lineH - 1;
+			if (room > 0) {
+				this.drawCenteredString(this.fontRendererObj, "\u00a76Last packets sent (screenshot this for Treasure Client):", this.width / 2, y, 16777215);
+				int from = Math.max(0, this.tcKickLog.size() - room);
+				for (int k = from; k < this.tcKickLog.size(); ++k) {
+					y += lineH;
+					this.drawCenteredString(this.fontRendererObj, "\u00a77" + this.tcKickLog.get(k), this.width / 2, y, 16777215);
+				}
+			}
+		}
 	}
 
 	public void updateScreen() {

@@ -214,6 +214,7 @@ public class GuiVideoSettings extends GuiScreen {
 		case "dynfps": return "Dynamic FPS";
 		case "memsaver": return "Memory Saver";
 		case "vanillafix": return "VanillaFix";
+		case "vsFpsReducer": return "FPS Reducer";
 		case "cextra": return "Celeritas Extra";
 		default: return key;
 		}
@@ -523,6 +524,11 @@ public class GuiVideoSettings extends GuiScreen {
 		g.add(new Header("Dynamic FPS", "dynfps"));
 		g.add(new VsSlider("vsBgFps", 10, 1, 60, 1, " FPS", "dynfps", "Background FPS",
 				"The frame rate while another window is focused. Lower keeps your device cooler.", "Varies"));
+		g.add(new Header("FPS Reducer", "vsFpsReducer"));
+		g.add(new VsSlider("vsIdleSec", 60, 10, 600, 10, " sec", "vsFpsReducer", "Idle After",
+				"How long without touching the keyboard or mouse before the frame rate drops.", "Varies"));
+		g.add(new VsSlider("vsIdleFps", 10, 1, 30, 1, " FPS", "vsFpsReducer", "Idle FPS",
+				"The frame rate while idle. Lower keeps your device cooler.", "Varies"));
 		g.add(new Header("Memory Saver", "memsaver"));
 		g.add(new VsSlider("vsWorkerSec", 5, 5, 300, 5, " sec", "memsaver", "Stop Singleplayer After",
 				"How long the singleplayer worker can sit idle while you're on a server before it's stopped to free memory.",

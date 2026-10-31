@@ -357,6 +357,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("FPS Reducer", "Treasure Client, inspired by bre2el", "Built in",
+				"Drops to a low frame rate when you haven't touched the keyboard or mouse for a while (AFK in a lobby, sitting in a menu), so your device stays cool and doesn't slow down when you play again. Any key or mouse movement brings full speed back at once. Set the wait and frame rate in Video Settings.",
+				"vsFpsReducer") {
+			boolean setting() {
+				return TreasureMods.fpsReducer();
+			}
+
+			String status(boolean on) {
+				return on ? (TreasureMods.fpsReducerIdle() ? "§aOn §7· idle, holding frame rate down" : "§aOn") : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("Fast Ping", "Treasure Client", "Built in",
 				"Lower ping: the server measures your ping with keep-alive packets, and they're now answered the moment they arrive, like the Java client does, instead of waiting for the game to get to them. Can take tens of milliseconds off your ping when frames are slow or lots of packets come in at once.",
 				"vsFastPing") {

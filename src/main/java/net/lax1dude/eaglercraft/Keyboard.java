@@ -29,7 +29,9 @@ public class Keyboard extends KeyboardConstants {
 	}
 
 	public static boolean next() {
-		return PlatformInput.keyboardNext();
+		boolean b = PlatformInput.keyboardNext();
+		if (b) Mouse.tcNoteInput(); // FPS Reducer
+		return b;
 	}
 
 	public static boolean getEventKeyState() {
