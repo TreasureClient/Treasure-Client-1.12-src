@@ -338,6 +338,8 @@ public class TreasureMods {
 	public static boolean hudCache() { return immediatelyFast() && hudCache; }
 	/** Dynamic FPS: frame rate while another window is focused. */
 	public static int backgroundFps() { return bgFps; }
+	/** Fast Ping: answer the server's keep-alive pings the moment they arrive. */
+	public static boolean fastPing() { return vsOn("vsFastPing", true); }
 	/** Elytra Fix: open the elytra the moment jump is pressed in the air, like newer versions. */
 	public static boolean elytraFix() { return vsOn("vsElytraFix", true); }
 	/** VanillaFix: crashes it recovers from within 15 seconds before giving up. */
@@ -559,6 +561,7 @@ public class TreasureMods {
 			net.lax1dude.eaglercraft.opengl.TCModelBatch.setEnabled(immediatelyFast() && modelBatch);
 			net.minecraft.client.particle.TCParticleCore.enabled = particleCore();
 			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me();
+			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcFastPing = fastPing();
 			net.minecraft.util.math.MathHelper.tcFastMath = betterFpsMath();
 
 			// Enhanced Block Entities changed: rebuild the chunk meshes with / without baked chests and beds
