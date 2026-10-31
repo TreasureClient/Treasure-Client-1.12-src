@@ -1105,6 +1105,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			} else if (packetIn.getOpCode() == 35) {
 				int i = 40;
 				this.gameController.effectRenderer.func_191271_a(entity, EnumParticleTypes.TOTEM, 30);
+				net.minecraft.client.particle.TCTreasureParticles.totemPop(entity); // Treasure Animations
 				this.clientWorldController.playSound(entity.posX, entity.posY, entity.posZ, SoundEvents.ITEM_TOTEM_USE,
 						entity.getSoundCategory(), 1.0F, 1.0F, false);
 

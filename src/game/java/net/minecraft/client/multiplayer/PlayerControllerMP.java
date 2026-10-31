@@ -481,6 +481,8 @@ public class PlayerControllerMP {
 	 * Attacks an entity
 	 */
 	public void attackEntity(EntityPlayer playerIn, Entity targetEntity) {
+		net.minecraft.client.renderer.TCTreasureAnimations.onHit(); // Treasure Animations: hit punch (visual)
+		net.minecraft.client.particle.TCTreasureParticles.hit(targetEntity); // Treasure Animations: hit sparkles (visual)
 		this.syncCurrentPlayItem();
 		this.connection.sendPacket(new CPacketUseEntity(targetEntity));
 

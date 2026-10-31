@@ -25,6 +25,10 @@ public class ParticleTotem extends ParticleSimpleAnimated {
 		}
 
 		this.func_191238_f(0.6F);
+		// Treasure Client — Treasure Animations particles: recolor totem pops
+		if (net.minecraft.client.gui.TreasureMods.taTotemFx()) {
+			TCTreasureParticles.color(this, this.rand);
+		}
 	}
 
 	public static class Factory implements IParticleFactory {

@@ -64,9 +64,13 @@ public final class TCOldAnimations {
 		if (!charged) {
 			return;
 		}
-		if (p.isSprinting()) {
+		// the server decides knockback from the sprint state it was last told, so count that too
+		if (p.isSprinting() || p.tcServerSprinting()) {
 			swingType = SWING_SPRINT;
 			return;
+		}
+		if (isLegacyCombatServer(p)) {
+			return; // 1.8 servers have no sweep attack
 		}
 		boolean crit = p.fallDistance > 0.0F && !p.onGround && !p.isOnLadder() && !p.isInWater()
 				&& !p.isPotionActive(net.minecraft.init.MobEffects.BLINDNESS) && !p.isRiding();
@@ -87,12 +91,21 @@ public final class TCOldAnimations {
 		GlStateManager.rotate(-15.0F * arc, 1.0F, 0.0F, 0.0F);
 	}
 
-	/** First-person sprint hit: a quick forward stab with the tip pointing ahead. */
+	/**
+	 * First-person sprint hit: a sharp straight thrust toward the crosshair with the tip
+	 * pointing ahead (out fast, back steadily), nothing like the sideways sweep.
+	 */
 	public static void stabFirstPerson(int side, float swing) {
-		float t = net.minecraft.util.math.MathHelper.sin(net.minecraft.util.math.MathHelper.sqrt(swing) * (float) Math.PI);
-		GlStateManager.translate((float) side * -0.12F * t, 0.08F * t, -0.42F * t);
-		GlStateManager.rotate(-55.0F * t, 1.0F, 0.0F, 0.0F);
-		GlStateManager.rotate((float) side * 10.0F * t, 0.0F, 1.0F, 0.0F);
+		float t;
+		if (swing < 0.25F) {
+			t = net.minecraft.util.math.MathHelper.sin(swing / 0.25F * (float) Math.PI * 0.5F);
+		} else {
+			float u = (swing - 0.25F) / 0.75F;
+			t = 1.0F - u * u * (3.0F - 2.0F * u);
+		}
+		GlStateManager.translate((float) side * -0.30F * t, 0.14F * t, -0.75F * t);
+		GlStateManager.rotate(-60.0F * t, 1.0F, 0.0F, 0.0F);
+		GlStateManager.rotate((float) side * -25.0F * t, 0.0F, 1.0F, 0.0F);
 	}
 
 	public static boolean useSwingOn() {

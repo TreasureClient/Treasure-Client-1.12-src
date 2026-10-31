@@ -127,6 +127,11 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 	/** the last sprinting state sent to the server */
 	private boolean serverSprintState;
 
+	/** Treasure Client: whether the server still thinks we are sprinting (its sprint-hit check uses this). */
+	public boolean tcServerSprinting() {
+		return this.serverSprintState;
+	}
+
 	/**
 	 * Reset to 0 every time position is sent to the server, used to send periodic
 	 * updates every 20 ticks even when the player is not moving.
