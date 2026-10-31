@@ -2386,7 +2386,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps','tc-sprint','tc-sneak'];
     /* HUD size: the boxes are sized in page pixels, so zooming the browser out (Ctrl and -)
        shrinks them while the game itself stays the same size. Chrome's page zoom is
-       outerWidth / innerWidth, so cancel it out, then apply the HUD Size slider. */
+       outerWidth / innerWidth, so divide it out, then apply the HUD Size slider. */
     var hudScaleK = 1;
     function hudPageZoom() {
       var iw = window.innerWidth, ow = window.outerWidth;
@@ -2398,7 +2398,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     function applyHudScale() {
       var hud = document.getElementById('tc-hud'); if (!hud) return;
       var user = Math.max(50, Math.min(200, parseInt(state.hudScale, 10) || 100));
-      var k = Math.round(hudPageZoom() * user) / 100;
+      var k = Math.round(user / hudPageZoom()) / 100; // zoomed out to 67% -> HUD drawn 1.5x so it looks the same
       hudScaleK = k;
       if (k === 1) { hud.style.zoom = ''; hud.style.width = hud.style.height = hud.style.right = hud.style.bottom = ''; return; }
       // zoom the whole HUD layer, sized so it still covers exactly the screen
