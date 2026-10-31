@@ -685,6 +685,7 @@ public class TreasureMods {
 			} catch (Throwable t) {}
 
 			net.minecraft.client.renderer.TCTreasureAnimations.tick(mc); // Treasure Animations swing speed
+			net.lax1dude.eaglercraft.internal.PlatformAudio.tcNoWaitDecode = mc.world != null; // decode new sounds without freezing
 
 			// only drive the game while actually in a world with no screen open
 			boolean active = (mc.player != null && mc.currentScreen == null);

@@ -66,6 +66,28 @@ function setCurrentAudioContext(audioContext, audioImports) {
 
 	audioImports["decodeAudioBrowser"] = new WebAssembly.Suspending(decodeAudioBrowserImpl);
 
+	// Treasure Client: decode without stopping the game; the result lands in the holder
+	audioImports["createDecodeHolder"] = function() {
+		return { "done": false, "buffer": null };
+	};
+	audioImports["decodeAudioBrowserNoWait"] = function(fileData, errorFileName, holder) {
+		const copiedData = new Uint8Array(fileData.length);
+		copiedData.set(fileData, 0);
+		audioContext.decodeAudioData(copiedData.buffer, function(buf) {
+			holder["buffer"] = buf;
+			holder["done"] = true;
+		}, function(err) {
+			eagError("Failed to load audio: {}", errorFileName);
+			holder["done"] = true;
+		});
+	};
+	audioImports["holderDone"] = function(holder) {
+		return !!holder["done"];
+	};
+	audioImports["holderBuffer"] = function(holder) {
+		return holder["buffer"];
+	};
+
 }
 
 function setNoAudioContext(audioImports) {
@@ -75,4 +97,8 @@ function setNoAudioContext(audioImports) {
 	setUnsupportedFunc(audioImports, platfAudioName, "registerIsEndedHandler");
 	setUnsupportedFunc(audioImports, platfAudioName, "releaseIsEndedHandler");
 	setUnsupportedFunc(audioImports, platfAudioName, "decodeAudioBrowser");
+	setUnsupportedFunc(audioImports, platfAudioName, "createDecodeHolder");
+	setUnsupportedFunc(audioImports, platfAudioName, "decodeAudioBrowserNoWait");
+	setUnsupportedFunc(audioImports, platfAudioName, "holderDone");
+	setUnsupportedFunc(audioImports, platfAudioName, "holderBuffer");
 }
