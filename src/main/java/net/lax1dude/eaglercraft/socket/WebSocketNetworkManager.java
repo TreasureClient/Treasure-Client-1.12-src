@@ -266,6 +266,9 @@ public class WebSocketNetworkManager extends NetworkManager {
 		temporaryBuffer.getBytes(0, bytes);
 		
 		webSocketClient.send(bytes);
+		if (packetState == net.minecraft.network.EnumConnectionState.PLAY) {
+			net.minecraft.client.TCKickLog.sent(pkt); // Treasure Client: kick log
+		}
 	}
 
 	public boolean checkDisconnected() {

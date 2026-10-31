@@ -1063,10 +1063,15 @@ public class Minecraft implements IThreadListener {
 		} else {
 			this.gameSettings.enableVsync = false;
 		}
+		net.lax1dude.eaglercraft.Mouse.tcPollMove(); // FPS Reducer: pointer movement counts as input
 		if (net.minecraft.client.gui.TreasureMods.dynamicFps() && !Display.isActive()) {
 			// Treasure Client: Dynamic FPS, a low frame rate while another window is focused
 			Display.setVSync(false);
 			Display.update(net.minecraft.client.gui.TreasureMods.backgroundFps());
+		} else if (net.minecraft.client.gui.TreasureMods.fpsReducerIdle()) {
+			// Treasure Client: FPS Reducer, a low frame rate while nobody touches the keyboard or mouse
+			Display.setVSync(false);
+			Display.update(net.minecraft.client.gui.TreasureMods.idleFps());
 		} else if (!this.gameSettings.enableVsync && this.isFramerateLimitBelowMax()) {
 			Display.update(this.getLimitFramerate());
 		} else {

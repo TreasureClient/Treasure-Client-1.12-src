@@ -21,6 +21,24 @@ import net.lax1dude.eaglercraft.internal.PlatformInput;
  */
 public class Mouse {
 
+	/** Treasure Client (FPS Reducer): when the keyboard or mouse was last used. */
+	public static long tcLastInputMs = EagRuntime.steadyTimeMillis();
+	private static int tcLastX = -1, tcLastY = -1;
+
+	public static void tcNoteInput() {
+		tcLastInputMs = EagRuntime.steadyTimeMillis();
+	}
+
+	/** Notices the pointer moving, once a frame. */
+	public static void tcPollMove() {
+		int x = PlatformInput.mouseGetX(), y = PlatformInput.mouseGetY();
+		if (x != tcLastX || y != tcLastY) {
+			tcLastX = x;
+			tcLastY = y;
+			tcNoteInput();
+		}
+	}
+
 	public static int getEventDWheel() {
 		return PlatformInput.mouseGetEventDWheel();
 	}
@@ -42,7 +60,9 @@ public class Mouse {
 	}
 
 	public static boolean next() {
-		return PlatformInput.mouseNext();
+		boolean b = PlatformInput.mouseNext();
+		if (b) tcNoteInput();
+		return b;
 	}
 
 	public static int getEventX() {
@@ -70,11 +90,15 @@ public class Mouse {
 	}
 
 	public static int getDX() {
-		return PlatformInput.mouseGetDX();
+		int d = PlatformInput.mouseGetDX();
+		if (d != 0) tcNoteInput();
+		return d;
 	}
 
 	public static int getDY() {
-		return PlatformInput.mouseGetDY();
+		int d = PlatformInput.mouseGetDY();
+		if (d != 0) tcNoteInput();
+		return d;
 	}
 
 	public static void setCursorPosition(int x, int y) {

@@ -358,6 +358,15 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 				net.minecraft.client.TCLagMonitor.print(this.mc);
 				return;
 			}
+			if (tcCmd.equalsIgnoreCase(".kicklog")) {
+				java.util.List<String> tcLog = net.minecraft.client.TCKickLog.last();
+				this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
+						tcLog.isEmpty() ? "\u00a76[Kick log] \u00a77no kick yet this session" : "\u00a76[Kick log] \u00a77last packets sent before the last kick:"));
+				for (String tcLine : tcLog) {
+					this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString("\u00a77" + tcLine));
+				}
+				return;
+			}
 			if (tcCmd.equalsIgnoreCase(".perf")) {
 				net.minecraft.client.TCPerfStats.print(this.mc);
 				return;

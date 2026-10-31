@@ -338,6 +338,16 @@ public class TreasureMods {
 	public static boolean hudCache() { return immediatelyFast() && hudCache; }
 	/** Dynamic FPS: frame rate while another window is focused. */
 	public static int backgroundFps() { return bgFps; }
+	/** FPS Reducer: on (Mods screen) and part of the Performance modpack. */
+	public static boolean fpsReducer() { return perfPack && vsOn("vsFpsReducer", true); }
+	/** FPS Reducer: frame rate while idle. */
+	public static int idleFps() { return vsInt("vsIdleFps", 10, 1, 30); }
+	/** True while FPS Reducer should hold the frame rate down (no input for the chosen time). */
+	public static boolean fpsReducerIdle() {
+		if (!fpsReducer()) return false;
+		long idleMs = vsInt("vsIdleSec", 60, 10, 600) * 1000L;
+		return EagRuntime.steadyTimeMillis() - net.lax1dude.eaglercraft.Mouse.tcLastInputMs > idleMs;
+	}
 	/** Fast Ping: answer the server's keep-alive pings the moment they arrive. */
 	public static boolean fastPing() { return vsOn("vsFastPing", true); }
 	/** Elytra Fix: open the elytra the moment jump is pressed in the air, like newer versions. */
