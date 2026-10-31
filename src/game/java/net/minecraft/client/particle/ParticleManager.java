@@ -317,8 +317,10 @@ public class ParticleManager {
 					bufferbuilder.begin(7, DefaultVertexFormats.PARTICLE_POSITION_TEX_COLOR_LMAP);
 
 					for (final Particle particle : this.fxLayers[i][j]) {
-						if (tcFrustum != null && !tcFrustum.isBoxInFrustum(particle.posX - 2.0D, particle.posY - 2.0D,
-								particle.posZ - 2.0D, particle.posX + 2.0D, particle.posY + 2.0D, particle.posZ + 2.0D)) {
+						if (tcFrustum != null && !tcFrustum.isBoxInFrustum(particle.posX - TCParticleCore.cullMargin,
+								particle.posY - TCParticleCore.cullMargin, particle.posZ - TCParticleCore.cullMargin,
+								particle.posX + TCParticleCore.cullMargin, particle.posY + TCParticleCore.cullMargin,
+								particle.posZ + TCParticleCore.cullMargin)) {
 							++tcCulled;
 							continue;
 						}

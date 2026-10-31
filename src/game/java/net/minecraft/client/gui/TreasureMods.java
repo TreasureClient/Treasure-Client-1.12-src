@@ -99,7 +99,7 @@ public class TreasureMods {
 
 	// Enhanced Block Entities: chests and beds baked into the chunk mesh. Default ON; overlay writes ebe=0 to turn it off.
 	private static boolean ebe = true;
-	private static boolean appliedEbe = true;
+	private static int appliedEbe = 7;
 	// BetterFps fast math (OptiFine-compatible sine table). Default ON; overlay writes bfmath=0 to turn it off.
 	private static boolean bfMath = true;
 	public static boolean betterFpsMath() { return perfPack && bfMath; }
@@ -311,6 +311,68 @@ public class TreasureMods {
 	 * The value saved for a setting, as the user chose it (the Performance modpack switch
 	 * doesn't change it). Used by Video Settings to show the mods' own settings.
 	 */
+	// ---- mod settings from Video Settings (keys starting with "vs") ----
+	private static final java.util.HashMap<String, String> vs = new java.util.HashMap<String, String>();
+
+	/** A whole-number mod setting, kept between min and max. */
+	public static int vsInt(String key, int def, int min, int max) {
+		String v = vs.get(key);
+		if (v == null) return def;
+		try {
+			return Math.max(min, Math.min(max, Integer.parseInt(v)));
+		} catch (Throwable t) {
+			return def;
+		}
+	}
+
+	/** An on/off mod setting (part of a mod, not the mod itself). */
+	public static boolean vsOn(String key, boolean def) {
+		String v = vs.get(key);
+		return v == null ? def : v.equals("1");
+	}
+
+	private static boolean hudBatch = true, hudCache = true, modelBatch = true;
+	private static int bgFps = 10, workerIdleSec = 5, crashRecoveries = 3;
+
+	/** ImmediatelyFast's HUD cache (draw the HUD only when it changes). */
+	public static boolean hudCache() { return immediatelyFast() && hudCache; }
+	/** Dynamic FPS: frame rate while another window is focused. */
+	public static int backgroundFps() { return bgFps; }
+	/** VanillaFix: crashes it recovers from within 15 seconds before giving up. */
+	public static int crashRecoveries() { return crashRecoveries; }
+
+	/** Pushes the Video Settings values into the mods. */
+	private static void applyModSettings() {
+		try {
+			org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.MAIN_THREAD_BUDGET_NANOS =
+					vsInt("vsBuildMs", 4, 2, 12) * 1000000.0;
+			org.embeddedt.embeddium.impl.gui.SodiumGameOptions.PerformanceSettings po =
+					org.taumc.celeritas.CeleritasVintage.options().performance;
+			po.alwaysDeferChunkUpdates = vsOn("vsDefer", true);
+			po.useFogOcclusion = vsOn("vsFogOcc", true);
+			po.useBlockFaceCulling = vsOn("vsFaceCull", true);
+			po.useEntityCulling = vsOn("vsChunkEnt", true);
+		} catch (Throwable t) {}
+		net.minecraft.client.renderer.TCEntityCulling.FRAME_BUDGET_NS = vsInt("vsCullMs", 15, 5, 40) * 100000L;
+		int near = vsInt("vsCullNear", 4, 0, 16);
+		net.minecraft.client.renderer.TCEntityCulling.ALWAYS_VISIBLE_DIST_SQ = near * near;
+		net.minecraft.client.renderer.TCBlockEntities.bakeChests = vsOn("vsChests", true);
+		net.minecraft.client.renderer.TCBlockEntities.bakeBeds = vsOn("vsBeds", true);
+		hudBatch = vsOn("vsHudBatch", true);
+		hudCache = vsOn("vsHudCache", true);
+		modelBatch = vsOn("vsModelBatch", true);
+		int sign = vsInt("vsSignDist", 32, 8, 64);
+		net.minecraft.client.renderer.TCFastText.SIGN_TEXT_DISTANCE_SQ = sign * sign;
+		net.minecraft.client.particle.TCParticleCore.maxParticles = vsInt("vsPMax", 2048, 512, 8192);
+		int coll = vsInt("vsPColl", 24, 8, 64);
+		net.minecraft.client.particle.TCParticleCore.FAR_SQ = coll * coll;
+		net.minecraft.client.particle.TCParticleCore.cullMargin = vsInt("vsPPad", 2, 0, 8);
+		net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcBaseBudgetNs = vsInt("vsPktMs", 4, 2, 16) * 1000000L;
+		bgFps = vsInt("vsBgFps", 10, 1, 60);
+		workerIdleSec = vsInt("vsWorkerSec", 5, 5, 300);
+		crashRecoveries = vsInt("vsCrashMax", 3, 1, 10);
+	}
+
 	public static String userSetting(String key, String def) {
 		byte[] data = lastModsData;
 		if (data == null || data.length == 0) {
@@ -366,6 +428,7 @@ public class TreasureMods {
 			lowShield = false; lowShieldAmt = 0.30f;
 			smallTotem = false; totemScaleV = 0.40f;
 			net.minecraft.client.renderer.TCExtra.reset();
+			vs.clear();
 			leafCull = net.minecraft.block.TCLeafCulling.SOLID;
 			if (data != null && data.length > 0) {
 				String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
@@ -427,17 +490,19 @@ public class TreasureMods {
 				else if (k.equals("smallTotem")) smallTotem = v.equals("1");
 				else if (k.equals("totemScale")) { try { totemScaleV = clamp01(Integer.parseInt(v) / 100.0f, 0.1f, 1.0f); } catch (Throwable t) {} }
 				else if (k.equals("leafCull")) leafCull = net.minecraft.block.TCLeafCulling.parseMode(v);
+				else if (k.startsWith("vs")) vs.put(k, v);
 				else net.minecraft.client.renderer.TCExtra.parse(k, v);
 				}
 			}
 			net.minecraft.client.renderer.TCExtra.packOn = perfPack;
 			net.minecraft.client.renderer.TCExtra.apply();
+			applyModSettings();
 		} catch (Throwable t) {
 			// leave defaults
 		}
 	}
 
-	private static long lastWorkerCheck;
+	private static long lastWorkerCheck, workerIdleSince;
 
 	/**
 	 * Memory Saver: once you're on a server, stop the singleplayer worker if it's
@@ -453,7 +518,7 @@ public class TreasureMods {
 			return;
 		}
 		long now = EagRuntime.steadyTimeMillis();
-		if (now - lastWorkerCheck < 5000L) {
+		if (now - lastWorkerCheck < 1000L) {
 			return;
 		}
 		lastWorkerCheck = now;
@@ -462,7 +527,13 @@ public class TreasureMods {
 					&& net.lax1dude.eaglercraft.sp.SingleplayerServerController.isIntegratedServerWorkerAlive()
 					&& net.lax1dude.eaglercraft.sp.SingleplayerServerController.isReady()
 					&& net.lax1dude.eaglercraft.sp.SingleplayerServerController.canKillWorker()) {
-				net.lax1dude.eaglercraft.sp.SingleplayerServerController.killWorker();
+				if (workerIdleSince == 0L) workerIdleSince = now;
+				if (now - workerIdleSince >= workerIdleSec * 1000L - 100L) {
+					net.lax1dude.eaglercraft.sp.SingleplayerServerController.killWorker();
+					workerIdleSince = 0L;
+				}
+			} else {
+				workerIdleSince = 0L;
 			}
 		} catch (Throwable t) {
 		}
@@ -482,8 +553,8 @@ public class TreasureMods {
 			// Memory Saver
 			applyMemorySaver(mc);
 			net.minecraft.util.TCLithium.enabled = lithium();
-			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(immediatelyFast());
-			net.lax1dude.eaglercraft.opengl.TCModelBatch.setEnabled(immediatelyFast());
+			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(immediatelyFast() && hudBatch);
+			net.lax1dude.eaglercraft.opengl.TCModelBatch.setEnabled(immediatelyFast() && modelBatch);
 			net.minecraft.client.particle.TCParticleCore.enabled = particleCore();
 			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me();
 			net.minecraft.util.math.MathHelper.tcFastMath = betterFpsMath();
@@ -497,8 +568,10 @@ public class TreasureMods {
 				}
 			}
 
-			if (enhancedBlockEntities() != appliedEbe) {
-				appliedEbe = enhancedBlockEntities();
+			int ebeNow = enhancedBlockEntities() ? 1 | (net.minecraft.client.renderer.TCBlockEntities.bakeChests ? 2 : 0)
+					| (net.minecraft.client.renderer.TCBlockEntities.bakeBeds ? 4 : 0) : 0;
+			if (ebeNow != appliedEbe) {
+				appliedEbe = ebeNow;
 				if (mc.world != null && mc.renderGlobal != null) {
 					try { mc.renderGlobal.loadRenderers(); } catch (Throwable t) {}
 				}

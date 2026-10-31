@@ -641,7 +641,7 @@ public class Minecraft implements IThreadListener {
 		long now = EagRuntime.steadyTimeMillis();
 		this.tcCrashCount = now - this.tcLastCrashTime < 15000L ? this.tcCrashCount + 1 : 1;
 		this.tcLastCrashTime = now;
-		if (this.tcCrashCount > 3) {
+		if (this.tcCrashCount > net.minecraft.client.gui.TreasureMods.crashRecoveries()) {
 			return false;
 		}
 		try {
@@ -1052,9 +1052,9 @@ public class Minecraft implements IThreadListener {
 			this.gameSettings.enableVsync = false;
 		}
 		if (net.minecraft.client.gui.TreasureMods.dynamicFps() && !Display.isActive()) {
-			// Treasure Client: Dynamic FPS, 10 FPS while another window is focused
+			// Treasure Client: Dynamic FPS, a low frame rate while another window is focused
 			Display.setVSync(false);
-			Display.update(10);
+			Display.update(net.minecraft.client.gui.TreasureMods.backgroundFps());
 		} else if (!this.gameSettings.enableVsync && this.isFramerateLimitBelowMax()) {
 			Display.update(this.getLimitFramerate());
 		} else {

@@ -1386,6 +1386,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'smallTotem=' + (state.smallTotem ? 1 : 0),
           'totemScale=' + (state.totemScale || 40)
         ];
+        // mod settings from the game's Video Settings ("vs" keys)
+        if (state.vs && typeof state.vs === 'object') Object.keys(state.vs).forEach(function (k) { parts.push(k + '=' + state.vs[k]); });
         localStorage.setItem('_eaglercraft_1.12.tcmods', btoa(parts.join(',')));
       } catch (e) {}
     }
@@ -1516,6 +1518,11 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             if (kv[0] === 'leafCull') {
               if (['off', 'hollow', 'aggressive', 'solid'].indexOf(kv[1]) < 0) return;
               state.leafCull = kv[1]; changed = true; return;
+            }
+            if (/^vs[A-Z][A-Za-z0-9]{1,30}$/.test(kv[0])) {
+              if (!/^[A-Za-z0-9.]{1,12}$/.test(kv[1])) return;
+              if (!state.vs || typeof state.vs !== 'object') state.vs = {};
+              state.vs[kv[0]] = kv[1]; changed = true; return;
             }
             if (kv[0] === 'entDist') {
               var n = parseInt(kv[1], 10);

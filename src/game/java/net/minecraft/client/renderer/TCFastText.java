@@ -31,7 +31,7 @@ public final class TCFastText {
 	}
 
 	/** Sign text further than this (in blocks) isn't drawn: it would be about 2 pixels tall. */
-	private static final double SIGN_TEXT_DISTANCE_SQ = 32.0 * 32.0;
+	public static double SIGN_TEXT_DISTANCE_SQ = 32.0 * 32.0; // Sign Text Distance setting
 
 	public static boolean enabled() {
 		return TreasureMods.immediatelyFast();

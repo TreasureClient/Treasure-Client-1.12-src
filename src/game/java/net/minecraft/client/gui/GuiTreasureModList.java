@@ -268,7 +268,7 @@ public class GuiTreasureModList extends GuiScreen {
 			}
 		});
 		this.entries.add(new Entry("Celeritas Extra", "Sumire-Labs", "LGPL-3.0",
-				"Extra switches for animations, particles, sky, weather, item frames, armor stands, paintings, beacon beams, enchanting books, pistons and toasts. Set them with the gear in Treasure Settings.",
+				"Extra switches for animations, particles, sky, weather, item frames, armor stands, paintings, beacon beams, enchanting books, pistons and toasts. Set them in Options → Video Settings → Mods.",
 				"cextra") {
 			boolean setting() {
 				return net.minecraft.client.renderer.TCExtra.enabled();
@@ -279,7 +279,7 @@ public class GuiTreasureModList extends GuiScreen {
 			}
 		});
 		this.entries.add(new Entry("Celeritas Leaf Culling", "Karnatour (fork of Sodium Leaf Culling)", "MIT",
-				"With fancy leaves, skips leaf faces hidden inside trees. Pick Hollow, Solid Aggressive or Solid in Treasure Settings.",
+				"With fancy leaves, skips leaf faces hidden inside trees. Pick Hollow, Solid Aggressive or Solid in Video Settings → Performance.",
 				"leafCull") {
 			boolean setting() {
 				return TreasureMods.leafCulling() != net.minecraft.block.TCLeafCulling.OFF;

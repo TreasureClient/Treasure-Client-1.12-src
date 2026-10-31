@@ -63,10 +63,13 @@ public class WebSocketNetworkManager extends NetworkManager {
 	}
 
 	/** Packet time allowed per frame, more when packets are piling up. */
+	/** Video Settings: packet time per frame (more when packets pile up). */
+	public static long tcBaseBudgetNs = 4000000L;
+
 	private static long tcBudgetNs(int backlog) {
-		if (backlog < 200) return 4000000L;
-		if (backlog < 1000) return 8000000L;
-		return 16000000L;
+		if (backlog < 200) return tcBaseBudgetNs;
+		if (backlog < 1000) return tcBaseBudgetNs * 2L;
+		return tcBaseBudgetNs * 4L;
 	}
 
 	/** True while packets are waiting for a later frame. */
