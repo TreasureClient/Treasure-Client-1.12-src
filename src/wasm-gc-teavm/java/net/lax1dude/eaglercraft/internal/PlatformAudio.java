@@ -276,8 +276,66 @@ public class PlatformAudio {
 		}
 	}
 
+	/**
+	 * Treasure Client: while in a world, a sound that isn't decoded yet is decoded in the
+	 * background instead of stopping the game until it's ready (a few ms to tens of ms each,
+	 * on every new sound). loadAudioDataNew returns null until it's done; SoundManager plays
+	 * it a moment later. Set by the game each tick.
+	 */
+	public static boolean tcNoWaitDecode;
+	private static final Map<String, JSObject> tcPending = new HashMap<>();
+
+	@Import(module = "platformAudio", name = "createDecodeHolder")
+	private static native JSObject tcCreateHolder();
+
+	@Import(module = "platformAudio", name = "decodeAudioBrowserNoWait")
+	private static native void tcDecodeNoWait(Uint8Array array, JSString errorFileName, JSObject holder);
+
+	@Import(module = "platformAudio", name = "holderDone")
+	private static native boolean tcHolderDone(JSObject holder);
+
+	@Import(module = "platformAudio", name = "holderBuffer")
+	private static native AudioBuffer tcHolderBuffer(JSObject holder);
+
+	/** Forget a background decode nobody is waiting for any more (music is big). */
+	public static void tcCancel(String filename) {
+		tcPending.remove(filename);
+	}
+
+	/** True while this sound file is being decoded in the background. */
+	public static boolean tcIsDecoding(String filename) {
+		JSObject h = tcPending.get(filename);
+		return h != null && !tcHolderDone(h);
+	}
+
 	public static IAudioResource loadAudioDataNew(String filename, boolean holdInCache, IAudioCacheLoader loader) {
 		BrowserAudioResource buffer = soundCache.get(filename);
+		if(buffer == null && oggSupport) {
+			JSObject h = tcPending.get(filename);
+			if(h != null) {
+				if(!tcHolderDone(h)) {
+					return null; // still decoding
+				}
+				tcPending.remove(filename);
+				buffer = new BrowserAudioResource(tcHolderBuffer(h));
+				if(holdInCache) {
+					soundCache.put(filename, buffer); // music (streamed) is too big to keep
+				}
+			}else if(tcNoWaitDecode) {
+				byte[] file = loader.loadFile(filename);
+				if(file == null) return null;
+				h = tcCreateHolder();
+				MemoryStack.push();
+				try {
+					tcDecodeNoWait(WASMGCDirectArrayConverter.byteArrayToStackU8Array(file),
+							BetterJSStringConverter.stringToJS(filename), h);
+				}finally {
+					MemoryStack.pop();
+				}
+				tcPending.put(filename, h);
+				return null;
+			}
+		}
 		if(buffer == null) {
 			byte[] file = loader.loadFile(filename);
 			if(file == null) return null;

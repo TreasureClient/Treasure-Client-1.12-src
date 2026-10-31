@@ -39,6 +39,17 @@ import paulscode.sound.codecs.CodecWav;
  */
 public class PlatformAudio {
 
+	/** Treasure Client: background sound decoding (only the WASM build does it). */
+	public static boolean tcNoWaitDecode;
+
+	public static boolean tcIsDecoding(String filename) {
+		return false;
+	}
+
+	public static void tcCancel(String filename) {
+	}
+
+
 	protected static class PaulscodeAudioResource implements IAudioResource {
 
 		protected final URL resourceLoc;

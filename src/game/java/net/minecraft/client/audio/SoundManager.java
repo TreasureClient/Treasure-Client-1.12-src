@@ -162,6 +162,7 @@ public class SoundManager {
 			}
 		}
 		activeSounds.clear();
+		tcWaiting.clear(); // Treasure Client: nothing starts late after a stop
 	}
 
 	public void addListener(ISoundEventListener listener) {
@@ -173,6 +174,33 @@ public class SoundManager {
 	}
 
 	public void updateAllSounds() {
+		// Treasure Client: start sounds that finished decoding in the background
+		if (!tcWaiting.isEmpty()) {
+			long now = EagRuntime.steadyTimeMillis();
+			Iterator<Object[]> w = tcWaiting.iterator();
+			List<Object[]> ready = null;
+			while (w.hasNext()) {
+				Object[] e = w.next();
+				ISound snd = (ISound) e[0];
+				Sound etr = (Sound) e[1];
+				// music can take seconds to decode and is fine to start late; effects are not
+				if (now - ((Long) e[2]).longValue() > (etr.isStreaming() ? 30000L : 500L)) {
+					w.remove(); // too late to still sound right
+					if (etr.isStreaming()) {
+						PlatformAudio.tcCancel(etr.getSoundAsOggLocation().toString());
+					}
+				} else if (!PlatformAudio.tcIsDecoding(etr.getSoundAsOggLocation().toString())) {
+					w.remove();
+					if (ready == null) ready = new java.util.ArrayList<Object[]>();
+					ready.add(e);
+				}
+			}
+			if (ready != null) {
+				for (Object[] e : ready) {
+					this.tcStart((ISound) e[0], (Sound) e[1]);
+				}
+			}
+		}
 		Iterator<ActiveSoundEvent> soundItr = activeSounds.iterator();
 		while (soundItr.hasNext()) {
 			ActiveSoundEvent evt = soundItr.next();
@@ -232,10 +260,23 @@ public class SoundManager {
 				return !evt.soundHandle.shouldFree();
 			}
 		}
+		// Treasure Client: a sound still decoding in the background counts as playing
+		for (Object[] e : tcWaiting) {
+			if (e[0] == sound) {
+				return true;
+			}
+		}
 		return false;
 	}
 
 	public void stopSound(ISound sound) {
+		// Treasure Client: also drop it if it's still waiting to be decoded
+		Iterator<Object[]> tcW = tcWaiting.iterator();
+		while (tcW.hasNext()) {
+			if (tcW.next()[0] == sound) {
+				tcW.remove();
+			}
+		}
 		Iterator<ActiveSoundEvent> soundItr = activeSounds.iterator();
 		while (soundItr.hasNext()) {
 			ActiveSoundEvent evt = soundItr.next();
@@ -279,6 +320,13 @@ public class SoundManager {
 					}
 				}
 
+				// Treasure Client: a sound turned all the way down (e.g. music off) isn't loaded or played,
+				// so nothing has to be decoded for it
+				if (p_sound.getCategory() != SoundCategory.MASTER
+						&& categoryVolumes[p_sound.getCategory().getCategoryId()] <= 0.0f) {
+					return;
+				}
+
 				// Treasure Client: don't stack lots of copies of the same sound
 				// (TNT chains, a crowd of burning mobs). Each playing sound costs
 				// CPU, and past a few copies you can't hear the difference.
@@ -290,6 +338,19 @@ public class SoundManager {
 				if (etr == SoundHandler.MISSING_SOUND) {
 					LOGGER.warn("Unable to play empty soundEvent(2): {}", etr.getSoundAsOggLocation().toString());
 				} else {
+					this.tcStart(p_sound, etr);
+				}
+			}
+		}
+	}
+
+	/** Treasure Client: sounds whose file is still being decoded in the background, played when ready. */
+	private final List<Object[]> tcWaiting = new LinkedList<Object[]>();
+
+	private void tcStart(ISound p_sound, Sound etr) {
+		{
+			{
+				{
 					ResourceLocation lc = etr.getSoundAsOggLocation();
 					IAudioResource trk;
 					if (EagRuntime.getPlatformType() != EnumPlatformType.DESKTOP) {
@@ -298,7 +359,12 @@ public class SoundManager {
 					} else {
 						trk = PlatformAudio.loadAudioData(lc.getResourcePath(), !etr.isStreaming());
 					}
-					if (trk == null) {
+					if (trk == null && PlatformAudio.tcIsDecoding(lc.toString())) {
+						// play it as soon as it's decoded (if that's soon enough to still make sense)
+						if (tcWaiting.size() < 64) {
+							tcWaiting.add(new Object[] { p_sound, etr, Long.valueOf(EagRuntime.steadyTimeMillis()) });
+						}
+					} else if (trk == null) {
 						LOGGER.warn("Unable to play unknown soundEvent(3): {}", p_sound.getSoundLocation().toString());
 					} else {
 

@@ -50,6 +50,17 @@ import net.minecraft.util.math.MathHelper;
  */
 public class PlatformAudio {
 
+	/** Treasure Client: background sound decoding (only the WASM build does it). */
+	public static boolean tcNoWaitDecode;
+
+	public static boolean tcIsDecoding(String filename) {
+		return false;
+	}
+
+	public static void tcCancel(String filename) {
+	}
+
+
 	/** Treasure Client: how long an unused decoded sound stays in memory (Memory Saver lowers it). */
 	public static long cacheExpireMillis = 600000l;
 
