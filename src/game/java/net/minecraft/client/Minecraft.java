@@ -922,6 +922,17 @@ public class Minecraft implements IThreadListener {
 	 * game ticks (vanilla also handles them each frame). Uses what is left of the
 	 * frame's packet time, so big bursts are spread over frames.
 	 */
+	/** Treasure Client: Fast Ping, answer the server's keep-alive pings at the start of the frame. */
+	private void tcAnswerPings() {
+		if (this.player == null || this.player.connection == null) {
+			return;
+		}
+		net.minecraft.network.NetworkManager nm = this.player.connection.getNetworkManager();
+		if (nm instanceof net.lax1dude.eaglercraft.socket.WebSocketNetworkManager && nm.isChannelOpen()) {
+			((net.lax1dude.eaglercraft.socket.WebSocketNetworkManager) nm).tcAnswerPings();
+		}
+	}
+
 	private void tcPumpPackets() {
 		if (this.world == null || this.player == null || this.player.connection == null) {
 			return;
@@ -950,6 +961,7 @@ public class Minecraft implements IThreadListener {
 		// expensive world render and yield briefly so the tab stops burning GPU.
 		// Ticks still run so nothing desyncs; only rendering is skipped.
 		net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcFrameStart(); // Treasure Client: packet time per frame
+		this.tcAnswerPings();
 		if (net.minecraft.client.gui.TreasureMods.pauseWhenUnfocused() && !Display.isActive()) {
 			this.timer.updateTimer();
 			for (int j = 0; j < this.timer.elapsedTicks; ++j) {

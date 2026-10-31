@@ -834,10 +834,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           <!-- hud -->
           <div class="tc-panel active" data-panel="hud" data-group="hud">
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>HUD Size</b><i>Size of the HUD mods (stays the same when the browser is zoomed)</i></div></div>
-              <div class="tc-cfg-row"><span>Size %</span><div class="tc-slider"><input type="range" min="50" max="200" step="5" value="100" data-mod="hudScale"><span class="tc-val">100</span></div></div>
-            </div>
-            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Coordinates</b><i>Real X / Y / Z position</i></div><button class="tc-gear" data-gear="coordcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="coords"><i></i></div></div>
               <div class="tc-cfg" data-cfg="coordcfg">
                 <div class="tc-cfg-row"><span>Precision</span>
@@ -1213,7 +1209,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
       theme:'normal', themeTitles:{}, themeBg:{}, titleFont:"'Outfit', system-ui, sans-serif",
-      hudScale:100, hudPositions:{}
+      hudPositions:{}
     };
     var state = load();
     function load() {
@@ -1886,31 +1882,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
     /* ---------- custom HUD positions (persisted; applied over CSS defaults) ---------- */
     var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps','tc-sprint','tc-sneak'];
-    /* HUD size: the boxes are sized in page pixels, so zooming the browser out (Ctrl and -)
-       shrinks them while the game itself stays the same size. Chrome's page zoom is
-       outerWidth / innerWidth, so divide it out, then apply the HUD Size slider. */
-    var hudScaleK = 1;
-    function hudPageZoom() {
-      var iw = window.innerWidth, ow = window.outerWidth;
-      if (!iw || !ow) return 1;
-      var z = ow / iw;
-      if (z < 0.25 || z > 5 || Math.abs(z - 1) < 0.05) return 1;
-      return Math.round(z * 100) / 100;
-    }
-    function applyHudScale() {
-      var hud = document.getElementById('tc-hud'); if (!hud) return;
-      var user = Math.max(50, Math.min(200, parseInt(state.hudScale, 10) || 100));
-      var k = Math.round(user / hudPageZoom()) / 100; // zoomed out to 67% -> HUD drawn 1.5x so it looks the same
-      hudScaleK = k;
-      if (k === 1) { hud.style.zoom = ''; hud.style.width = hud.style.height = hud.style.right = hud.style.bottom = ''; return; }
-      // zoom the whole HUD layer, sized so it still covers exactly the screen
-      hud.style.zoom = k;
-      hud.style.right = hud.style.bottom = 'auto';
-      hud.style.width = (window.innerWidth / k) + 'px'; hud.style.height = (window.innerHeight / k) + 'px';
-    }
-    window.addEventListener('resize', function () { applyHudScale(); });
     function applyHudPositions() {
-      applyHudScale();
       HUD_ELS.forEach(function (id) {
         var el = document.getElementById(id); if (!el) return;
         var p = state.hudPositions && state.hudPositions[id];
@@ -2389,14 +2361,14 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var left = e.clientX - drag.dx, top = e.clientY - drag.dy;
         left = Math.max(0, Math.min(window.innerWidth - 20, left));
         top = Math.max(0, Math.min(window.innerHeight - 20, top));
-        drag.el.style.left = (left / hudScaleK) + 'px'; drag.el.style.top = (top / hudScaleK) + 'px';
+        drag.el.style.left = left + 'px'; drag.el.style.top = top + 'px';
         drag.el.style.right = 'auto'; drag.el.style.bottom = 'auto'; drag.el.style.transform = 'none';
       }
       function up() {
         if (!drag) return;
         var id = drag.el.id, r = drag.el.getBoundingClientRect();
         state.hudPositions = state.hudPositions || {};
-        state.hudPositions[id] = { left: Math.round(r.left / hudScaleK), top: Math.round(r.top / hudScaleK) };
+        state.hudPositions[id] = { left: Math.round(r.left), top: Math.round(r.top) };
         save();
         drag.el.classList.remove('tc-hud-drag-active'); drag = null;
       }

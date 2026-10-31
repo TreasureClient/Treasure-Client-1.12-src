@@ -56,6 +56,66 @@ public class WebSocketNetworkManager extends NetworkManager {
 	 * (anti-cheats kick for that). Only the frames between ticks spread packets out.
 	 */
 	public static boolean tcDrainAll;
+
+	/**
+	 * Fast Ping (Treasure Client): the server measures your ping with keep-alive packets.
+	 * A normal Java client answers them the moment they arrive (on its network thread),
+	 * but here they used to wait in the queue for a game tick or for the packets before
+	 * them, which added a frame, a tick or a whole backlog to your ping. Now each one is
+	 * answered as soon as the browser hands it over. Nothing else changes order.
+	 */
+	public static boolean tcFastPing = true;
+	public static int tcPingsAnswered;
+	private int tcKeepAliveId = -2;
+
+	/** Moves newly arrived packets into the queue, answering keep-alive pings on the spot. */
+	private void tcIntake() {
+		List<IWebSocketFrame> pkts = webSocketClient.getNextBinaryFrames();
+		if (pkts == null) {
+			return;
+		}
+		net.minecraft.client.TCLagMonitor.packets += pkts.size(); // Treasure Client: lag monitor
+		boolean fast = tcFastPing && isChannelOpen() && packetState == net.minecraft.network.EnumConnectionState.PLAY
+				&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient;
+		for (int k = 0, n = pkts.size(); k < n; ++k) {
+			IWebSocketFrame f = pkts.get(k);
+			// a keep-alive is its packet id (1 byte) plus an 8-byte number
+			if (fast && f.getLength() == 9 && tcAnswerPing(f)) {
+				continue;
+			}
+			tcBacklog.add(f);
+		}
+	}
+
+	private boolean tcAnswerPing(IWebSocketFrame f) {
+		try {
+			if (tcKeepAliveId == -2) {
+				tcKeepAliveId = packetState.getPacketId(EnumPacketDirection.CLIENTBOUND,
+						new net.minecraft.network.play.server.SPacketKeepAlive());
+			}
+			byte[] b = f.getByteArray();
+			if (b.length != 9 || b[0] != tcKeepAliveId) {
+				return false;
+			}
+			long id = 0L;
+			for (int k = 1; k < 9; ++k) {
+				id = (id << 8) | (b[k] & 0xFFL);
+			}
+			sendPacket(new net.minecraft.network.play.client.CPacketKeepAlive(id));
+			++tcPingsAnswered;
+			return true;
+		} catch (Throwable t) {
+			tcKeepAliveId = -1; // can't tell which packet is a keep-alive: leave them to the normal path
+			return false;
+		}
+	}
+
+	/** Called at the very start of every frame, the earliest the game can answer a ping. */
+	public void tcAnswerPings() {
+		if (nethandler != null && tcFastPing) {
+			tcIntake();
+		}
+	}
 	private static final int TC_MAX_BACKLOG = 4000;
 	private static final int TC_MIN_PER_FRAME = 8;
 	private static long tcFrameUsedNs;
@@ -109,12 +169,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 			logger.warn("discarding {} string frames recieved on a binary connection", webSocketClient.availableStringFrames());
 			webSocketClient.clearStringFrames();
 		}
-		List<IWebSocketFrame> pkts = webSocketClient.getNextBinaryFrames();
-
-		if(pkts != null) {
-			net.minecraft.client.TCLagMonitor.packets += pkts.size(); // Treasure Client: lag monitor
-			tcBacklog.addAll(pkts);
-		}
+		tcIntake(); // Treasure Client: Fast Ping answers keep-alives while queueing the rest
 		if(tcBacklog.isEmpty()) {
 			return;
 		}

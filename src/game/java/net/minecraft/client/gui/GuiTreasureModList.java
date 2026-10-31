@@ -357,6 +357,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("Fast Ping", "Treasure Client", "Built in",
+				"Lower ping: the server measures your ping with keep-alive packets, and they're now answered the moment they arrive, like the Java client does, instead of waiting for the game to get to them. Can take tens of milliseconds off your ping when frames are slow or lots of packets come in at once.",
+				"vsFastPing") {
+			boolean setting() {
+				return TreasureMods.fastPing();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn §7· " + net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcPingsAnswered + " pings answered early" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("Elytra Fix", "Treasure Client", "Built in",
 				"Opens your elytra the moment you press jump in the air, like newer versions of Minecraft, instead of waiting until you start falling and then for the server to answer.",
 				"vsElytraFix") {
