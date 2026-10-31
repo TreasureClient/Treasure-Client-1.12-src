@@ -334,7 +334,13 @@ public class PlayerControllerMP {
 
 		if (this.connection.getNetworkManager().isChannelOpen()) {
 			try {
-				this.connection.getNetworkManager().processReceivedPackets();
+				// Treasure Client: a tick handles every waiting packet before it runs (like vanilla)
+				net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcDrainAll = true;
+				try {
+					this.connection.getNetworkManager().processReceivedPackets();
+				} finally {
+					net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcDrainAll = false;
+				}
 			} catch (IOException ex) {
 				NetworkManager.logger
 						.fatal("Unhandled IOException was thrown " + "while processing multiplayer packets!");

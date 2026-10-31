@@ -50,6 +50,12 @@ public class WebSocketNetworkManager extends NetworkManager {
 	 * at once. Set from the "c2me" setting.
 	 */
 	public static boolean tcSpreadBursts = true;
+	/**
+	 * Set while a game tick reads packets: then every waiting packet is handled first,
+	 * like vanilla, so the tick never sends movement or replies based on old server state
+	 * (anti-cheats kick for that). Only the frames between ticks spread packets out.
+	 */
+	public static boolean tcDrainAll;
 	private static final int TC_MAX_BACKLOG = 4000;
 	private static final int TC_MIN_PER_FRAME = 8;
 	private static long tcFrameUsedNs;
@@ -113,7 +119,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 			return;
 		}
 
-		boolean spread = tcSpreadBursts && isChannelOpen() && tcBacklog.size() < TC_MAX_BACKLOG
+		boolean spread = !tcDrainAll && tcSpreadBursts && isChannelOpen() && tcBacklog.size() < TC_MAX_BACKLOG
 				&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient;
 		long start = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
 		long deadline = start + tcBudgetNs(tcBacklog.size()) - tcFrameUsedNs;
