@@ -123,7 +123,7 @@ public class TreasureMods {
 	private static boolean lithium = true;
 	public static boolean lithium() { return perfPack && lithium; }
 
-	// Memory Saver: stop the idle singleplayer worker on servers, shorter sound cache. Default ON; overlay writes memsaver=0.
+	// Memory Saver: stop the idle singleplayer worker on servers. Default ON; overlay writes memsaver=0.
 	private static boolean memSaver = true;
 	public static boolean memorySaver() { return perfPack && memSaver; }
 
@@ -446,7 +446,9 @@ public class TreasureMods {
 	 */
 	private static void applyMemorySaver(Minecraft mc) {
 		boolean memSaver = memorySaver();
-		net.lax1dude.eaglercraft.internal.PlatformAudio.cacheExpireMillis = memSaver ? 120000L : 600000L;
+		// Decoded sounds stay 10 minutes either way: a sound that isn't cached is decoded while the
+		// game waits (a small freeze each time), and decoded sounds use little memory.
+		net.lax1dude.eaglercraft.internal.PlatformAudio.cacheExpireMillis = 600000L;
 		if (!memSaver || mc.world == null) {
 			return;
 		}

@@ -351,7 +351,7 @@ public class GuiVideoSettings extends GuiScreen {
 		g.add(new ModBool("dynfps", true, "perfpack", "Dynamic FPS",
 				"Drops to 10 FPS while another window is focused, so your device stays cool.", "Varies"));
 		g.add(new ModBool("memsaver", true, "perfpack", "Memory Saver",
-				"Stops the idle singleplayer worker while you're on a server and frees unused sounds sooner.",
+				"Stops the idle singleplayer worker while you're on a server.",
 				"Low"));
 		g.add(new ModBool("vanillafix", true, "perfpack", "VanillaFix",
 				"Recovers from crashes instead of closing the game, plus Minecraft bug fixes.", null));

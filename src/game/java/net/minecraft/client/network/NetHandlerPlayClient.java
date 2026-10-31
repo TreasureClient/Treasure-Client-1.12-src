@@ -2052,14 +2052,33 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * weapon/tool attackDamage, hostiles followRange randomization, zombie
 	 * maxHealth and knockback resistance as well as reinforcement spawning chance.
 	 */
+	/** Treasure Client: true when a stat already has exactly this base value and these modifiers. */
+	private static boolean tcSameAttribute(IAttributeInstance inst, SPacketEntityProperties.Snapshot snap) {
+		if (inst.getBaseValue() != snap.getBaseValue()) {
+			return false;
+		}
+		java.util.Collection<AttributeModifier> incoming = snap.getModifiers();
+		int have = inst.getModifiersByOperation(0).size() + inst.getModifiersByOperation(1).size()
+				+ inst.getModifiersByOperation(2).size();
+		if (have != incoming.size()) {
+			return false;
+		}
+		for (AttributeModifier m : incoming) {
+			AttributeModifier cur = inst.getModifier(m.getID());
+			if (cur == null || cur.getAmount() != m.getAmount() || cur.getOperation() != m.getOperation()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public void handleEntityProperties(SPacketEntityProperties packetIn) {
 		Entity entity = this.clientWorldController.getEntityByID(packetIn.getEntityId());
 
-		if (entity != null) {
-			if (!(entity instanceof EntityLivingBase)) {
-				throw new IllegalStateException(
-						"Server tried to update attributes of a non-living entity (actually: " + entity + ")");
-			} else {
+		// Treasure Client: a non-living entity used to throw here, and the error was logged with a
+		// stack trace for every such packet (slow in a browser); vanilla ignores it in the end anyway
+		if (entity instanceof EntityLivingBase) {
+			{
 				AbstractAttributeMap abstractattributemap = ((EntityLivingBase) entity).getAttributeMap();
 
 				for (SPacketEntityProperties.Snapshot spacketentityproperties$snapshot : packetIn.getSnapshots()) {
@@ -2067,9 +2086,14 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 							.getAttributeInstanceByName(spacketentityproperties$snapshot.getName());
 
 					if (iattributeinstance == null) {
-						iattributeinstance = abstractattributemap.registerAttribute(
-								new RangedAttribute((IAttribute) null, spacketentityproperties$snapshot.getName(), 0.0D,
-										2.2250738585072014E-308D, Double.MAX_VALUE));
+						// Treasure Client: a stat 1.12 doesn't have (modern servers send many, e.g. scale,
+						// step height, gravity). Nothing in this version reads them, so don't keep them.
+						continue;
+					}
+
+					// Treasure Client: servers resend unchanged stats often; skip rebuilding the modifiers then
+					if (tcSameAttribute(iattributeinstance, spacketentityproperties$snapshot)) {
+						continue;
 					}
 
 					iattributeinstance.setBaseValue(spacketentityproperties$snapshot.getBaseValue());
