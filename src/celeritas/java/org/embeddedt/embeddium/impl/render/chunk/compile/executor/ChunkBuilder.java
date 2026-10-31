@@ -196,7 +196,7 @@ public class ChunkBuilder {
             // Treasure Client: builds run on the main thread, so give them a time budget per frame
             // instead of a fixed count: fast builds load the world quicker, slow ones don't stall frames.
             double meshNanos = Math.max(50_000.0, metrics.getAverageExecutionNanos(ChunkBuildOutput.class, DEFAULT_MESH_TASK_NANOS));
-            this.targetInFlight = (int) Math.max(1, Math.min(MAIN_THREAD_MAX_TASKS, (long) (MAIN_THREAD_BUDGET_NANOS / meshNanos)));
+            this.targetInFlight = (int) Math.max(1, Math.min(MAIN_THREAD_MAX_TASKS, (long) (tcFrameBudgetNs() / meshNanos)));
             return;
         }
 
@@ -288,6 +288,12 @@ public class ChunkBuilder {
             job.setCancelled();
         }
 
+        // Treasure Client: let a paused build see it was cancelled and give back its buffers
+        if (this.tcPausedJob != null) {
+            this.tcPausedJob.setCancelled();
+            tcFinishPaused();
+        }
+
         this.shutdownThreads();
     }
 
@@ -342,6 +348,7 @@ public class ChunkBuilder {
     }
 
     public void tryStealTask(ChunkJob job) {
+        tcFinishPaused(); // Treasure Client: the stolen job needs the build buffers
         if (!this.queue.stealJob(job)) {
             return;
         }
@@ -349,16 +356,62 @@ public class ChunkBuilder {
         executeJobWithLocalContext(job);
     }
 
+    /**
+     * Treasure Client: one heavy chunk can take 40+ ms to build on a slow computer, which no
+     * per-frame limit between chunks can stop. While this is set, a chunk build pauses between
+     * block layers once this time passes and continues next frame (0 = no limit). Only one build
+     * runs at a time, so the paused build keeps the shared build buffers until it finishes.
+     */
+    public static long tcDeadlineNs;
+    /**
+     * Treasure Client: visible sections still waiting to be built, set each frame. Lots of missing
+     * land (just joined a lobby) gets more build time per frame so it loads fast; a few sections
+     * (normal play) get the small Chunk Build Time so building never causes a spike.
+     */
+    public static int tcBacklog;
+
+    private static long tcFrameBudgetNs() {
+        long base = (long) MAIN_THREAD_BUDGET_NANOS;
+        if (tcBacklog >= 48) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(16));
+        if (tcBacklog >= 12) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(10));
+        return base;
+    }
+
+    /** Set by a build that paused. */
+    public static boolean tcPaused;
+    private ChunkJob tcPausedJob;
+
+    /** Finishes a paused build right away (before anything waits on builds or uses the buffers). */
+    public void tcFinishPaused() {
+        if (this.tcPausedJob == null) {
+            return;
+        }
+        long d = tcDeadlineNs;
+        tcDeadlineNs = 0L;
+        try {
+            executeJobWithLocalContext(this.tcPausedJob);
+        } finally {
+            tcDeadlineNs = d;
+        }
+    }
+
     private void executeJobWithLocalContext(ChunkJob job) {
         var localContext = this.localContext;
         GlobalChunkBuildContext.bindMainThread(localContext);
         long tcT = System.nanoTime();
+        tcPaused = false;
 
         try {
             job.execute(localContext);
         } finally {
             GlobalChunkBuildContext.bindMainThread(null);
-            localContext.cleanup();
+            if (tcPaused) {
+                tcPaused = false;
+                this.tcPausedJob = job; // keep the buffers for the rest of this build
+            } else {
+                this.tcPausedJob = null;
+                localContext.cleanup();
+            }
             net.minecraft.client.TCLagMonitor.addBuild(tcT); // Treasure Client: .lag terrain parts
         }
     }
@@ -372,17 +425,35 @@ public class ChunkBuilder {
         // Treasure Client: stop after the frame's build time is used up and leave the rest for
         // the next frame. The number of builds per frame comes from their average cost, so a
         // group of heavy chunks could otherwise take 40 ms in one frame (a lag spike).
-        long deadline = System.nanoTime() + (long) MAIN_THREAD_BUDGET_NANOS;
+        long deadline = System.nanoTime() + tcFrameBudgetNs();
         int ran = 0;
-        while (!this.queue.isEmpty()) {
-            if (ran > 0 && System.nanoTime() > deadline) {
-                break;
+        tcDeadlineNs = deadline;
+        try {
+            // continue a build that ran out of time last frame first
+            if (this.tcPausedJob != null) {
+                executeJobWithLocalContext(this.tcPausedJob);
+                if (this.tcPausedJob == null) {
+                    ++ran;
+                }
             }
-            var job = Objects.requireNonNull(this.queue.pollJob());
-            executeJobWithLocalContext(job);
-            ++ran;
+            while (this.tcPausedJob == null && !this.queue.isEmpty()) {
+                if (ran > 0 && System.nanoTime() > deadline) {
+                    break;
+                }
+                var job = Objects.requireNonNull(this.queue.pollJob());
+                executeJobWithLocalContext(job);
+                if (this.tcPausedJob == null) {
+                    ++ran;
+                } else if (ran == 0) {
+                    ran = -1; // started a build that will finish later; nothing finished yet
+                }
+            }
+        } finally {
+            tcDeadlineNs = 0L;
         }
-        net.minecraft.client.renderer.chunk.RenderChunk.renderChunksUpdated += ran; // for the .lag report
+        if (ran > 0) {
+            net.minecraft.client.renderer.chunk.RenderChunk.renderChunksUpdated += ran; // for the .lag report
+        }
     }
 
     public boolean isBuildQueueEmpty() {

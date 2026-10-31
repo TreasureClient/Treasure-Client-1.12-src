@@ -484,6 +484,10 @@ public abstract class RenderSectionManager {
         // controller (which would halve its measured frame time); both passes share the same worker queue and
         // in-flight target.
         if (!this.isInShadowPass()) {
+            // Treasure Client: how much visible land still waits to be built (sets the build time per frame)
+            var tcLists = this.getCurrentRenderListManager().getRebuildLists();
+            org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcBacklog = (tcLists.getUpdateCount(ChunkUpdateType.INITIAL_BUILD)
+                    + tcLists.getUpdateCount(ChunkUpdateType.REBUILD) + this.builder.getScheduledJobCount());
             this.builder.tickSchedulingBudget(this.jobMetricsTracker);
         }
         this.promoteInterimRebuildList();
@@ -491,6 +495,8 @@ public abstract class RenderSectionManager {
             if (CONTINUOUSLY_REMESH_WORLD && !this.getCurrentRenderListManager().getRebuildLists().hasAdditionalUpdates()) {
                 this.scheduleRebuildAll();
             }
+            // Treasure Client: keep building what is already queued (or paused) even when nothing new was added
+            this.builder.tick();
             return;
         }
         var blockingRebuilds = new ChunkJobCollector(Integer.MAX_VALUE, this.buildResults::add);

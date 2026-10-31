@@ -402,6 +402,18 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 .tc-editbar button:hover { filter: brightness(1.1); }
 .tc-editbar .tc-eb-reset { background: var(--panel2); color: var(--dim); border: 1px solid var(--bord); }
 .tc-editbar .tc-eb-done { background: linear-gradient(180deg,var(--a-1),var(--a-2)); color: var(--bg0); }
+/* Treasure Client: Right Shift screen (logo, Mods button, drag the HUD) */
+.tc-hs { position: fixed; inset: 0; z-index: 2147483001; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.tc-hs.tc-hidden { display: none; }
+.tc-hs-card { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 22px 30px 18px; }
+.tc-hs-logo { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.tc-hs .tc-hs-chest { height: 86px; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)); }
+.tc-hs .tc-hs-word { height: 40px; width: auto; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
+.tc-hs-mods { font: 700 15px 'Outfit', sans-serif; letter-spacing: 0.08em; border: 0; border-radius: 12px; padding: 12px 54px; cursor: pointer; background: linear-gradient(180deg,var(--a-1),var(--a-2)); color: var(--bg0); box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 18px var(--glow); transition: filter var(--tc-fast), transform var(--tc-fast); }
+.tc-hs-mods:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.tc-hs-hint { font: 500 12px 'Outfit', sans-serif; color: var(--dim); text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+.tc-hs-hint button { font: inherit; color: var(--txt); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+#tc-root.hud-screen::before { background: rgba(6,8,16,0.32); }
 
 /* ---------- keybind manager ---------- */
 .tc-kb-row { display: flex; align-items: center; gap: 14px; padding: 10px 8px; }
@@ -585,6 +597,13 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     <span>Drag HUD elements to reposition</span>
     <button class="tc-eb-reset" id="tc-eb-reset">Reset Positions</button>
     <button class="tc-eb-done" id="tc-eb-done">Done</button>
+  </div>
+  <div class="tc-hs tc-hidden" id="tc-hudscreen">
+    <div class="tc-hs-card">
+      <div class="tc-hs-logo"><img class="tc-logo-chest tc-hs-chest" alt="" draggable="false"><img class="tc-logo-word tc-hs-word" alt="Treasure Client" draggable="false"></div>
+      <button class="tc-hs-mods" id="tc-hs-mods">Mods</button>
+      <div class="tc-hs-hint">Drag your HUD to move it &middot; <button id="tc-hs-reset">Reset HUD</button></div>
+    </div>
   </div>
 
   <!-- ClickGUI (captures input only while open) -->
@@ -1366,7 +1385,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       try { if (typeof tcSetView === 'function') tcSetView('modules'); } catch (e) {}
       // Ask the Java side to open the in-game menu so the world pauses (SP) and
       // the mouse is freed — no more needing to press Escape after the hotkey.
-      try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(1))); } catch (e) {}
+      // (3 = an empty screen that only freezes the game, never the pause menu)
+      try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(3))); } catch (e) {}
       // Also release pointer lock immediately so the cursor is usable right away.
       try { if (document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
     }
@@ -2184,10 +2204,17 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (state.menuKeyCode && e.code === state.menuKeyCode && (!tcIsTypingTarget(e) || !e.key || e.key.length !== 1)) {
         e.preventDefault(); e.stopImmediatePropagation();
         if (tcIsTypingTarget(e)) { try { e.target.blur(); } catch (er) {} }
-        toggleGui(); return;
+        // Treasure Client: in a world the key opens the Right Shift screen (logo, Mods, drag the HUD)
+        var hsApi = window.__tcHudScreen;
+        if (gui.classList.contains('open')) closeGui();
+        else if (hsApi && hsApi.isOpen()) hsApi.close(true);
+        else if (hsApi && tcInWorld()) hsApi.open();
+        else openGui();
+        return;
       }
       if (tcIsTypingTarget(e)) return;
       if (e.code === 'Escape' && gui.classList.contains('open')) { e.preventDefault(); closeGui(); }
+      else if (e.code === 'Escape' && window.__tcHudScreen && window.__tcHudScreen.isOpen()) { e.preventDefault(); e.stopImmediatePropagation(); window.__tcHudScreen.close(true); }
     }, true);
 
     function syncModToggleSwitch(key) {
@@ -2240,12 +2267,10 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           if (k && state[k]) el.classList.remove('tc-hidden');
           else el.classList.add('tc-hidden');
         });
-        bar.classList.remove('tc-hidden');
         // close just the Mod Menu panel — keep the overlay up so HUD boxes stay draggable
         gui.classList.remove('open'); root.setAttribute('aria-hidden', 'false'); if (root.__tcBgStop) root.__tcBgStop();
-        // pause the game completely while editing: open the in-game menu so the world
-        // freezes (singleplayer) and the mouse is released for dragging
-        try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(1))); } catch (e) {}
+        // freeze the game while editing (an empty screen, not the pause menu) and free the mouse
+        try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(3))); } catch (e) {}
         try { if (document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
       }
       function exit() {
@@ -2254,7 +2279,44 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         // un-pause: close the in-game menu we opened for editing
         try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(2))); } catch (e) {}
       }
-      if (editBtn) editBtn.addEventListener('click', enter);
+
+      // Treasure Client: the Right Shift screen. Freezes the game (no pause menu), shows the
+      // logo and a Mods button, and lets you drag your HUD elements right there.
+      var hs = $('#tc-hudscreen'), hsOpen = false;
+      function hsShow() {
+        if (!hs) return;
+        enter(); hsOpen = true;
+        root.classList.add('hud-screen'); hs.classList.remove('tc-hidden');
+      }
+      function hsHide(toGame) {
+        if (!hsOpen) return;
+        hsOpen = false; root.classList.remove('hud-screen'); hs.classList.add('tc-hidden');
+        if (drag) { drag.el.classList.remove('tc-hud-drag-active'); drag = null; }
+        editing = false; root.classList.remove('hud-editing'); applyHud();
+        if (toGame) {
+          try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(2))); } catch (e) {}
+          root.setAttribute('aria-hidden', 'true');
+          if (typeof window.__tcRefocusGame === 'function') window.__tcRefocusGame();
+        }
+      }
+      window.__tcHudScreen = { open: hsShow, close: hsHide, isOpen: function () { return hsOpen; } };
+      var hsMods = $('#tc-hs-mods');
+      if (hsMods) hsMods.addEventListener('click', function () { hsHide(false); openGui(); });
+      var hsReset = $('#tc-hs-reset');
+      if (hsReset && resetBtn) hsReset.addEventListener('click', function () { resetBtn.click(); });
+      // the game closed the freeze screen itself (Escape reached it) or you left the world
+      setInterval(function () {
+        try {
+          var r = localStorage.getItem('_eaglercraft_1.12.tcpause');
+          if (r && atob(r).charCodeAt(0) === 4) {
+            localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(0)));
+            if (hsOpen) hsHide(false);
+          }
+          if (hsOpen && !tcInWorld()) hsHide(true);
+        } catch (e) {}
+      }, 250);
+      // the mod menu's HUD Editor tab opens this screen too
+      if (editBtn) editBtn.addEventListener('click', hsShow);
       if (doneBtn) doneBtn.addEventListener('click', exit);
       if (resetBtn) resetBtn.addEventListener('click', function () {
         state.hudPositions = {}; save();

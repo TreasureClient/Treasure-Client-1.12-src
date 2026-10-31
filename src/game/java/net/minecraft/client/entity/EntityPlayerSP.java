@@ -223,7 +223,20 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 	/**
 	 * Called to update the entity's position/logic.
 	 */
+	private boolean tcWasInBlock;
+
 	public void onUpdate() {
+		// Treasure Client: kick log notes the moment you end up inside a block, and which block
+		boolean tcIn = this.isEntityInsideOpaqueBlock();
+		if (tcIn && !this.tcWasInBlock) {
+			BlockPos tcP = new BlockPos(this.posX, this.posY + (double) this.getEyeHeight(), this.posZ);
+			String tcName = String.valueOf(net.minecraft.block.Block.REGISTRY.getNameForObject(this.world.getBlockState(tcP).getBlock()));
+			if (tcName.startsWith("minecraft:")) tcName = tcName.substring(10);
+			net.minecraft.client.TCKickLog.event("INSIDE BLOCK " + tcName + " at " + tcP.getX() + " " + tcP.getY() + " " + tcP.getZ()
+					+ (this.world.isBlockLoaded(tcP) ? "" : " (chunk not loaded)"));
+		}
+		this.tcWasInBlock = tcIn;
+
 		if (this.world.isBlockLoaded(new BlockPos(this.posX, 0.0D, this.posZ))) {
 			super.onUpdate();
 
