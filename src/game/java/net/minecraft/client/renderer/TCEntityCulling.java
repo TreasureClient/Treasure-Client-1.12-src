@@ -43,9 +43,9 @@ public final class TCEntityCulling {
 	/** How long a "visible" result is trusted (ms). Becoming hidden late only costs a little FPS. */
 	private static final long VISIBLE_RECHECK_MS = 150L;
 	/** Max time spent casting rays per frame (ns). */
-	private static final long FRAME_BUDGET_NS = 1_500_000L;
+	public static long FRAME_BUDGET_NS = 1_500_000L; // Culling Time setting
 	/** Anything this close (blocks) is always drawn. */
-	private static final double ALWAYS_VISIBLE_DIST_SQ = 4.0 * 4.0;
+	public static double ALWAYS_VISIBLE_DIST_SQ = 4.0 * 4.0; // Always Draw Within setting
 	/** Rays never step further than this many blocks. Past that, just draw it. */
 	private static final double MAX_DIST = 128.0;
 

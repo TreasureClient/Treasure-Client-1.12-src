@@ -66,6 +66,8 @@ public final class TCBlockEntities {
 
 	private static final Map<String, IBakedModel> MODELS = new HashMap<>();
 	private static Boolean christmas;
+	/** Video Settings: which block entities are baked into the chunk mesh. */
+	public static boolean bakeChests = true, bakeBeds = true;
 
 	public static boolean enabled() {
 		return TreasureMods.enhancedBlockEntities();
@@ -139,7 +141,7 @@ public final class TCBlockEntities {
 	private static IBakedModel modelFor(IBlockAccess world, IBlockState state, BlockPos pos, TileEntity te) {
 		Block block = state.getBlock();
 		if (block instanceof BlockChest) {
-			if (isChristmas()) {
+			if (isChristmas() || !bakeChests) {
 				return null;
 			}
 			if (!(te instanceof TileEntityChest) || te.tcBakeAnimating) {
@@ -162,13 +164,13 @@ public final class TCBlockEntities {
 			return chestModel(trapped ? "trapped" : "normal", meta, xPos, zPos);
 		}
 		if (block instanceof BlockEnderChest) {
-			if (!(te instanceof TileEntityEnderChest) || te.tcBakeAnimating) {
+			if (!bakeChests || !(te instanceof TileEntityEnderChest) || te.tcBakeAnimating) {
 				return null;
 			}
 			return chestModel("ender", state.getValue(BlockEnderChest.FACING).getIndex(), false, false);
 		}
 		if (block instanceof BlockBed) {
-			if (!(te instanceof TileEntityBed)) {
+			if (!bakeBeds || !(te instanceof TileEntityBed)) {
 				return null;
 			}
 			EnumDyeColor color = ((TileEntityBed) te).func_193048_a();

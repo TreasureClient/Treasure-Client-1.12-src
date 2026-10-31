@@ -18,10 +18,11 @@ import net.minecraft.util.math.MathHelper;
  * implementation). Pages along the top, option rows on the left and a description
  * of the hovered option on the right.
  *
- * Besides the vanilla video options, this is where every ported performance mod is
- * set up. Those settings are stored by the overlay (Treasure Settings), so changes
- * are sent to it through the "tcset" storage key, like the Mods screen does. The
- * overlay's single "Performance modpack" switch turns all of them on or off.
+ * Besides the vanilla video options, this holds the settings of every ported
+ * performance mod (not their on/off switches: those are in the Mods screen, and the
+ * overlay's "Performance modpack" switch turns them all off). The settings are
+ * stored by the overlay (Treasure Settings), so changes are sent to it through the
+ * "tcset" storage key, like the Mods screen does.
  */
 public class GuiVideoSettings extends GuiScreen {
 
@@ -126,63 +127,6 @@ public class GuiVideoSettings extends GuiScreen {
 		}
 	}
 
-	/** A switch saved by the overlay. */
-	private class ModBool extends Opt {
-		final String key;
-		final boolean def;
-		final String parent; // grayed out while this switch is off ("perfpack", "cextra")
-
-		ModBool(String key, boolean def, String parent, String name, String tip, String impact) {
-			super(name, tip, impact);
-			this.key = key;
-			this.def = def;
-			this.parent = parent;
-		}
-
-		boolean on() {
-			return "1".equals(setting(this.key, this.def ? "1" : "0"));
-		}
-
-		String value() {
-			return this.on() ? "§aOn" : "§7Off";
-		}
-
-		void click(int button) {
-			send(this.key, this.on() ? "0" : "1");
-		}
-
-		String inactiveReason() {
-			return parentOff(this.parent);
-		}
-	}
-
-	private class Celeritas extends ModBool {
-		Celeritas() {
-			super("celeritas", true, "perfpack", "Celeritas Renderer",
-					"Faster chunk rendering, based on Sodium for Minecraft 1.12. Draws the world with far fewer draw calls. Turn it off if the world looks wrong.",
-					"High");
-		}
-
-		boolean usable() {
-			try {
-				return org.taumc.celeritas.impl.TreasureCeleritas.isAvailable();
-			} catch (Throwable t) {
-				return false;
-			}
-		}
-
-		String value() {
-			return this.usable() ? super.value() : "§8Not available";
-		}
-
-		String inactiveReason() {
-			if (!this.usable()) {
-				return "Needs the WASM version and WebGL 2.";
-			}
-			return super.inactiveReason();
-		}
-	}
-
 	private class LeafCull extends Opt {
 		final String[] vals = { "off", "hollow", "aggressive", "solid" };
 		final String[] labels = { "Off", "Hollow", "Solid Aggressive", "Solid" };
@@ -213,7 +157,7 @@ public class GuiVideoSettings extends GuiScreen {
 		}
 
 		String inactiveReason() {
-			return parentOff("perfpack");
+			return modOff(null);
 		}
 	}
 
@@ -253,7 +197,195 @@ public class GuiVideoSettings extends GuiScreen {
 		}
 
 		String inactiveReason() {
-			return parentOff("perfpack");
+			return modOff(null);
+		}
+	}
+
+	/** Names of the mods, for "X is off" messages. */
+	private static String modName(String key) {
+		switch (key) {
+		case "celeritas": return "Celeritas";
+		case "entcull": return "Entity Culling";
+		case "ebe": return "Enhanced Block Entities";
+		case "ifast": return "ImmediatelyFast";
+		case "pcore": return "Particle Core";
+		case "pcull": return "Particle Culling";
+		case "c2me": return "C2ME";
+		case "dynfps": return "Dynamic FPS";
+		case "memsaver": return "Memory Saver";
+		case "vanillafix": return "VanillaFix";
+		case "cextra": return "Celeritas Extra";
+		default: return key;
+		}
+	}
+
+	/** Why a mod's settings aren't doing anything right now, or null. */
+	private String modOff(String mod) {
+		if (!"1".equals(this.setting("perfpack", "1"))) {
+			return "Performance modpack is off in Treasure Settings, so this isn't running.";
+		}
+		if (mod == null) {
+			return null;
+		}
+		if (mod.equals("celeritas")) {
+			boolean avail;
+			try {
+				avail = org.taumc.celeritas.impl.TreasureCeleritas.isAvailable();
+			} catch (Throwable t) {
+				avail = false;
+			}
+			if (!avail) {
+				return "Celeritas needs the WASM version and WebGL 2.";
+			}
+		}
+		return "1".equals(this.setting(mod, "1")) ? null
+				: modName(mod) + " is turned off in the Mods screen, so this isn't running.";
+	}
+
+	/** A mod name above its settings. */
+	private class Header extends Opt {
+		final String mod;
+
+		Header(String name, String mod) {
+			super(name, mod == null ? "Settings for " + name + "."
+					: "Settings for " + name + ". Turn it on or off in the Mods screen (Mods button on the title screen).",
+					null);
+			this.mod = mod;
+		}
+
+		String value() {
+			return "";
+		}
+
+		boolean usable() {
+			return false;
+		}
+
+		String inactiveReason() {
+			return modOff(this.mod);
+		}
+	}
+
+	/** An on/off part of a mod. */
+	private class VsBool extends Opt {
+		final String key, mod;
+		final boolean def;
+
+		VsBool(String key, boolean def, String mod, String name, String tip, String impact) {
+			super(name, tip, impact);
+			this.key = key;
+			this.def = def;
+			this.mod = mod;
+		}
+
+		boolean on() {
+			return "1".equals(setting(this.key, this.def ? "1" : "0"));
+		}
+
+		String value() {
+			return this.on() ? "§aOn" : "§7Off";
+		}
+
+		void click(int button) {
+			send(this.key, this.on() ? "0" : "1");
+		}
+
+		String inactiveReason() {
+			return modOff(this.mod);
+		}
+	}
+
+	/** A mod setting with a few named choices. */
+	private class VsCycle extends Opt {
+		final String key, def, mod;
+		final String[] vals, labels;
+
+		VsCycle(String key, String def, String[] vals, String[] labels, String mod, String name, String tip,
+				String impact) {
+			super(name, tip, impact);
+			this.key = key;
+			this.def = def;
+			this.vals = vals;
+			this.labels = labels;
+			this.mod = mod;
+		}
+
+		int index() {
+			String v = setting(this.key, this.def);
+			for (int i = 0; i < this.vals.length; ++i) {
+				if (this.vals[i].equals(v)) {
+					return i;
+				}
+			}
+			return 0;
+		}
+
+		String value() {
+			return this.labels[this.index()];
+		}
+
+		void click(int button) {
+			int n = this.vals.length;
+			send(this.key, this.vals[(this.index() + (button == 1 ? n - 1 : 1)) % n]);
+		}
+
+		String inactiveReason() {
+			return modOff(this.mod);
+		}
+	}
+
+	/** A number setting of a mod, shown as a slider. */
+	private class VsSlider extends Opt {
+		final String key, unit, mod;
+		final int def, min, max, step;
+
+		/** unit "tenthsMs" shows the value divided by 10 as milliseconds. */
+		VsSlider(String key, int def, int min, int max, int step, String unit, String mod, String name, String tip,
+				String impact) {
+			super(name, tip, impact);
+			this.key = key;
+			this.def = def;
+			this.min = min;
+			this.max = max;
+			this.step = step;
+			this.unit = unit;
+			this.mod = mod;
+		}
+
+		int get() {
+			try {
+				return Math.max(this.min, Math.min(this.max, Integer.parseInt(setting(this.key, Integer.toString(this.def)))));
+			} catch (Throwable t) {
+				return this.def;
+			}
+		}
+
+		String value() {
+			int v = this.get();
+			if (this.unit.equals("tenthsMs")) {
+				return (v / 10) + "." + (v % 10) + " ms";
+			}
+			return v + this.unit;
+		}
+
+		boolean slider() {
+			return true;
+		}
+
+		float sliderPos() {
+			return (this.get() - this.min) / (float) (this.max - this.min);
+		}
+
+		void setSlider(float pos) {
+			int steps = (this.max - this.min) / this.step;
+			int v = this.min + Math.round(MathHelper.clamp(pos, 0.0F, 1.0F) * steps) * this.step;
+			if (v != this.get()) {
+				send(this.key, Integer.toString(v));
+			}
+		}
+
+		String inactiveReason() {
+			return modOff(this.mod);
 		}
 	}
 
@@ -318,56 +450,91 @@ public class GuiVideoSettings extends GuiScreen {
 		g.add(new VanillaOpt(GameSettings.Options.ANAGLYPH, "Red and cyan 3D, for 3D glasses.", "High"));
 		this.pages.add(quality);
 
+		// each mod's own settings; the mods are switched on and off in the Mods screen
 		Page perf = new Page("Performance");
 		g = perf.group();
-		g.add(new ModBool("perfpack", true, null, "Performance modpack",
-				"All of the ported performance mods below. Turn it off to play like vanilla (handy if something looks broken). Their own settings stay saved. Also in Treasure Settings → Performance.",
+		g.add(new Header("Celeritas Renderer", "celeritas"));
+		g.add(new VsSlider("vsBuildMs", 4, 2, 12, 1, " ms", "celeritas", "Chunk Build Time",
+				"How long chunks can be built each frame. Lower stops chunk building from causing stutters, higher loads new chunks faster.",
 				"High"));
-		g = perf.group();
-		g.add(new Celeritas());
-		g.add(new ModBool("entcull", true, "perfpack", "Entity Culling",
-				"Skips drawing mobs, chests, signs and banners that are hidden behind solid blocks.", "High"));
-		g.add(new EntityDistance());
-		g.add(new LeafCull());
-		g.add(new ModBool("ebe", true, "perfpack", "Enhanced Block Entities",
-				"Draws chests and beds as part of the world instead of one by one, which is much faster.",
+		g.add(new VsCycle("vsDefer", "1", new String[] { "1", "0" }, new String[] { "Smooth", "Nearby First" },
+				"celeritas", "Chunk Updates",
+				"Smooth builds every changed chunk in the background. Nearby First rebuilds chunks right next to you at once, so placed and broken blocks show up sooner, but it can stutter.",
 				"Medium"));
-		g = perf.group();
-		g.add(new ModBool("ifast", true, "perfpack", "ImmediatelyFast",
-				"Draws the HUD with far fewer draw calls, plus cheaper name labels and sign text.", "Medium"));
-		g.add(new ModBool("pcull", true, "perfpack", "Particle Culling",
-				"Skips particles behind you or off screen.", "Low"));
-		g.add(new ModBool("pcore", true, "perfpack", "Particle Core",
-				"Cheaper particle movement, fewer leftover particles, and particles land on the ground properly.",
-				"Low"));
-		g.add(new ModBool("bfmath", true, "perfpack", "BetterFps",
-				"Faster sine and cosine math, the same numbers as OptiFine's Fast Math.", "Low"));
-		g.add(new ModBool("lithium", true, "perfpack", "Lithium",
-				"Faster collisions, chunk lookups and block entity lists. Same results as vanilla.", "Medium"));
-		g = perf.group();
-		g.add(new ModBool("c2me", true, "perfpack", "C2ME",
-				"Smoother chunk loading: big bursts from the server are handled over a few ticks instead of freezing the game.",
-				"Medium"));
-		g.add(new ModBool("dynfps", true, "perfpack", "Dynamic FPS",
-				"Drops to 10 FPS while another window is focused, so your device stays cool.", "Varies"));
-		g.add(new ModBool("memsaver", true, "perfpack", "Memory Saver",
-				"Stops the idle singleplayer worker while you're on a server.",
-				"Low"));
-		g.add(new ModBool("vanillafix", true, "perfpack", "VanillaFix",
-				"Recovers from crashes instead of closing the game, plus Minecraft bug fixes.", null));
-		g = perf.group();
+		g.add(new VsBool("vsFogOcc", true, "celeritas", "Fog Occlusion",
+				"Skips chunks that are completely hidden in fog.", "Medium"));
+		g.add(new VsBool("vsFaceCull", true, "celeritas", "Block Face Culling",
+				"Skips the sides of chunks that face away from you.", "Medium"));
+		g.add(new VsBool("vsChunkEnt", true, "celeritas", "Hide Entities in Hidden Chunks",
+				"Skips mobs and players inside chunks you can't see.", "Medium"));
 		g.add(new VanillaOpt(GameSettings.Options.CHUNK_UPDATES,
-				"How many chunks are rebuilt per frame. Lower is smoother, higher loads changes faster.", "Medium"));
-		g.add(new VanillaOpt(GameSettings.Options.CHUNK_FIX, "Fixes chunks that sometimes don't show up.",
-				null));
+				"How many chunks are rebuilt per frame when Celeritas isn't running. Lower is smoother, higher loads changes faster.",
+				"Medium"));
+		g.add(new VanillaOpt(GameSettings.Options.CHUNK_FIX, "Fixes chunks that sometimes don't show up.", null));
+
+		g = perf.group();
+		g.add(new Header("Entity Culling", "entcull"));
+		g.add(new EntityDistance());
+		g.add(new VsSlider("vsCullMs", 15, 5, 40, 5, "tenthsMs", "entcull", "Culling Time",
+				"How long each frame can be spent checking which mobs and chests are hidden behind blocks. Higher hides more of them in crowded places, lower leaves more time for the rest of the frame.",
+				"Medium"));
+		g.add(new VsSlider("vsCullNear", 4, 0, 16, 1, " blocks", "entcull", "Always Draw Within",
+				"Mobs and chests this close are always drawn, without checking whether they're hidden.", "Low"));
+
+		g = perf.group();
+		g.add(new Header("Enhanced Block Entities", "ebe"));
+		g.add(new VsBool("vsChests", true, "ebe", "Fast Chests",
+				"Draws chests and ender chests as part of the world, which is much faster. Lids still open normally.",
+				"Medium"));
+		g.add(new VsBool("vsBeds", true, "ebe", "Fast Beds", "Draws beds as part of the world, which is much faster.",
+				"Low"));
+		g.add(new Header("Leaf Culling", null));
+		g.add(new LeafCull());
+
+		g = perf.group();
+		g.add(new Header("ImmediatelyFast", "ifast"));
+		g.add(new VsBool("vsHudBatch", true, "ifast", "HUD Batching",
+				"Draws the HUD's text and icons together instead of one at a time.", "Medium"));
+		g.add(new VsBool("vsHudCache", true, "ifast", "HUD Cache",
+				"Redraws the HUD only when something on it changes, and reuses the last picture otherwise.",
+				"Medium"));
+		g.add(new VsBool("vsModelBatch", true, "ifast", "Entity Model Batching",
+				"Draws each mob's and player's body parts together instead of one by one.", "High"));
+		g.add(new VsSlider("vsSignDist", 32, 8, 64, 4, " blocks", "ifast", "Sign Text Distance",
+				"Sign text further away than this isn't drawn.", "Low"));
+
+		g = perf.group();
+		g.add(new Header("Particle Core", "pcore"));
+		g.add(new VsSlider("vsPMax", 2048, 512, 8192, 512, "", "pcore", "Max Particles",
+				"How many particles of each kind are kept at once. Lower helps in explosions and busy lobbies.",
+				"Medium"));
+		g.add(new VsSlider("vsPColl", 24, 8, 64, 4, " blocks", "pcore", "Collision Distance",
+				"Particles further away than this move without checking for blocks in their way.", "Low"));
+		g.add(new Header("Particle Culling", "pcull"));
+		g.add(new VsSlider("vsPPad", 2, 0, 8, 1, " blocks", "pcull", "Screen Edge Margin",
+				"Particles just outside the screen are still drawn if they're within this distance, so big ones don't pop in at the edges.",
+				"Low"));
+
+		g = perf.group();
+		g.add(new Header("C2ME", "c2me"));
+		g.add(new VsSlider("vsPktMs", 4, 2, 16, 1, " ms", "c2me", "Packet Time",
+				"How long each frame can spend on packets from the server (more when they pile up). Lower is smoother, higher loads chunks faster.",
+				"Medium"));
+		g.add(new Header("Dynamic FPS", "dynfps"));
+		g.add(new VsSlider("vsBgFps", 10, 1, 60, 1, " FPS", "dynfps", "Background FPS",
+				"The frame rate while another window is focused. Lower keeps your device cooler.", "Varies"));
+		g.add(new Header("Memory Saver", "memsaver"));
+		g.add(new VsSlider("vsWorkerSec", 5, 5, 300, 5, " sec", "memsaver", "Stop Singleplayer After",
+				"How long the singleplayer worker can sit idle while you're on a server before it's stopped to free memory.",
+				"Low"));
+		g.add(new Header("VanillaFix", "vanillafix"));
+		g.add(new VsSlider("vsCrashMax", 3, 1, 10, 1, "", "vanillafix", "Crash Recoveries",
+				"How many crashes in a row (within 15 seconds) are recovered from before the game gives up.", null));
 		this.pages.add(perf);
 
 		Page mods = new Page("Mods");
 		g = mods.group();
-		g.add(new ModBool("cextra", true, "perfpack", "Celeritas Extra",
-				"Lets you turn off animations, particles, sky parts and some entities below for extra FPS. When off, everything is drawn like vanilla.",
-				"Varies"));
-		g = mods.group();
+		g.add(new Header("Animations", "cextra"));
 		g.add(this.extra("ceAnim", "All Animations", "Every animated texture. Off freezes them all."));
 		g.add(this.extra("ceAnimWater", "Water Animation", "Moving water."));
 		g.add(this.extra("ceAnimLava", "Lava Animation", "Moving lava."));
@@ -376,15 +543,18 @@ public class GuiVideoSettings extends GuiScreen {
 		g.add(this.extra("ceAnimBlock", "Block Animations",
 				"Magma, sea lanterns, prismarine and other animated blocks."));
 		g = mods.group();
+		g.add(new Header("Particles", "cextra"));
 		g.add(this.extra("ceRainSplash", "Rain Splashes", "Splash particles where rain lands."));
 		g.add(this.extra("ceBreakFx", "Block Break Particles", "Pieces flying out when a block breaks."));
 		g.add(this.extra("ceHitFx", "Block Mining Particles", "Small pieces while you mine a block."));
 		g = mods.group();
+		g.add(new Header("Sky and Weather", "cextra"));
 		g.add(this.extra("ceSky", "Sky", "The sky color and sunset."));
 		g.add(this.extra("ceStars", "Stars", "Stars at night."));
 		g.add(this.extra("ceSunMoon", "Sun and Moon", "The sun and moon."));
 		g.add(this.extra("ceWeather", "Rain and Snow", "Falling rain and snow."));
 		g = mods.group();
+		g.add(new Header("Entities and Effects", "cextra"));
 		g.add(this.extra("ceFrames", "Item Frames", "Item frames and what's in them."));
 		g.add(this.extra("ceStands", "Armor Stands", "Armor stands."));
 		g.add(this.extra("cePaintings", "Paintings", "Paintings."));
@@ -398,7 +568,14 @@ public class GuiVideoSettings extends GuiScreen {
 	}
 
 	private Opt extra(String key, String name, String what) {
-		return new ModBool(key, true, "cextra", name, what + " Turn off for a little more FPS.", "Low");
+		return new VsBoolKey(key, name, what + " Turn off for a little more FPS.");
+	}
+
+	/** A Celeritas Extra part (saved under its own key, like before). */
+	private class VsBoolKey extends VsBool {
+		VsBoolKey(String key, String name, String tip) {
+			super(key, true, "cextra", name, tip, "Low");
+		}
 	}
 
 	// ---------------------------------------------------------------- settings plumbing
@@ -430,21 +607,6 @@ public class GuiVideoSettings extends GuiScreen {
 			EagRuntime.setStorage("tcset", (prev.isEmpty() ? kv : prev + "," + kv).getBytes(StandardCharsets.UTF_8));
 		} catch (Throwable t) {
 		}
-	}
-
-	private String parentOff(String parent) {
-		if (parent == null) {
-			return null;
-		}
-		if (parent.equals("cextra")) {
-			String r = this.parentOff("perfpack");
-			if (r != null) {
-				return r;
-			}
-			return "1".equals(this.setting("cextra", "1")) ? null : "Celeritas Extra is off, so this is drawn like vanilla.";
-		}
-		return "1".equals(this.setting(parent, "1")) ? null
-				: "Performance modpack is off, so this isn't running.";
 	}
 
 	// ---------------------------------------------------------------- layout
@@ -641,9 +803,17 @@ public class GuiVideoSettings extends GuiScreen {
 		if (bottom <= top) {
 			return;
 		}
-		drawRect(this.listX, top, this.listX + this.listW, bottom, hovered ? 0xE0000000 : 0x90000000);
+		if (!(o instanceof Header)) {
+			drawRect(this.listX, top, this.listX + this.listW, bottom, hovered ? 0xE0000000 : 0x90000000);
+		}
 		if (y < this.listY || y + ROW_H > this.listBottom) {
 			return; // only partly visible: just the background
+		}
+		if (o instanceof Header) {
+			// mod name above its settings
+			String off = o.inactiveReason() != null ? " §8(not running)" : "";
+			this.fontRendererObj.drawStringWithShadow("§6§l" + o.name + off, this.listX + 4, y + ROW_H - 11, 0xFFFFFF);
+			return;
 		}
 		boolean inactive = !o.usable() || o.inactiveReason() != null;
 		int textY = y + (ROW_H - 8) / 2;

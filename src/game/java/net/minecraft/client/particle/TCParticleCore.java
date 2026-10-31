@@ -23,10 +23,13 @@ public final class TCParticleCore {
 	/** Set from the "pcore" setting every tick. */
 	public static boolean enabled = true;
 
-	private static final double FAR_SQ = 24.0D * 24.0D;
+	// Video Settings: collision check distance, particles kept per kind, off-screen margin
+	public static double FAR_SQ = 24.0D * 24.0D;
+	public static int maxParticles = 2048;
+	public static double cullMargin = 2.0D;
 
 	public static int maxPerLayer() {
-		return enabled ? 2048 : 8192;
+		return enabled ? maxParticles : 8192;
 	}
 
 	/** Whether a particle can move without the block collision check. */

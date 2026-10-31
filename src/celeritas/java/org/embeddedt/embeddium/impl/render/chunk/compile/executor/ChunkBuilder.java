@@ -36,7 +36,7 @@ public class ChunkBuilder {
     private static final int TASK_QUEUE_LIMIT_PER_WORKER = 2;
 
     /** Treasure Client: main-thread chunk build time allowed per frame, and the most builds per frame. */
-    private static final double MAIN_THREAD_BUDGET_NANOS = TimeUnit.MILLISECONDS.toNanos(4);
+    public static double MAIN_THREAD_BUDGET_NANOS = TimeUnit.MILLISECONDS.toNanos(4); // Treasure Client: Chunk Build Time setting
     private static final int MAIN_THREAD_MAX_TASKS = 16;
 
     /**

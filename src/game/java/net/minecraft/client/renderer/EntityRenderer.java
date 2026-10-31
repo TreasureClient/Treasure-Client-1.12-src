@@ -956,7 +956,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					// with ImmediatelyFast off, it is drawn straight onto the screen like vanilla.
 					this.setupOverlayRendering();
 					GlStateManager.alphaFunc(RealOpenGLEnums.GL_GREATER, 0.1F);
-					int tcMode = net.minecraft.client.gui.TreasureMods.immediatelyFast()
+					int tcMode = net.minecraft.client.gui.TreasureMods.hudCache()
 							? net.minecraft.client.gui.TCHudCache.decide(this.mc.ingameGUI)
 							: net.minecraft.client.gui.TCHudCache.DIRECT;
 					if (tcMode == net.minecraft.client.gui.TCHudCache.REDRAW) {
