@@ -79,14 +79,14 @@ public class TCLagMonitor {
 			}
 		});
 		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < Math.min(5, list.size()); i++) {
+		for (int i = 0; i < Math.min(3, list.size()); i++) {
 			long[] st = list.get(i).getValue();
 			if (st[key] <= 0L) break;
 			String name = list.get(i).getKey().getSimpleName();
 			if (name.startsWith("SPacket")) name = name.substring(7);
 			if (sb.length() > 0) sb.append(" §7· ");
-			sb.append("§f").append(name).append(" §7").append(st[key] / 1000000L).append("ms, ").append(st[1])
-					.append("x, ").append(st[1] > 0 ? st[0] / st[1] / 1000L : 0L).append("µs each");
+			sb.append("§f").append(name).append(" §7").append(st[key] / 1000000L).append("ms (")
+					.append(st[1] > 0 ? st[0] / st[1] / 1000L : 0L).append("µs each)");
 		}
 		return sb.length() > 0 ? sb.toString() : "§7none";
 	}
@@ -300,28 +300,6 @@ public class TCLagMonitor {
 		tBuild = tBuildMax = tUpload = tGraph = 0L;
 	}
 
-	/** "terrain 6.1 · entities 2.0 ..." as ms per frame (perFrame) or % of the total. */
-	private static String partLine(long[] sum, long frames, boolean perFrame) {
-		return partLine(sum, frames, perFrame, PART_NAMES);
-	}
-
-	private static String partLine(long[] sum, long frames, boolean perFrame, String[] names) {
-		long all = 0L;
-		for (int k = 0; k < sum.length; k++) all += sum[k];
-		StringBuilder sb = new StringBuilder();
-		for (int k = 0; k < sum.length; k++) {
-			if (sb.length() > 0) sb.append(" §7· ");
-			sb.append("§f").append(names[k]).append(' ');
-			if (perFrame) {
-				long tenths = frames > 0 ? sum[k] / 100000L / frames : 0L;
-				sb.append(tenths / 10).append('.').append(tenths % 10);
-			} else {
-				sb.append(all > 0 ? sum[k] * 100L / all : 0L).append('%');
-			}
-		}
-		return sb.toString();
-	}
-
 	private static void say(Minecraft mc, String s) {
 		mc.ingameGUI.getChatGUI().printChatMessage(new TextComponentString(s));
 	}
@@ -330,81 +308,67 @@ public class TCLagMonitor {
 		return mMs[m] > 0 ? (int) (mFrames[m] * 1000L / mMs[m]) : 0;
 	}
 
+	/** Parts taking at least 5% of the time, biggest first: "terrain 54% · HUD 22%". */
+	private static String bigParts(long[] sum, String[] names) {
+		long all = 0L;
+		for (int k = 0; k < sum.length; k++) all += sum[k];
+		if (all <= 0L) return "§7none";
+		boolean[] used = new boolean[sum.length];
+		StringBuilder sb = new StringBuilder();
+		for (int n = 0; n < sum.length; n++) {
+			int big = -1;
+			for (int k = 0; k < sum.length; k++) if (!used[k] && (big < 0 || sum[k] > sum[big])) big = k;
+			used[big] = true;
+			long pct = sum[big] * 100L / all;
+			if (pct < 5L) break;
+			if (sb.length() > 0) sb.append(" §7· ");
+			sb.append("§f").append(names[big]).append(' ').append(pct).append('%');
+		}
+		return sb.toString();
+	}
+
 	public static void print(Minecraft mc) {
 		if (start < 0L || curMinute < 0) {
 			say(mc, "§6[Lag] §7no data yet");
 			return;
 		}
 		int last = Math.min(curMinute, MINUTES - 1);
-		say(mc, "§6[Lag] §f" + (last + 1) + " min recorded §7(spike = a frame over " + SPIKE_MS + " ms)");
-		// minute table, newest last, at most 20 minutes
-		int from = Math.max(0, last - 19);
-		StringBuilder sb = new StringBuilder();
+		int from = Math.max(0, last - 4);
+		long frames = 0L, ms = 0L, l = 0, d = 0, b = 0;
+		int spikes = 0, worst = 0;
+		long[] spk = new long[PARTS], lspk = new long[LPARTS];
 		for (int m = from; m <= last; m++) {
-			if (sb.length() > 0 && (m - from) % 5 == 0) {
-				say(mc, sb.toString());
-				sb.setLength(0);
-			}
-			int sp = mSpikes[m];
-			String spc = sp == 0 ? "§a" : sp < 5 ? "§e" : "§c";
-			sb.append("§7m").append(m + 1).append(" §f").append(fps(m)).append("fps ").append(spc).append(sp)
-					.append("sp");
-			if (mHeap[m] > 0) sb.append(" §8").append(mHeap[m]).append("MB");
-			sb.append("  ");
-		}
-		if (sb.length() > 0) say(mc, sb.toString());
-
-		// where spike time went, first half of the session vs. the last 5 minutes
-		long l = 0, d = 0, b = 0;
-		for (int m = Math.max(0, last - 4); m <= last; m++) {
+			frames += mFrames[m];
+			ms += mMs[m];
+			spikes += mSpikes[m];
+			worst = Math.max(worst, mWorst[m]);
 			l += mLogic[m];
 			d += mDraw[m];
 			b += mBrowser[m];
+			for (int k = 0; k < PARTS; k++) spk[k] += mPartSpike[m][k];
+			for (int k = 0; k < LPARTS; k++) lspk[k] += mLPartSpike[m][k];
 		}
+		say(mc, "§6[Lag] §f" + (last + 1) + " min §7· last 5 min: §f" + (ms > 0 ? frames * 1000L / ms : 0L)
+				+ " fps, " + spikes + " spikes §7(over " + SPIKE_MS + " ms), worst §f" + worst + " ms");
 		long sum = l + d + b;
 		if (sum > 0) {
-			say(mc, "§7Spike time, last 5 min: §flogic " + (l * 100 / sum) + "% §7· §fdrawing " + (d * 100 / sum)
+			say(mc, "§7Spikes: §flogic " + (l * 100 / sum) + "% §7· §fdrawing " + (d * 100 / sum)
 					+ "% §7· §fbrowser/GPU " + (b * 100 / sum) + "%");
-		}
-		// what the drawing time is made of, last 5 minutes
-		long[] all = new long[PARTS], spk = new long[PARTS];
-		long frames = 0L;
-		for (int m = Math.max(0, last - 4); m <= last; m++) {
-			frames += mFrames[m];
-			for (int k = 0; k < PARTS; k++) {
-				all[k] += mPartAll[m][k];
-				spk[k] += mPartSpike[m][k];
+			say(mc, "§7Drawing: " + bigParts(spk, PART_NAMES));
+			say(mc, "§7Logic: " + bigParts(lspk, LPART_NAMES));
+			if (!pktTypes.isEmpty()) {
+				say(mc, "§7Packets: " + slowestPackets(true));
 			}
-		}
-		say(mc, "§7Drawing, ms per frame, last 5 min: " + partLine(all, frames, true));
-		if (sum > 0) {
-			say(mc, "§7Drawing in spikes, last 5 min: " + partLine(spk, 0L, false));
-		}
-		long[] lall = new long[LPARTS], lspk = new long[LPARTS];
-		for (int m = Math.max(0, last - 4); m <= last; m++) {
-			for (int k = 0; k < LPARTS; k++) {
-				lall[k] += mLPartAll[m][k];
-				lspk[k] += mLPartSpike[m][k];
-			}
-		}
-		say(mc, "§7Logic, ms per frame, last 5 min: " + partLine(lall, frames, true, LPART_NAMES));
-		if (sum > 0) {
-			say(mc, "§7Logic in spikes, last 5 min: " + partLine(lspk, 0L, false, LPART_NAMES));
-		}
-		if (!pktTypes.isEmpty()) {
-			say(mc, "§7Slowest packets, whole session: " + slowestPackets(false));
-			say(mc, "§7Slowest packets in spikes: " + slowestPackets(true));
 		}
 		if (ringCount > 0) {
-			say(mc, "§7Last spikes (time: total = logic + drawing + browser/GPU · packets · chunk rebuilds):");
-			for (int i = 0; i < ringCount; i++) {
+			say(mc, "§7Last spikes (logic / drawing / browser, ms):");
+			for (int i = 0; i < Math.min(5, ringCount); i++) {
 				int[] r = ring[(ringPos - 1 - i + RING * 2) % RING];
-				say(mc, "§8 " + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7= " + r[3] + " + "
-						+ r[4] + " + " + r[5] + " §8· " + r[6] + " pkts · " + r[7] + " chunks"
-						+ (r[8] > 0 ? " · " + r[8] + "MB" : "") + " · most: " + PART_NAMES[r[9]] + " " + r[10]
-						+ "ms, " + LPART_NAMES[r[11]] + " " + r[12] + "ms"
-						+ (r[13] + r[15] + r[16] > 0 ? " · terrain: builds " + r[13] + "ms (slowest " + r[14]
-								+ "), uploads " + r[15] + "ms, visibility " + r[16] + "ms" : ""));
+				say(mc, "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4]
+						+ "/" + r[5] + " · " + PART_NAMES[r[9]] + " " + r[10] + ", " + LPART_NAMES[r[11]] + " "
+						+ r[12] + (r[7] > 0 ? " · " + r[7] + " chunks" : "")
+						+ (r[13] + r[15] + r[16] > 0 ? " · build " + r[13] + " (max " + r[14] + ") upload " + r[15]
+								+ " vis " + r[16] : ""));
 			}
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));

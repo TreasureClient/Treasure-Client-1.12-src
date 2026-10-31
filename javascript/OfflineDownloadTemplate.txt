@@ -570,7 +570,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 /* per-mod settings: gear + expandable config panel */
 .tc-mod { border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); }
 .tc-mod:last-child { border-bottom: 0; }
-.tc-mod { padding: 16px 0; }
+.tc-mod { padding: 18px 0; }
 .tc-mod .tc-row { border-bottom: 0; }
 .tc-gear { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--a-2); background: color-mix(in srgb, var(--a-2) 14%, transparent); color: var(--a-1);
   font-size: 13px; cursor: pointer; margin-left: auto; transition: color var(--tc-fast), border-color var(--tc-fast), transform var(--tc-med) var(--tc-ease); flex: 0 0 auto; }
