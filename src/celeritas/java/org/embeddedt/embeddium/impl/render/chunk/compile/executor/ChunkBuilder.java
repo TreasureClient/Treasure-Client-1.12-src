@@ -352,12 +352,14 @@ public class ChunkBuilder {
     private void executeJobWithLocalContext(ChunkJob job) {
         var localContext = this.localContext;
         GlobalChunkBuildContext.bindMainThread(localContext);
+        long tcT = System.nanoTime();
 
         try {
             job.execute(localContext);
         } finally {
             GlobalChunkBuildContext.bindMainThread(null);
             localContext.cleanup();
+            net.minecraft.client.TCLagMonitor.addBuild(tcT); // Treasure Client: .lag terrain parts
         }
     }
 

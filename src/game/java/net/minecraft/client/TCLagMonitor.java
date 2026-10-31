@@ -128,6 +128,17 @@ public class TCLagMonitor {
 		return L_OTHER_PKTS;
 	}
 
+	// parts of the terrain time with Celeritas, this frame: chunk builds, slowest single build,
+	// uploads to the graphics chip, visibility search (ns)
+	public static long tBuild, tBuildMax, tUpload, tGraph;
+
+	/** Adds one chunk build job's time (Celeritas). */
+	public static void addBuild(long startNs) {
+		long d = EagRuntime.nanoTime() - startNs;
+		tBuild += d;
+		if (d > tBuildMax) tBuildMax = d;
+	}
+
 	/** Current time for timing a part. */
 	public static long now() {
 		return EagRuntime.nanoTime();
@@ -156,7 +167,7 @@ public class TCLagMonitor {
 
 	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
 	// biggest drawing part, its ms, biggest logic part, its ms
-	private static final int[][] ring = new int[RING][13];
+	private static final int[][] ring = new int[RING][17];
 	private static int ringPos, ringCount;
 
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
@@ -239,6 +250,10 @@ public class TCLagMonitor {
 			}
 			r[11] = lbig;
 			r[12] = (int) (lcur[lbig] / 1000000L);
+			r[13] = (int) (tBuild / 1000000L);
+			r[14] = (int) (tBuildMax / 1000000L);
+			r[15] = (int) (tUpload / 1000000L);
+			r[16] = (int) (tGraph / 1000000L);
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
@@ -282,6 +297,7 @@ public class TCLagMonitor {
 		for (int k = 0; k < LPARTS; k++) lcur[k] = 0L;
 		for (int k = 0, n = pktTouched.size(); k < n; k++) pktTouched.get(k)[3] = 0L;
 		pktTouched.clear();
+		tBuild = tBuildMax = tUpload = tGraph = 0L;
 	}
 
 	/** "terrain 6.1 · entities 2.0 ..." as ms per frame (perFrame) or % of the total. */
@@ -386,7 +402,9 @@ public class TCLagMonitor {
 				say(mc, "§8 " + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7= " + r[3] + " + "
 						+ r[4] + " + " + r[5] + " §8· " + r[6] + " pkts · " + r[7] + " chunks"
 						+ (r[8] > 0 ? " · " + r[8] + "MB" : "") + " · most: " + PART_NAMES[r[9]] + " " + r[10]
-						+ "ms, " + LPART_NAMES[r[11]] + " " + r[12] + "ms");
+						+ "ms, " + LPART_NAMES[r[11]] + " " + r[12] + "ms"
+						+ (r[13] + r[15] + r[16] > 0 ? " · terrain: builds " + r[13] + "ms (slowest " + r[14]
+								+ "), uploads " + r[15] + "ms, visibility " + r[16] + "ms" : ""));
 			}
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));

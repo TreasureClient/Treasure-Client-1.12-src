@@ -117,23 +117,29 @@ public abstract class SimpleWorldRenderer<WORLD, SECTIONMANAGER extends RenderSe
         // When a shadow pass preceded this one, it joined the previous frame's searches, applied the chunk events
         // and submitted this frame's searches; joining again here would stall on those, and chunk events must
         // be applied while no search is in flight.
+        long tcG = System.nanoTime(); // Treasure Client: .lag terrain parts (visibility)
         if (!this.renderSectionManager.didShadowPassRunThisFrame()) {
             this.renderSectionManager.finishAllGraphUpdates();
             this.processChunkEvents();
         }
         this.renderSectionManager.runAsyncTasks();
+        net.minecraft.client.TCLagMonitor.tGraph += System.nanoTime() - tcG;
         if (getEffectiveRenderDistance() != this.renderDistance) {
             this.reload();
         }
         this.prepareFrame(viewport, cameraState, updateChunksImmediately);
         // After a shadow pass the uploads already happened there; uploading here would join the searches it submitted,
         // which is only worth it for rebuilds the render thread just waited on.
+        long tcT = System.nanoTime(); // Treasure Client: .lag terrain parts
         if (!this.renderSectionManager.didShadowPassRunThisFrame() || this.renderSectionManager.hasBlockingResultsPending()) {
             this.renderSectionManager.uploadChunks();
         }
+        long tcT2 = System.nanoTime();
+        net.minecraft.client.TCLagMonitor.tUpload += tcT2 - tcT;
         if (this.renderSectionManager.needsUpdate()) {
             this.renderSectionManager.update(viewport, frame, spectator);
         }
+        net.minecraft.client.TCLagMonitor.tGraph += System.nanoTime() - tcT2;
         if (updateChunksImmediately) {
             this.renderSectionManager.uploadChunks();
         }
