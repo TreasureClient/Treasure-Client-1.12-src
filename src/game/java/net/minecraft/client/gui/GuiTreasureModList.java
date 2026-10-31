@@ -357,6 +357,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("Elytra Fix", "Treasure Client", "Built in",
+				"Opens your elytra the moment you press jump in the air, like newer versions of Minecraft, instead of waiting until you start falling and then for the server to answer.",
+				"vsElytraFix") {
+			boolean setting() {
+				return TreasureMods.elytraFix();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("ViaVersion support", "Treasure Client", "Built in",
 				"Shows modern 1.13+ blocks, items and entities on servers that send them.", "via") {
 			boolean setting() {

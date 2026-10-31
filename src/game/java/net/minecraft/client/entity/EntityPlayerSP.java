@@ -956,12 +956,21 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 			}
 		}
 
-		if (this.movementInput.jump && !flag && !this.onGround && this.motionY < 0.0D && !this.isElytraFlying()
-				&& !this.capabilities.isFlying) {
+		// Treasure Client — Elytra Fix: like newer versions, open the elytra on a fresh jump press in
+		// the air (not only once falling) and start gliding right away instead of waiting for the server
+		// to answer. The server still decides: if it says no, its next update closes the elytra again.
+		boolean tcElytraFix = net.minecraft.client.gui.TreasureMods.elytraFix();
+		if (this.movementInput.jump && !flag && !this.onGround && (tcElytraFix || this.motionY < 0.0D)
+				&& !this.isElytraFlying() && !this.capabilities.isFlying
+				&& (!tcElytraFix || (!this.isRiding() && !this.isInWater() && !this.isInLava() && !this.isOnLadder()
+						&& !this.isPotionActive(net.minecraft.init.MobEffects.LEVITATION)))) {
 			ItemStack itemstack = this.getItemStackFromSlot(EntityEquipmentSlot.CHEST);
 
 			if (itemstack.getItem() == Items.ELYTRA && ItemElytra.isBroken(itemstack)) {
 				this.connection.sendPacket(new CPacketEntityAction(this, CPacketEntityAction.Action.START_FALL_FLYING));
+				if (tcElytraFix) {
+					this.setFlag(7, true);
+				}
 			}
 		}
 

@@ -338,6 +338,8 @@ public class TreasureMods {
 	public static boolean hudCache() { return immediatelyFast() && hudCache; }
 	/** Dynamic FPS: frame rate while another window is focused. */
 	public static int backgroundFps() { return bgFps; }
+	/** Elytra Fix: open the elytra the moment jump is pressed in the air, like newer versions. */
+	public static boolean elytraFix() { return vsOn("vsElytraFix", true); }
 	/** VanillaFix: crashes it recovers from within 15 seconds before giving up. */
 	public static int crashRecoveries() { return crashRecoveries; }
 
