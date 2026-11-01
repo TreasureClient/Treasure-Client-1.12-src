@@ -47,6 +47,17 @@ public class GlStateManager {
 	static float statePolygonOffsetFactor = 0.0f;
 	static float statePolygonOffsetUnits = 0.0f;
 
+	/** Treasure Client: the current color as ARGB. */
+	public static int tcColorARGB() {
+		return (tcByte(stateColorA) << 24) | (tcByte(stateColorR) << 16) | (tcByte(stateColorG) << 8)
+				| tcByte(stateColorB);
+	}
+
+	private static int tcByte(float f) {
+		int i = (int) (f * 255.0f + 0.5f);
+		return i < 0 ? 0 : (i > 255 ? 255 : i);
+	}
+
 	static float stateColorR = 1.0f;
 	static float stateColorG = 1.0f;
 	static float stateColorB = 1.0f;

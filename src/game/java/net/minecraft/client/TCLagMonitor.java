@@ -54,6 +54,7 @@ public class TCLagMonitor {
 		if (p == null) {
 			return;
 		}
+		addChannel(p, ns);
 		Class<?> c = p.getClass();
 		long[] st = pktTypes.get(c);
 		if (st == null) {
@@ -66,6 +67,37 @@ public class TCLagMonitor {
 			pktTouched.add(st);
 		}
 		st[3] += ns + 1L; // +1 so a 0 ns packet still counts as touched
+	}
+
+	// plugin message time per channel, so a slow CustomPayload can be traced to its sender
+	private static final java.util.HashMap<String, long[]> chanTimes = new java.util.HashMap<String, long[]>();
+
+	private static void addChannel(Object p, long ns) {
+		if (!(p instanceof net.minecraft.network.play.server.SPacketCustomPayload)) {
+			return;
+		}
+		String ch = ((net.minecraft.network.play.server.SPacketCustomPayload) p).getChannelName();
+		long[] t = chanTimes.get(ch);
+		if (t == null) {
+			if (chanTimes.size() > 64) {
+				return;
+			}
+			t = new long[1];
+			chanTimes.put(ch, t);
+		}
+		t[0] += ns;
+	}
+
+	private static String slowestChannel() {
+		String best = null;
+		long bt = 0L;
+		for (java.util.Map.Entry<String, long[]> e : chanTimes.entrySet()) {
+			if (e.getValue()[0] > bt) {
+				bt = e.getValue()[0];
+				best = e.getKey();
+			}
+		}
+		return best;
 	}
 
 	/** The packet types that took the most time (in spikes if there were any), slowest first. */
@@ -84,6 +116,10 @@ public class TCLagMonitor {
 			if (st[key] <= 0L) break;
 			String name = list.get(i).getKey().getSimpleName();
 			if (name.startsWith("SPacket")) name = name.substring(7);
+			if (name.equals("CustomPayload")) {
+				String ch = slowestChannel();
+				if (ch != null) name += " [" + ch + "]";
+			}
 			if (sb.length() > 0) sb.append(" §7· ");
 			sb.append("§f").append(name).append(" §7").append(st[key] / 1000000L).append("ms (")
 					.append(st[1] > 0 ? st[0] / st[1] / 1000L : 0L).append("µs each)");
