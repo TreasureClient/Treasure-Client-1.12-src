@@ -94,6 +94,7 @@ public final class TreasureCeleritas {
             LOGGER.error("Could not clean up Celeritas", t2);
         }
         renderer = null;
+        tcLastWorld = null;
     }
 
     /**
@@ -125,6 +126,7 @@ public final class TreasureCeleritas {
                 LOGGER.error("Could not shut down Celeritas", t);
             }
             renderer = null;
+            tcLastWorld = null;
         }
         if (mc.world != null && mc.renderGlobal != null) {
             mc.renderGlobal.loadRenderers();
@@ -139,7 +141,12 @@ public final class TreasureCeleritas {
         try {
             RenderDevice.enterManagedCode();
             try {
-                renderer().setWorld(isActive() ? world : null);
+                WorldClient target = isActive() ? world : null;
+                // Treasure Client: setWorld builds a fresh renderer for a new world, so the
+                // reload that RenderGlobal.loadRenderers does right after can be skipped
+                tcJustBuilt = target != null && target != tcLastWorld;
+                tcLastWorld = target;
+                renderer().setWorld(target);
             } finally {
                 RenderDevice.exitManagedCode();
             }
@@ -152,8 +159,15 @@ public final class TreasureCeleritas {
      * Called at the end of RenderGlobal.loadRenderers. Returns false if Celeritas
      * just failed, meaning RenderGlobal must set up vanilla rendering instead.
      */
+    private static WorldClient tcLastWorld;
+    private static boolean tcJustBuilt;
+
     public static boolean reload() {
         if (!isActive()) {
+            return true;
+        }
+        if (tcJustBuilt) {
+            tcJustBuilt = false; // built a moment ago by setWorld
             return true;
         }
         try {

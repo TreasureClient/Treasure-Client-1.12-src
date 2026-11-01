@@ -169,7 +169,7 @@ public class GuiIngame extends Gui {
 				|| this.mc.playerController.isSpectator()) {
 			return Long.MIN_VALUE;
 		}
-		boolean perTick = false;
+		boolean perTick = false, perTwoTicks = false;
 		long h = 1469598103934665603L;
 		h = tcMix(h, this.mc.displayWidth);
 		h = tcMix(h, this.mc.displayHeight);
@@ -192,7 +192,7 @@ public class GuiIngame extends Gui {
 			h = tcMix(h, s.func_190916_E());
 			h = tcMix(h, s.getItemDamage());
 			if (s.hasEffect()) {
-				perTick = true; // enchantment glint moves
+				perTwoTicks = true; // enchantment glint moves (10 updates a second is plenty)
 			}
 		}
 		// health, food, armor, air, XP
@@ -233,8 +233,10 @@ public class GuiIngame extends Gui {
 			perTick = true;
 		}
 		// chat lines fade out over ticks
-		if (this.persistantChatGUI.tcNewestLineCounter() > this.updateCounter - 200) {
-			perTick = true;
+		if (!this.mc.ingameGUI.getChatGUI().getChatOpen()
+				&& this.persistantChatGUI.tcNewestLineCounter() > this.updateCounter - 202
+				&& this.persistantChatGUI.tcChatFading(this.updateCounter)) {
+			perTick = true; // only the last second of a line's life animates
 		}
 		// the always-on FPS / position line in the corner
 		if (gs.hudFps) {
@@ -253,6 +255,8 @@ public class GuiIngame extends Gui {
 		}
 		if (perTick) {
 			h = tcMix(h, this.updateCounter);
+		} else if (perTwoTicks) {
+			h = tcMix(h, this.updateCounter >> 1);
 		}
 		return h == Long.MIN_VALUE ? 0L : h;
 	}
