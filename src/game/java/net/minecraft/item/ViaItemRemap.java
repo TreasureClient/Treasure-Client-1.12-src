@@ -68,6 +68,7 @@ public final class ViaItemRemap {
 	 * as our item (same count, original NBT preserved); otherwise return it as-is.
 	 */
 	public static ItemStack remap(ItemStack st) {
+		int at = 0; // which step failed, for the dump command (never touch the caught error: it can be null)
 		try {
 			if (st == null || st.func_190926_b()) {
 				return st;
@@ -77,6 +78,7 @@ public final class ViaItemRemap {
 			}
 			// 0) Most reliable: the original item id ViaBackwards saved in the NBT.
 			//    Works even when the server gave the item a custom name ("Spearmace").
+			at = 1;
 			String backup = fromBackup(st);
 			if (backup != null) {
 				ItemStack r = swap(st, backup);
@@ -84,23 +86,24 @@ public final class ViaItemRemap {
 					return r;
 				}
 			}
+			// Down-mapped modern items always carry a custom name ("1.20.5 Mace"); plain
+			// items don't, so they skip the name matching (keeps equipment packets cheap).
+			at = 2;
+			if (!st.hasDisplayName()) {
+				return st;
+			}
 			String disp = st.getDisplayName();
 			if (disp == null) {
 				return st;
 			}
+			at = 3;
 			String lower = clean(disp);
-			// Treasure Client: matching the name against hundreds of item names is remembered
-			// per (item, name). Only the matching is remembered: whether our item exists is
-			// checked every time, so an early miss (before modern items were ready) can't stick.
-			String key = Item.getIdFromItem(st.getItem()) + "|" + lower;
-			String[] names = nameCache.get(key);
+			at = 4;
+			String[] names = candidates(st, lower);
 			if (names == null) {
-				names = candidates(st, lower);
-				if (nameCache.size() > 2048) {
-					nameCache.clear();
-				}
-				nameCache.put(key, names);
+				return st;
 			}
+			at = 5;
 			for (int i = 0; i < names.length; i++) {
 				ItemStack r = swap(st, names[i]);
 				if (r != null) {
@@ -108,13 +111,13 @@ public final class ViaItemRemap {
 				}
 			}
 		} catch (Throwable t) {
-			// never let item remapping break the client
+			lastError = "remap failed at step " + at;
 		}
 		return st;
 	}
 
-	private static final java.util.HashMap<String, String[]> nameCache = new java.util.HashMap<String, String[]>();
-	private static final String[] NO_NAMES = new String[0];
+	/** Last error inside remap (shown by the dump command), or null. */
+	public static String lastError;
 
 	/** For the dump command: what the name matched and whether the cache had it. */
 	public static String tcDebug(ItemStack st) {
@@ -123,14 +126,28 @@ public final class ViaItemRemap {
 				return "empty";
 			}
 			String lower = clean(st.getDisplayName());
-			String key = Item.getIdFromItem(st.getItem()) + "|" + lower;
 			String[] c = candidates(st, lower);
+			if (c == null) c = new String[0];
 			StringBuilder sb = new StringBuilder("name='").append(lower).append("' matches=");
 			for (int i = 0; i < c.length && i < 4; i++) {
 				sb.append(i > 0 ? "," : "").append(c[i]).append(ViaItems.getByName(c[i]) == null ? "(missing)" : "");
 			}
 			if (c.length == 0) sb.append("none");
-			sb.append(" cached=").append(nameCache.containsKey(key));
+			sb.append(" customName=").append(st.hasDisplayName());
+			try {
+				sb.append(" backup=").append(fromBackup(st));
+			} catch (Throwable t) {
+				sb.append(" backup-error=").append(t);
+			}
+			for (int i = 0; i < c.length && i < 2; i++) {
+				try {
+					ItemStack r = swap(st, c[i]);
+					sb.append(" swap(").append(c[i]).append(")=").append(r == null ? "null" : "ok");
+				} catch (Throwable t) {
+					sb.append(" swap(").append(c[i]).append(")-error=").append(t);
+				}
+			}
+			sb.append(" lastError=").append(lastError);
 			return sb.toString();
 		} catch (Throwable t) {
 			return "error " + t;
@@ -168,7 +185,14 @@ public final class ViaItemRemap {
 				out.add(pr[1]);
 			}
 		}
-		return out == null ? NO_NAMES : out.toArray(new String[out.size()]);
+		if (out == null) {
+			return null;
+		}
+		String[] arr = new String[out.size()];
+		for (int i = 0; i < arr.length; i++) {
+			arr[i] = out.get(i);
+		}
+		return arr;
 	}
 
 	/** version ("1_21_11") -> (id -> registry name), parsed from {@link ViaItemIds} on first use. */
@@ -262,7 +286,12 @@ public final class ViaItemRemap {
 		}
 		ItemStack r = new ItemStack(via, st.func_190916_E());
 		if (st.hasTagCompound()) {
-			r.setTagCompound(st.getTagCompound().copy());
+			try {
+				r.setTagCompound(st.getTagCompound().copy());
+			} catch (Throwable t) {
+				lastError = "nbt copy failed";
+				r.setTagCompound(st.getTagCompound()); // share it rather than lose the swap
+			}
 		}
 		return r;
 	}
