@@ -323,7 +323,8 @@ public class TreasureMods {
 					} catch (Throwable t2) {}
 					String verdict = ">> VERDICT: held=" + (ours ? ("OURS id " + vid) : ("vanilla id " + vid))
 							+ " | mace reg=" + maceStr + " | remap-now=" + (changes ? "SWAPS" : "no-op")
-							+ " | Via " + (viaEnabled() ? "ON" : "OFF");
+							+ " | Via " + (viaEnabled() ? "ON" : "OFF")
+							+ " | " + net.minecraft.item.ViaItemRemap.tcDebug(st);
 					mc.ingameGUI.getChatGUI().printChatMessage(
 							new net.minecraft.util.text.TextComponentString(verdict));
 				}

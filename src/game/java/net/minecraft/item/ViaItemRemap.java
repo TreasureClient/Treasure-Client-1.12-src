@@ -89,19 +89,20 @@ public final class ViaItemRemap {
 				return st;
 			}
 			String lower = clean(disp);
-			// Treasure Client: the name lookup below checks hundreds of names, so each
-			// (item, name) result is remembered instead of worked out for every packet
+			// Treasure Client: matching the name against hundreds of item names is remembered
+			// per (item, name). Only the matching is remembered: whether our item exists is
+			// checked every time, so an early miss (before modern items were ready) can't stick.
 			String key = Item.getIdFromItem(st.getItem()) + "|" + lower;
-			String name = nameCache.get(key);
-			if (name == null) {
-				name = resolveName(st, lower);
+			String[] names = nameCache.get(key);
+			if (names == null) {
+				names = candidates(st, lower);
 				if (nameCache.size() > 2048) {
 					nameCache.clear();
 				}
-				nameCache.put(key, name == null ? "" : name);
+				nameCache.put(key, names);
 			}
-			if (name != null && !name.isEmpty()) {
-				ItemStack r = swap(st, name);
+			for (int i = 0; i < names.length; i++) {
+				ItemStack r = swap(st, names[i]);
 				if (r != null) {
 					return r;
 				}
@@ -112,11 +113,34 @@ public final class ViaItemRemap {
 		return st;
 	}
 
-	private static final java.util.HashMap<String, String> nameCache = new java.util.HashMap<String, String>();
+	private static final java.util.HashMap<String, String[]> nameCache = new java.util.HashMap<String, String[]>();
+	private static final String[] NO_NAMES = new String[0];
 
-	/** Usable item name for this display name (same order as before), or null. */
-	private static String resolveName(ItemStack st, String lower) {
+	/** For the dump command: what the name matched and whether the cache had it. */
+	public static String tcDebug(ItemStack st) {
+		try {
+			if (st == null || st.func_190926_b()) {
+				return "empty";
+			}
+			String lower = clean(st.getDisplayName());
+			String key = Item.getIdFromItem(st.getItem()) + "|" + lower;
+			String[] c = candidates(st, lower);
+			StringBuilder sb = new StringBuilder("name='").append(lower).append("' matches=");
+			for (int i = 0; i < c.length && i < 4; i++) {
+				sb.append(i > 0 ? "," : "").append(c[i]).append(ViaItems.getByName(c[i]) == null ? "(missing)" : "");
+			}
+			if (c.length == 0) sb.append("none");
+			sb.append(" cached=").append(nameCache.containsKey(key));
+			return sb.toString();
+		} catch (Throwable t) {
+			return "error " + t;
+		}
+	}
+
+	/** Item names this display name could be, in the order they're tried. */
+	private static String[] candidates(ItemStack st, String lower) {
 		ensure();
+		List<String> out = null;
 		// 1) Exact name: ViaBackwards labels a down-mapped item "<version> <Name>",
 		//    e.g. "1.21 Wind Charge" — strip the version, look up the real name.
 		String bare = stripVersion(lower);
@@ -124,29 +148,27 @@ public final class ViaItemRemap {
 		if (exact == null && bare != lower) {
 			exact = exactNames.get(lower);
 		}
-		if (exact != null && usable(st, exact)) {
-			return exact;
+		if (exact != null) {
+			out = new ArrayList<String>();
+			out.add(exact);
 		}
 		// 2) A renamed spear ("Spearmace") down-mapped to a sword: spear of that material.
 		if (lower.contains("spear")) {
 			String sp = spearFor(st.getItem());
-			if (sp != null && usable(st, sp)) {
-				return sp;
+			if (sp != null) {
+				if (out == null) out = new ArrayList<String>();
+				out.add(sp);
 			}
 		}
 		// 3) Fallback: the name merely contains one of our item names.
 		for (int i = 0; i < phrases.size(); i++) {
 			String[] pr = phrases.get(i);
-			if (pr[0].length() >= 4 && lower.contains(pr[0]) && usable(st, pr[1])) {
-				return pr[1];
+			if (pr[0].length() >= 4 && lower.contains(pr[0])) {
+				if (out == null) out = new ArrayList<String>();
+				out.add(pr[1]);
 			}
 		}
-		return null;
-	}
-
-	private static boolean usable(ItemStack st, String name) {
-		Item via = ViaItems.getByName(name);
-		return via != null && via != st.getItem();
+		return out == null ? NO_NAMES : out.toArray(new String[out.size()]);
 	}
 
 	/** version ("1_21_11") -> (id -> registry name), parsed from {@link ViaItemIds} on first use. */
