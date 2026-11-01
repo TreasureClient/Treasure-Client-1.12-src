@@ -1545,8 +1545,10 @@ public class Minecraft implements IThreadListener {
 		}
 
 		if (!this.isGamePaused) {
+			long tcSnd = TCLagMonitor.now(); // Treasure Client: .lag "sounds/music"
 			this.mcMusicTicker.update();
 			this.mcSoundHandler.update();
+			TCLagMonitor.addLogic(TCLagMonitor.L_SOUND, tcSnd);
 		}
 
 		if (this.world != null) {

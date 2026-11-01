@@ -33,9 +33,9 @@ public class TCLagMonitor {
 
 	// parts of the logic time (game ticks), timed by the tick code and the network code
 	public static final int L_CHUNK_PKTS = 0, L_ENTITY_PKTS = 1, L_OTHER_PKTS = 2, L_ENTITIES = 3, L_WORLD = 4,
-			L_PARTICLES = 5, L_OTHER = 6, LPARTS = 7;
+			L_PARTICLES = 5, L_OTHER = 6, L_SOUND = 7, LPARTS = 8;
 	private static final String[] LPART_NAMES = { "chunk packets", "entity packets", "other packets",
-			"entity updates", "world updates", "particles", "other" };
+			"entity updates", "world updates", "particles", "other", "sounds/music" };
 	private static final long[] lcur = new long[LPARTS];
 	private static final long[][] mLPartAll = new long[MINUTES][LPARTS];
 	private static final long[][] mLPartSpike = new long[MINUTES][LPARTS];
@@ -132,6 +132,9 @@ public class TCLagMonitor {
 	// uploads to the graphics chip, visibility search (ns)
 	public static long tBuild, tBuildMax, tUpload, tGraph;
 
+	// parts of a HUD redraw this frame: hotbar, chat, scoreboard (ns); the rest of the HUD is "other"
+	public static long hHotbar, hChat, hBoard;
+
 	/** Adds one chunk build job's time (Celeritas). */
 	public static void addBuild(long startNs) {
 		long d = EagRuntime.nanoTime() - startNs;
@@ -167,7 +170,7 @@ public class TCLagMonitor {
 
 	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
 	// biggest drawing part, its ms, biggest logic part, its ms
-	private static final int[][] ring = new int[RING][17];
+	private static final int[][] ring = new int[RING][20];
 	private static int ringPos, ringCount;
 
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
@@ -193,7 +196,7 @@ public class TCLagMonitor {
 		for (int k = 0; k < OTHER; k++) timed += cur[k];
 		cur[OTHER] = Math.max(0L, drawNs - timed);
 		long ltimed = 0L;
-		for (int k = 0; k < L_OTHER; k++) ltimed += lcur[k];
+		for (int k = 0; k < LPARTS; k++) if (k != L_OTHER) ltimed += lcur[k];
 		lcur[L_OTHER] = Math.max(0L, logicNs - ltimed);
 		if (now - lastHeapRead > 5000L) {
 			lastHeapRead = now;
@@ -254,6 +257,9 @@ public class TCLagMonitor {
 			r[14] = (int) (tBuildMax / 1000000L);
 			r[15] = (int) (tUpload / 1000000L);
 			r[16] = (int) (tGraph / 1000000L);
+			r[17] = (int) (hHotbar / 1000000L);
+			r[18] = (int) (hChat / 1000000L);
+			r[19] = (int) (hBoard / 1000000L);
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
@@ -298,6 +304,7 @@ public class TCLagMonitor {
 		for (int k = 0, n = pktTouched.size(); k < n; k++) pktTouched.get(k)[3] = 0L;
 		pktTouched.clear();
 		tBuild = tBuildMax = tUpload = tGraph = 0L;
+		hHotbar = hChat = hBoard = 0L;
 	}
 
 	private static void say(Minecraft mc, String s) {
@@ -365,7 +372,9 @@ public class TCLagMonitor {
 			for (int i = 0; i < Math.min(5, ringCount); i++) {
 				int[] r = ring[(ringPos - 1 - i + RING * 2) % RING];
 				say(mc, "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4]
-						+ "/" + r[5] + " · " + PART_NAMES[r[9]] + " " + r[10] + ", " + LPART_NAMES[r[11]] + " "
+						+ "/" + r[5] + " · " + PART_NAMES[r[9]] + " " + r[10]
+						+ (r[9] == HUD && r[10] >= 8 ? " (hotbar " + r[17] + " chat " + r[18] + " board " + r[19] + ")" : "")
+						+ ", " + LPART_NAMES[r[11]] + " "
 						+ r[12] + (r[7] > 0 ? " · " + r[7] + " chunks" : "")
 						+ (r[13] + r[15] + r[16] > 0 ? " · build " + r[13] + " (max " + r[14] + ") upload " + r[15]
 								+ " vis " + r[16] : ""));
