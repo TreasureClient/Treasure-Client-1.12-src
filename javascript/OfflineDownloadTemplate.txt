@@ -1061,6 +1061,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
                 <div class="tc-cfg-row"><span>Draw twirl (new items spin into your hand)</span><div class="tc-sw on" data-mod="taDraw" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Sway (item leans when you turn)</span><div class="tc-sw on" data-mod="taSway" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Block-hit bounce (1.8 servers, needs 1.7 sword blocking)</span><div class="tc-sw on" data-mod="taBlockHit" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Eating (bites, squash and wobble; bottles tip up as you drink)</span><div class="tc-sw on" data-mod="taEat" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Throwing (snowballs, pearls, potions, wind and fire charges)</span><div class="tc-sw on" data-mod="taThrow" style="margin-left:auto;"><i></i></div></div>
                 <div class="tc-cfg-row"><span>Particles</span>
                   <div class="tc-seg tc-seg-sm" data-seg="taParticles">
                     <button data-val="off">Off</button>
@@ -1326,7 +1328,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1496,6 +1498,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'taParticles=' + (state.taParticles || 'treasure'),
           'taTotemFx=' + (state.taTotemFx === false ? 0 : 1),
           'taHitFx=' + (state.taHitFx === false ? 0 : 1),
+          'taEat=' + (state.taEat === false ? 0 : 1),
+          'taThrow=' + (state.taThrow === false ? 0 : 1),
           'perfpack=' + (state.perfpack === false ? 0 : 1),
           'fullbright=' + (state.fullbright ? 1 : 0),
           'clearWater=' + (state.clearWater === false ? 0 : 1),

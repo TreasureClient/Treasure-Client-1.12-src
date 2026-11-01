@@ -150,7 +150,9 @@ public class TreasureMods {
 	// Treasure Client: Treasure Animations
 	private static boolean tAnim = false, taPunch = true, taDraw = true, taSway = true, taBlockHit = true;
 	private static int taStyle = 0, taSpeed = 100, taParticles = 1;
-	private static boolean taTotemFx = true, taHitFx = true;
+	private static boolean taTotemFx = true, taHitFx = true, taEat = true, taThrow = true;
+	public static boolean taEat() { return taEat; }
+	public static boolean taThrow() { return taThrow; }
 	public static int taParticles() { return taParticles; }
 	public static boolean taTotemFx() { return tAnim && taParticles != 0 && taTotemFx; }
 	public static boolean taHitFx() { return taHitFx; }
@@ -457,7 +459,7 @@ public class TreasureMods {
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true; oaHitSwing = true;
 			tAnim = false; taPunch = true; taDraw = true; taSway = true; taBlockHit = true; taStyle = 0; taSpeed = 100;
-			taParticles = 1; taTotemFx = true; taHitFx = true;
+			taParticles = 1; taTotemFx = true; taHitFx = true; taEat = true; taThrow = true;
 			autoGG = false; agGlhf = false; agMessage = "gg"; agDelay = 1000;
 			fullbright = false; clearWater = true; satDisplay = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
@@ -521,6 +523,8 @@ public class TreasureMods {
 				else if (k.equals("taParticles")) taParticles = v.equals("off") ? 0 : v.equals("rainbow") ? 2 : v.equals("frost") ? 3 : v.equals("ember") ? 4 : 1;
 				else if (k.equals("taTotemFx")) taTotemFx = v.equals("1");
 				else if (k.equals("taHitFx")) taHitFx = v.equals("1");
+				else if (k.equals("taEat")) taEat = v.equals("1");
+				else if (k.equals("taThrow")) taThrow = v.equals("1");
 				else if (k.equals("autoGG")) autoGG = v.equals("1");
 				else if (k.equals("agGlhf")) agGlhf = v.equals("1");
 				else if (k.equals("agMsg")) agMessage = v.equals("ggwp") ? "gg wp" : v.equals("goodgame") ? "good game" : v.equals("gf") ? "gf" : v.equals("ggs") ? "ggs" : "gg";
