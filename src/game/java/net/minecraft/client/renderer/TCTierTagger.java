@@ -49,9 +49,23 @@ public final class TCTierTagger {
 			}
 			return display;
 		}
-		String tag = format(data, TreasureMods.tierTaggerMode());
-		return tag == null ? display : tag + " §8| §r" + display;
+		// Treasure Client: the finished name is remembered (it was rebuilt with regex splits
+		// for every player, every frame)
+		String mode = TreasureMods.tierTaggerMode();
+		String ck = mode + '\u0000' + data + '\u0000' + display;
+		String out = SHOWN.get(ck);
+		if (out == null) {
+			String tag = format(data, mode);
+			out = tag == null ? display : tag + " §8| §r" + display;
+			if (SHOWN.size() > 512) {
+				SHOWN.clear();
+			}
+			SHOWN.put(ck, out);
+		}
+		return out;
 	}
+
+	private static final Map<String, String> SHOWN = new HashMap<>();
 
 	private static boolean isValidName(String n) {
 		int len = n.length();

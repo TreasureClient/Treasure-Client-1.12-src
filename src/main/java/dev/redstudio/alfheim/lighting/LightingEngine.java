@@ -80,20 +80,24 @@ public final class LightingEngine {
 	private final NeighborInfo[] neighborInfos = new NeighborInfo[6];
 	private DeduplicatedLongQueue currentQueue;
 
+	private static final int TC_QUEUE_START = 1024;
+
 	public LightingEngine(final World world) {
 		this.world = world;
 
-		initialBrightenings = new DeduplicatedLongQueue(16384);
-		initialDarkenings = new DeduplicatedLongQueue(16384);
+		// Treasure Client: start small (they grow when needed). At 16384 each, the 36
+		// queues took ~14 MB for every new world, so each server switch froze the game.
+		initialBrightenings = new DeduplicatedLongQueue(TC_QUEUE_START);
+		initialDarkenings = new DeduplicatedLongQueue(TC_QUEUE_START);
 
 		for (int i = 0; i < EnumSkyBlock.values().length; ++i)
-			lightUpdateQueues[i] = new DeduplicatedLongQueue(16384);
+			lightUpdateQueues[i] = new DeduplicatedLongQueue(TC_QUEUE_START);
 
 		for (int i = 0; i < darkeningQueues.length; ++i)
-			darkeningQueues[i] = new DeduplicatedLongQueue(16384);
+			darkeningQueues[i] = new DeduplicatedLongQueue(TC_QUEUE_START);
 
 		for (int i = 0; i < brighteningQueues.length; ++i)
-			brighteningQueues[i] = new DeduplicatedLongQueue(16384);
+			brighteningQueues[i] = new DeduplicatedLongQueue(TC_QUEUE_START);
 
 		for (int i = 0; i < neighborInfos.length; ++i)
 			neighborInfos[i] = new NeighborInfo();

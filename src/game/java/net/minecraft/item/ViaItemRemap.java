@@ -89,40 +89,20 @@ public final class ViaItemRemap {
 				return st;
 			}
 			String lower = clean(disp);
-			ensure();
-			// 1) Exact name: ViaBackwards labels a down-mapped item "<version> <Name>",
-			//    e.g. "1.21 Wind Charge" — strip the version, look up the real name.
-			String bare = stripVersion(lower);
-			String exact = exactNames.get(bare);
-			if (exact == null && bare != lower) {
-				exact = exactNames.get(lower);
+			// Treasure Client: the name lookup below checks hundreds of names, so each
+			// (item, name) result is remembered instead of worked out for every packet
+			String key = Item.getIdFromItem(st.getItem()) + "|" + lower;
+			String name = nameCache.get(key);
+			if (name == null) {
+				name = resolveName(st, lower);
+				if (nameCache.size() > 2048) {
+					nameCache.clear();
+				}
+				nameCache.put(key, name == null ? "" : name);
 			}
-			if (exact != null) {
-				ItemStack r = swap(st, exact);
+			if (name != null && !name.isEmpty()) {
+				ItemStack r = swap(st, name);
 				if (r != null) {
-					return r;
-				}
-			}
-			// 2) A renamed spear ("Spearmace") down-mapped to a sword: spear of that material.
-			if (lower.contains("spear")) {
-				String sp = spearFor(st.getItem());
-				if (sp != null) {
-					ItemStack r = swap(st, sp);
-					if (r != null) {
-						return r;
-					}
-				}
-			}
-			// 3) Fallback: the name merely contains one of our item names.
-			for (int i = 0; i < phrases.size(); i++) {
-				String[] pr = phrases.get(i);
-				if (pr[0].length() >= 4 && lower.contains(pr[0])) {
-					// Direct array lookup, not Item.getByNameOrId — the registry can
-					// fail to resolve our high ids in some runtimes.
-					ItemStack r = swap(st, pr[1]);
-					if (r == null) {
-						continue; // not registered / already ours — try the next phrase
-					}
 					return r;
 				}
 			}
@@ -130,6 +110,43 @@ public final class ViaItemRemap {
 			// never let item remapping break the client
 		}
 		return st;
+	}
+
+	private static final java.util.HashMap<String, String> nameCache = new java.util.HashMap<String, String>();
+
+	/** Usable item name for this display name (same order as before), or null. */
+	private static String resolveName(ItemStack st, String lower) {
+		ensure();
+		// 1) Exact name: ViaBackwards labels a down-mapped item "<version> <Name>",
+		//    e.g. "1.21 Wind Charge" — strip the version, look up the real name.
+		String bare = stripVersion(lower);
+		String exact = exactNames.get(bare);
+		if (exact == null && bare != lower) {
+			exact = exactNames.get(lower);
+		}
+		if (exact != null && usable(st, exact)) {
+			return exact;
+		}
+		// 2) A renamed spear ("Spearmace") down-mapped to a sword: spear of that material.
+		if (lower.contains("spear")) {
+			String sp = spearFor(st.getItem());
+			if (sp != null && usable(st, sp)) {
+				return sp;
+			}
+		}
+		// 3) Fallback: the name merely contains one of our item names.
+		for (int i = 0; i < phrases.size(); i++) {
+			String[] pr = phrases.get(i);
+			if (pr[0].length() >= 4 && lower.contains(pr[0]) && usable(st, pr[1])) {
+				return pr[1];
+			}
+		}
+		return null;
+	}
+
+	private static boolean usable(ItemStack st, String name) {
+		Item via = ViaItems.getByName(name);
+		return via != null && via != st.getItem();
 	}
 
 	/** version ("1_21_11") -> (id -> registry name), parsed from {@link ViaItemIds} on first use. */

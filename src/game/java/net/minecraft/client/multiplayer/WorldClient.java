@@ -131,11 +131,21 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 		return allowEmpty || !this.getChunkProvider().provideChunk(x, z).isEmpty();
 	}
 
+	// Treasure Client: the list only changes when you enter another chunk or change render
+	// distance, so it isn't rebuilt (hundreds of new objects) on every tick
+	private int tcListR = -1, tcListX, tcListZ;
+
 	protected void buildChunkCoordList() {
-		this.viewableChunks.clear();
 		int i = this.mc.gameSettings.renderDistanceChunks;
 		int j = MathHelper.floor(this.mc.player.posX / 16.0D);
 		int k = MathHelper.floor(this.mc.player.posZ / 16.0D);
+		if (i == this.tcListR && j == this.tcListX && k == this.tcListZ && !this.viewableChunks.isEmpty()) {
+			return;
+		}
+		this.tcListR = i;
+		this.tcListX = j;
+		this.tcListZ = k;
+		this.viewableChunks.clear();
 
 		for (int l = -i; l <= i; ++l) {
 			for (int i1 = -i; i1 <= i; ++i1) {

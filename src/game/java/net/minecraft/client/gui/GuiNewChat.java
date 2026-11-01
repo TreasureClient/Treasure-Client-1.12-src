@@ -32,6 +32,29 @@ public class GuiNewChat extends Gui {
 		return this.drawnChatLines.isEmpty() ? Integer.MIN_VALUE : this.drawnChatLines.get(0).getUpdatedCounter();
 	}
 
+	/**
+	 * Treasure Client: true while a shown chat line is fading out (its last second) or
+	 * just disappeared. Before that a line is drawn fully opaque and doesn't change.
+	 */
+	public boolean tcChatFading(int updateCounter) {
+		int n = Math.min(this.drawnChatLines.size(), this.scrollPos + this.getLineCount());
+		for (int k = this.scrollPos; k < n; ++k) {
+			ChatLine line = this.drawnChatLines.get(k);
+			if (line == null) {
+				continue;
+			}
+			int age = updateCounter - line.getUpdatedCounter();
+			if (age < 178) {
+				continue; // newer lines are further up the list... and fully visible
+			}
+			if (age <= 201) {
+				return true;
+			}
+			break; // older lines are already gone
+		}
+		return false;
+	}
+
 	public void drawChat(int updateCounter) {
 		if (this.mc.gameSettings.chatVisibility != EntityPlayer.EnumChatVisibility.HIDDEN) {
 			int i = this.getLineCount();

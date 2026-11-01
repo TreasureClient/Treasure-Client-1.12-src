@@ -605,6 +605,9 @@ public class TreasureMods {
 		}
 	}
 
+	private static int tcInWorldWritten = -1;
+	private static long tcInWorldWriteAt;
+
 	public static void tick(Minecraft mc) {
 		try {
 			if (mc == null || mc.gameSettings == null) return;
@@ -657,7 +660,12 @@ public class TreasureMods {
 				lastInWorldWrite = now;
 				try {
 					boolean inWorld = (mc.world != null && mc.player != null);
-					EagRuntime.setStorage("tcinworld", new byte[] { (byte) (inWorld ? 1 : 0) });
+					int iw = inWorld ? 1 : 0;
+					if (iw != tcInWorldWritten || now - tcInWorldWriteAt > 5000L) { // only on change (plus a slow refresh)
+						tcInWorldWritten = iw;
+						tcInWorldWriteAt = now;
+						EagRuntime.setStorage("tcinworld", new byte[] { (byte) iw });
+					}
 				} catch (Throwable t) {}
 			}
 

@@ -154,7 +154,28 @@ public abstract class LayerArmorBase<T extends ModelBase> implements LayerRender
 		return this.getArmorResource(armor, p_177181_2_, (String) null);
 	}
 
+	// Treasure Client: texture per (material, layer, overlay), found without building a
+	// formatted string for every armor piece on every player each frame
+	private static final java.util.IdentityHashMap<ItemArmor.ArmorMaterial, ResourceLocation[]> TC_ARMOR_TEX = new java.util.IdentityHashMap<>();
+
 	private ResourceLocation getArmorResource(ItemArmor armor, boolean p_177178_2_, String p_177178_3_) {
+		int slot = (p_177178_2_ ? 1 : 0) + (p_177178_3_ == null ? 0 : "overlay".equals(p_177178_3_) ? 2 : -100);
+		if (slot >= 0) {
+			ResourceLocation[] arr = TC_ARMOR_TEX.get(armor.getArmorMaterial());
+			if (arr == null) {
+				arr = new ResourceLocation[4];
+				TC_ARMOR_TEX.put(armor.getArmorMaterial(), arr);
+			}
+			ResourceLocation r = arr[slot];
+			if (r == null) {
+				r = arr[slot] = this.tcArmorResource(armor, p_177178_2_, p_177178_3_);
+			}
+			return r;
+		}
+		return this.tcArmorResource(armor, p_177178_2_, p_177178_3_);
+	}
+
+	private ResourceLocation tcArmorResource(ItemArmor armor, boolean p_177178_2_, String p_177178_3_) {
 		String s = HString.format("textures/models/armor/%s_layer_%d%s.png",
 				new Object[] { armor.getArmorMaterial().getName(),
 						p_177178_2_ ? Integer.valueOf(2) : Integer.valueOf(1),

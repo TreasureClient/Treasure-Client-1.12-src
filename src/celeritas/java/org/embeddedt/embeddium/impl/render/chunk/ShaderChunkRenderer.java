@@ -43,14 +43,44 @@ public abstract class ShaderChunkRenderer implements ChunkRenderer {
         }
     }
 
+    // Treasure Client: compiled terrain shaders are kept for the whole session. Before,
+    // every world change (each server switch or respawn into another world) threw them
+    // away and compiled them again, one of the slowest things a browser can do.
+    // A program only depends on its defines and vertex attributes, so those are the key.
+    private static final Map<String, GlProgram<ChunkShaderInterface>> SHARED_PROGRAMS = new Object2ObjectOpenHashMap<>();
+
+    private String tcProgramKey(ChunkShaderOptions options) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.enableLegacyGLPatches).append('|');
+        for (String d : options.constants().getDefineStrings()) {
+            sb.append(d).append(';');
+        }
+        sb.append('|');
+        for (var attr : options.pass().vertexType().getVertexFormat().getAttributes()) {
+            sb.append(attr.getName()).append(';');
+        }
+        sb.append('|');
+        for (var c : options.components()) {
+            sb.append(c.getClass().getName()).append(':').append(String.valueOf(c)).append(';');
+        }
+        return sb.toString();
+    }
+
     protected GlProgram<ChunkShaderInterface> compileProgram(ChunkShaderOptions options) {
         GlProgram<ChunkShaderInterface> program = this.programs.get(options);
 
         if (program == null && !this.programs.containsKey(options)) {
-            try {
-                program = this.createShader("blocks/block_layer_opaque", options);
-            } catch(Exception e) {
-                LOGGER.error("There was an error creating a chunk program. Terrain will not render until this is fixed.", e);
+            String key = this.tcProgramKey(options);
+            program = SHARED_PROGRAMS.get(key);
+            if (program == null) {
+                try {
+                    program = this.createShader("blocks/block_layer_opaque", options);
+                } catch(Exception e) {
+                    LOGGER.error("There was an error creating a chunk program. Terrain will not render until this is fixed.", e);
+                }
+                if (program != null) {
+                    SHARED_PROGRAMS.put(key, program);
+                }
             }
             this.programs.put(options, program);
         }
@@ -118,8 +148,8 @@ public abstract class ShaderChunkRenderer implements ChunkRenderer {
 
     @Override
     public void delete(CommandList commandList) {
-        this.programs.values().stream().filter(Objects::nonNull)
-                .forEach(GlProgram::delete);
+        // Treasure Client: the programs are shared and kept (see SHARED_PROGRAMS)
+        this.programs.clear();
     }
 
     @Override

@@ -62,13 +62,13 @@ public final class DeduplicatedLongQueue {
 	 * Creates a new deduplication set.
 	 */
 	public void newDeduplicationSet() {
-		int i = queue.size();
-		if(i < 4) {
-			i = 4;
-		}
-		if((set.keys.length * 3 / 2) > i) {
+		// Treasure Client: reuse the set instead of making a new one for every light
+		// update (this ran ~35 times per update). Only shrink it when it grew far
+		// bigger than needed, and skip clearing when it's already empty.
+		int i = Math.max(queue.size(), 16);
+		if (set.keys.length > 1024 && set.keys.length > i * 8) {
 			set = new LongHashSet(i);
-		}else {
+		} else if (!set.isEmpty()) {
 			set.clear();
 		}
 	}
