@@ -23,6 +23,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
+import net.minecraft.item.EnumAction;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
@@ -376,6 +377,19 @@ public class ItemRenderer {
 
 				case EAT:
 				case DRINK:
+					if (TCTreasureAnimations.eatOn()) {
+						// Treasure Animations: bites, squash and wobble instead of the vanilla bob
+						float left = (float) p_187457_1_.getItemInUseCount() - p_187457_2_ + 1.0F;
+						int max = p_187457_6_.getMaxItemUseDuration();
+						boolean drink = p_187457_6_.getItemUseAction() == EnumAction.DRINK;
+						TCTreasureAnimations.eatPre(left, max, j, drink);
+						this.transformSideFirstPerson(enumhandside, p_187457_7_);
+						TCTreasureAnimations.eatPost(left, max, j, drink);
+						if (TCOldAnimations.useSwingOn()) {
+							this.transformFirstPerson(enumhandside, p_187457_5_); // 1.7: punch while eating
+						}
+						break;
+					}
 					this.transformEatFirstPerson(p_187457_2_, enumhandside, p_187457_6_);
 					this.transformSideFirstPerson(enumhandside, p_187457_7_);
 					if (TCOldAnimations.useSwingOn()) {
@@ -440,7 +454,7 @@ public class ItemRenderer {
 				this.transformSideFirstPerson(enumhandside, p_187457_7_);
 				SpearAnimations.firstPersonAttack(p_187457_5_, flag1 ? 1 : -1);
 			} else if (flag && p_187457_5_ > 0.0F && TCOldAnimations.swingType != TCOldAnimations.SWING_NORMAL
-					&& TCOldAnimations.hitSwingOn()) {
+					&& TCOldAnimations.hitSwingOn() && !TCTreasureAnimations.throwing()) {
 				// Treasure Client — 1.7 Animations: sweep = sideways slash, sprint hit = forward stab
 				this.transformSideFirstPerson(enumhandside, p_187457_7_);
 				if (TCOldAnimations.swingType == TCOldAnimations.SWING_SWEEP) {

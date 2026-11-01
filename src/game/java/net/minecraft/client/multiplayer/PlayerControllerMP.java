@@ -460,6 +460,9 @@ public class PlayerControllerMP {
 			if (player.getCooldownTracker().hasCooldown(itemstack.getItem())) {
 				return EnumActionResult.PASS;
 			} else {
+				if (stack == EnumHand.MAIN_HAND) {
+					net.minecraft.client.renderer.TCTreasureAnimations.onThrow(itemstack); // Treasure Animations (visual)
+				}
 				int i = itemstack.func_190916_E();
 				ActionResult<ItemStack> actionresult = itemstack.useItemRightClick(worldIn, player, stack);
 				ItemStack itemstack1 = actionresult.getResult();
