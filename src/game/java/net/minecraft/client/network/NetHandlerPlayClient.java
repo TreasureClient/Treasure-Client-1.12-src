@@ -952,6 +952,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.ingameGUI.func_191742_a(packetIn.func_192590_c(), packetIn.getChatComponent());
 		try {
 			net.minecraft.client.TCKickLog.chat(this.gameController, packetIn.getChatComponent().getUnformattedText()); // Treasure Client: kick log
+			if (packetIn.func_192590_c() != net.minecraft.util.text.ChatType.GAME_INFO) {
+				net.minecraft.client.TCAutoGG.onChat(packetIn.getChatComponent().getUnformattedText()); // Treasure Client: Auto GG
+			}
 		} catch (Throwable t) {
 		}
 	}
@@ -1633,6 +1636,10 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		switch (spackettitle$type) {
 		case TITLE:
 			s = s2;
+			try {
+				net.minecraft.client.TCAutoGG.onTitle(packetIn.getMessage() != null ? packetIn.getMessage().getUnformattedText() : null); // Treasure Client: Auto GG
+			} catch (Throwable t) {
+			}
 			break;
 
 		case SUBTITLE:

@@ -1190,6 +1190,22 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Password Hider</b><i>Hide your password when typing /login, /register, etc.</i></div><div class="tc-sw" data-mod="pwHide"><i></i></div></div>
             </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Auto GG</b><i>Says gg in chat for you when a game ends</i></div><button class="tc-gear" data-gear="agcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="autoGG"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="agcfg">
+                <div class="tc-cfg-row"><span>Message</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="agMsg">
+                    <button data-val="gg">gg</button>
+                    <button data-val="ggs">ggs</button>
+                    <button data-val="ggwp">gg wp</button>
+                    <button data-val="goodgame">good game</button>
+                    <button data-val="gf">gf</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Delay (ms)</span><div class="tc-slider"><input type="range" min="0" max="3000" step="250" value="1000" data-mod="agDelay"><span class="tc-val">1000</span></div></div>
+                <div class="tc-cfg-row"><span>Say "glhf" when a game starts</span><div class="tc-sw" data-mod="agGlhf" style="margin-left:auto;"><i></i></div></div>
+              </div>
+            </div>
             <div class="tc-sep"></div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Menu Animations</b><i>Smooth open / close &amp; hover transitions</i></div><div class="tc-sw on" data-mod="guiAnim"><i></i></div></div>
@@ -1310,7 +1326,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest',
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1491,6 +1507,10 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'ttMode=' + (state.ttMode || 'highest'),
           'entDist=' + (state.entDist || 0),
           'pwHide=' + (state.pwHide ? 1 : 0),
+          'autoGG=' + (state.autoGG ? 1 : 0),
+          'agMsg=' + (state.agMsg || 'gg'),
+          'agDelay=' + (state.agDelay == null ? 1000 : state.agDelay),
+          'agGlhf=' + (state.agGlhf ? 1 : 0),
           'lowFire=' + (state.lowFire ? 1 : 0),
           'lowFireH=' + (state.lowFireH || 40),
           'lowShield=' + (state.lowShield ? 1 : 0),
@@ -1807,6 +1827,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         toggleSprint: '<circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 3v3M6 12l3-4 4 1 3 3h3M11 15l-1-5"/><path d="M2 9h4M3 13h3"/>',
         toggleSneak: '<circle cx="12" cy="5" r="2"/><path d="M12 7v6l-4 3v4M12 13l4 3v4M8 10h8"/>',
         via: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+        autoGG: '<path d="M4 5h16v11H9l-5 4z"/><path d="M9 10.5h2.5v1.5a1.5 1.5 0 0 1-3 0v-2a1.5 1.5 0 0 1 2.6-1"/><path d="M14.5 10.5H17v1.5a1.5 1.5 0 0 1-3 0v-2a1.5 1.5 0 0 1 2.6-1"/>',
         pwHide: '<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/><path d="M4 4l16 16"/>',
         guiAnim: '<path d="M5 19L15 9l2-2M13 5l1-2 1 2 2 1-2 1-1 2-1-2-2-1zM18 12l.7-1.3L20 10l-1.3-.7L18 8l-.7 1.3L16 10l1.3.7z"/>'
       };
@@ -1925,7 +1946,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       sl.addEventListener('input', function () {
         showVal();
         state[key] = parseInt(sl.value, 10); save();
-        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale' || key === 'taSpeed') writeModsToEngine(); // engine-backed sliders
+        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale' || key === 'taSpeed' || key === 'agDelay') writeModsToEngine(); // engine-backed sliders
         else if (key === 'resolutionScale') { dynScale = 100; applyResolutionScale(); }
         else applyHud();
       });
@@ -2022,6 +2043,12 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var hit = it.hay.indexOf(q) !== -1;
           it.el.toggleAttribute('data-searchmiss', !hit);
           if (hit) { hitPanels[it.panel.dataset.panel] = it.panel; any = true; }
+        });
+        // a mod that matched (even only through its settings) keeps its own title row
+        items.forEach(function (it) {
+          if (it.el.classList.contains('tc-mod') && !it.el.hasAttribute('data-searchmiss')) {
+            $$(':scope > .tc-row', it.el).forEach(function (r) { r.removeAttribute('data-searchmiss'); });
+          }
         });
         $$('.tc-panel').forEach(function (p) { p.classList.toggle('tc-search-hit', !!hitPanels[p.dataset.panel]); });
         var empty = $('#tc-search-empty');

@@ -162,6 +162,14 @@ public class TreasureMods {
 	public static int taStyle() { return taStyle; }
 	public static int taSpeed() { return taSpeed; }
 	public static boolean oaHitSwing() { return oaHitSwing; }
+	// Treasure Client: Auto GG
+	private static boolean autoGG = false, agGlhf = false;
+	private static String agMessage = "gg";
+	private static int agDelay = 1000;
+	public static boolean autoGG() { return autoGG; }
+	public static boolean agGlhf() { return agGlhf; }
+	public static String agMessage() { return agMessage; }
+	public static int agDelay() { return agDelay; }
 	public static boolean oldAnim() { return oldAnim; }
 	public static boolean oaBlock() { return oaBlock; }
 	public static boolean oaNoDip() { return oaNoDip; }
@@ -450,6 +458,7 @@ public class TreasureMods {
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true; oaHitSwing = true;
 			tAnim = false; taPunch = true; taDraw = true; taSway = true; taBlockHit = true; taStyle = 0; taSpeed = 100;
 			taParticles = 1; taTotemFx = true; taHitFx = true;
+			autoGG = false; agGlhf = false; agMessage = "gg"; agDelay = 1000;
 			fullbright = false; clearWater = true; satDisplay = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
 			tierTagger = false; ttMode = "highest";
@@ -512,6 +521,10 @@ public class TreasureMods {
 				else if (k.equals("taParticles")) taParticles = v.equals("off") ? 0 : v.equals("rainbow") ? 2 : v.equals("frost") ? 3 : v.equals("ember") ? 4 : 1;
 				else if (k.equals("taTotemFx")) taTotemFx = v.equals("1");
 				else if (k.equals("taHitFx")) taHitFx = v.equals("1");
+				else if (k.equals("autoGG")) autoGG = v.equals("1");
+				else if (k.equals("agGlhf")) agGlhf = v.equals("1");
+				else if (k.equals("agMsg")) agMessage = v.equals("ggwp") ? "gg wp" : v.equals("goodgame") ? "good game" : v.equals("gf") ? "gf" : v.equals("ggs") ? "ggs" : "gg";
+				else if (k.equals("agDelay")) { try { agDelay = Math.max(0, Math.min(5000, Integer.parseInt(v))); } catch (Throwable t) {} }
 				else if (k.equals("taSpeed")) { try { taSpeed = Math.max(50, Math.min(200, Integer.parseInt(v))); } catch (Throwable t) {} }
 				else if (k.equals("fullbright")) fullbright = v.equals("1");
 				else if (k.equals("clearWater")) clearWater = v.equals("1");
@@ -685,6 +698,7 @@ public class TreasureMods {
 			} catch (Throwable t) {}
 
 			net.minecraft.client.renderer.TCTreasureAnimations.tick(mc); // Treasure Animations swing speed
+			net.minecraft.client.TCAutoGG.tick(mc); // Auto GG
 			net.lax1dude.eaglercraft.internal.PlatformAudio.tcNoWaitDecode = mc.world != null; // decode new sounds without freezing
 
 			// only drive the game while actually in a world with no screen open
