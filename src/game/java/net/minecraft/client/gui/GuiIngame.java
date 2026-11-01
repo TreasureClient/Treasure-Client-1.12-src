@@ -289,7 +289,9 @@ public class GuiIngame extends Gui {
 		if (this.mc.playerController.isSpectator()) {
 			this.spectatorGui.renderTooltip(scaledresolution, partialTicks);
 		} else {
+			long tcT = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 			this.renderHotbar(scaledresolution, partialTicks);
+			net.minecraft.client.TCLagMonitor.hHotbar += net.minecraft.client.TCLagMonitor.now() - tcT;
 		}
 
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
@@ -428,7 +430,9 @@ public class GuiIngame extends Gui {
 				: scoreboard.getObjectiveInDisplaySlot(1);
 
 		if (scoreobjective1 != null) {
+			long tcB = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 			this.renderScoreboard(scoreobjective1, scaledresolution);
+			net.minecraft.client.TCLagMonitor.hBoard += net.minecraft.client.TCLagMonitor.now() - tcB;
 		}
 
 		GlStateManager.enableBlend();
@@ -437,7 +441,9 @@ public class GuiIngame extends Gui {
 		GlStateManager.disableAlpha();
 		GlStateManager.pushMatrix();
 		GlStateManager.translate(0.0F, (float) (j - 48), 0.0F);
+		long tcC = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 		this.persistantChatGUI.drawChat(this.updateCounter);
+		net.minecraft.client.TCLagMonitor.hChat += net.minecraft.client.TCLagMonitor.now() - tcC;
 		GlStateManager.popMatrix();
 		scoreobjective1 = scoreboard.getObjectiveInDisplaySlot(0);
 

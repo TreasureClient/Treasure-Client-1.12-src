@@ -17,6 +17,7 @@ import net.lax1dude.eaglercraft.EagRuntime;
  * items up, a menu is open...), then it is drawn every frame like before;</li>
  * <li>and 5 times a second regardless, as a safety net.</li>
  * </ul>
+ * Server changes are grouped: at most one redraw for them every 100 ms.
  */
 public final class TCHudCache {
 
@@ -25,6 +26,8 @@ public final class TCHudCache {
 
 	/** Most time between redraws, so nothing can stay out of date for long. */
 	private static final long MAX_AGE_MS = 200L;
+	/** Least time between redraws caused by the server (chat, scoreboard, boss bars, tab list). */
+	private static final long SERVER_CHANGE_MS = 100L;
 
 	private static int version;
 	private static int drawnVersion = -1;
@@ -57,7 +60,11 @@ public final class TCHudCache {
 			return DIRECT;
 		}
 		long now = EagRuntime.steadyTimeMillis();
-		if (!valid || sig != drawnSignature || version != drawnVersion || now - drawnAt >= MAX_AGE_MS) {
+		// Server-side changes (busy scoreboards, ping and team updates, chat) can arrive many times
+		// a second, and each one used to redraw the whole HUD. They are grouped into at most one
+		// redraw every 100 ms; changes to your own HUD (health, hotbar...) still redraw right away.
+		boolean serverChange = version != drawnVersion && now - drawnAt >= SERVER_CHANGE_MS;
+		if (!valid || sig != drawnSignature || serverChange || now - drawnAt >= MAX_AGE_MS) {
 			drawnSignature = sig;
 			drawnVersion = version;
 			drawnAt = now;
