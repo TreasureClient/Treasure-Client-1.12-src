@@ -248,30 +248,54 @@ public class FontRenderer implements IResourceManagerReloadListener {
 		int i = ch % 16 * 8;
 		int j = ch / 16 * 8;
 		int k = italic ? 1 : 0;
-		this.renderEngine.bindTexture(this.locationFontTexture);
 		int l = this.charWidth[ch];
 		float f = (float) l - 0.01F;
-
-		Tessellator tessellator = Tessellator.getInstance();
-		WorldRenderer worldrenderer = tessellator.getWorldRenderer();
-
-		worldrenderer.begin(Tessellator.GL_TRIANGLE_STRIP, DefaultVertexFormats.POSITION_TEX);
-
-		worldrenderer.pos(this.posX + (float) k, this.posY, 0.0F).tex((float) i / 128.0F, (float) j / 128.0F)
-				.endVertex();
-
-		worldrenderer.pos(this.posX - (float) k, this.posY + 7.99F, 0.0F)
-				.tex((float) i / 128.0F, ((float) j + 7.99F) / 128.0F).endVertex();
-
-		worldrenderer.pos(this.posX + f - 1.0F + (float) k, this.posY, 0.0F)
-				.tex(((float) i + f - 1.0F) / 128.0F, (float) j / 128.0F).endVertex();
-
-		worldrenderer.pos(this.posX + f - 1.0F - (float) k, this.posY + 7.99F, 0.0F)
-				.tex(((float) i + f - 1.0F) / 128.0F, ((float) j + 7.99F) / 128.0F).endVertex();
-
-		tessellator.draw();
-
+		// Treasure Client: collected into one draw per string instead of one per letter
+		this.tcQuad(this.locationFontTexture, this.posX + (float) k, this.posX - (float) k,
+				this.posX + f - 1.0F + (float) k, this.posX + f - 1.0F - (float) k, this.posY, this.posY + 7.99F,
+				(float) i / 128.0F, (float) j / 128.0F, ((float) i + f - 1.0F) / 128.0F,
+				((float) j + 7.99F) / 128.0F);
 		return (float) l;
+	}
+
+	// Treasure Client (fast fallback text): text with symbols the fast font path can't
+	// draw (common in lobby chat and scoreboards) used to send every letter to the
+	// graphics chip on its own. Now the letters of a string are collected and drawn
+	// together, one draw per font page.
+	private ResourceLocation tcBatchTex;
+	private boolean tcBatchOpen;
+
+	private void tcQuad(ResourceLocation tex, float xTopL, float xBotL, float xTopR, float xBotR, float yTop,
+			float yBot, float u0, float v0, float u1, float v1) {
+		if (this.tcBatchOpen && tex != this.tcBatchTex) {
+			this.tcFlush();
+		}
+		WorldRenderer wr = Tessellator.getInstance().getWorldRenderer();
+		if (!this.tcBatchOpen) {
+			this.tcBatchTex = tex;
+			this.tcBatchOpen = true;
+			wr.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		}
+		int c = GlStateManager.tcColorARGB();
+		int r = c >>> 16 & 255, g = c >>> 8 & 255, b = c & 255, a = c >>> 24;
+		wr.pos(xTopL, yTop, 0.0D).tex(u0, v0).color(r, g, b, a).endVertex();
+		wr.pos(xBotL, yBot, 0.0D).tex(u0, v1).color(r, g, b, a).endVertex();
+		wr.pos(xBotR, yBot, 0.0D).tex(u1, v1).color(r, g, b, a).endVertex();
+		wr.pos(xTopR, yTop, 0.0D).tex(u1, v0).color(r, g, b, a).endVertex();
+	}
+
+	/** Draws the letters collected so far. */
+	private void tcFlush() {
+		if (!this.tcBatchOpen) {
+			return;
+		}
+		this.tcBatchOpen = false;
+		this.renderEngine.bindTexture(this.tcBatchTex);
+		int c = GlStateManager.tcColorARGB();
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F); // each letter carries its own color
+		Tessellator.getInstance().draw();
+		GlStateManager.color((float) (c >>> 16 & 255) / 255.0F, (float) (c >>> 8 & 255) / 255.0F,
+				(float) (c & 255) / 255.0F, (float) (c >>> 24) / 255.0F);
 	}
 
 	private ResourceLocation getUnicodePageLocation(int page) {
@@ -302,7 +326,6 @@ public class FontRenderer implements IResourceManagerReloadListener {
 			return 0.0F;
 		} else {
 			int j = ch / 256;
-			this.loadGlyphTexture(j);
 			int k = i >>> 4;
 			int l = i & 15;
 			float f = (float) k;
@@ -311,23 +334,9 @@ public class FontRenderer implements IResourceManagerReloadListener {
 			float f3 = (float) ((ch & 255) / 16 * 16);
 			float f4 = f1 - f - 0.02F;
 			float f5 = italic ? 1.0F : 0.0F;
-			Tessellator tessellator = Tessellator.getInstance();
-			WorldRenderer worldrenderer = tessellator.getWorldRenderer();
-
-			worldrenderer.begin(Tessellator.GL_TRIANGLE_STRIP, DefaultVertexFormats.POSITION_TEX);
-
-			worldrenderer.pos(this.posX + f5, this.posY, 0.0F).tex(f2 / 256.0F, f3 / 256.0F).endVertex();
-
-			worldrenderer.pos(this.posX - f5, this.posY + 7.99F, 0.0F).tex(f2 / 256.0F, (f3 + 15.98F) / 256.0F)
-					.endVertex();
-
-			worldrenderer.pos(this.posX + f4 / 2.0F + f5, this.posY, 0.0F).tex((f2 + f4) / 256.0F, f3 / 256.0F)
-					.endVertex();
-
-			worldrenderer.pos(this.posX + f4 / 2.0F - f5, this.posY + 7.99F, 0.0F)
-					.tex((f2 + f4) / 256.0F, (f3 + 15.98F) / 256.0F).endVertex();
-
-			tessellator.draw();
+			this.tcQuad(this.getUnicodePageLocation(j), this.posX + f5, this.posX - f5, this.posX + f4 / 2.0F + f5,
+					this.posX + f4 / 2.0F - f5, this.posY, this.posY + 7.99F, f2 / 256.0F, f3 / 256.0F,
+					(f2 + f4) / 256.0F, (f3 + 15.98F) / 256.0F);
 
 			return (f1 - f) / 2.0F + 1.0F;
 		}
@@ -529,6 +538,7 @@ public class FontRenderer implements IResourceManagerReloadListener {
 				}
 
 				if (this.strikethroughStyle) {
+					this.tcFlush();
 					Tessellator tessellator = Tessellator.getInstance();
 					WorldRenderer bufferbuilder = tessellator.getBuffer();
 					GlStateManager.disableTexture2D();
@@ -548,6 +558,7 @@ public class FontRenderer implements IResourceManagerReloadListener {
 				}
 
 				if (this.underlineStyle) {
+					this.tcFlush();
 					Tessellator tessellator1 = Tessellator.getInstance();
 					WorldRenderer bufferbuilder1 = tessellator1.getBuffer();
 					GlStateManager.disableTexture2D();
@@ -569,6 +580,7 @@ public class FontRenderer implements IResourceManagerReloadListener {
 				this.posX += (float) ((int) f);
 			}
 		}
+		this.tcFlush();
 	}
 
 	/**
