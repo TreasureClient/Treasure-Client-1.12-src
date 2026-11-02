@@ -52,6 +52,7 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
     private VisGraph tcOccluder;
     private BlockPos tcPos;
     private int tcNextY = Integer.MIN_VALUE;
+    private boolean tcGroupNext;
 
     @Override
     public ChunkBuildOutput execute(ChunkBuildContext context, CancellationToken cancellationToken) {
@@ -152,7 +153,20 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
             return null;
         }
 
-        buildContext.convertVanillaDataToCeleritasData(buffers);
+        // Treasure Client: the conversion and the mesh grouping can also continue next frame
+        if (!this.tcGroupNext) {
+            if (!buildContext.tcConvert(buffers, deadline)) {
+                this.tcNextY = maxY;
+                org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
+                return null;
+            }
+            if (deadline != 0L && System.nanoTime() > deadline) {
+                this.tcGroupNext = true;
+                this.tcNextY = maxY;
+                org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
+                return null;
+            }
+        }
 
         Reference2ReferenceMap<TerrainRenderPass, BuiltSectionMeshParts> meshes = BuiltSectionMeshParts.groupFromBuildBuffers(buffers, (float) (camera.x - minX), (float) (camera.y - minY), (float) (camera.z - minZ));
 

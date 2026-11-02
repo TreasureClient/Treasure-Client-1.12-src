@@ -274,6 +274,12 @@ public class TCLagMonitor {
 		long total = now - lastEnd;
 		lastEnd = now;
 		reportWindow(now, logicNs);
+		Minecraft tcMc = Minecraft.getMinecraft();
+		if (tcMc.world == null || tcMc.player == null) {
+			// menus and the login handshake (which waits for the server) aren't gameplay
+			clearParts();
+			return;
+		}
 		// entities were timed including the block entities and name tags inside them
 		cur[ENTITIES] = Math.max(0L, cur[ENTITIES] - cur[BLOCK_ENTS] - cur[NAME_TAGS]);
 		long timed = 0L;
