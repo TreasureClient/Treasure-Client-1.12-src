@@ -354,8 +354,13 @@ public class SoundManager {
 					ResourceLocation lc = etr.getSoundAsOggLocation();
 					IAudioResource trk;
 					if (EagRuntime.getPlatformType() != EnumPlatformType.DESKTOP) {
+						long tcL = EagRuntime.nanoTime();
 						trk = PlatformAudio.loadAudioDataNew(lc.toString(), !etr.isStreaming(),
 								browserResourcePackLoader);
+						long tcLd = EagRuntime.nanoTime() - tcL;
+						if (tcLd > 200000L) { // only real loads (a cached sound takes a few µs)
+							net.minecraft.client.TCLagMonitor.addSoundLoad(lc.toString(), tcLd);
+						}
 					} else {
 						trk = PlatformAudio.loadAudioData(lc.getResourcePath(), !etr.isStreaming());
 					}

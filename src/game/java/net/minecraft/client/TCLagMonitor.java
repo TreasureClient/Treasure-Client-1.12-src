@@ -69,6 +69,36 @@ public class TCLagMonitor {
 		st[3] += ns + 1L; // +1 so a 0 ns packet still counts as touched
 	}
 
+	// slowest world change: total and its parts (new world, renderer + load, player) in ns
+	private static long wcTotal, wcWorld, wcLoad, wcPlayer;
+	private static int wcCount;
+
+	/** One world change (dimension switch) from handleRespawn. */
+	public static void worldChange(long world, long load, long player) {
+		wcCount++;
+		long t = world + load + player;
+		if (t > wcTotal) {
+			wcTotal = t;
+			wcWorld = world;
+			wcLoad = load;
+			wcPlayer = player;
+		}
+	}
+
+	// sound files loaded while playing (reading + handing to the browser): count, total, slowest
+	public static long sndLoads, sndLoadNs, sndSlowNs;
+	public static String sndSlow;
+
+	/** Adds one sound file load (SoundManager) to the stats. */
+	public static void addSoundLoad(String name, long ns) {
+		sndLoads++;
+		sndLoadNs += ns;
+		if (ns > sndSlowNs) {
+			sndSlowNs = ns;
+			sndSlow = name;
+		}
+	}
+
 	// plugin message time per channel, so a slow CustomPayload can be traced to its sender
 	private static final java.util.HashMap<String, long[]> chanTimes = new java.util.HashMap<String, long[]>();
 
@@ -401,6 +431,17 @@ public class TCLagMonitor {
 			say(mc, "§7Logic: " + bigParts(lspk, LPART_NAMES));
 			if (!pktTypes.isEmpty()) {
 				say(mc, "§7Packets: " + slowestPackets(true));
+			}
+			if (wcCount > 0) {
+				say(mc, "§7World changes: §f" + wcCount + "§7, slowest §f" + (wcTotal / 1000000L) + "ms §7(new world "
+						+ (wcWorld / 1000000L) + ", renderer " + (wcLoad / 1000000L) + ", player " + (wcPlayer / 1000000L) + ")");
+			}
+			if (sndLoads > 0) {
+				String sn = sndSlow == null ? "?" : sndSlow;
+				int sl = sn.lastIndexOf('/');
+				if (sl >= 0) sn = sn.substring(sl + 1);
+				say(mc, "§7Sound loads: §f" + sndLoads + " §7taking §f" + (sndLoadNs / 1000000L) + "ms§7, slowest §f" + sn
+						+ " " + (sndSlowNs / 1000000L) + "ms");
 			}
 		}
 		if (ringCount > 0) {

@@ -1143,19 +1143,26 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		net.minecraft.client.TCKickLog.event("Respawn / world change"); // Treasure Client: kick log
 		if (packetIn.getDimensionID() != this.gameController.player.dimension) {
 			this.doneLoadingTerrain = false;
+			long tcW0 = net.minecraft.client.TCLagMonitor.now(); // .lag world change parts
 			Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 			this.clientWorldController = new WorldClient(this,
 					new WorldSettings(0L, packetIn.getGameType(), false,
 							this.gameController.world.getWorldInfo().isHardcoreModeEnabled(), packetIn.getWorldType()),
 					packetIn.getDimensionID(), packetIn.getDifficulty());
 			this.clientWorldController.setWorldScoreboard(scoreboard);
+			long tcW1 = net.minecraft.client.TCLagMonitor.now();
 			this.gameController.loadWorld(this.clientWorldController);
+			long tcW2 = net.minecraft.client.TCLagMonitor.now();
 			this.gameController.player.dimension = packetIn.getDimensionID();
 			// VanillaFix: no "Downloading terrain" screen when changing dimension
 			this.gameController.displayGuiScreen(TreasureMods.vanillaFix() ? null : new GuiDownloadTerrain());
+			this.gameController.setDimensionAndSpawnPlayer(packetIn.getDimensionID());
+			long tcW3 = net.minecraft.client.TCLagMonitor.now();
+			net.minecraft.client.TCLagMonitor.worldChange(tcW1 - tcW0, tcW2 - tcW1, tcW3 - tcW2);
+		} else {
+			this.gameController.setDimensionAndSpawnPlayer(packetIn.getDimensionID());
 		}
 
-		this.gameController.setDimensionAndSpawnPlayer(packetIn.getDimensionID());
 		this.gameController.playerController.setGameType(packetIn.getGameType());
 		// Treasure Client — a proxy server switch only sends a respawn: opt in to TuffX+ again
 		TCServerChannels.onRespawn(this.netManager);
