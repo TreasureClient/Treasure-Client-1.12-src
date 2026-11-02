@@ -163,7 +163,37 @@ public class EaglerFolderResourcePack extends AbstractResourcePack {
 
 	@Override
 	protected boolean hasResourceName(String var1) {
+		// Treasure Client: answer from a file list made once, instead of asking the browser's
+		// storage every time (each ask waits on IndexedDB, mid-frame, for every new sound or
+		// texture while a resource pack is on).
+		java.util.HashSet<String> files = tcFiles();
+		if (files != null) {
+			return files.contains(new VFile2(prefix, this.resourcePackFile, var1).getPath());
+		}
 		return (new VFile2(prefix, this.resourcePackFile, var1)).exists();
+	}
+
+	private java.util.HashSet<String> tcFileSet;
+	private boolean tcFilesTried;
+
+	/** Every file path in this pack, listed once; null if listing didn't work. */
+	private java.util.HashSet<String> tcFiles() {
+		if (!tcFilesTried) {
+			tcFilesTried = true;
+			try {
+				java.util.List<String> names = (new VFile2(prefix, this.resourcePackFile)).listFilenames(true);
+				if (names != null && !names.isEmpty()) {
+					java.util.HashSet<String> set = new java.util.HashSet<String>(names.size() * 2);
+					for (int i = 0, n = names.size(); i < n; ++i) {
+						set.add(names.get(i));
+					}
+					tcFileSet = set;
+				}
+			} catch (Throwable t) {
+				tcFileSet = null;
+			}
+		}
+		return tcFileSet;
 	}
 
 	public long getTimestamp() {

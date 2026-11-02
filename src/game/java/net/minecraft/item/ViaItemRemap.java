@@ -60,7 +60,40 @@ public final class ViaItemRemap {
 				return b[0].length() - a[0].length();
 			}
 		});
+		// Parallel plain arrays (no arrays inside collections at match time), plus a letter
+		// fingerprint per phrase so most phrases are ruled out with one comparison.
+		int n = p.size();
+		String[] text = new String[n];
+		String[] reg = new String[n];
+		long[] mask = new long[n];
+		for (int i = 0; i < n; i++) {
+			String[] pr = p.get(i);
+			text[i] = pr[0];
+			reg[i] = pr[1];
+			mask[i] = letters(pr[0]);
+		}
+		phraseText = text;
+		phraseReg = reg;
+		phraseMask = mask;
 		phrases = p;
+	}
+
+	private static String[] phraseText;
+	private static String[] phraseReg;
+	private static long[] phraseMask;
+
+	/** Which letters and digits a string contains, one bit each. */
+	private static long letters(String s) {
+		long m = 0L;
+		for (int i = 0, n = s.length(); i < n; i++) {
+			char c = s.charAt(i);
+			if (c >= 'a' && c <= 'z') {
+				m |= 1L << (c - 'a');
+			} else if (c >= '0' && c <= '9') {
+				m |= 1L << (26 + c - '0');
+			}
+		}
+		return m;
 	}
 
 	/**
@@ -178,11 +211,19 @@ public final class ViaItemRemap {
 			}
 		}
 		// 3) Fallback: the name merely contains one of our item names.
-		for (int i = 0; i < phrases.size(); i++) {
-			String[] pr = phrases.get(i);
-			if (pr[0].length() >= 4 && lower.contains(pr[0])) {
+		String[] text = phraseText;
+		String[] reg = phraseReg;
+		long[] mask = phraseMask;
+		long have = letters(lower);
+		int len = lower.length();
+		for (int i = 0; i < text.length; i++) {
+			String t = text[i];
+			if ((mask[i] & ~have) != 0L || t.length() < 4 || t.length() > len) {
+				continue; // needs a letter the name doesn't have, or longer than the name
+			}
+			if (lower.contains(t)) {
 				if (out == null) out = new ArrayList<String>();
-				out.add(pr[1]);
+				out.add(reg[i]);
 			}
 		}
 		if (out == null) {
