@@ -18,6 +18,11 @@ import net.lax1dude.eaglercraft.EagRuntime;
  * <li>and 5 times a second regardless, as a safety net.</li>
  * </ul>
  * Server changes are grouped: at most one redraw for them every 100 ms.
+ * <p>
+ * The HUD is cached as two layers: your own part (hotbar items, health, food, XP,
+ * effects) and the server's part (scoreboard, chat, boss bars, titles, tab list).
+ * Busy scoreboards and chat change many times a second; they now only redraw their
+ * own layer, not the hotbar items, which are the slowest part of the HUD.
  */
 public final class TCHudCache {
 
@@ -30,10 +35,15 @@ public final class TCHudCache {
 	private static final long SERVER_CHANGE_MS = 100L;
 
 	private static int version;
-	private static int drawnVersion = -1;
 	private static long drawnSignature;
 	private static long drawnAt;
 	private static boolean valid;
+	// the server layer
+	private static int drawnVersionS = -1;
+	private static long drawnAtS;
+	private static boolean validS;
+	/** Most time between redraws of your own layer (it is redrawn whenever it changes anyway). */
+	private static final long OWN_MAX_AGE_MS = 1000L;
 
 	/** Something the HUD shows changed (chat, scoreboard, boss bar, title, tab list). */
 	public static void markDirty() {
@@ -43,6 +53,7 @@ public final class TCHudCache {
 	/** Throws the cached image away, so the next frame draws the HUD again. */
 	public static void invalidate() {
 		valid = false;
+		validS = false;
 	}
 
 	/** Reuse the cached HUD image. */
@@ -57,18 +68,34 @@ public final class TCHudCache {
 		long sig = gui.tcHudSignature();
 		if (sig == Long.MIN_VALUE) {
 			valid = false;
+			validS = false;
 			return DIRECT;
 		}
 		long now = EagRuntime.steadyTimeMillis();
 		// Server-side changes (busy scoreboards, ping and team updates, chat) can arrive many times
 		// a second, and each one used to redraw the whole HUD. They are grouped into at most one
 		// redraw every 100 ms; changes to your own HUD (health, hotbar...) still redraw right away.
-		boolean serverChange = version != drawnVersion && now - drawnAt >= SERVER_CHANGE_MS;
-		if (!valid || sig != drawnSignature || serverChange || now - drawnAt >= MAX_AGE_MS) {
+		if (!valid || sig != drawnSignature || now - drawnAt >= OWN_MAX_AGE_MS) {
 			drawnSignature = sig;
-			drawnVersion = version;
 			drawnAt = now;
 			valid = true;
+			return REDRAW;
+		}
+		return REUSE;
+	}
+
+	/** How to draw the server's layer this frame (after {@link #decide} said it isn't DIRECT). */
+	public static int decideServer(GuiIngame gui) {
+		if (gui.tcServerAnimating()) {
+			validS = false;
+			return DIRECT;
+		}
+		long now = EagRuntime.steadyTimeMillis();
+		boolean serverChange = version != drawnVersionS && now - drawnAtS >= SERVER_CHANGE_MS;
+		if (!validS || serverChange || now - drawnAtS >= MAX_AGE_MS) {
+			drawnVersionS = version;
+			drawnAtS = now;
+			validS = true;
 			return REDRAW;
 		}
 		return REUSE;

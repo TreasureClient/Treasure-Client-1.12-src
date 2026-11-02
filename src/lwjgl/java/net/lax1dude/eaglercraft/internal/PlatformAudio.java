@@ -46,6 +46,10 @@ public class PlatformAudio {
 		return false;
 	}
 
+	public static boolean tcIsCached(String filename) {
+		return true;
+	}
+
 	public static void tcCancel(String filename) {
 	}
 

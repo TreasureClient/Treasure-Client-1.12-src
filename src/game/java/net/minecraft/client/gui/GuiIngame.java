@@ -159,13 +159,29 @@ public class GuiIngame extends Gui {
 	 * player's own state changes, or Long.MIN_VALUE when something on it animates every
 	 * frame. TCHudCache uses it to decide when the HUD has to be drawn again.
 	 */
+	/** Treasure Client (HUD cache): which part of the HUD renderGameOverlay draws. */
+	public static final int TC_ALL = 0, TC_OWN = 1, TC_SERVER = 2;
+	public static int tcLayer = TC_ALL;
+
+	/**
+	 * Treasure Client: true while the server's part of the HUD (titles, subtitles, tab list,
+	 * fading chat) animates every frame, so it is drawn straight onto the screen.
+	 */
+	public boolean tcServerAnimating() {
+		GameSettings gs = this.mc.gameSettings;
+		return this.titlesTimer > 0 || gs.showSubtitles || gs.keyBindPlayerList.isKeyDown()
+				|| (!this.mc.ingameGUI.getChatGUI().getChatOpen()
+						&& this.persistantChatGUI.tcNewestLineCounter() > this.updateCounter - 202
+						&& this.persistantChatGUI.tcChatFading(this.updateCounter));
+	}
+
 	public long tcHudSignature() {
 		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
 		GameSettings gs = this.mc.gameSettings;
 		if (p == null || this.mc.world == null || this.mc.currentScreen != null || gs.showDebugInfo
-				|| this.titlesTimer > 0 || this.recordPlayingUpFor > 0 || gs.showSubtitles || p.timeInPortal > 0.0F
+				|| this.recordPlayingUpFor > 0 || p.timeInPortal > 0.0F
 				|| p.prevTimeInPortal > 0.0F || p.getSleepTimer() > 0 || p.isRidingHorse()
-				|| this.mc.entityRenderer.tcItemActivationShowing() || gs.keyBindPlayerList.isKeyDown()
+				|| this.mc.entityRenderer.tcItemActivationShowing()
 				|| this.mc.playerController.isSpectator()) {
 			return Long.MIN_VALUE;
 		}
@@ -232,12 +248,6 @@ public class GuiIngame extends Gui {
 		if (gs.attackIndicator == 2 && p.getCooledAttackStrength(0.0F) < 1.0F) {
 			perTick = true;
 		}
-		// chat lines fade out over ticks
-		if (!this.mc.ingameGUI.getChatGUI().getChatOpen()
-				&& this.persistantChatGUI.tcNewestLineCounter() > this.updateCounter - 202
-				&& this.persistantChatGUI.tcChatFading(this.updateCounter)) {
-			perTick = true; // only the last second of a line's life animates
-		}
 		// the always-on FPS / position line in the corner
 		if (gs.hudFps) {
 			h = tcMix(h, this.mc.renderGlobal.getDebugInfoShort().hashCode());
@@ -275,8 +285,10 @@ public class GuiIngame extends Gui {
 		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
 				RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
 
+		boolean tcOwn = tcLayer != TC_SERVER, tcSrv = tcLayer != TC_OWN;
 		ItemStack itemstack = this.mc.player.inventory.armorItemInSlot(3);
 
+		if (tcOwn) {
 		if (this.mc.gameSettings.thirdPersonView == 0 && itemstack.getItem() == Item.getItemFromBlock(Blocks.PUMPKIN)) {
 			this.renderPumpkinOverlay(scaledresolution);
 		}
@@ -298,14 +310,21 @@ public class GuiIngame extends Gui {
 			net.minecraft.client.TCLagMonitor.hHotbar += net.minecraft.client.TCLagMonitor.now() - tcT;
 		}
 
+		}
+
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 		this.mc.getTextureManager().bindTexture(ICONS);
 		GlStateManager.enableBlend();
 		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
-		this.overlayBoss.renderBossHealth();
+		if (tcSrv) {
+			long tcBb = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
+			this.overlayBoss.renderBossHealth();
+			net.minecraft.client.TCLagMonitor.hBoss += net.minecraft.client.TCLagMonitor.now() - tcBb;
+		}
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 		this.mc.getTextureManager().bindTexture(ICONS);
 
+		if (tcOwn) {
 		if (this.mc.playerController.shouldDrawHUD()) {
 			this.renderPlayerStats(scaledresolution);
 		}
@@ -348,7 +367,9 @@ public class GuiIngame extends Gui {
 			this.renderDemo(scaledresolution);
 		}
 
+		long tcE = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 		this.renderPotionEffects(scaledresolution);
+		net.minecraft.client.TCLagMonitor.hEffects += net.minecraft.client.TCLagMonitor.now() - tcE;
 
 		this.overlayDebug.renderDebugInfo(scaledresolution);
 
@@ -379,8 +400,12 @@ public class GuiIngame extends Gui {
 			}
 		}
 
+		}
+
+		if (tcSrv) {
 		this.overlaySubtitle.renderSubtitles(scaledresolution);
 
+		long tcTi = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 		if (this.titlesTimer > 0) {
 			float f3 = (float) this.titlesTimer - partialTicks;
 			int i2 = 255;
@@ -418,6 +443,7 @@ public class GuiIngame extends Gui {
 			}
 		}
 
+		net.minecraft.client.TCLagMonitor.hTitle += net.minecraft.client.TCLagMonitor.now() - tcTi;
 		Scoreboard scoreboard = this.mc.world.getScoreboard();
 		ScoreObjective scoreobjective = null;
 		ScorePlayerTeam scoreplayerteam = scoreboard.getPlayersTeam(this.mc.player.getName());
@@ -455,8 +481,12 @@ public class GuiIngame extends Gui {
 				&& this.mc.player.connection.getPlayerInfoMap().size() <= 1 && scoreobjective1 == null) {
 			this.overlayPlayerList.updatePlayerList(false);
 		} else {
+			long tcTab = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 			this.overlayPlayerList.updatePlayerList(true);
 			this.overlayPlayerList.renderPlayerlist(i, scoreboard, scoreobjective1);
+			net.minecraft.client.TCLagMonitor.hTab += net.minecraft.client.TCLagMonitor.now() - tcTab;
+		}
+
 		}
 
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);

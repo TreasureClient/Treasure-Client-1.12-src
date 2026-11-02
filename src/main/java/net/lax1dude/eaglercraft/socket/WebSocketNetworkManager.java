@@ -194,7 +194,9 @@ public class WebSocketNetworkManager extends NetworkManager {
 			logger.warn("discarding {} string frames recieved on a binary connection", webSocketClient.availableStringFrames());
 			webSocketClient.clearStringFrames();
 		}
+		long tcIn = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
 		tcIntake(); // Treasure Client: Fast Ping answers keep-alives while queueing the rest
+		net.minecraft.client.TCLagMonitor.addLogic(net.minecraft.client.TCLagMonitor.L_NET, tcIn);
 		if(tcBacklog.isEmpty()) {
 			return;
 		}

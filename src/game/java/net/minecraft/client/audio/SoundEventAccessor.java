@@ -49,6 +49,18 @@ public class SoundEventAccessor implements ISoundEventAccessor<Sound> {
 		}
 	}
 
+	/** Treasure Client: every sound file this event can play (warm-up). */
+	public void tcCollect(List<Sound> out) {
+		for (int i = 0, n = this.accessorList.size(); i < n; ++i) {
+			ISoundEventAccessor<Sound> a = this.accessorList.get(i);
+			if (a instanceof Sound) {
+				out.add((Sound) a);
+			} else if (a instanceof SoundEventAccessor && a != this) {
+				((SoundEventAccessor) a).tcCollect(out);
+			}
+		}
+	}
+
 	public void addSound(ISoundEventAccessor<Sound> p_188715_1_) {
 		this.accessorList.add(p_188715_1_);
 	}

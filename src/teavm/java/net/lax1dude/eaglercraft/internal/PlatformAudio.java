@@ -414,6 +414,12 @@ public class PlatformAudio {
 		}
 	}
 
+	/** Treasure Client: true if this sound file is decoded and in memory. */
+	public static boolean tcIsCached(String filename) {
+		BrowserAudioResource b = soundCache.get(filename);
+		return b != null && b.buffer != null;
+	}
+
 	public static IAudioResource loadAudioDataNew(String filename, boolean holdInCache, IAudioCacheLoader loader) {
 		BrowserAudioResource buffer = soundCache.get(filename);
 		if(buffer == null && oggSupport) {

@@ -986,6 +986,9 @@ public class Minecraft implements IThreadListener {
 			this.runTick();
 		}
 		this.tcPumpPackets();
+		long tcW = TCLagMonitor.now(); // Treasure Client: load common textures/sounds while idle
+		TCWarmup.tick(this);
+		TCLagMonitor.addLogic(TCLagMonitor.L_LOADING, tcW);
 
 		long i1 = EagRuntime.nanoTime() - l;
 		this.checkGLError("Pre render");
@@ -1429,7 +1432,9 @@ public class Minecraft implements IThreadListener {
 		}
 
 		if (!this.isGamePaused) {
+			long tcH = TCLagMonitor.now(); // .lag "HUD tick"
 			this.ingameGUI.updateTick();
+			TCLagMonitor.addLogic(TCLagMonitor.L_HUDTICK, tcH);
 		}
 
 		long tcV = TCLagMonitor.now(); // .lag "aim + camera"
@@ -1448,11 +1453,14 @@ public class Minecraft implements IThreadListener {
 			TCLagMonitor.addLogic(TCLagMonitor.L_TEXTURES, tcX);
 		}
 		
+		long tcN = TCLagMonitor.now(); // .lag "network"
 		if (this.player != null && this.player.connection != null) {
 			this.player.connection.getEaglerMessageController().flush();
 		}
 
 		this.tickAutoRegisterDefaultUsername();
+		TCLagMonitor.addLogic(TCLagMonitor.L_NET, tcN);
+		long tcS = TCLagMonitor.now(); // .lag "menus"
 
 		if (this.currentScreen == null && this.player != null) {
 			if (this.player.getHealth() <= 0.0F && !(this.currentScreen instanceof GuiGameOver)) {
@@ -1510,6 +1518,7 @@ public class Minecraft implements IThreadListener {
 			}
 		}
 
+		TCLagMonitor.addLogic(TCLagMonitor.L_SCREEN, tcS);
 		if (this.currentScreen == null || this.currentScreen.allowUserInput) {
 			long tcI = TCLagMonitor.now(); // .lag "input/clicks"
 			this.runTickMouse();

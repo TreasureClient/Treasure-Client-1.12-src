@@ -163,6 +163,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	private float field_190569_ae;
 	private int frameCount;
 	private GameOverlayFramebuffer overlayFramebuffer;
+	/** Treasure Client: the server's part of the HUD (scoreboard, chat, boss bars), cached on its own. */
+	private GameOverlayFramebuffer tcServerFramebuffer;
 	public float currentProjMatrixFOV = 0.0f;
 	public boolean fogStandard = false;
 
@@ -174,6 +176,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		this.locationLightMap = mcIn.getTextureManager().getDynamicTextureLocation("lightMap", this.lightmapTexture);
 		this.lightmapColors = this.lightmapTexture.getTextureData();
 		this.overlayFramebuffer = new GameOverlayFramebuffer();
+		this.tcServerFramebuffer = new GameOverlayFramebuffer();
 		
 		for (int i = 0; i < 32; ++i) {
 			for (int j = 0; j < 32; ++j) {
@@ -959,16 +962,20 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					int tcMode = net.minecraft.client.gui.TreasureMods.hudCache()
 							? net.minecraft.client.gui.TCHudCache.decide(this.mc.ingameGUI)
 							: net.minecraft.client.gui.TCHudCache.DIRECT;
+					int tcSrvMode = tcMode == net.minecraft.client.gui.TCHudCache.DIRECT
+							? net.minecraft.client.gui.TCHudCache.DIRECT
+							: net.minecraft.client.gui.TCHudCache.decideServer(this.mc.ingameGUI);
 					if (tcMode == net.minecraft.client.gui.TCHudCache.REDRAW) {
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
-						this.overlayFramebuffer.beginRender(mc.displayWidth, mc.displayHeight);
-						GlStateManager.colorMask(true, true, true, true);
-						GlStateManager.clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-						GlStateManager.clear(RealOpenGLEnums.GL_COLOR_BUFFER_BIT | RealOpenGLEnums.GL_DEPTH_BUFFER_BIT);
-						GlStateManager.enableOverlayFramebufferBlending();
-						this.tcDrawHud(l, i1, partialTicks);
-						GlStateManager.disableOverlayFramebufferBlending();
-						this.overlayFramebuffer.endRender();
+						this.tcRenderLayer(this.overlayFramebuffer, net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1,
+								partialTicks);
+						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
+					}
+					if (tcMode != net.minecraft.client.gui.TCHudCache.DIRECT
+							&& tcSrvMode == net.minecraft.client.gui.TCHudCache.REDRAW) {
+						long tcHud = net.minecraft.client.TCLagMonitor.now();
+						this.tcRenderLayer(this.tcServerFramebuffer, net.minecraft.client.gui.GuiIngame.TC_SERVER, l,
+								i1, partialTicks);
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
 					GlStateManager.disableLighting();
@@ -984,25 +991,14 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						this.tcDrawHud(l, i1, partialTicks);
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					} else {
-						// paste the cached HUD (it holds premultiplied colors)
+						// paste the cached HUD layers (they hold premultiplied colors)
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
-						GlStateManager.bindTexture(this.overlayFramebuffer.getTexture());
-						GlStateManager.enableBlend();
-						GlStateManager.blendFunc(RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
-						GlStateManager.disableAlpha();
-						GlStateManager.disableDepth();
-						GlStateManager.depthMask(false);
-						GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
-						Tessellator tessellator = Tessellator.getInstance();
-						WorldRenderer worldrenderer = tessellator.getWorldRenderer();
-						worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
-						worldrenderer.pos(0.0D, (double) i1, -90.0D).tex(0.0D, 0.0D).endVertex();
-						worldrenderer.pos((double) l, (double) i1, -90.0D).tex(1.0D, 0.0D).endVertex();
-						worldrenderer.pos((double) l, 0.0D, -90.0D).tex(1.0D, 1.0D).endVertex();
-						worldrenderer.pos(0.0D, 0.0D, -90.0D).tex(0.0D, 1.0D).endVertex();
-						tessellator.draw();
-						GlStateManager.enableAlpha();
-						GlStateManager.blendFunc(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+						this.tcPasteLayer(this.overlayFramebuffer, l, i1);
+						if (tcSrvMode == net.minecraft.client.gui.TCHudCache.DIRECT) {
+							this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_SERVER, l, i1, partialTicks);
+						} else {
+							this.tcPasteLayer(this.tcServerFramebuffer, l, i1);
+						}
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
 					GlStateManager.depthMask(true);
@@ -1876,6 +1872,48 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	}
 
 	/** Treasure Client: draws the HUD (totem pop and the game overlay), batched by ImmediatelyFast. */
+	/** Treasure Client: draws one HUD layer into its cached image. */
+	private void tcRenderLayer(GameOverlayFramebuffer fb, int layer, int width, int height, float partialTicks) {
+		fb.beginRender(mc.displayWidth, mc.displayHeight);
+		GlStateManager.colorMask(true, true, true, true);
+		GlStateManager.clearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		GlStateManager.clear(RealOpenGLEnums.GL_COLOR_BUFFER_BIT | RealOpenGLEnums.GL_DEPTH_BUFFER_BIT);
+		GlStateManager.enableOverlayFramebufferBlending();
+		this.tcDrawHudLayer(layer, width, height, partialTicks);
+		GlStateManager.disableOverlayFramebufferBlending();
+		fb.endRender();
+	}
+
+	private void tcDrawHudLayer(int layer, int width, int height, float partialTicks) {
+		net.minecraft.client.gui.GuiIngame.tcLayer = layer;
+		try {
+			this.tcDrawHud(width, height, partialTicks);
+		} finally {
+			net.minecraft.client.gui.GuiIngame.tcLayer = net.minecraft.client.gui.GuiIngame.TC_ALL;
+		}
+	}
+
+	/** Treasure Client: pastes a cached HUD layer over the screen. */
+	private void tcPasteLayer(GameOverlayFramebuffer fb, int l, int i1) {
+		GlStateManager.bindTexture(fb.getTexture());
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+		GlStateManager.disableAlpha();
+		GlStateManager.disableDepth();
+		GlStateManager.depthMask(false);
+		GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer worldrenderer = tessellator.getWorldRenderer();
+		worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
+		worldrenderer.pos(0.0D, (double) i1, -90.0D).tex(0.0D, 0.0D).endVertex();
+		worldrenderer.pos((double) l, (double) i1, -90.0D).tex(1.0D, 0.0D).endVertex();
+		worldrenderer.pos((double) l, 0.0D, -90.0D).tex(1.0D, 1.0D).endVertex();
+		worldrenderer.pos(0.0D, 0.0D, -90.0D).tex(0.0D, 1.0D).endVertex();
+		tessellator.draw();
+		GlStateManager.enableAlpha();
+		GlStateManager.blendFunc(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+	}
+
 	private void tcDrawHud(int width, int height, float partialTicks) {
 		GlStateManager.enableBlend();
 		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
@@ -1886,7 +1924,11 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.depthMask(true);
 		net.lax1dude.eaglercraft.opengl.TCHudBatch.begin(); // ImmediatelyFast HUD batching
 		try {
-			this.func_190563_a(width, height, partialTicks);
+			long tcTo = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
+			if (net.minecraft.client.gui.GuiIngame.tcLayer != net.minecraft.client.gui.GuiIngame.TC_SERVER) {
+				this.func_190563_a(width, height, partialTicks);
+			}
+			net.minecraft.client.TCLagMonitor.hTotem += net.minecraft.client.TCLagMonitor.now() - tcTo;
 			this.mc.ingameGUI.renderGameOverlay(partialTicks);
 		} finally {
 			net.lax1dude.eaglercraft.opengl.TCHudBatch.end();
