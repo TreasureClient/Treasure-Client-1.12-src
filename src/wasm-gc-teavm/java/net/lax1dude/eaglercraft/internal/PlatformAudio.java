@@ -282,7 +282,7 @@ public class PlatformAudio {
 	 * on every new sound). loadAudioDataNew returns null until it's done; SoundManager plays
 	 * it a moment later. Set by the game each tick.
 	 */
-	public static boolean tcNoWaitDecode;
+	public static boolean tcNoWaitDecode = true;
 	private static final Map<String, JSObject> tcPending = new HashMap<>();
 
 	@Import(module = "platformAudio", name = "createDecodeHolder")

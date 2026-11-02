@@ -50,14 +50,28 @@ import net.minecraft.util.math.MathHelper;
  */
 public class PlatformAudio {
 
-	/** Treasure Client: background sound decoding (only the WASM build does it). */
-	public static boolean tcNoWaitDecode;
+	/**
+	 * Treasure Client: background sound decoding. A sound that isn't decoded yet is handed to
+	 * the browser to decode in the background instead of the game waiting for it (music took
+	 * over a second); loadAudioDataNew returns null until it's ready and SoundManager plays it
+	 * a moment later.
+	 */
+	public static boolean tcNoWaitDecode = true;
+
+	private static final class TcPending {
+		AudioBuffer buffer;
+		boolean done;
+	}
+
+	private static final Map<String, TcPending> tcPending = new HashMap<>();
 
 	public static boolean tcIsDecoding(String filename) {
-		return false;
+		TcPending p = tcPending.get(filename);
+		return p != null && !p.done;
 	}
 
 	public static void tcCancel(String filename) {
+		tcPending.remove(filename);
 	}
 
 
@@ -402,6 +416,41 @@ public class PlatformAudio {
 
 	public static IAudioResource loadAudioDataNew(String filename, boolean holdInCache, IAudioCacheLoader loader) {
 		BrowserAudioResource buffer = soundCache.get(filename);
+		if(buffer == null && oggSupport) {
+			TcPending p = tcPending.get(filename);
+			if(p != null) {
+				if(!p.done) {
+					return null; // still decoding
+				}
+				tcPending.remove(filename);
+				buffer = new BrowserAudioResource(p.buffer);
+				if(holdInCache) {
+					soundCache.put(filename, buffer); // music (streamed) is too big to keep
+				}
+			}else if(tcNoWaitDecode) {
+				byte[] file = loader.loadFile(filename);
+				if(file == null) return null;
+				Int8Array arr = Int8Array.create(file.length);
+				arr.set(TeaVMUtils.unwrapByteArray(file), 0);
+				final TcPending np = new TcPending();
+				final String errName = filename;
+				tcPending.put(filename, np);
+				audioctx.decodeAudioData(arr.getBuffer(), new DecodeSuccessCallback() {
+					@Override
+					public void onSuccess(AudioBuffer decodedData) {
+						np.buffer = decodedData;
+						np.done = true;
+					}
+				}, new DecodeErrorCallback() {
+					@Override
+					public void onError(JSObject error) {
+						logger.error("Could not load audio: {}", errName);
+						np.done = true;
+					}
+				});
+				return null;
+			}
+		}
 		if(buffer == null) {
 			byte[] file = loader.loadFile(filename);
 			if(file == null) return null;

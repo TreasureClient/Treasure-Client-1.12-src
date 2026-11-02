@@ -156,6 +156,30 @@ public class FontRenderer implements IResourceManagerReloadListener {
 	public void onResourceManagerReload(IResourceManager resourceManager) {
 		this.readFontTexture();
 		this.readGlyphSizes();
+		this.tcPreloadSymbolPages();
+	}
+
+	/**
+	 * Treasure Client: load the symbol sheets servers use all the time (hearts, stars, boxes,
+	 * dots, swords, arrows: pages 20-27) during resource loading, instead of decoding one the
+	 * first time a title or scoreboard shows such a symbol (a freeze in the middle of a game).
+	 */
+	private void tcPreloadSymbolPages() {
+		try {
+			if (this.renderEngine == null || this.locationFontTexture == null
+					|| !this.locationFontTexture.getResourcePath().endsWith("ascii.png")) {
+				return;
+			}
+			int[] pages = { 0x20, 0x21, 0x22, 0x23, 0x25, 0x26, 0x27 };
+			for (int i = 0; i < pages.length; i++) {
+				ResourceLocation loc = this.getUnicodePageLocation(pages[i]);
+				if (this.renderEngine.getTexture(loc) == null) {
+					this.renderEngine.loadTexture(loc, new net.minecraft.client.renderer.texture.SimpleTexture(loc));
+				}
+			}
+		} catch (Throwable t) {
+			// they'll load when first used instead
+		}
 	}
 
 	private void readFontTexture() {
