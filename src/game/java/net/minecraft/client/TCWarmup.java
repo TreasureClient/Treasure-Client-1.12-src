@@ -49,7 +49,9 @@ public final class TCWarmup {
 			"textures/entity/spider/spider.png", "textures/entity/spider_eyes.png",
 			"textures/entity/enderman/enderman.png", "textures/entity/enderman/enderman_eyes.png",
 			"textures/entity/iron_golem.png", "textures/entity/blaze.png", "textures/entity/slime/slime.png",
-			"textures/entity/witch.png", "textures/environment/rain.png" };
+			"textures/entity/witch.png", "textures/environment/rain.png", "textures/environment/sun.png",
+			"textures/environment/moon_phases.png", "textures/environment/clouds.png",
+			"textures/environment/snow.png", "textures/misc/forcefield.png" };
 
 	private static final String[] SOUNDS = { "entity.generic.explode", "entity.creeper.primed", "entity.creeper.hurt",
 			"entity.creeper.death", "entity.tnt.primed", "entity.player.hurt", "entity.player.death",

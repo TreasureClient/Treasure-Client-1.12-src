@@ -117,7 +117,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 		}
 	}
 	private static final int TC_MAX_BACKLOG = 4000;
-	private static final long TC_TICK_DRAIN_NS = 20000000L;
+	private static final long TC_TICK_DRAIN_NS = 10000000L;
 	private int tcPosLookId = -2;
 
 	/** True if a server teleport (or anything we can't identify) is still waiting in the queue. */
@@ -261,7 +261,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 				break;
 			}
 			// Treasure Client: a tick handles everything waiting (so it never moves you from before a
-			// server teleport), but a huge burst (a duel's worth of chunks) is cut off after ~20 ms
+			// server teleport), but a huge burst (a duel's worth of chunks) is cut off after ~10 ms
 			// when no teleport is waiting; the rest is handled next frame, like ordinary network delay.
 			if(!spread && tcDrainAll && tcSpreadBursts && (handled & 7) == 0
 					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() - start > TC_TICK_DRAIN_NS

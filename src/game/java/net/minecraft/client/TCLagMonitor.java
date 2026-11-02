@@ -24,9 +24,9 @@ public class TCLagMonitor {
 
 	// parts of the drawing time, timed by the renderers each frame
 	public static final int TERRAIN = 0, ENTITIES = 1, BLOCK_ENTS = 2, NAME_TAGS = 3, PARTICLES = 4, HUD = 5,
-			SKY = 6, OTHER = 7, PARTS = 8;
+			SKY = 6, HAND = 7, OTHER = 8, PARTS = 9;
 	private static final String[] PART_NAMES = { "terrain", "entities", "block ents", "name tags", "particles",
-			"HUD", "sky", "other" };
+			"HUD", "sky", "hand", "other" };
 	private static final long[] cur = new long[PARTS];
 	private static final long[][] mPartAll = new long[MINUTES][PARTS]; // all frames, ns
 	private static final long[][] mPartSpike = new long[MINUTES][PARTS]; // spike frames, ns
@@ -275,7 +275,8 @@ public class TCLagMonitor {
 		lastEnd = now;
 		reportWindow(now, logicNs);
 		Minecraft tcMc = Minecraft.getMinecraft();
-		if (tcMc.world == null || tcMc.player == null) {
+		if (tcMc.world == null || tcMc.player == null || skipFrame) {
+			skipFrame = false;
 			// menus and the login handshake (which waits for the server) aren't gameplay
 			clearParts();
 			return;
@@ -445,7 +446,11 @@ public class TCLagMonitor {
 		return sb.toString();
 	}
 
+	/** The frame that printed the .lag report itself (writing it to chat isn't gameplay lag). */
+	private static boolean skipFrame;
+
 	public static void print(Minecraft mc) {
+		skipFrame = true;
 		if (start < 0L || curMinute < 0) {
 			say(mc, "§6[Lag] §7no data yet");
 			return;
@@ -468,29 +473,6 @@ public class TCLagMonitor {
 		}
 		say(mc, "§6[Lag] §f" + (last + 1) + " min §7· last 5 min: §f" + (ms > 0 ? frames * 1000L / ms : 0L)
 				+ " fps, " + spikes + " spikes §7(over " + SPIKE_MS + " ms), worst §f" + worst + " ms");
-		if (frames > 0) {
-			// every frame, not only spikes: shows why the game is slow when it is slow all the time
-			long la = 0L, da = 0L;
-			int bj = 0, ml = 0, mb = 0, mr = 0;
-			long[] all = new long[PARTS], lall = new long[LPARTS];
-			for (int m = from; m <= last; m++) {
-				la += mLogicAll[m];
-				da += mDrawAll[m];
-				bj += mBuilds[m];
-				ml += mMkLight[m];
-				mb += mMkBlock[m];
-				mr += mMkRange[m];
-				for (int k = 0; k < PARTS; k++) all[k] += mPartAll[m][k];
-				for (int k = 0; k < LPARTS; k++) lall[k] += mLPartAll[m][k];
-			}
-			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
-			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
-					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
-			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
-			long mins = Math.max(1L, ms / 60000L);
-			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
-					+ (mb / mins) + ", areas " + (mr / mins) + ")");
-		}
 		long sum = l + d + b;
 		if (sum > 0) {
 			say(mc, "§7Spikes: §flogic " + (l * 100 / sum) + "% §7· §fdrawing " + (d * 100 / sum)
@@ -520,6 +502,29 @@ public class TCLagMonitor {
 		}
 		if (worstMinute >= 0 && worstMinute >= from) {
 			say(mc, "§7Worst spike: " + row(worstRow));
+		}
+		if (frames > 0) {
+			// every frame, not only spikes: shows why the game is slow when it is slow all the time
+			long la = 0L, da = 0L;
+			int bj = 0, ml = 0, mb = 0, mr = 0;
+			long[] all = new long[PARTS], lall = new long[LPARTS];
+			for (int m = from; m <= last; m++) {
+				la += mLogicAll[m];
+				da += mDrawAll[m];
+				bj += mBuilds[m];
+				ml += mMkLight[m];
+				mb += mMkBlock[m];
+				mr += mMkRange[m];
+				for (int k = 0; k < PARTS; k++) all[k] += mPartAll[m][k];
+				for (int k = 0; k < LPARTS; k++) lall[k] += mLPartAll[m][k];
+			}
+			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
+			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
+					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
+			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
+			long mins = Math.max(1L, ms / 60000L);
+			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
+					+ (mb / mins) + ", areas " + (mr / mins) + ")");
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}
