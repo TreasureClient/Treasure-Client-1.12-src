@@ -180,6 +180,11 @@ public class SoundHandler implements IResourceManagerReloadListener, ITickable {
 	}
 
 	@Nullable
+	/** Treasure Client: the sound manager (warm-up). */
+	public SoundManager tcManager() {
+		return this.sndManager;
+	}
+
 	public SoundEventAccessor getAccessor(ResourceLocation location) {
 		return (SoundEventAccessor) this.soundRegistry.getObject(location);
 	}

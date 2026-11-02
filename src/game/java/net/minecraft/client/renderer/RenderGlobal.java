@@ -1126,6 +1126,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
                 int j = blockpos.getY();
                 int k = blockpos.getZ();
                 this.markBlocksForUpdate(i - 1, j - 1, k - 1, i + 1, j + 1, k + 1, false);
+                ++net.minecraft.client.TCLagMonitor.mkLight;
             }
         }
 		
@@ -1786,6 +1787,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 		int l1 = pos.getY();
 		int i2 = pos.getZ();
 		this.markBlocksForUpdate(k1 - 1, l1 - 1, i2 - 1, k1 + 1, l1 + 1, i2 + 1, (flags & 8) != 0);
+		++net.minecraft.client.TCLagMonitor.mkBlock;
 	}
 
 	public void notifyLightSet(BlockPos pos) {
@@ -1798,6 +1800,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 	 */
 	public void markBlockRangeForRenderUpdate(int x1, int y1, int z1, int x2, int y2, int z2) {
 		this.markBlocksForUpdate(x1 - 1, y1 - 1, z1 - 1, x2 + 1, y2 + 1, z2 + 1, false);
+		++net.minecraft.client.TCLagMonitor.mkRange;
 	}
 
 	public void playRecord(@Nullable SoundEvent soundIn, BlockPos pos) {
@@ -2383,6 +2386,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			final int y = (int) (longPos << 64 - BlockPos.Y_SHIFT - BlockPos.NUM_Y_BITS >> 64 - BlockPos.NUM_Y_BITS);
 			final int z = (int) (longPos << 64 - BlockPos.NUM_Z_BITS >> 64 - BlockPos.NUM_Z_BITS);
 			markBlocksForUpdate(x - 1, y - 1, z - 1, x + 1, y + 1, z + 1, false);
+			++net.minecraft.client.TCLagMonitor.mkLight;
 		} while (!alfheim$lightUpdatesQueue.isEmpty());
 
 		alfheim$lightUpdatesQueue.newDeduplicationSet();

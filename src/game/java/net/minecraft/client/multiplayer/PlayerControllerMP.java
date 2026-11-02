@@ -330,7 +330,9 @@ public class PlayerControllerMP {
 	}
 
 	public void updateController() {
+		long tcN = net.minecraft.client.TCLagMonitor.now(); // .lag "network"
 		this.syncCurrentPlayItem();
+		net.minecraft.client.TCLagMonitor.addLogic(net.minecraft.client.TCLagMonitor.L_NET, tcN);
 
 		if (this.connection.getNetworkManager().isChannelOpen()) {
 			try {
@@ -349,10 +351,12 @@ public class PlayerControllerMP {
 				this.connection.getNetworkManager()
 						.closeChannel(new TextComponentString("Exception thrown: " + ex.toString()));
 			}
+			tcN = net.minecraft.client.TCLagMonitor.now();
 			this.connection.getSkinCache().flush();
 			this.connection.getCapeCache().flush();
 			this.connection.getNotifManager().runTick();
 			ClientUUIDLoadingCache.update();
+			net.minecraft.client.TCLagMonitor.addLogic(net.minecraft.client.TCLagMonitor.L_NET, tcN);
 		} else {
 			this.connection.getNetworkManager().checkDisconnected();
 		}

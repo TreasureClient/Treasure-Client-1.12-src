@@ -121,6 +121,24 @@ public class SoundManager {
 
 	public void reloadSoundSystem() {
 		PlatformAudio.flushAudioCache();
+		net.minecraft.client.TCWarmup.resetSounds();
+	}
+
+	/**
+	 * Treasure Client: starts loading a sound file ahead of time if it isn't in memory yet.
+	 * True if it had to load it.
+	 */
+	public boolean tcWarm(Sound s) {
+		if (!PlatformAudio.available() || EagRuntime.getPlatformType() == EnumPlatformType.DESKTOP || s.isStreaming()
+				|| s == SoundHandler.MISSING_SOUND) {
+			return false;
+		}
+		String n = s.getSoundAsOggLocation().toString();
+		if (PlatformAudio.tcIsCached(n) || PlatformAudio.tcIsDecoding(n)) {
+			return false;
+		}
+		PlatformAudio.loadAudioDataNew(n, true, browserResourcePackLoader);
+		return true;
 	}
 
 	private float getVolume(SoundCategory category) {

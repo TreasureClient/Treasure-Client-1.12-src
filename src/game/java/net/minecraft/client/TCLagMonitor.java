@@ -34,10 +34,11 @@ public class TCLagMonitor {
 	// parts of the logic time (game ticks), timed by the tick code and the network code
 	public static final int L_CHUNK_PKTS = 0, L_ENTITY_PKTS = 1, L_OTHER_PKTS = 2, L_ENTITIES = 3, L_WORLD = 4,
 			L_PARTICLES = 5, L_OTHER = 6, L_SOUND = 7, L_MODS = 8, L_TEXTURES = 9, L_INPUT = 10, L_VIEW = 11,
-			LPARTS = 12;
+			L_HUDTICK = 12, L_SCREEN = 13, L_NET = 14, L_LOADING = 15, LPARTS = 16;
 	private static final String[] LPART_NAMES = { "chunk packets", "entity packets", "other packets",
 			"entity updates", "world updates", "particles", "other", "sounds/music", "client mods",
-			"texture animations", "input/clicks", "aim + camera" };
+			"texture animations", "input/clicks", "aim + camera", "HUD tick", "menus", "network",
+			"warm-up loads" };
 	private static final long[] lcur = new long[LPARTS];
 	private static final long[][] mLPartAll = new long[MINUTES][LPARTS];
 	private static final long[][] mLPartSpike = new long[MINUTES][LPARTS];
@@ -201,10 +202,21 @@ public class TCLagMonitor {
 	public static long tBuild, tBuildMax, tUpload, tGraph;
 
 	// parts of a HUD redraw this frame: hotbar, chat, scoreboard (ns); the rest of the HUD is "other"
-	public static long hHotbar, hChat, hBoard;
+	public static long hHotbar, hChat, hBoard, hBoss, hEffects, hTitle, hTab, hTotem;
+
+	// why chunks get redrawn: light changes, single block changes, whole areas (chunk data, modern blocks)
+	public static int mkLight, mkBlock, mkRange;
+	private static int buildJobs;
+	private static final long[] mLogicAll = new long[MINUTES];
+	private static final long[] mDrawAll = new long[MINUTES];
+	private static final int[] mBuilds = new int[MINUTES];
+	private static final int[] mMkLight = new int[MINUTES];
+	private static final int[] mMkBlock = new int[MINUTES];
+	private static final int[] mMkRange = new int[MINUTES];
 
 	/** Adds one chunk build job's time (Celeritas). */
 	public static void addBuild(long startNs) {
+		++buildJobs;
 		long d = EagRuntime.nanoTime() - startNs;
 		tBuild += d;
 		if (d > tBuildMax) tBuildMax = d;
@@ -238,7 +250,11 @@ public class TCLagMonitor {
 
 	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
 	// biggest drawing part, its ms, biggest logic part, its ms
-	private static final int[][] ring = new int[RING][20];
+	private static final int RW = 27;
+	private static final int[][] ring = new int[RING][RW];
+	// the worst spike of the session, same layout as a ring entry
+	private static final int[] worstRow = new int[RW];
+	private static int worstMinute = -1;
 	private static int ringPos, ringCount;
 
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
@@ -281,6 +297,12 @@ public class TCLagMonitor {
 		}
 		mFrames[minute]++;
 		mMs[minute] += total;
+		mLogicAll[minute] += logicNs;
+		mDrawAll[minute] += drawNs;
+		mBuilds[minute] += buildJobs;
+		mMkLight[minute] += mkLight;
+		mMkBlock[minute] += mkBlock;
+		mMkRange[minute] += mkRange;
 		mHeap[minute] = heapNow;
 		for (int k = 0; k < PARTS; k++) mPartAll[minute][k] += cur[k];
 		for (int k = 0; k < LPARTS; k++) mLPartAll[minute][k] += lcur[k];
@@ -328,6 +350,20 @@ public class TCLagMonitor {
 			r[17] = (int) (hHotbar / 1000000L);
 			r[18] = (int) (hChat / 1000000L);
 			r[19] = (int) (hBoard / 1000000L);
+			r[20] = (int) (hBoss / 1000000L);
+			r[21] = (int) (hEffects / 1000000L);
+			r[22] = (int) (hTitle / 1000000L);
+			r[23] = (int) (hTab / 1000000L);
+			r[26] = (int) (hTotem / 1000000L);
+			// second biggest logic part, so "other" isn't the only name shown
+			int l2 = lbig == 0 ? 1 : 0;
+			for (int k = 0; k < LPARTS; k++) if (k != lbig && lcur[k] > lcur[l2]) l2 = k;
+			r[24] = l2;
+			r[25] = (int) (lcur[l2] / 1000000L);
+			if (r[2] > worstRow[2] || worstMinute < 0 || minute - worstMinute > 4) {
+				System.arraycopy(r, 0, worstRow, 0, RW);
+				worstMinute = minute;
+			}
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
@@ -372,7 +408,8 @@ public class TCLagMonitor {
 		for (int k = 0, n = pktTouched.size(); k < n; k++) pktTouched.get(k)[3] = 0L;
 		pktTouched.clear();
 		tBuild = tBuildMax = tUpload = tGraph = 0L;
-		hHotbar = hChat = hBoard = 0L;
+		buildJobs = mkLight = mkBlock = mkRange = 0;
+		hHotbar = hChat = hBoard = hBoss = hEffects = hTitle = hTab = hTotem = 0L;
 	}
 
 	private static void say(Minecraft mc, String s) {
@@ -425,6 +462,29 @@ public class TCLagMonitor {
 		}
 		say(mc, "§6[Lag] §f" + (last + 1) + " min §7· last 5 min: §f" + (ms > 0 ? frames * 1000L / ms : 0L)
 				+ " fps, " + spikes + " spikes §7(over " + SPIKE_MS + " ms), worst §f" + worst + " ms");
+		if (frames > 0) {
+			// every frame, not only spikes: shows why the game is slow when it is slow all the time
+			long la = 0L, da = 0L;
+			int bj = 0, ml = 0, mb = 0, mr = 0;
+			long[] all = new long[PARTS], lall = new long[LPARTS];
+			for (int m = from; m <= last; m++) {
+				la += mLogicAll[m];
+				da += mDrawAll[m];
+				bj += mBuilds[m];
+				ml += mMkLight[m];
+				mb += mMkBlock[m];
+				mr += mMkRange[m];
+				for (int k = 0; k < PARTS; k++) all[k] += mPartAll[m][k];
+				for (int k = 0; k < LPARTS; k++) lall[k] += mLPartAll[m][k];
+			}
+			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
+			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
+					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
+			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
+			long mins = Math.max(1L, ms / 60000L);
+			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
+					+ (mb / mins) + ", areas " + (mr / mins) + ")");
+		}
 		long sum = l + d + b;
 		if (sum > 0) {
 			say(mc, "§7Spikes: §flogic " + (l * 100 / sum) + "% §7· §fdrawing " + (d * 100 / sum)
@@ -448,18 +508,38 @@ public class TCLagMonitor {
 		}
 		if (ringCount > 0) {
 			say(mc, "§7Last spikes (logic / drawing / browser, ms):");
-			for (int i = 0; i < Math.min(5, ringCount); i++) {
-				int[] r = ring[(ringPos - 1 - i + RING * 2) % RING];
-				say(mc, "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4]
-						+ "/" + r[5] + " · " + PART_NAMES[r[9]] + " " + r[10]
-						+ (r[9] == HUD && r[10] >= 8 ? " (hotbar " + r[17] + " chat " + r[18] + " board " + r[19] + ")" : "")
-						+ ", " + LPART_NAMES[r[11]] + " "
-						+ r[12] + (r[7] > 0 ? " · " + r[7] + " chunks" : "")
-						+ (r[13] + r[15] + r[16] > 0 ? " · build " + r[13] + " (max " + r[14] + ") upload " + r[15]
-								+ " vis " + r[16] : ""));
+			for (int i = 0; i < Math.min(3, ringCount); i++) {
+				say(mc, row(ring[(ringPos - 1 - i + RING * 2) % RING]));
 			}
 		}
+		if (worstMinute >= 0 && worstMinute >= from) {
+			say(mc, "§7Worst spike: " + row(worstRow));
+		}
 		say(mc, "§6[Lag] §7" + verdict(last));
+	}
+
+	private static String ms1(long us) {
+		return (us / 1000L) + "." + ((us / 100L) % 10L);
+	}
+
+	private static String row(int[] r) {
+		StringBuilder hud = new StringBuilder();
+		if (r[9] == HUD && r[10] >= 8) {
+			hud.append(" (hotbar ").append(r[17]).append(" chat ").append(r[18]).append(" board ").append(r[19]);
+			if (r[20] > 0) hud.append(" boss bar ").append(r[20]);
+			if (r[21] > 0) hud.append(" effects ").append(r[21]);
+			if (r[22] > 0) hud.append(" title ").append(r[22]);
+			if (r[23] > 0) hud.append(" tab ").append(r[23]);
+			if (r[26] > 0) hud.append(" totem ").append(r[26]);
+			hud.append(')');
+		}
+		return "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4]
+				+ "/" + r[5] + " · " + PART_NAMES[r[9]] + " " + r[10] + hud
+				+ ", " + LPART_NAMES[r[11]] + " " + r[12]
+				+ (r[25] > 0 ? ", " + LPART_NAMES[r[24]] + " " + r[25] : "")
+				+ (r[7] > 0 ? " · " + r[7] + " chunks" : "")
+				+ (r[13] + r[15] + r[16] > 0 ? " · build " + r[13] + " (max " + r[14] + ") upload " + r[15]
+						+ " vis " + r[16] : "");
 	}
 
 	private static String verdict(int last) {
