@@ -122,8 +122,14 @@ public class TileEntityRendererDispatcher {
 		if (destroyStage == -1 && net.minecraft.client.renderer.TCBlockEntities.skipRenderer(tileentityIn)) {
 			return;
 		}
-		if (tileentityIn.getDistanceSq(this.entityX, this.entityY, this.entityZ) < tileentityIn
-				.getMaxRenderDistanceSquared()
+		double tcMax = tileentityIn.getMaxRenderDistanceSquared();
+		// Treasure Client: banners and heads are full models drawn one by one; past 40 blocks
+		// they are a few pixels big, so they aren't drawn (saves FPS in decorated arenas)
+		if (tileentityIn instanceof net.minecraft.tileentity.TileEntityBanner
+				|| tileentityIn instanceof net.minecraft.tileentity.TileEntitySkull) {
+			tcMax = Math.min(tcMax, 1600.0D);
+		}
+		if (tileentityIn.getDistanceSq(this.entityX, this.entityY, this.entityZ) < tcMax
 				&& (destroyStage != -1 || net.minecraft.client.renderer.TCEntityCulling.isVisible(tileentityIn))) {
 			RenderHelper.enableStandardItemLighting();
 			int i = this.worldObj.getCombinedLight(tileentityIn.getPos(), 0);

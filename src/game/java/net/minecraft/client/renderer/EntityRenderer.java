@@ -1285,7 +1285,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 
 		if (this.renderHand) {
 			GlStateManager.clear(256);
+			long tcHand = net.minecraft.client.TCLagMonitor.now(); // .lag "hand"
 			this.renderHand(partialTicks, pass);
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HAND, tcHand);
 		}
 	}
 

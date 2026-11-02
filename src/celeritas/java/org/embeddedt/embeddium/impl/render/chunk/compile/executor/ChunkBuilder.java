@@ -375,8 +375,9 @@ public class ChunkBuilder {
         long base = (long) MAIN_THREAD_BUDGET_NANOS;
         // Treasure Client: capped lower than before (16 / 10 ms): together with drawing and packets,
         // 16 ms of chunk building made the frames at the start of a duel into lag spikes
-        if (tcBacklog >= 48) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(10));
-        if (tcBacklog >= 12) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(7));
+        // Treasure Client: lower again for weak computers; a big arena loads over a few more frames instead
+        if (tcBacklog >= 48) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(6));
+        if (tcBacklog >= 12) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(5));
         return base;
     }
 

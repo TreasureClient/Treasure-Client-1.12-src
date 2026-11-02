@@ -208,7 +208,7 @@ public class GuiIngame extends Gui {
 			h = tcMix(h, s.func_190916_E());
 			h = tcMix(h, s.getItemDamage());
 			if (s.hasEffect()) {
-				perTwoTicks = true; // enchantment glint moves (10 updates a second is plenty)
+				perTwoTicks = true; // enchantment glint moves (5 updates a second: each one redraws the hotbar)
 			}
 		}
 		// health, food, armor, air, XP
@@ -266,7 +266,7 @@ public class GuiIngame extends Gui {
 		if (perTick) {
 			h = tcMix(h, this.updateCounter);
 		} else if (perTwoTicks) {
-			h = tcMix(h, this.updateCounter >> 1);
+			h = tcMix(h, this.updateCounter >> 2);
 		}
 		return h == Long.MIN_VALUE ? 0L : h;
 	}
