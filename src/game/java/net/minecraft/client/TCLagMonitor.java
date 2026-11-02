@@ -33,9 +33,11 @@ public class TCLagMonitor {
 
 	// parts of the logic time (game ticks), timed by the tick code and the network code
 	public static final int L_CHUNK_PKTS = 0, L_ENTITY_PKTS = 1, L_OTHER_PKTS = 2, L_ENTITIES = 3, L_WORLD = 4,
-			L_PARTICLES = 5, L_OTHER = 6, L_SOUND = 7, LPARTS = 8;
+			L_PARTICLES = 5, L_OTHER = 6, L_SOUND = 7, L_MODS = 8, L_TEXTURES = 9, L_INPUT = 10, L_VIEW = 11,
+			LPARTS = 12;
 	private static final String[] LPART_NAMES = { "chunk packets", "entity packets", "other packets",
-			"entity updates", "world updates", "particles", "other", "sounds/music" };
+			"entity updates", "world updates", "particles", "other", "sounds/music", "client mods",
+			"texture animations", "input/clicks", "aim + camera" };
 	private static final long[] lcur = new long[LPARTS];
 	private static final long[][] mLPartAll = new long[MINUTES][LPARTS];
 	private static final long[][] mLPartSpike = new long[MINUTES][LPARTS];

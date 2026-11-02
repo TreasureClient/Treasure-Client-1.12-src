@@ -295,6 +295,7 @@ public class ChunkBuilder {
         }
 
         this.shutdownThreads();
+        this.localContext.cleanup(); // Treasure Client: free the scratch buffers kept between builds
     }
 
     private void shutdownThreads() {
@@ -410,7 +411,7 @@ public class ChunkBuilder {
                 this.tcPausedJob = job; // keep the buffers for the rest of this build
             } else {
                 this.tcPausedJob = null;
-                localContext.cleanup();
+                localContext.tcJobDone(); // Treasure Client: keep the scratch buffers for the next build
             }
             net.minecraft.client.TCLagMonitor.addBuild(tcT); // Treasure Client: .lag terrain parts
         }

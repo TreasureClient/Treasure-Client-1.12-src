@@ -123,6 +123,7 @@ public final class TuffViaBlocks {
 		} catch (Throwable t) {
 			// ignore a malformed message
 		}
+		flushDirty(Minecraft.getMinecraft());
 	}
 
 	/**
@@ -151,6 +152,7 @@ public final class TuffViaBlocks {
 		} catch (Throwable t) {
 			// ignore
 		}
+		flushDirty(Minecraft.getMinecraft());
 	}
 
 	/** Reads one message. Returns false if the bytes aren't a known message. */
@@ -226,8 +228,69 @@ public final class TuffViaBlocks {
 			statUnknown++;
 			return;
 		}
-		mc.world.setBlockState(new BlockPos(x, y, z), state, 2);
 		statApplied++;
+		// Fast path: the modern block replaces the server's stand-in block with the same
+		// light behaviour, so write it straight into the chunk and redraw the chunk once
+		// later, instead of a full block update (lighting + 27 section redraw requests) for
+		// each of what can be thousands of blocks in one message.
+		try {
+			Chunk c = mc.world.getChunkFromChunkCoords(x >> 4, z >> 4);
+			net.minecraft.world.chunk.storage.ExtendedBlockStorage sec = c.getBlockStorageArray()[y >> 4];
+			if (sec != null && sec != Chunk.NULL_BLOCK_STORAGE) {
+				IBlockState old = sec.get(x & 15, y & 15, z & 15);
+				Block ob = old.getBlock();
+				Block nb = state.getBlock();
+				if (old == state) {
+					return;
+				}
+				if (ob != net.minecraft.init.Blocks.AIR && !ob.hasTileEntity() && !nb.hasTileEntity()
+						&& old.getLightOpacity() == state.getLightOpacity()
+						&& old.getLightValue() == state.getLightValue()) {
+					sec.set(x & 15, y & 15, z & 15, state);
+					markDirty(mc, x, y, z);
+					return;
+				}
+			}
+		} catch (Throwable t) {
+			// fall back to a normal block update below
+		}
+		mc.world.setBlockState(new BlockPos(x, y, z), state, 2);
+	}
+
+	// Blocks written by the fast path that still need a redraw: a box inside one chunk.
+	private static boolean dirty;
+	private static int dCx, dCz, dMinY, dMaxY;
+
+	private static void markDirty(Minecraft mc, int x, int y, int z) {
+		int cx = x >> 4, cz = z >> 4;
+		if (dirty && (cx != dCx || cz != dCz)) {
+			flushDirty(mc);
+		}
+		if (!dirty) {
+			dirty = true;
+			dCx = cx;
+			dCz = cz;
+			dMinY = y;
+			dMaxY = y;
+		} else {
+			if (y < dMinY) dMinY = y;
+			if (y > dMaxY) dMaxY = y;
+		}
+	}
+
+	/** Asks for one redraw covering every fast-path block since the last flush. */
+	private static void flushDirty(Minecraft mc) {
+		if (!dirty) {
+			return;
+		}
+		dirty = false;
+		try {
+			if (mc != null && mc.world != null) {
+				int x0 = dCx << 4, z0 = dCz << 4;
+				mc.world.markBlockRangeForRenderUpdate(x0, dMinY, z0, x0 + 15, dMaxY, z0 + 15);
+			}
+		} catch (Throwable t) {
+		}
 	}
 
 	/** Called after a chunk packet is applied: place anything that was waiting for it. */
@@ -247,6 +310,7 @@ public final class TuffViaBlocks {
 			long[] e = list.get(i);
 			apply(mc, unpackX(e[0]), unpackY(e[0]), unpackZ(e[0]), (int) e[1]);
 		}
+		flushDirty(mc);
 	}
 
 	/** Called every client tick: catch chunks that loaded some other way. */

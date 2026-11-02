@@ -963,6 +963,22 @@ public class PacketBuffer extends ByteBuf {
 			p_189423_1_ = new long[i];
 		}
 
+		// Treasure Client (Krypton): decode chunk block data straight from the packet's bytes
+		// instead of one bounds-checked readLong call per value (about 2000 per chunk)
+		ByteBuf b = this.buf;
+		int n = p_189423_1_.length;
+		if (b.hasArray() && b.readableBytes() >= n * 8) {
+			byte[] a = b.array();
+			int p = b.arrayOffset() + b.readerIndex();
+			for (int j = 0; j < n; ++j, p += 8) {
+				int hi = (a[p] & 255) << 24 | (a[p + 1] & 255) << 16 | (a[p + 2] & 255) << 8 | (a[p + 3] & 255);
+				int lo = (a[p + 4] & 255) << 24 | (a[p + 5] & 255) << 16 | (a[p + 6] & 255) << 8 | (a[p + 7] & 255);
+				p_189423_1_[j] = (long) hi << 32 | (lo & 0xFFFFFFFFL);
+			}
+			b.skipBytes(n * 8);
+			return p_189423_1_;
+		}
+
 		for (int j = 0; j < p_189423_1_.length; ++j) {
 			p_189423_1_[j] = this.readLong();
 		}

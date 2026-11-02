@@ -1420,8 +1420,10 @@ public class Minecraft implements IThreadListener {
 	 * Runs the current tick.
 	 */
 	public void runTick() throws IOException {
+		long tcM = TCLagMonitor.now(); // .lag "client mods"
 		net.minecraft.client.gui.TreasureMods.tick(this); // Treasure Client mods
 		net.minecraft.client.gui.TreasureHud.tick(this); // Treasure Client HUD data bridge
+		TCLagMonitor.addLogic(TCLagMonitor.L_MODS, tcM);
 		if (this.rightClickDelayTimer > 0) {
 			--this.rightClickDelayTimer;
 		}
@@ -1430,16 +1432,20 @@ public class Minecraft implements IThreadListener {
 			this.ingameGUI.updateTick();
 		}
 
+		long tcV = TCLagMonitor.now(); // .lag "aim + camera"
 		this.entityRenderer.getMouseOver(1.0F);
 		this.field_193035_aW.func_193297_a(this.world, this.objectMouseOver);
+		TCLagMonitor.addLogic(TCLagMonitor.L_VIEW, tcV);
 
 		if (!this.isGamePaused && this.world != null) {
 			this.playerController.updateController();
 		}
 
 		if (!this.isGamePaused) {
+			long tcX = TCLagMonitor.now(); // .lag "texture animations"
 			this.renderEngine.tick();
 			GlStateManager.viewport(0, 0, displayWidth, displayHeight); // to be safe
+			TCLagMonitor.addLogic(TCLagMonitor.L_TEXTURES, tcX);
 		}
 		
 		if (this.player != null && this.player.connection != null) {
@@ -1505,6 +1511,7 @@ public class Minecraft implements IThreadListener {
 		}
 
 		if (this.currentScreen == null || this.currentScreen.allowUserInput) {
+			long tcI = TCLagMonitor.now(); // .lag "input/clicks"
 			this.runTickMouse();
 
 			if (this.leftClickCounter > 0) {
@@ -1512,6 +1519,7 @@ public class Minecraft implements IThreadListener {
 			}
 
 			this.runTickKeyboard();
+			TCLagMonitor.addLogic(TCLagMonitor.L_INPUT, tcI);
 		}
 
 		if (this.world != null) {
@@ -1525,11 +1533,10 @@ public class Minecraft implements IThreadListener {
 			}
 
 			if (!this.isGamePaused) {
+				long tcV2 = TCLagMonitor.now(); // .lag "aim + camera"
 				this.entityRenderer.updateRenderer();
-			}
-
-			if (!this.isGamePaused) {
 				this.renderGlobal.updateClouds();
+				TCLagMonitor.addLogic(TCLagMonitor.L_VIEW, tcV2);
 			}
 
 			if (!this.isGamePaused) {
