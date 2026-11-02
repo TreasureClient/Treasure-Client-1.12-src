@@ -139,7 +139,7 @@ public abstract class World implements IBlockAccess {
 	protected LootTableManager lootTable;
 	protected AdvancementManager field_191951_C;
 	protected FunctionManager field_193036_D;
-	private final Calendar theCalendar;
+	private Calendar theCalendar; // Treasure Client: made on first use (slow to create in the browser)
 	protected Scoreboard worldScoreboard;
 
 	/**
@@ -161,7 +161,6 @@ public abstract class World implements IBlockAccess {
 
 	protected World(ISaveHandler saveHandlerIn, WorldInfo info, WorldProvider providerIn, boolean client) {
 		this.eventListeners = Lists.newArrayList(this.pathListener);
-		this.theCalendar = Calendar.getInstance();
 		this.worldScoreboard = new Scoreboard();
 		this.spawnHostileMobs = true;
 		this.spawnPeacefulMobs = true;
@@ -3087,6 +3086,9 @@ public abstract class World implements IBlockAccess {
 	 * returns a calendar object containing the current date
 	 */
 	public Calendar getCurrentDate() {
+		if (this.theCalendar == null) {
+			this.theCalendar = Calendar.getInstance();
+		}
 		if (this.getTotalWorldTime() % 600L == 0L) {
 			this.theCalendar.setTimeInMillis(MinecraftServer.getCurrentTimeMillis());
 		}

@@ -776,27 +776,57 @@ public class GuiIngame extends Gui {
 		int j1 = scaledRes.getScaledHeight() / 2 + i1 / 3;
 		int k1 = 3;
 		int l1 = scaledRes.getScaledWidth() - i - 3;
-		int j = 0;
+		int fh = this.getFontRenderer().FONT_HEIGHT;
+		int l = scaledRes.getScaledWidth() - 3 + 2;
+		int n = collection.size();
+		if (n == 0) {
+			return;
+		}
 
+		// Treasure Client: all backgrounds in one draw, then all text, instead of switching
+		// between untextured boxes and font text three times per line (same picture: the
+		// boxes don't overlap each other or another line's text).
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer wr = tessellator.getBuffer();
+		GlStateManager.enableBlend();
+		GlStateManager.disableTexture2D();
+		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
+				RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		wr.begin(7, DefaultVertexFormats.POSITION_COLOR);
+		int top = j1 - n * fh;
+		tcRect(wr, l1 - 2, top, l, j1, 1342177280); // every score line
+		tcRect(wr, l1 - 2, top - fh - 1, l, top - 1, 1610612736); // title
+		tcRect(wr, l1 - 2, top - 1, l, top, 1342177280); // line under the title
+		tessellator.draw();
+		GlStateManager.enableTexture2D();
+		GlStateManager.disableBlend();
+
+		int j = 0;
 		for (Score score1 : collection) {
 			++j;
 			ScorePlayerTeam scoreplayerteam1 = scoreboard.getPlayersTeam(score1.getPlayerName());
 			String s1 = ScorePlayerTeam.formatPlayerName(scoreplayerteam1, score1.getPlayerName());
 			String s2 = TextFormatting.RED + "" + score1.getScorePoints();
-			int k = j1 - j * this.getFontRenderer().FONT_HEIGHT;
-			int l = scaledRes.getScaledWidth() - 3 + 2;
-			drawRect(l1 - 2, k, l, k + this.getFontRenderer().FONT_HEIGHT, 1342177280);
+			int k = j1 - j * fh;
 			this.getFontRenderer().drawString(s1, l1, k, 553648127);
 			this.getFontRenderer().drawString(s2, l - this.getFontRenderer().getStringWidth(s2), k, 553648127);
 
-			if (j == collection.size()) {
+			if (j == n) {
 				String s3 = objective.getDisplayName();
-				drawRect(l1 - 2, k - this.getFontRenderer().FONT_HEIGHT - 1, l, k - 1, 1610612736);
-				drawRect(l1 - 2, k - 1, l, k, 1342177280);
 				this.getFontRenderer().drawString(s3, l1 + i / 2 - this.getFontRenderer().getStringWidth(s3) / 2,
-						k - this.getFontRenderer().FONT_HEIGHT, 553648127);
+						k - fh, 553648127);
 			}
 		}
+	}
+
+	/** One colored box into an open POSITION_COLOR quad batch. */
+	private static void tcRect(WorldRenderer wr, int left, int top, int right, int bottom, int color) {
+		int a = color >>> 24, r = color >> 16 & 255, g = color >> 8 & 255, b = color & 255;
+		wr.pos((double) left, (double) bottom, 0.0D).color(r, g, b, a).endVertex();
+		wr.pos((double) right, (double) bottom, 0.0D).color(r, g, b, a).endVertex();
+		wr.pos((double) right, (double) top, 0.0D).color(r, g, b, a).endVertex();
+		wr.pos((double) left, (double) top, 0.0D).color(r, g, b, a).endVertex();
 	}
 
 	private void renderPlayerStats(ScaledResolution scaledRes) {

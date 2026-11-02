@@ -158,21 +158,30 @@ public class WorldSlice implements CeleritasBlockAccess {
         this.defaultSkyLightValue = this.hasSkyLight() ? EnumSkyBlock.SKY.defaultLightValue : 0;
 
         this.sections = new ClonedChunkSection[SECTION_TABLE_ARRAY_SIZE];
-        this.blockStatesArrays = new IBlockState[SECTION_TABLE_ARRAY_SIZE][];
         this.biomeCaches = new Biome[SECTION_TABLE_ARRAY_SIZE][16 * 16];
         this.biomeColorCache = new BiomeColorCache(this, CeleritasVintage.options().quality.legacyBiomeBlendRadius);
 
-        for (int x = 0; x < SECTION_LENGTH; x++) {
-            for (int y = 0; y < SECTION_LENGTH; y++) {
-                for (int z = 0; z < SECTION_LENGTH; z++) {
-                    int i = getLocalSectionIndex(x, y, z);
+        // Treasure Client: the block arrays (27 x 4096) are made once and shared by every world.
+        // copyData overwrites everything a build reads, and chunks build one at a time, so a
+        // server switch no longer allocates and fills them again.
+        if (tcSharedStates == null) {
+            IBlockState[][] arr = new IBlockState[SECTION_TABLE_ARRAY_SIZE][];
+            for (int x = 0; x < SECTION_LENGTH; x++) {
+                for (int y = 0; y < SECTION_LENGTH; y++) {
+                    for (int z = 0; z < SECTION_LENGTH; z++) {
+                        int i = getLocalSectionIndex(x, y, z);
 
-                    this.blockStatesArrays[i] = new IBlockState[SECTION_BLOCK_COUNT];
-                    Arrays.fill(this.blockStatesArrays[i], EMPTY_BLOCK_STATE);
+                        arr[i] = new IBlockState[SECTION_BLOCK_COUNT];
+                        Arrays.fill(arr[i], EMPTY_BLOCK_STATE);
+                    }
                 }
             }
+            tcSharedStates = arr;
         }
+        this.blockStatesArrays = tcSharedStates;
     }
+
+    private static IBlockState[][] tcSharedStates;
 
     public void copyData(ChunkRenderContext context) {
         this.origin = context.getOrigin();
