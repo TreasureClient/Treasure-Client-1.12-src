@@ -45,8 +45,11 @@ public class ServerCapeCache {
 			this.isPresetCape = false;
 			this.presetCapeId = -1;
 			this.customCape = new CacheCustomCape(textureInstance, resourceLocation);
-			ServerCapeCache.this.textureManager.loadTexture(resourceLocation, textureInstance);
+			// Treasure Client: uploaded the first time it's drawn, spread over frames (like skins)
+			this.tcPending = textureInstance != null;
 		}
+
+		private boolean tcPending;
 		
 		/**
 		 * Use only for the constant for the client player
@@ -68,6 +71,14 @@ public class ServerCapeCache {
 				return DefaultCapes.getCapeFromId(presetCapeId).location;
 			}else {
 				if(customCape != null) {
+					if(tcPending) {
+						if(!ServerSkinCache.tcMayUpload()) {
+							return null; // no cape for a moment, until its turn
+						}
+						tcPending = false;
+						ServerCapeCache.this.textureManager.loadTexture(customCape.resourceLocation,
+								customCape.textureInstance);
+					}
 					return customCape.resourceLocation;
 				}else {
 					return null;
@@ -76,7 +87,7 @@ public class ServerCapeCache {
 		}
 		
 		protected void free() {
-			if(!isPresetCape && customCape.resourceLocation != null) {
+			if(!isPresetCape && !tcPending && customCape.resourceLocation != null) {
 				ServerCapeCache.this.textureManager.deleteTexture(customCape.resourceLocation);
 			}
 		}

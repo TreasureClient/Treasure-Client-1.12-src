@@ -144,6 +144,14 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
             throw fillCrashInfo(CrashReport.makeCrashReport(ex, "Encountered exception while building chunk meshes"), slice, blockPos);
         }
 
+        // Treasure Client: if this frame's build time ran out while placing blocks, turn the result
+        // into a mesh at the start of the next frame instead (that last step is a few ms on its own)
+        if (startY < maxY && deadline != 0L && System.nanoTime() > deadline) {
+            this.tcNextY = maxY;
+            org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
+            return null;
+        }
+
         buildContext.convertVanillaDataToCeleritasData(buffers);
 
         Reference2ReferenceMap<TerrainRenderPass, BuiltSectionMeshParts> meshes = BuiltSectionMeshParts.groupFromBuildBuffers(buffers, (float) (camera.x - minX), (float) (camera.y - minY), (float) (camera.z - minZ));

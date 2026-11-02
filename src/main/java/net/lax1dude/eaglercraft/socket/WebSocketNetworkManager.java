@@ -117,6 +117,31 @@ public class WebSocketNetworkManager extends NetworkManager {
 		}
 	}
 	private static final int TC_MAX_BACKLOG = 4000;
+	private static final long TC_TICK_DRAIN_NS = 20000000L;
+	private int tcPosLookId = -2;
+
+	/** True if a server teleport (or anything we can't identify) is still waiting in the queue. */
+	private boolean tcTeleportWaiting() {
+		try {
+			if (tcPosLookId == -2) {
+				tcPosLookId = packetState.getPacketId(EnumPacketDirection.CLIENTBOUND,
+						new net.minecraft.network.play.server.SPacketPlayerPosLook());
+			}
+			if (tcPosLookId < 0 || tcPosLookId > 127) {
+				return true;
+			}
+			for (IWebSocketFrame f : tcBacklog) {
+				byte[] b = f.getByteArray();
+				if (b.length == 0 || (b[0] & 0x80) != 0 || b[0] == tcPosLookId) {
+					return true;
+				}
+			}
+			return false;
+		} catch (Throwable t) {
+			tcPosLookId = -1;
+			return true;
+		}
+	}
 	private static final int TC_MIN_PER_FRAME = 8;
 	private static long tcFrameUsedNs;
 	private static int tcFrameHandled;
@@ -231,6 +256,15 @@ public class WebSocketNetworkManager extends NetworkManager {
 			++handled;
 			if(spread && tcFrameHandled + handled >= TC_MIN_PER_FRAME
 					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() > deadline) {
+				break;
+			}
+			// Treasure Client: a tick handles everything waiting (so it never moves you from before a
+			// server teleport), but a huge burst (a duel's worth of chunks) is cut off after ~20 ms
+			// when no teleport is waiting; the rest is handled next frame, like ordinary network delay.
+			if(!spread && tcDrainAll && tcSpreadBursts && (handled & 7) == 0
+					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() - start > TC_TICK_DRAIN_NS
+					&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient
+					&& !tcTeleportWaiting()) {
 				break;
 			}
 		}

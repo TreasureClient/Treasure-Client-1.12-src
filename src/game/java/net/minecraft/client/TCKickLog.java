@@ -20,7 +20,9 @@ import net.minecraft.network.play.client.CPacketUseEntity;
 public class TCKickLog {
 
 	private static final int SIZE = 200;
-	private static final String[] names = new String[SIZE];
+	// a String (events) or the sent Packet itself; turned into text only when a log is shown,
+	// so sending a packet costs almost nothing extra
+	private static final Object[] names = new Object[SIZE];
 	private static final long[] times = new long[SIZE];
 	private static int head, count;
 
@@ -28,13 +30,7 @@ public class TCKickLog {
 	private static List<String> lastKick = new ArrayList<String>();
 
 	public static void sent(Packet<?> p) {
-		String n;
-		try {
-			n = name(p);
-		} catch (Throwable t) {
-			n = "?";
-		}
-		add("> " + n);
+		add(p);
 	}
 
 	/** Something the server did (or that happened to you), shown with a "<" in the log. */
@@ -42,11 +38,22 @@ public class TCKickLog {
 		add("< " + what);
 	}
 
-	private static void add(String n) {
+	private static void add(Object n) {
 		names[head] = n;
 		times[head] = EagRuntime.steadyTimeMillis();
 		head = (head + 1) % SIZE;
 		if (count < SIZE) ++count;
+	}
+
+	private static String text(Object o) {
+		if (o instanceof Packet) {
+			try {
+				return "> " + name((Packet<?>) o);
+			} catch (Throwable t) {
+				return "> ?";
+			}
+		}
+		return String.valueOf(o);
 	}
 
 	private static String name(Packet<?> p) {
@@ -76,12 +83,13 @@ public class TCKickLog {
 		for (int k = 0; k < count; ++k) {
 			int i = (start + k) % SIZE;
 			if (now - times[i] > 6000L) continue; // only the last 6 seconds
-			if (names[i].equals(prev)) {
+			String nm = text(names[i]);
+			if (nm.equals(prev)) {
 				++repeat;
 				continue;
 			}
 			if (prev != null) out.add(line(prev, prevT, now, repeat));
-			prev = names[i];
+			prev = nm;
 			prevT = times[i];
 			repeat = 1;
 		}

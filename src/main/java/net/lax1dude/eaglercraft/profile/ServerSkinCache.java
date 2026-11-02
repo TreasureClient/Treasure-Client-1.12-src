@@ -49,8 +49,12 @@ public class ServerSkinCache {
 			this.isPresetSkin = false;
 			this.presetSkinId = -1;
 			this.customSkin = new CacheCustomSkin(textureInstance, resourceLocation, model);
-			ServerSkinCache.this.textureManager.loadTexture(resourceLocation, textureInstance);
+			// Treasure Client: upload the skin the first time the player is drawn, a few per
+			// frame, instead of all at once when a lobby full of skins arrives
+			this.tcPending = textureInstance != null;
 		}
+
+		private boolean tcPending;
 		
 		/**
 		 * Use only for the constant for the client player
@@ -72,6 +76,14 @@ public class ServerSkinCache {
 				return DefaultSkins.getSkinFromId(presetSkinId).location;
 			}else {
 				if(customSkin != null) {
+					if(tcPending) {
+						if(!tcMayUpload()) {
+							return DefaultSkins.DEFAULT_STEVE.location; // for a moment, until its turn
+						}
+						tcPending = false;
+						ServerSkinCache.this.textureManager.loadTexture(customSkin.resourceLocation,
+								customSkin.textureInstance);
+					}
 					return customSkin.resourceLocation;
 				}else {
 					return DefaultSkins.DEFAULT_STEVE.location;
@@ -92,11 +104,23 @@ public class ServerSkinCache {
 		}
 		
 		protected void free() {
-			if(!isPresetSkin) {
+			if(!isPresetSkin && !tcPending) {
 				ServerSkinCache.this.textureManager.deleteTexture(customSkin.resourceLocation);
 			}
 		}
 
+	}
+
+	private static long tcLastUpload;
+
+	/** At most one skin upload every 8 ms. */
+	static boolean tcMayUpload() {
+		long now = EagRuntime.steadyTimeMillis();
+		if (now - tcLastUpload < 8L) {
+			return false;
+		}
+		tcLastUpload = now;
+		return true;
 	}
 
 	protected static class CacheCustomSkin {

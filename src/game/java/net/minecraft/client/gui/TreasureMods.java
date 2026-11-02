@@ -712,7 +712,7 @@ public class TreasureMods {
 
 			net.minecraft.client.renderer.TCTreasureAnimations.tick(mc); // Treasure Animations swing speed
 			net.minecraft.client.TCAutoGG.tick(mc); // Auto GG
-			net.lax1dude.eaglercraft.internal.PlatformAudio.tcNoWaitDecode = mc.world != null; // decode new sounds without freezing
+			net.lax1dude.eaglercraft.internal.PlatformAudio.tcNoWaitDecode = true; // decode new sounds (music too, also in menus) without freezing
 
 			// only drive the game while actually in a world with no screen open
 			boolean active = (mc.player != null && mc.currentScreen == null);

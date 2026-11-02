@@ -1582,8 +1582,10 @@ public class Minecraft implements IThreadListener {
 			}
 
 			if (!this.isGamePaused && this.world != null) {
+				long tcT = TCLagMonitor.now(); // .lag "world updates" (ambient block particles)
 				this.world.doVoidFogParticles(MathHelper.floor(this.player.posX), MathHelper.floor(this.player.posY),
 						MathHelper.floor(this.player.posZ));
+				TCLagMonitor.addLogic(TCLagMonitor.L_WORLD, tcT);
 			}
 
 			if (!this.isGamePaused) {

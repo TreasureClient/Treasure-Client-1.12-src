@@ -350,8 +350,14 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 		int i = p_184153_1_ + this.rand.nextInt(p_184153_4_) - this.rand.nextInt(p_184153_4_);
 		int j = p_184153_2_ + this.rand.nextInt(p_184153_4_) - this.rand.nextInt(p_184153_4_);
 		int k = p_184153_3_ + this.rand.nextInt(p_184153_4_) - this.rand.nextInt(p_184153_4_);
+		if (j < 0 || j > 255) {
+			return; // Treasure Client: outside the world, nothing to show (and no barrier there)
+		}
 		pos.setPos(i, j, k);
 		IBlockState iblockstate = this.getBlockState(pos);
+		if (iblockstate.getBlock() == Blocks.AIR) {
+			return; // Treasure Client: most picks are air, which shows nothing
+		}
 		iblockstate.getBlock().randomDisplayTick(iblockstate, this, pos, random);
 
 		if (p_184153_6_ && iblockstate.getBlock() == Blocks.BARRIER) {
