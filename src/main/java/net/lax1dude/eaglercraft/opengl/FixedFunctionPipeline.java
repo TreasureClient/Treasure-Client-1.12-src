@@ -201,9 +201,97 @@ public class FixedFunctionPipeline {
 	private static FixedFunctionPipeline getPipelineInstanceCore(int bits) {
 		FixedFunctionPipeline pp = pipelineStateCache[bits];
 		if(pp == null) {
+			long t0 = EagRuntime.nanoTime();
 			pipelineStateCache[bits] = pp = makeNewPipeline(bits, 0, false);
+			long t = EagRuntime.nanoTime() - t0;
+			++tcCompiles;
+			tcCompileNs += t;
+			if(t > tcSlowNs) tcSlowNs = t;
+			tcMarkUsed(bits);
 		}
 		return pp;
+	}
+
+	// Treasure Client: shader warm-up. Each new mix of draw settings (texture, fog, lighting,
+	// alpha test...) needs its own shader, and compiling one makes the game wait for the GPU
+	// (often 20-100 ms on a Chromebook) in the middle of a frame. The mixes that were used are
+	// saved, and on the next start they are compiled on the menus instead of mid-game.
+	public static int tcCompiles, tcWarmed;
+	public static long tcCompileNs, tcSlowNs;
+	private static final String TC_KEY = "tcShaderWarm";
+	private static boolean[] tcUsed;
+	private static boolean tcDirty;
+	private static int[] tcList;
+	private static int tcListIdx;
+
+	private static void tcMarkUsed(int bits) {
+		if(tcUsed == null) tcUsed = new boolean[fixedFunctionStatesBits + 1];
+		if(!tcUsed[bits]) {
+			tcUsed[bits] = true;
+			tcDirty = true;
+		}
+	}
+
+	private static void tcLoadList() {
+		if(tcList != null) return;
+		tcList = new int[0];
+		try {
+			byte[] b = EagRuntime.getStorage(TC_KEY);
+			if(b == null) return;
+			int n = b.length / 2;
+			int[] l = new int[n];
+			int c = 0;
+			for(int i = 0; i < n; ++i) {
+				int v = ((b[i * 2] & 0xFF) << 8) | (b[i * 2 + 1] & 0xFF);
+				if(v <= fixedFunctionStatesBits) l[c++] = v;
+			}
+			int[] o = new int[c];
+			System.arraycopy(l, 0, o, 0, c);
+			tcList = o;
+		}catch(Throwable t) {
+			tcList = new int[0];
+		}
+	}
+
+	/** Compiles one saved shader that isn't compiled yet. False when there is nothing left. */
+	public static boolean tcWarmStep() {
+		tcLoadList();
+		while(tcListIdx < tcList.length) {
+			int bits = tcList[tcListIdx++];
+			tcMarkUsed(bits);
+			if(pipelineStateCache[bits] == null) {
+				try {
+					pipelineStateCache[bits] = makeNewPipeline(bits, 0, false);
+					++tcWarmed;
+				}catch(Throwable t) {
+					// a broken entry never stops the game; it compiles on demand like before
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Saves the list of used shaders if it changed (a few hundred bytes). */
+	public static void tcSave() {
+		if(!tcDirty || tcUsed == null) return;
+		tcDirty = false;
+		tcLoadList();
+		for(int i = 0; i < tcList.length; ++i) tcUsed[tcList[i]] = true; // keep ones not used this time
+		int n = 0;
+		for(int i = 0; i < tcUsed.length; ++i) if(tcUsed[i]) ++n;
+		byte[] b = new byte[n * 2];
+		int k = 0;
+		for(int i = 0; i < tcUsed.length; ++i) {
+			if(tcUsed[i]) {
+				b[k++] = (byte)(i >> 8);
+				b[k++] = (byte)i;
+			}
+		}
+		try {
+			EagRuntime.setStorage(TC_KEY, b);
+		}catch(Throwable t) {
+		}
 	}
 	
 	private static FixedFunctionPipeline getPipelineInstanceExt(int coreBits, int extBits) {
@@ -1070,6 +1158,7 @@ public class FixedFunctionPipeline {
 	}
 
 	public static void flushCache() {
+		tcListIdx = 0; // Treasure Client: warm the saved shaders again
 		shaderSourceCacheVSH = null;
 		shaderSourceCacheFSH = null;
 		FixedFunctionPipeline pp;

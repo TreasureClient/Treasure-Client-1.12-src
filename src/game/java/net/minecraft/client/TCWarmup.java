@@ -3,6 +3,7 @@ package net.minecraft.client;
 import java.util.ArrayList;
 
 import net.lax1dude.eaglercraft.EagRuntime;
+import net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline;
 import net.minecraft.client.audio.Sound;
 import net.minecraft.client.audio.SoundEventAccessor;
 import net.minecraft.client.audio.SoundHandler;
@@ -72,7 +73,7 @@ public final class TCWarmup {
 	private static int texIdx, sndEventIdx, sndIdx;
 	private static final ArrayList<Sound> sndList = new ArrayList<Sound>();
 	private static Object lastWorld;
-	private static long lastBusy, nextInWorld;
+	private static long lastBusy, nextInWorld, nextShaderSave;
 
 	/** Sounds were dropped from memory (resource reload): check them again. */
 	public static void resetSounds() {
@@ -93,6 +94,13 @@ public final class TCWarmup {
 			sndIdx = 0;
 		}
 		long now = EagRuntime.steadyTimeMillis();
+		if (now > nextShaderSave) {
+			nextShaderSave = now + 10000L;
+			try {
+				FixedFunctionPipeline.tcSave();
+			} catch (Throwable t) {
+			}
+		}
 		boolean loading = mc.world == null || mc.player == null || mc.currentScreen instanceof GuiDownloadTerrain;
 		if (!loading) {
 			// in a world: only when nothing has happened for a while, one file at a time
@@ -115,6 +123,10 @@ public final class TCWarmup {
 	/** Loads one file that isn't loaded yet. False when everything is loaded. */
 	private static boolean step(Minecraft mc) {
 		try {
+			// shaders first: an uncompiled one stalls a frame for 20-100 ms
+			if (FixedFunctionPipeline.tcWarmStep()) {
+				return true;
+			}
 			TextureManager tm = mc.getTextureManager();
 			while (texIdx < TEXTURES.length) {
 				ResourceLocation loc = new ResourceLocation(TEXTURES[texIdx++]);

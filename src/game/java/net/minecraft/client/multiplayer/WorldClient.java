@@ -178,7 +178,10 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 				this.previousActiveChunkSet.add(chunkpos);
 				++i;
 
-				if (i >= 10) {
+				// Treasure Client: vanilla re-checks the server's lighting in 10 chunks every tick
+				// (~25,000 light checks a second for ~19 minutes after every world change, and each
+				// "fix" redraws chunks). The server already sends the light, so 2 a tick is plenty.
+				if (i >= 2) {
 					return;
 				}
 			}
