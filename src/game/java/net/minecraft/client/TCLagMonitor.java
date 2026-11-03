@@ -521,6 +521,10 @@ public class TCLagMonitor {
 						+ " " + (sndSlowNs / 1000000L) + "ms");
 			}
 		}
+		say(mc, "§7Shader compiles on demand: §f" + net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompiles
+				+ " §7taking §f" + (net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompileNs / 1000000L)
+				+ "ms§7, slowest §f" + (net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcSlowNs / 1000000L)
+				+ "ms §7(warmed on menus: §f" + net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcWarmed + "§7)");
 		if (ringCount > 0) {
 			say(mc, "§7Last spikes (logic / drawing / browser, ms):");
 			for (int i = 0; i < Math.min(3, ringCount); i++) {
