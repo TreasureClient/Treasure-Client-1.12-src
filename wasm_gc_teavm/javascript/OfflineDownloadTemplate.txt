@@ -2924,7 +2924,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     /* ---------- Dynamic Resolution ----------
        The game writes "fps,logic%,fps limit,in world,seq" to tcframe once a second.
        While frames stay slow and the time isn't game logic (server lag), the render
-       resolution steps down 10% (never below 70% or the Render Resolution setting,
+       resolution steps down 10% (never below 60% or the Render Resolution setting,
        and never so far that the auto GUI scale would change). It steps back up after
        a stretch of smooth frames; if it keeps bouncing, it waits longer each time. */
     var dynScale = 100, dynLow = 0, dynHigh = 0, dynHold = 0, dynRaiseNeed = 20, dynSinceRaise = 999, lastDynTick = 0, lastFrameSeq = null;
@@ -2947,11 +2947,12 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (!inWorld || document.hidden || !document.hasFocus()) { dynLow = 0; dynHigh = 0; return; }
       if (dynHold > 0) { dynHold--; return; }
       var cap = Math.min(limit > 0 ? limit : 60, 60);
-      var lowFps = Math.round(cap * 0.7), highFps = Math.round(cap * 0.92);
+      // react to the 48-60 dips a slowed-down device has, not only to big drops
+      var lowFps = Math.round(cap * 0.85), highFps = Math.round(cap * 0.95);
       if (fps < lowFps && logic < 50) { dynLow++; dynHigh = 0; }
       else if (fps >= highFps) { dynHigh++; dynLow = 0; }
       else { dynLow = 0; dynHigh = 0; }
-      var cur = Math.min(user, dynScale), floor = Math.min(user, 70);
+      var cur = Math.min(user, dynScale), floor = Math.min(user, 60);
       if (dynLow >= 3 && cur > floor) {
         var next = Math.max(floor, cur - 10);
         dynLow = 0;
