@@ -43,6 +43,10 @@ public final class TCWarmup {
 			"textures/models/armor/gold_layer_1.png", "textures/models/armor/gold_layer_2.png",
 			"textures/models/armor/leather_layer_1.png", "textures/models/armor/leather_layer_2.png",
 			"textures/models/armor/leather_layer_1_overlay.png", "textures/models/armor/leather_layer_2_overlay.png",
+			// modern armor drawn by ViaVersion items (netherite, copper, turtle)
+			"textures/models/armor/netherite_layer_1.png", "textures/models/armor/netherite_layer_2.png",
+			"textures/models/armor/copper_layer_1.png", "textures/models/armor/copper_layer_2.png",
+			"textures/models/armor/turtle_layer_1.png", "textures/models/armor/turtle_layer_2.png",
 			// lobbies and common mobs
 			"textures/entity/chest/normal.png", "textures/entity/chest/ender.png", "textures/entity/chest/trapped.png",
 			"textures/entity/sign.png", "textures/entity/villager/villager.png", "textures/entity/armorstand/wood.png",
