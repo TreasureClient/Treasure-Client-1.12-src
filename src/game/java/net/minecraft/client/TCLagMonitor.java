@@ -24,9 +24,9 @@ public class TCLagMonitor {
 
 	// parts of the drawing time, timed by the renderers each frame
 	public static final int TERRAIN = 0, ENTITIES = 1, BLOCK_ENTS = 2, NAME_TAGS = 3, PARTICLES = 4, HUD = 5,
-			SKY = 6, HAND = 7, OTHER = 8, PARTS = 9;
+			SKY = 6, HAND = 7, SETUP = 8, SCREENS = 9, OTHER = 10, PARTS = 11;
 	private static final String[] PART_NAMES = { "terrain", "entities", "block ents", "name tags", "particles",
-			"HUD", "sky", "hand", "other" };
+			"HUD", "sky", "hand", "camera setup", "menus/toasts", "other" };
 	private static final long[] cur = new long[PARTS];
 	private static final long[][] mPartAll = new long[MINUTES][PARTS]; // all frames, ns
 	private static final long[][] mPartSpike = new long[MINUTES][PARTS]; // spike frames, ns
@@ -242,6 +242,23 @@ public class TCLagMonitor {
 	private static final int[] mSpikes = new int[MINUTES];
 	private static final int[] mWorst = new int[MINUTES];
 	private static final int[] mHeap = new int[MINUTES];
+	// fastest run of a fixed CPU test in each minute (ns): when the device gets hot and slows
+	// down, the same work takes longer, which tells heat apart from the game doing more work
+	private static final int[] mCpu = new int[MINUTES];
+	private static long lastCpuTest;
+	public static int cpuSink;
+
+	private static int cpuTest() {
+		long t0 = EagRuntime.nanoTime();
+		int x = 0x2545F491 ^ cpuSink;
+		for (int i = 0; i < 300000; i++) {
+			x ^= x << 13;
+			x ^= x >>> 17;
+			x ^= x << 5;
+		}
+		cpuSink += x;
+		return (int) Math.min(Integer.MAX_VALUE, EagRuntime.nanoTime() - t0);
+	}
 	private static final long[] mMs = new long[MINUTES];
 	private static final long[] mBrowser = new long[MINUTES];
 	private static final long[] mLogic = new long[MINUTES];
@@ -303,6 +320,11 @@ public class TCLagMonitor {
 			curMinute = minute;
 		}
 		mFrames[minute]++;
+		if (now - lastCpuTest > 5000L) {
+			lastCpuTest = now;
+			int c = cpuTest();
+			if (mCpu[minute] == 0 || c < mCpu[minute]) mCpu[minute] = c;
+		}
 		mMs[minute] += total;
 		mLogicAll[minute] += logicNs;
 		mDrawAll[minute] += drawNs;
@@ -449,6 +471,11 @@ public class TCLagMonitor {
 	/** The frame that printed the .lag report itself (writing it to chat isn't gameplay lag). */
 	private static boolean skipFrame;
 
+	/** Leave this frame out of the report (logging in to a server waits for the server, not the game). */
+	public static void skipThisFrame() {
+		skipFrame = true;
+	}
+
 	public static void print(Minecraft mc) {
 		skipFrame = true;
 		if (start < 0L || curMinute < 0) {
@@ -526,6 +553,20 @@ public class TCLagMonitor {
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
 					+ (mb / mins) + ", areas " + (mr / mins) + ")");
 		}
+		int speed = cpuSpeed(last);
+		int first = -1;
+		for (int m = 0; m <= last; m++) {
+			if (mFrames[m] > 0) {
+				first = m;
+				break;
+			}
+		}
+		if (speed > 0 && first >= 0 && mFrames[last] > 0) {
+			long early = (mLogicAll[first] + mDrawAll[first]) / 1000L / mFrames[first];
+			long nowW = (mLogicAll[last] + mDrawAll[last]) / 1000L / mFrames[last];
+			say(mc, "§7Device speed: §f" + speed + "% §7of its best (heat slows it down) · game work per frame: §f"
+					+ ms1(early) + " §7(min " + (first + 1) + ") → §f" + ms1(nowW) + "ms §7(now)");
+		}
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}
 
@@ -553,6 +594,18 @@ public class TCLagMonitor {
 						+ " vis " + r[16] : "");
 	}
 
+	/** CPU test speed in the last minute compared to the fastest minute (100 = no slowdown). */
+	private static int cpuSpeed(int last) {
+		int best = 0, cur = 0;
+		for (int m = 0; m <= last; m++) {
+			if (mCpu[m] > 0) {
+				if (best == 0 || mCpu[m] < best) best = mCpu[m];
+				cur = mCpu[m];
+			}
+		}
+		return cur > 0 ? (int) ((long) best * 100L / cur) : 0;
+	}
+
 	private static String verdict(int last) {
 		int early = Math.min(3, last);
 		int heapStart = -1, heapEnd = -1;
@@ -574,9 +627,12 @@ public class TCLagMonitor {
 		if (spikesLate == 0) {
 			return "No spikes in the last 5 minutes.";
 		}
-		String trend = (heapStart > 0 && heapEnd > heapStart * 3 / 2)
+		int speed = cpuSpeed(last);
+		String heat = speed > 0 && speed < 80
+				? "The device slowed to " + speed + "% speed (likely heat), so everything takes longer. " : "";
+		String trend = heat + ((heapStart > 0 && heapEnd > heapStart * 3 / 2)
 				? "Page memory grew from " + heapStart + " to " + heapEnd + " MB. "
-				: (heapStart > 0 ? "Page memory is steady (" + heapStart + " -> " + heapEnd + " MB). " : "");
+				: (heapStart > 0 ? "Page memory is steady (" + heapStart + " -> " + heapEnd + " MB). " : ""));
 		if (b >= l && b >= d) {
 			return trend + "Most spike time is the browser/GPU (garbage collection, GPU work or the device slowing down when hot).";
 		}

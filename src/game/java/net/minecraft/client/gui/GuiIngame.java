@@ -160,7 +160,7 @@ public class GuiIngame extends Gui {
 	 * frame. TCHudCache uses it to decide when the HUD has to be drawn again.
 	 */
 	/** Treasure Client (HUD cache): which part of the HUD renderGameOverlay draws. */
-	public static final int TC_ALL = 0, TC_OWN = 1, TC_SERVER = 2;
+	public static final int TC_ALL = 0, TC_OWN = 1, TC_SERVER = 2, TC_HOTBAR = 3;
 	public static int tcLayer = TC_ALL;
 
 	/**
@@ -179,6 +179,7 @@ public class GuiIngame extends Gui {
 		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
 		GameSettings gs = this.mc.gameSettings;
 		if (p == null || this.mc.world == null || this.mc.currentScreen != null || gs.showDebugInfo
+				|| (gs.thirdPersonView == 0 && p.inventory.armorItemInSlot(3).getItem() == Item.getItemFromBlock(Blocks.PUMPKIN))
 				|| this.recordPlayingUpFor > 0 || p.timeInPortal > 0.0F
 				|| p.prevTimeInPortal > 0.0F || p.getSleepTimer() > 0 || p.isRidingHorse()
 				|| this.mc.entityRenderer.tcItemActivationShowing()
@@ -210,59 +211,12 @@ public class GuiIngame extends Gui {
 			if (s.hasEffect()) {
 				perTwoTicks = true; // enchantment glint moves (5 updates a second: each one redraws the hotbar)
 			}
-		}
-		// health, food, armor, air, XP
-		float health = p.getHealth();
-		float absorb = p.getAbsorptionAmount();
-		h = tcMix(h, Float.floatToIntBits(health));
-		h = tcMix(h, Float.floatToIntBits(p.getMaxHealth()));
-		h = tcMix(h, Float.floatToIntBits(absorb));
-		h = tcMix(h, this.playerHealth);
-		h = tcMix(h, this.lastPlayerHealth);
-		h = tcMix(h, p.getTotalArmorValue());
-		h = tcMix(h, p.getFoodStats().getFoodLevel());
-		float sat = p.getFoodStats().getSaturationLevel();
-		h = tcMix(h, Float.floatToIntBits(sat));
-		h = tcMix(h, p.isInsideOfMaterial(Material.WATER) ? p.getAir() : 300);
-		h = tcMix(h, p.experienceLevel);
-		h = tcMix(h, (int) (p.experience * 182.0F));
-		h = tcMix(h, this.mc.world.getWorldInfo().isHardcoreModeEnabled() ? 1 : 0);
-		if (this.healthUpdateCounter > (long) this.updateCounter || health + absorb <= 4.0F || sat <= 0.0F
-				|| p.isPotionActive(MobEffects.REGENERATION) || this.remainingHighlightTicks > 0) {
-			perTick = true; // blinking or shaking hearts, regeneration wave, shaking food, item name fade
-		}
-		Entity mount = p.getRidingEntity();
-		if (mount instanceof EntityLivingBase) {
-			h = tcMix(h, Float.floatToIntBits(((EntityLivingBase) mount).getHealth()));
-		}
-		// potion icons (they blink when about to run out)
-		for (PotionEffect e : p.getActivePotionEffects()) {
-			h = tcMix(h, Potion.getIdFromPotion(e.getPotion()));
-			h = tcMix(h, e.getAmplifier());
-			h = tcMix(h, (e.getIsAmbient() ? 1 : 0) | (e.doesShowParticles() ? 2 : 0));
-			if (e.getDuration() <= 200) {
-				perTick = true;
+			if (p.getCooldownTracker().hasCooldown(s.getItem())) {
+				perTick = true; // ender pearl / shield cooldown sweep
 			}
 		}
-		// attack cooldown icon next to the hotbar
-		if (gs.attackIndicator == 2 && p.getCooledAttackStrength(0.0F) < 1.0F) {
-			perTick = true;
-		}
-		// the always-on FPS / position line in the corner
-		if (gs.hudFps) {
-			h = tcMix(h, this.mc.renderGlobal.getDebugInfoShort().hashCode());
-			if (net.lax1dude.eaglercraft.sp.SingleplayerServerController.isWorldRunning()) {
-				h = tcMix(h, net.lax1dude.eaglercraft.sp.SingleplayerServerController.getTPS().hashCode());
-			}
-		}
-		if (gs.hudCoords) {
-			Entity e = this.mc.getRenderViewEntity();
-			if (e != null) {
-				h = tcMix(h, MathHelper.floor(e.posX));
-				h = tcMix(h, MathHelper.floor(e.getEntityBoundingBox().minY));
-				h = tcMix(h, MathHelper.floor(e.posZ));
-			}
-		}
+		// Treasure Client: health, food, XP, effects, the item name and the attack icon are drawn
+		// live every frame now (cheap flat icons); only the hotbar items are cached
 		if (perTick) {
 			h = tcMix(h, this.updateCounter);
 		} else if (perTwoTicks) {
@@ -285,7 +239,11 @@ public class GuiIngame extends Gui {
 		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
 				RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
 
-		boolean tcOwn = tcLayer != TC_SERVER, tcSrv = tcLayer != TC_OWN;
+		// TC_HOTBAR: hotbar and its items (cached), TC_OWN: hearts, food, XP, effects... (drawn live),
+		// TC_SERVER: scoreboard, chat, boss bars, titles, tab list (cached)
+		boolean tcHot = tcLayer == TC_ALL || tcLayer == TC_HOTBAR;
+		boolean tcOwn = tcLayer == TC_ALL || tcLayer == TC_OWN;
+		boolean tcSrv = tcLayer == TC_ALL || tcLayer == TC_SERVER;
 		ItemStack itemstack = this.mc.player.inventory.armorItemInSlot(3);
 
 		if (tcOwn) {
@@ -302,8 +260,13 @@ public class GuiIngame extends Gui {
 			}
 		}
 
+		}
+
+		if (tcHot || tcOwn) {
 		if (this.mc.playerController.isSpectator()) {
-			this.spectatorGui.renderTooltip(scaledresolution, partialTicks);
+			if (tcOwn) { // drawn live, never cached (it would be drawn twice)
+				this.spectatorGui.renderTooltip(scaledresolution, partialTicks);
+			}
 		} else {
 			long tcT = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 			this.renderHotbar(scaledresolution, partialTicks);
@@ -627,6 +590,7 @@ public class GuiIngame extends Gui {
 			float f = this.zLevel;
 			int j = 182;
 			int k = 91;
+			if (tcLayer != TC_OWN) {
 			this.zLevel = -90.0F;
 			this.drawTexturedModalRect(i - 91, sr.getScaledHeight() - 22, 0, 0, 182, 22);
 			this.drawTexturedModalRect(i - 91 - 1 + entityplayer.inventory.currentItem * 20,
@@ -665,8 +629,9 @@ public class GuiIngame extends Gui {
 				}
 				CustomItems.setRenderOffHand(false);
 			}
+			} // Treasure Client: end of the cached hotbar part
 
-			if (this.mc.gameSettings.attackIndicator == 2) {
+			if (tcLayer != TC_HOTBAR && this.mc.gameSettings.attackIndicator == 2) {
 				float f1 = this.mc.player.getCooledAttackStrength(0.0F);
 
 				if (f1 < 1.0F) {
