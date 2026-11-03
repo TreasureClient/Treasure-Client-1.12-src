@@ -1328,7 +1328,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, badopt:true, xcull:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1459,6 +1459,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'dynfps=' + (state.dynfps === false ? 0 : 1),
           'memsaver=' + (state.memsaver === false ? 0 : 1),
           'bfmath=' + (state.bfmath === false ? 0 : 1),
+          'badopt=' + (state.badopt === false ? 0 : 1),
+          'xcull=' + (state.xcull === false ? 0 : 1),
           'dynres=' + (state.dynResOn ? 1 : 0),
           'cextra=' + (state.cextra === false ? 0 : 1),
           'ceAnim=' + (state.ceAnim === false ? 0 : 1),
@@ -1702,7 +1704,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               if (!(n >= 0 && n <= 256)) return;
               state.entDist = n; changed = true; return;
             }
-            if (['celeritas','via','entcull','pcull','vanillafix','ebe','lithium','ifast','dynfps','memsaver','cextra','bfmath','dynResOn','pcore','c2me','perfpack','ceAnim','ceAnimWater','ceAnimLava','ceAnimFire','ceAnimPortal','ceAnimBlock','ceRainSplash','ceBreakFx','ceHitFx','ceSky','ceStars','ceSunMoon','ceWeather','ceFrames','ceStands','cePaintings','ceBeacon','ceEnchBook','cePiston','ceToasts'].indexOf(kv[0]) < 0) return;
+            if (['celeritas','via','entcull','pcull','vanillafix','ebe','lithium','ifast','dynfps','memsaver','cextra','bfmath','badopt','xcull','dynResOn','pcore','c2me','perfpack','ceAnim','ceAnimWater','ceAnimLava','ceAnimFire','ceAnimPortal','ceAnimBlock','ceRainSplash','ceBreakFx','ceHitFx','ceSky','ceStars','ceSunMoon','ceWeather','ceFrames','ceStands','cePaintings','ceBeacon','ceEnchBook','cePiston','ceToasts'].indexOf(kv[0]) < 0) return;
             state[kv[0]] = kv[1] === '1';
             var sw = $('.tc-sw[data-mod="' + kv[0] + '"]'); if (sw) sw.classList.toggle('on', state[kv[0]]);
             changed = true;

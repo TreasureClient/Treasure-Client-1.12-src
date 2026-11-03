@@ -728,12 +728,47 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		this.lightmapUpdateNeeded = true;
 	}
 
+	// Treasure Client (BadOptimizations): what the last lightmap was built from, and its colors
+	private boolean tcLmValid;
+	private Object tcLmWorld;
+	private final float[] tcLmKey = new float[8];
+	private int[] tcLmPrev;
+
+	/** True if nothing the lightmap depends on changed since it was last built. */
+	private boolean tcLightmapSame(World world, float sun, float partialTicks) {
+		float[] k = this.tcLmKey;
+		float boss = this.bossColorModifier > 0.0F
+				? this.bossColorModifierPrev + (this.bossColorModifier - this.bossColorModifierPrev) * partialTicks
+				: 0.0F;
+		float nv = this.mc.player != null && this.mc.player.isPotionActive(MobEffects.NIGHT_VISION)
+				? this.getNightVisionBrightness(this.mc.player, partialTicks)
+				: -1.0F;
+		boolean same = this.tcLmValid && this.tcLmWorld == world && k[0] == sun && k[1] == this.torchFlickerX
+				&& k[2] == (world.getLastLightningBolt() > 0 ? 1.0F : 0.0F) && k[3] == boss
+				&& k[4] == (float) world.provider.getDimensionType().getId() && k[5] == nv
+				&& k[6] == this.mc.gameSettings.gammaSetting;
+		k[0] = sun;
+		k[1] = this.torchFlickerX;
+		k[2] = world.getLastLightningBolt() > 0 ? 1.0F : 0.0F;
+		k[3] = boss;
+		k[4] = (float) world.provider.getDimensionType().getId();
+		k[5] = nv;
+		k[6] = this.mc.gameSettings.gammaSetting;
+		this.tcLmWorld = world;
+		return same;
+	}
+
 	private void updateLightmap(float partialTicks) {
 		if (this.lightmapUpdateNeeded) {
 			World world = this.mc.world;
 
 			if (world != null) {
 				float f = world.getSunBrightness(1.0F);
+				boolean tcBad = net.minecraft.client.gui.TreasureMods.badOptimizations();
+				if (tcBad && this.tcLightmapSame(world, f, partialTicks)) {
+					this.lightmapUpdateNeeded = false; // same inputs: same lightmap
+					return;
+				}
 				float f1 = f * 0.95F + 0.05F;
 
 				for (int i = 0; i < 256; ++i) {
@@ -842,6 +877,18 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					int l = (int) (f10 * 255.0F);
 					this.lightmapColors[i] = short1 << 24 | j | k << 8 | l << 16;
 				}
+
+				// Treasure Client (BadOptimizations): no upload when the colors came out the same
+				if (tcBad && this.tcLmValid && this.tcLmPrev != null
+						&& java.util.Arrays.equals(this.tcLmPrev, this.lightmapColors)) {
+					this.lightmapUpdateNeeded = false;
+					return;
+				}
+				if (this.tcLmPrev == null || this.tcLmPrev.length != this.lightmapColors.length) {
+					this.tcLmPrev = new int[this.lightmapColors.length];
+				}
+				System.arraycopy(this.lightmapColors, 0, this.tcLmPrev, 0, this.lightmapColors.length);
+				this.tcLmValid = tcBad;
 
 				this.lightmapTexture.updateDynamicTexture();
 				GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
@@ -1159,8 +1206,10 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.clear(16640);
 		this.setupCameraTransform(partialTicks, pass);
 		ActiveRenderInfo.updateRenderInfo(this.mc.player, this.mc.gameSettings.thirdPersonView == 2);
-		ClippingHelperImpl.getInstance();
-		ICamera icamera = new Frustum();
+		// Treasure Client (BadOptimizations): build the frustum once (new Frustum() built it a second time)
+		net.minecraft.client.renderer.culling.ClippingHelper tcClip = ClippingHelperImpl.getInstance();
+		TCExtraCulling.frustum = tcClip;
+		ICamera icamera = new Frustum(tcClip);
 		Entity entity = this.mc.getRenderViewEntity();
 		double d0 = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * (double) partialTicks;
 		double d1 = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * (double) partialTicks;

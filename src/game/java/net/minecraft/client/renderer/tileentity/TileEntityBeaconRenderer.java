@@ -18,6 +18,15 @@ public class TileEntityBeaconRenderer extends TileEntitySpecialRenderer<TileEnti
 	public void func_192841_a(TileEntityBeacon p_192841_1_, double p_192841_2_, double p_192841_4_, double p_192841_6_,
 			float p_192841_8_, int p_192841_9_, float p_192841_10_) {
 		if (!net.minecraft.client.renderer.TCExtra.beaconBeam) return; // Treasure Client (Celeritas Extra)
+		// Treasure Client (Extra Culling): skip beams that aren't on screen
+		if (p_192841_1_.shouldBeamRender() > 0.0F) {
+			int tcH = 0;
+			java.util.List<TileEntityBeacon.BeamSegment> tcSeg = p_192841_1_.getBeamSegments();
+			for (int i = 0; i < tcSeg.size(); ++i) tcH += tcSeg.get(i).getHeight();
+			if (!net.minecraft.client.renderer.TCExtraCulling.beamVisible(p_192841_2_, p_192841_4_, p_192841_6_, tcH)) {
+				return;
+			}
+		}
 		this.renderBeacon(p_192841_2_, p_192841_4_, p_192841_6_, (double) p_192841_8_,
 				(double) p_192841_1_.shouldBeamRender(), p_192841_1_.getBeamSegments(),
 				(double) p_192841_1_.getWorld().getTotalWorldTime());

@@ -160,6 +160,30 @@ public class EntityXPOrb extends Entity {
 		if (this.xpOrbAge >= 6000) {
 			this.setDead();
 		}
+
+		// Treasure Client (Clumps): on the singleplayer server, orbs close together become one
+		// orb worth all of them, so mob farms and big kills don't leave hundreds of orbs around
+		if (!this.world.isRemote && !this.isDead && (this.xpOrbAge + this.getEntityId()) % 10 == 0) {
+			this.tcClump();
+		}
+	}
+
+	private void tcClump() {
+		java.util.List<EntityXPOrb> near = this.world.getEntitiesWithinAABB(EntityXPOrb.class,
+				this.getEntityBoundingBox().expandXyz(1.5D));
+		for (int i = 0, n = near.size(); i < n; ++i) {
+			EntityXPOrb o = near.get(i);
+			if (o == this || o.isDead || o.xpValue <= 0) {
+				continue;
+			}
+			if ((long) this.xpValue + (long) o.xpValue > (long) Short.MAX_VALUE) {
+				continue; // the value is saved as a short
+			}
+			this.xpValue += o.xpValue;
+			this.xpOrbAge = Math.min(this.xpOrbAge, o.xpOrbAge);
+			o.xpValue = 0;
+			o.setDead();
+		}
 	}
 
 	/**
@@ -219,7 +243,9 @@ public class EntityXPOrb extends Entity {
 	 */
 	public void onCollideWithPlayer(EntityPlayer entityIn) {
 		if (!this.world.isRemote) {
-			if (this.delayBeforeCanPickup == 0 && entityIn.xpCooldown == 0) {
+			// Treasure Client (Clumps): orbs touching you are collected right away instead of
+			// one every 2 ticks, so they don't pile up in your face
+			if (this.delayBeforeCanPickup == 0) {
 				entityIn.xpCooldown = 2;
 				entityIn.onItemPickup(this, 1);
 				ItemStack itemstack = EnchantmentHelper.getEnchantedItem(Enchantments.MENDING, entityIn);

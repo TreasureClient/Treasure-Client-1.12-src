@@ -103,6 +103,13 @@ public class TreasureMods {
 	// BetterFps fast math (OptiFine-compatible sine table). Default ON; overlay writes bfmath=0 to turn it off.
 	private static boolean bfMath = true;
 	public static boolean betterFpsMath() { return perfPack && bfMath; }
+	// BadOptimizations (own port): lightmap only rebuilt/uploaded when it changes, frustum built once.
+	// Default ON; overlay writes badopt=0 to turn it off.
+	private static boolean badOpt = true;
+	public static boolean badOptimizations() { return perfPack && badOpt; }
+	// Extra Culling (own): off-screen beacon beams, text on the back of signs. Default ON; xcull=0 turns it off.
+	private static boolean xCull = true;
+	public static boolean extraCulling() { return perfPack && xCull; }
 	// Dynamic Resolution (run by the overlay). Default OFF; read here for the Mods screen.
 	private static boolean dynRes = false;
 	public static boolean dynamicResolution() { return dynRes; }
@@ -455,6 +462,8 @@ public class TreasureMods {
 			lithium = true;
 			memSaver = true;
 			bfMath = true;
+			badOpt = true;
+			xCull = true;
 			dynRes = false;
 			dynFov = false;
 			entityDistance = 0;
@@ -504,6 +513,8 @@ public class TreasureMods {
 				else if (k.equals("lithium")) lithium = v.equals("1");
 				else if (k.equals("memsaver")) memSaver = v.equals("1");
 				else if (k.equals("bfmath")) bfMath = v.equals("1");
+				else if (k.equals("badopt")) badOpt = v.equals("1");
+				else if (k.equals("xcull")) xCull = v.equals("1");
 				else if (k.equals("dynres")) dynRes = v.equals("1");
 				else if (k.equals("dynfov")) dynFov = v.equals("1");
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
