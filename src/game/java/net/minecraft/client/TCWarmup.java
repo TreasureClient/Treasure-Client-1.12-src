@@ -71,6 +71,7 @@ public final class TCWarmup {
 			"ui.button.click", "block.note.pling" };
 
 	private static int texIdx, sndEventIdx, sndIdx;
+	private static boolean tcCopyDone;
 	private static final ArrayList<Sound> sndList = new ArrayList<Sound>();
 	private static Object lastWorld;
 	private static long lastBusy, nextInWorld, nextShaderSave;
@@ -126,6 +127,12 @@ public final class TCWarmup {
 			// shaders first: an uncompiled one stalls a frame for 20-100 ms
 			if (FixedFunctionPipeline.tcWarmStep()) {
 				return true;
+			}
+			if (!tcCopyDone) {
+				if (net.lax1dude.eaglercraft.opengl.TextureCopyUtil.tcWarmStep()) {
+					return true;
+				}
+				tcCopyDone = true;
 			}
 			TextureManager tm = mc.getTextureManager();
 			while (texIdx < TEXTURES.length) {

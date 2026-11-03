@@ -168,6 +168,19 @@ public class TextureCopyUtil {
 		return new TextureCopyShader(shaderProgram);
 	}
 
+	/**
+	 * Treasure Client: compiles one copy shader that isn't compiled yet (they were compiled
+	 * the first time water or lava came into view, a 100-300 ms freeze mid-game). False when done.
+	 */
+	public static boolean tcWarmStep() {
+		if(vshShader == null || fshSource == null) return false;
+		if(textureBlit == null) { textureBlit = compileShader(false, false); return true; }
+		if(textureBlitAligned == null) { textureBlitAligned = compileShader(true, false); return true; }
+		if(textureBlitDepth == null) { textureBlitDepth = compileShader(false, true); return true; }
+		if(textureBlitDepthAligned == null) { textureBlitDepthAligned = compileShader(true, true); return true; }
+		return false;
+	}
+
 	private static TextureCopyShader getShaderObj(boolean align, boolean depth) {
 		if(align) {
 			if(depth) {
