@@ -1003,7 +1003,9 @@ public class Minecraft implements IThreadListener {
 			
 			if (!this.skipRenderWorld) {
 				this.entityRenderer.updateCameraAndRender(this.isGamePaused ? this.field_193996_ah : this.timer.field_194147_b, i1);
+				long tcToast = TCLagMonitor.now(); // .lag "menus/toasts"
 				this.field_193034_aS.func_191783_a(this.scaledResolution);
+				TCLagMonitor.add(TCLagMonitor.SCREENS, tcToast);
 			}
 		}
 
@@ -1460,6 +1462,9 @@ public class Minecraft implements IThreadListener {
 
 		this.tickAutoRegisterDefaultUsername();
 		TCLagMonitor.addLogic(TCLagMonitor.L_NET, tcN);
+		if (this.currentScreen instanceof net.minecraft.client.multiplayer.GuiConnecting) {
+			TCLagMonitor.skipThisFrame(); // the login handshake waits for the server
+		}
 		long tcS = TCLagMonitor.now(); // .lag "menus"
 
 		if (this.currentScreen == null && this.player != null) {

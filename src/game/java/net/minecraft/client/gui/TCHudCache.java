@@ -44,6 +44,8 @@ public final class TCHudCache {
 	private static boolean validS;
 	/** Most time between redraws of your own layer (it is redrawn whenever it changes anyway). */
 	private static final long OWN_MAX_AGE_MS = 1000L;
+	/** Redraw interval of the server layer while something on it animates. */
+	private static final long ANIM_MS = 50L;
 
 	/** Something the HUD shows changed (chat, scoreboard, boss bar, title, tab list). */
 	public static void markDirty() {
@@ -86,11 +88,18 @@ public final class TCHudCache {
 
 	/** How to draw the server's layer this frame (after {@link #decide} said it isn't DIRECT). */
 	public static int decideServer(GuiIngame gui) {
-		if (gui.tcServerAnimating()) {
-			validS = false;
-			return DIRECT;
-		}
 		long now = EagRuntime.steadyTimeMillis();
+		if (gui.tcServerAnimating()) {
+			// titles, the tab list and fading chat change over ticks: redraw 20 times a second
+			// instead of every frame (a busy chat always has a line fading out)
+			if (!validS || now - drawnAtS >= ANIM_MS) {
+				drawnVersionS = version;
+				drawnAtS = now;
+				validS = true;
+				return REDRAW;
+			}
+			return REUSE;
+		}
 		boolean serverChange = version != drawnVersionS && now - drawnAtS >= SERVER_CHANGE_MS;
 		if (!validS || serverChange || now - drawnAtS >= MAX_AGE_MS) {
 			drawnVersionS = version;

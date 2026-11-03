@@ -967,7 +967,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 							: net.minecraft.client.gui.TCHudCache.decideServer(this.mc.ingameGUI);
 					if (tcMode == net.minecraft.client.gui.TCHudCache.REDRAW) {
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
-						this.tcRenderLayer(this.overlayFramebuffer, net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1,
+						this.tcRenderLayer(this.overlayFramebuffer, net.minecraft.client.gui.GuiIngame.TC_HOTBAR, l, i1,
 								partialTicks);
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
@@ -993,7 +993,11 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					} else {
 						// paste the cached HUD layers (they hold premultiplied colors)
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
-						this.tcPasteLayer(this.overlayFramebuffer, l, i1);
+						// only the strip with the hotbar and offhand slot holds anything
+						this.tcPasteRect(this.overlayFramebuffer, l / 2 - 124, i1 - 26, l / 2 + 124, i1, l, i1);
+						// hearts, food, XP, effects: cheap flat icons, drawn live so they never force
+						// the hotbar items (the slow part) to be drawn again
+						this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1, partialTicks);
 						if (tcSrvMode == net.minecraft.client.gui.TCHudCache.DIRECT) {
 							this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_SERVER, l, i1, partialTicks);
 						} else {
@@ -1014,9 +1018,12 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 				this.setupOverlayRendering();
 			}
 			
+			long tcScr = net.minecraft.client.TCLagMonitor.now(); // .lag "menus/toasts"
 			this.mc.notifRenderer.renderOverlay(j1, k1);
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SCREENS, tcScr);
 
 			if (this.mc.currentScreen != null) {
+				tcScr = net.minecraft.client.TCLagMonitor.now();
 				GlStateManager.clear(256);
 
 				try {
@@ -1048,6 +1055,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					});
 					throw new ReportedException(crashreport);
 				}
+				net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SCREENS, tcScr);
 			}
 		}
 	}
@@ -1143,6 +1151,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	private void renderWorldPass(int pass, float partialTicks, long finishTimeNano) {
 		RenderGlobal renderglobal = this.mc.renderGlobal;
 		ParticleManager particlemanager = this.mc.effectRenderer;
+		long tcSetup = net.minecraft.client.TCLagMonitor.now(); // .lag "camera setup"
 		boolean flag = this.isDrawBlockOutline();
 		GlStateManager.enableCull();
 		GlStateManager.viewport(0, 0, this.mc.displayWidth, this.mc.displayHeight);
@@ -1157,6 +1166,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		double d1 = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * (double) partialTicks;
 		double d2 = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * (double) partialTicks;
 		icamera.setPosition(d0, d1, d2);
+		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SETUP, tcSetup);
 
 		long tcT = net.minecraft.client.TCLagMonitor.now(); // Treasure Client: lag monitor timing
 		if (this.mc.gameSettings.renderDistanceChunks >= 4) {
@@ -1895,6 +1905,36 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		}
 	}
 
+	/** Treasure Client: pastes part of a cached HUD layer (x0..x1, y0..y1 in GUI units). */
+	private void tcPasteRect(GameOverlayFramebuffer fb, int x0, int y0, int x1, int y1, int l, int i1) {
+		x0 = Math.max(0, x0);
+		y0 = Math.max(0, y0);
+		x1 = Math.min(l, x1);
+		y1 = Math.min(i1, y1);
+		if (x1 <= x0 || y1 <= y0) {
+			return;
+		}
+		double u0 = (double) x0 / l, u1 = (double) x1 / l;
+		double v0 = 1.0D - (double) y0 / i1, v1 = 1.0D - (double) y1 / i1;
+		GlStateManager.bindTexture(fb.getTexture());
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+		GlStateManager.disableAlpha();
+		GlStateManager.disableDepth();
+		GlStateManager.depthMask(false);
+		GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer worldrenderer = tessellator.getWorldRenderer();
+		worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
+		worldrenderer.pos((double) x0, (double) y1, -90.0D).tex(u0, v1).endVertex();
+		worldrenderer.pos((double) x1, (double) y1, -90.0D).tex(u1, v1).endVertex();
+		worldrenderer.pos((double) x1, (double) y0, -90.0D).tex(u1, v0).endVertex();
+		worldrenderer.pos((double) x0, (double) y0, -90.0D).tex(u0, v0).endVertex();
+		tessellator.draw();
+		GlStateManager.enableAlpha();
+		GlStateManager.blendFunc(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+	}
+
 	/** Treasure Client: pastes a cached HUD layer over the screen. */
 	private void tcPasteLayer(GameOverlayFramebuffer fb, int l, int i1) {
 		GlStateManager.bindTexture(fb.getTexture());
@@ -1927,7 +1967,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		net.lax1dude.eaglercraft.opengl.TCHudBatch.begin(); // ImmediatelyFast HUD batching
 		try {
 			long tcTo = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
-			if (net.minecraft.client.gui.GuiIngame.tcLayer != net.minecraft.client.gui.GuiIngame.TC_SERVER) {
+			int tcL = net.minecraft.client.gui.GuiIngame.tcLayer;
+			if (tcL == net.minecraft.client.gui.GuiIngame.TC_ALL || tcL == net.minecraft.client.gui.GuiIngame.TC_OWN) {
 				this.func_190563_a(width, height, partialTicks);
 			}
 			net.minecraft.client.TCLagMonitor.hTotem += net.minecraft.client.TCLagMonitor.now() - tcTo;
