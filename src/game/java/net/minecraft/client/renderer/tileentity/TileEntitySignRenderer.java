@@ -24,11 +24,15 @@ public class TileEntitySignRenderer extends TileEntitySpecialRenderer<TileEntity
 		Block block = p_192841_1_.getBlockType();
 		GlStateManager.pushMatrix();
 		float f = 0.6666667F;
+		// Treasure Client (Extra Culling): which way the text faces, and the board's centre
+		float tcAngle;
+		double tcCx = p_192841_2_ + 0.5, tcCz = p_192841_6_ + 0.5;
 
 		if (block == Blocks.STANDING_SIGN) {
 			GlStateManager.translate((float) p_192841_2_ + 0.5F, (float) p_192841_4_ + 0.5F,
 					(float) p_192841_6_ + 0.5F);
 			float f1 = (float) (p_192841_1_.getBlockMetadata() * 360) / 16.0F;
+			tcAngle = f1;
 			GlStateManager.rotate(-f1, 0.0F, 1.0F, 0.0F);
 			this.model.signStick.showModel = true;
 		} else {
@@ -51,6 +55,10 @@ public class TileEntitySignRenderer extends TileEntitySpecialRenderer<TileEntity
 					(float) p_192841_6_ + 0.5F);
 			GlStateManager.rotate(-f2, 0.0F, 1.0F, 0.0F);
 			GlStateManager.translate(0.0F, -0.3125F, -0.4375F);
+			tcAngle = f2;
+			double tcA = Math.toRadians(f2);
+			tcCx += Math.sin(tcA) * 0.4375; // the board hangs against the wall behind it
+			tcCz -= Math.cos(tcA) * 0.4375;
 			this.model.signStick.showModel = false;
 		}
 
@@ -80,7 +88,8 @@ public class TileEntitySignRenderer extends TileEntitySpecialRenderer<TileEntity
 
 		// Treasure Client (ImmediatelyFast): skip unreadably far text, reuse each line's layout
 		double tcDistSq = p_192841_2_ * p_192841_2_ + p_192841_4_ * p_192841_4_ + p_192841_6_ * p_192841_6_;
-		if (p_192841_9_ < 0 && net.minecraft.client.renderer.TCFastText.drawSignText(tcDistSq)) {
+		if (p_192841_9_ < 0 && net.minecraft.client.renderer.TCFastText.drawSignText(tcDistSq)
+				&& net.minecraft.client.renderer.TCExtraCulling.signFrontVisible(tcCx, tcCz, tcAngle)) {
 			for (int j = 0; j < p_192841_1_.signText.length; ++j) {
 				if (p_192841_1_.signText[j] != null) {
 					String s = net.minecraft.client.renderer.TCFastText.signLine(p_192841_1_, j, fontrenderer);

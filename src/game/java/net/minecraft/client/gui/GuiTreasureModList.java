@@ -241,8 +241,45 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off §8(hoppers stay fast)";
 			}
 		});
+		this.entries.add(new Entry("BadOptimizations", "Treasure Client, inspired by thosea", "Built in",
+				"Skips work that gives the same result as last time: the lightmap (how bright light levels look) is only rebuilt and sent to the graphics chip when something that affects it changed, and the view area used for culling is worked out once per frame instead of twice.",
+				"badopt") {
+			boolean setting() {
+				return TreasureMods.badOptimizations();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
+		this.entries.add(new Entry("Extra Culling", "Treasure Client", "Built in",
+				"Skips drawing more things you can't see: beacon beams that are off screen (every beacon nearby used to draw its full beam every frame) and the text on the back of signs.",
+				"xcull") {
+			boolean setting() {
+				return TreasureMods.extraCulling();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
+		this.entries.add(new Entry("Clumps", "Treasure Client, inspired by Jaredlll08", "Built in",
+				"In singleplayer, XP orbs close together merge into one orb worth all of them, and orbs touching you are picked up right away. On servers the server owns the orbs, so it can't change them there.",
+				"clumps") {
+			boolean setting() {
+				return true;
+			}
+
+			boolean alwaysOn() {
+				return true;
+			}
+
+			String status(boolean on) {
+				return "§aOn §7· singleplayer";
+			}
+		});
 		this.entries.add(new Entry("Dynamic Resolution", "Treasure Client", "Built in",
-				"When frames get slow from drawing, like when your device heats up, the world is drawn at a slightly lower resolution so the graphics chip has less to do. It goes back up once things are smooth again. Off by default. It never goes below 70% or below your own Render Resolution setting, and it ignores lag that comes from the server.",
+				"When frames get slow from drawing, like when your device heats up, the world is drawn at a slightly lower resolution so the graphics chip has less to do. It goes back up once things are smooth again. Off by default. It never goes below 60% or below your own Render Resolution setting, and it ignores lag that comes from the server.",
 				"dynResOn") {
 			boolean setting() {
 				return TreasureMods.dynamicResolution();
