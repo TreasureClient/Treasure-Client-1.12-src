@@ -135,6 +135,17 @@ public class TextureManager implements ITickable, IResourceManagerReloadListener
 
 		if (itextureobject != null) {
 			TextureUtil.deleteTexture(itextureobject.getGlTextureId());
+			// Treasure Client: skins, capes and server icons get a one-time name ("eagler:.../tex_N")
+			// that is never loaded again. They stayed in the map with their pixels for the whole
+			// session, so every player seen added more for the garbage collector to walk.
+			if ("eagler".equals(textureLocation.getResourceDomain())
+					&& textureLocation.getResourcePath().contains("/tex_")) {
+				this.mapTextureObjects.remove(textureLocation);
+				if (textureLocation.cachedPointer == itextureobject) {
+					textureLocation.cachedPointer = null;
+					textureLocation.cachedPointerType = ResourceLocation.CACHED_POINTER_NONE;
+				}
+			}
 		}
 	}
 

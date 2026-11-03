@@ -567,9 +567,15 @@ public class TCLagMonitor {
 		}
 		if (speed > 0 && first >= 0 && mFrames[last] > 0) {
 			long early = (mLogicAll[first] + mDrawAll[first]) / 1000L / mFrames[first];
-			long nowW = (mLogicAll[last] + mDrawAll[last]) / 1000L / mFrames[last];
+			// the last 5 minutes, not only the current one (which may have just started with a world load)
+			long nowW = 0L, nf = 0L;
+			for (int m = Math.max(first + 1, last - 4); m <= last; m++) {
+				nowW += (mLogicAll[m] + mDrawAll[m]) / 1000L;
+				nf += mFrames[m];
+			}
+			nowW = nf > 0 ? nowW / nf : 0L;
 			say(mc, "§7Device speed: §f" + speed + "% §7of its best (heat slows it down) · game work per frame: §f"
-					+ ms1(early) + " §7(min " + (first + 1) + ") → §f" + ms1(nowW) + "ms §7(now)");
+					+ ms1(early) + " §7(min " + (first + 1) + ") → §f" + ms1(nowW) + "ms §7(last 5 min)");
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}
