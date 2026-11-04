@@ -178,7 +178,8 @@ public class GuiIngame extends Gui {
 	public long tcHudSignature() {
 		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
 		GameSettings gs = this.mc.gameSettings;
-		if (p == null || this.mc.world == null || this.mc.currentScreen != null || gs.showDebugInfo
+		if (p == null || this.mc.world == null
+				|| (this.mc.currentScreen != null && !(this.mc.currentScreen instanceof GuiChat)) || gs.showDebugInfo
 				|| (gs.thirdPersonView == 0 && p.inventory.armorItemInSlot(3).getItem() == Item.getItemFromBlock(Blocks.PUMPKIN))
 				|| this.recordPlayingUpFor > 0 || p.timeInPortal > 0.0F
 				|| p.prevTimeInPortal > 0.0F || p.getSleepTimer() > 0 || p.isRidingHorse()

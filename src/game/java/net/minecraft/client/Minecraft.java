@@ -2037,6 +2037,7 @@ public class Minecraft implements IThreadListener {
 
 		this.mcSoundHandler.stopSounds();
 		this.world = worldClientIn;
+		TCLagMonitor.skipThisFrame(); // a world load (new duel, respawn) is a loading moment, not lag
 
 		if (this.renderGlobal != null) {
 			this.renderGlobal.setWorldAndLoadRenderers(worldClientIn);

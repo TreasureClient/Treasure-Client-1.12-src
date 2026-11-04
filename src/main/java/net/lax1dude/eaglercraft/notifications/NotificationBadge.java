@@ -95,19 +95,34 @@ public class NotificationBadge {
 	}
 
 	protected CachedNotifBadgeTexture getGLTexture(ServerNotificationRenderer renderer, int scaleFactor, boolean showXButton) {
-		if(currentCacheGLTexture == null || currentCacheScaleFac != scaleFactor || currentCacheXButton != showXButton) {
+		// Treasure Client: keep both looks (with and without the X button). Opening or closing
+		// chat used to throw the badge image away and draw it again, a spike every time.
+		if(currentCacheScaleFac != scaleFactor) {
 			deleteGLTexture();
-			currentCacheGLTexture = renderer.renderBadge(this, scaleFactor, showXButton);
 			currentCacheScaleFac = scaleFactor;
+		}
+		if(currentCacheXButton != showXButton) {
+			CachedNotifBadgeTexture t = currentCacheGLTexture;
+			currentCacheGLTexture = tcOtherTexture;
+			tcOtherTexture = t;
 			currentCacheXButton = showXButton;
+		}
+		if(currentCacheGLTexture == null) {
+			currentCacheGLTexture = renderer.renderBadge(this, scaleFactor, showXButton);
 		}
 		return currentCacheGLTexture;
 	}
+
+	protected CachedNotifBadgeTexture tcOtherTexture = null;
 
 	protected void deleteGLTexture() {
 		if(currentCacheGLTexture != null) {
 			GlStateManager.deleteTexture(currentCacheGLTexture.glTexture);
 			currentCacheGLTexture = null;
+		}
+		if(tcOtherTexture != null) {
+			GlStateManager.deleteTexture(tcOtherTexture.glTexture);
+			tcOtherTexture = null;
 		}
 	}
 
