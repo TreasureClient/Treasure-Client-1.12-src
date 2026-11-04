@@ -396,4 +396,56 @@ public final class ViaBlocks {
 	public static final int[] EXTRA_KIND = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2};
 
 	public static final Block[] EXTRA = new Block[EXTRA_NAMES.length];
+
+	// ---- how the blocks break (Treasure Client) --------------------------------------
+	// Every modern block used to be hard stone (hardness 2, pickaxe). The ones below get
+	// their real modern values, so breaking them takes about as long as the server expects
+	// (Modern Block Guessing turns dirt in the nether into soul soil, for example).
+
+	/** The material a modern block is made of (decides which tool helps). */
+	public static net.minecraft.block.material.Material materialFor(String n) {
+		if (n.endsWith("_stem") || n.endsWith("_hyphae")) {
+			return net.minecraft.block.material.Material.WOOD;
+		}
+		if (n.equals("soul_soil")) {
+			return net.minecraft.block.material.Material.GROUND;
+		}
+		if (n.equals("warped_wart_block") || n.equals("shroomlight")) {
+			return net.minecraft.block.material.Material.GRASS;
+		}
+		return net.minecraft.block.material.Material.ROCK;
+	}
+
+	/** Modern hardness, or def when it isn't listed. */
+	public static float hardnessFor(String n, float def) {
+		if (n.equals("deepslate")) return 3.0F;
+		if (n.startsWith("deepslate_") && n.endsWith("_ore")) return 4.5F;
+		if (n.equals("nether_gold_ore")) return 3.0F;
+		if (n.equals("ancient_debris")) return 30.0F;
+		if (n.equals("tuff") || n.equals("amethyst_block") || n.equals("budding_amethyst")) return 1.5F;
+		if (n.equals("blackstone") || n.equals("polished_blackstone_bricks")) return 1.5F;
+		if (n.equals("calcite")) return 0.75F;
+		if (n.equals("basalt") || n.equals("polished_basalt") || n.equals("smooth_basalt")) return 1.25F;
+		if (n.endsWith("_nylium")) return 0.4F;
+		if (n.equals("soul_soil")) return 0.5F;
+		if (n.equals("warped_wart_block") || n.equals("shroomlight")) return 1.0F;
+		return def;
+	}
+
+	/** Modern sound, or def when it isn't listed. */
+	public static net.minecraft.block.SoundType soundFor(String n, net.minecraft.block.SoundType def) {
+		if (n.endsWith("_stem") || n.endsWith("_hyphae") || n.equals("warped_wart_block")
+				|| n.equals("shroomlight")) {
+			return net.minecraft.block.SoundType.WOOD;
+		}
+		if (n.equals("soul_soil")) {
+			return net.minecraft.block.SoundType.SAND;
+		}
+		return def;
+	}
+
+	/** Light a modern block gives off (0-1), like Block.setLightLevel. */
+	public static float lightFor(String n) {
+		return n.equals("shroomlight") ? 1.0F : 0.0F;
+	}
 }

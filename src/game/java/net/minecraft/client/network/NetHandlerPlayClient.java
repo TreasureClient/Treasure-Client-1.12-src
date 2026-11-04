@@ -829,7 +829,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			for (SPacketMultiBlockChange.BlockUpdateData spacketmultiblockchange$blockupdatedata : packetIn
 					.getChangedBlocks()) {
 				this.clientWorldController.invalidateRegionAndSetBlock(spacketmultiblockchange$blockupdatedata.getPos(),
-						spacketmultiblockchange$blockupdatedata.getBlockState());
+						TCViaGuess.onBlock(this.clientWorldController, spacketmultiblockchange$blockupdatedata.getPos(),
+								spacketmultiblockchange$blockupdatedata.getBlockState()));
 			}
 			TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
 		} finally {
@@ -850,6 +851,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 				(packetIn.getChunkX() << 4) + 15, 256, (packetIn.getChunkZ() << 4) + 15);
 		Chunk chunk = this.clientWorldController.getChunkFromChunkCoords(packetIn.getChunkX(), packetIn.getChunkZ());
 		chunk.fillChunk(packetIn.getReadBuffer(), packetIn.getExtractedSize(), packetIn.doChunkLoad());
+		TCViaGuess.onChunk(this.clientWorldController, chunk); // Treasure Client: Modern Block Guessing
 		this.clientWorldController.markBlockRangeForRenderUpdate(packetIn.getChunkX() << 4, 0,
 				packetIn.getChunkZ() << 4, (packetIn.getChunkX() << 4) + 15, 256, (packetIn.getChunkZ() << 4) + 15);
 
@@ -882,7 +884,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * clients)
 	 */
 	public void handleBlockChange(SPacketBlockChange packetIn) {
-		this.clientWorldController.invalidateRegionAndSetBlock(packetIn.getBlockPosition(), packetIn.getBlockState());
+		this.clientWorldController.invalidateRegionAndSetBlock(packetIn.getBlockPosition(),
+				TCViaGuess.onBlock(this.clientWorldController, packetIn.getBlockPosition(), packetIn.getBlockState()));
 		TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
 	}
 

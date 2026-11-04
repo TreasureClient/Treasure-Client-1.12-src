@@ -24,6 +24,12 @@ public final class TCServerChannels {
 
 	private static final Set<String> channels = new HashSet<String>();
 
+	/** True when this server sends the real modern blocks itself (TuffX+ or Treasure Client's plugin). */
+	public static boolean hasModernBlocksPlugin() {
+		return channels.contains(TuffViaBlocks.HANDSHAKE_CHANNEL) || channels.contains(TreasureViaHandshake.CHANNEL)
+				|| channels.contains(TuffViaBlocks.DATA_CHANNEL) || TreasureViaHandshake.serverSupports;
+	}
+
 	/** Called on JoinGame: a new connection, so forget the old server's channels. */
 	public static void onJoin() {
 		channels.clear();

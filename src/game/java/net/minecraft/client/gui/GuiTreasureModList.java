@@ -437,6 +437,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("Modern Block Guessing", "Treasure Client", "Built in",
+				"On servers without a modern-blocks plugin, modern blocks arrive as old look-alikes (deepslate shows as nether bricks). This guesses the real block from where it is: deepslate and deepslate ores near the bottom of the world, tuff, amethyst geodes, and basalt, crimson and warped forests, soul soil and more in the nether. Builds in normal worlds can't be guessed, so they stay as they are.",
+				"viaguess") {
+			boolean setting() {
+				return TreasureMods.viaGuess();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 	}
 
 	// ---------------- layout ----------------
@@ -495,7 +506,7 @@ public class GuiTreasureModList extends GuiScreen {
 
 	private static String categoryOf(Entry e) {
 		if (e.key.equals("vanillafix")) return "Bug fixes";
-		if (e.key.equals("via")) return "Compatibility";
+		if (e.key.equals("via") || e.key.equals("viaguess")) return "Compatibility";
 		return "Performance";
 	}
 

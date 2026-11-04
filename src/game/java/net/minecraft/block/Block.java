@@ -1634,11 +1634,15 @@ public class Block {
 			// Phase 4b: pillars render through an axis-rotated model; everything else
 			// stays a plain full cube. Both share the same rock material / sounds and
 			// flow through the identical registry + item pipeline.
-			Block base = ViaBlocks.isPillar(ViaBlocks.NAMES[i])
-					? new BlockRotatedPillar(Material.ROCK)
-					: new Block(Material.ROCK);
-			Block viaBlock = base.setHardness(2.0F).setResistance(10.0F)
-					.setSoundType(SoundType.STONE).setUnlocalizedName(ViaBlocks.NAMES[i])
+			String vn = ViaBlocks.NAMES[i];
+			Material vm = ViaBlocks.materialFor(vn);
+			Block base = ViaBlocks.isPillar(vn)
+					? new BlockRotatedPillar(vm)
+					: new Block(vm);
+			Block viaBlock = base.setHardness(ViaBlocks.hardnessFor(vn, 2.0F))
+					.setResistance(vn.equals("ancient_debris") ? 1200.0F : 10.0F)
+					.setLightLevel(ViaBlocks.lightFor(vn))
+					.setSoundType(ViaBlocks.soundFor(vn, SoundType.STONE)).setUnlocalizedName(vn)
 					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
 			registerBlock(ViaBlocks.FIRST_ID + i, ViaBlocks.NAMES[i], viaBlock);
 			ViaBlocks.BLOCKS[i] = viaBlock;
@@ -1671,10 +1675,12 @@ public class Block {
 		// Extra simple modern blocks (cubes, pillars, see-through cubes) for TuffX+ servers.
 		for (int i = 0; i < ViaBlocks.EXTRA_NAMES.length; i++) {
 			int kind = ViaBlocks.EXTRA_KIND[i];
-			Block extra = kind == 1 ? new BlockRotatedPillar(Material.ROCK)
-					: (kind == 2 ? new BlockViaCutout() : new Block(Material.ROCK));
-			extra.setHardness(kind == 2 ? 0.3F : 2.0F).setResistance(kind == 2 ? 1.5F : 10.0F)
-					.setSoundType(kind == 2 ? SoundType.GLASS : SoundType.STONE)
+			String en = ViaBlocks.EXTRA_NAMES[i];
+			Material em = ViaBlocks.materialFor(en);
+			Block extra = kind == 1 ? new BlockRotatedPillar(em)
+					: (kind == 2 ? new BlockViaCutout() : new Block(em));
+			extra.setHardness(kind == 2 ? 0.3F : ViaBlocks.hardnessFor(en, 2.0F)).setResistance(kind == 2 ? 1.5F : 10.0F)
+					.setSoundType(kind == 2 ? SoundType.GLASS : ViaBlocks.soundFor(en, SoundType.STONE))
 					.setUnlocalizedName(ViaBlocks.EXTRA_NAMES[i])
 					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
 			registerBlock(ViaBlocks.EXTRA_FIRST_ID + i, ViaBlocks.EXTRA_NAMES[i], extra);
