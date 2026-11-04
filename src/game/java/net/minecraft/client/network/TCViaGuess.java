@@ -133,6 +133,7 @@ public final class TCViaGuess {
 			if (dim != 0 && dim != -1) {
 				return; // the End: purpur there is real (end cities)
 			}
+			applyPlaced(w, c);
 			ExtendedBlockStorage[] secs = c.getBlockStorageArray();
 			int mycelium = 0; // nether: crimson or warped nylium, from the stems in this chunk
 			for (int si = 0; si < secs.length; si++) {
@@ -170,12 +171,80 @@ public final class TCViaGuess {
 		}
 	}
 
+	// ---- blocks you placed yourself ----------------------------------------------
+	// You placed a modern block from its item, so we know what it really is; the server
+	// sends it back as the old look-alike. Remembered per position (this world only).
+
+	private static java.util.HashMap<Long, IBlockState> placed;
+	private static World placedWorld;
+	private static final int MAX_PLACED = 4096;
+
+	public static void rememberPlaced(World w, BlockPos pos, IBlockState st) {
+		try {
+			if (st == null || !net.minecraft.client.gui.TreasureMods.viaGuess()) {
+				return;
+			}
+			if (placed == null) {
+				placed = new java.util.HashMap<Long, IBlockState>();
+			}
+			if (placedWorld != w) {
+				placed.clear();
+				placedWorld = w;
+			}
+			if (placed.size() >= MAX_PLACED) {
+				placed.clear(); // keep it small; older spots fall back to guessing
+			}
+			placed.put(Long.valueOf(pos.toLong()), st);
+		} catch (Throwable t) {
+		}
+	}
+
+	/** What you placed at this spot, or null. */
+	private static IBlockState placedAt(World w, long key) {
+		if (placed == null || placed.isEmpty() || placedWorld != w) {
+			return null;
+		}
+		return placed.get(Long.valueOf(key));
+	}
+
+	private static void applyPlaced(World w, Chunk c) {
+		if (placed == null || placed.isEmpty() || placedWorld != w) {
+			return;
+		}
+		int cx = c.xPosition, cz = c.zPosition;
+		for (java.util.Map.Entry<Long, IBlockState> e : placed.entrySet()) {
+			BlockPos p = BlockPos.fromLong(e.getKey().longValue());
+			if ((p.getX() >> 4) != cx || (p.getZ() >> 4) != cz || p.getY() < 0 || p.getY() > 255) {
+				continue;
+			}
+			ExtendedBlockStorage sec = c.getBlockStorageArray()[p.getY() >> 4];
+			if (sec == Chunk.NULL_BLOCK_STORAGE) {
+				continue;
+			}
+			IBlockState cur = sec.get(p.getX() & 15, p.getY() & 15, p.getZ() & 15);
+			if (cur.getBlock() != net.minecraft.init.Blocks.AIR
+					&& Block.getIdFromBlock(cur.getBlock()) < ViaBlocks.FIRST_ID) {
+				sec.set(p.getX() & 15, p.getY() & 15, p.getZ() & 15, e.getValue());
+			}
+		}
+	}
+
 	/** Called for single block changes. Returns the state to use. */
 	public static IBlockState onBlock(World w, BlockPos pos, IBlockState st) {
 		if (st == null || w == null || !active()) {
 			return st;
 		}
 		try {
+			IBlockState mine = placedAt(w, pos.toLong());
+			if (mine != null) {
+				if (st.getBlock() == net.minecraft.init.Blocks.AIR) {
+					placed.remove(Long.valueOf(pos.toLong())); // broken or the placement was refused
+					return st;
+				}
+				if (Block.getIdFromBlock(st.getBlock()) < ViaBlocks.FIRST_ID) {
+					return mine;
+				}
+			}
 			int dim = dimOf(w);
 			if (dim != 0 && dim != -1) {
 				return st;
