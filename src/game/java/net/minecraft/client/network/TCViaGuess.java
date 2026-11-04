@@ -144,6 +144,7 @@ public final class TCViaGuess {
 			applyPlaced(w, c);
 			ExtendedBlockStorage[] secs = c.getBlockStorageArray();
 			int mycelium = 0; // nether: crimson or warped nylium, from the stems in this chunk
+			int ironCount = 0;
 			for (int si = 0; si < secs.length; si++) {
 				ExtendedBlockStorage sec = secs[si];
 				if (sec == Chunk.NULL_BLOCK_STORAGE || sec.isEmpty()) {
@@ -154,25 +155,61 @@ public final class TCViaGuess {
 					break; // nothing to guess higher up in the overworld
 				}
 				BlockStateContainer data = sec.getData();
-				IBlockState[] pal = data.tcPaletteStates();
-				if (pal != null && !paletteHasCandidate(pal, dim, baseY)) {
-					continue; // most sections: one look over the palette and done
+				int palSize = data.tcPaletteSize();
+				if (palSize <= 0) {
+					continue; // a section with 256+ kinds of block: a build, nothing to guess
+				}
+				// which palette entries are worth a look (most sections: none, done)
+				if (wantBuf == null) {
+					wantBuf = new boolean[256];
+				}
+				boolean[] want = wantBuf;
+				boolean any = false;
+				for (int i = 0; i < 256; i++) {
+					boolean wv = false;
+					if (i < palSize) {
+						IBlockState ps = data.tcPaletteState(i);
+						wv = ps != null && isCandidate(ps, dim, baseY);
+					}
+					want[i] = wv;
+					any |= wv;
+				}
+				if (!any) {
+					continue;
 				}
 				if (dim == -1 && mycelium == 0) {
 					mycelium = nyliumHint(c);
 				}
-				for (int y = 0; y < 16; y++) {
-					int wy = baseY + y;
-					for (int z = 0; z < 16; z++) {
-						for (int x = 0; x < 16; x++) {
-							IBlockState st = data.get(x, y, z);
-							IBlockState g = guess(dim, st, c, null, x, wy, z, mycelium);
-							if (g != null) {
-								data.set(x, y, z, g);
+				if (idxBuf == null) {
+					idxBuf = new int[4096];
+				}
+				int n = data.tcFind(want, idxBuf);
+				for (int k = 0; k < n; k++) {
+					int i = idxBuf[k];
+					int x = i & 15, z = (i >> 4) & 15, y = i >> 8;
+					IBlockState st = data.get(x, y, z);
+					if (dim == 0 && Block.getIdFromBlock(st.getBlock()) == IRON_ORE) {
+						// copper or iron: decided per vein below, once every ore block is known
+						if (ironCount < MAX_IRON) {
+							if (grid == null) {
+								grid = new byte[65536];
+								ironList = new int[MAX_IRON];
+								queue = new int[MAX_IRON];
 							}
+							int key = ((baseY + y) << 8) | (z << 4) | x;
+							grid[key] = 1;
+							ironList[ironCount++] = key;
 						}
+						continue;
+					}
+					IBlockState g = guess(dim, st, c, null, x, baseY + y, z, mycelium);
+					if (g != null) {
+						data.set(x, y, z, g);
 					}
 				}
+			}
+			if (ironCount > 0) {
+				decideVeins(c, ironCount);
 			}
 		} catch (Throwable t) {
 			// a guess must never break chunk loading
@@ -184,6 +221,7 @@ public final class TCViaGuess {
 	// sends it back as the old look-alike. Remembered per position (this world only).
 
 	private static java.util.HashMap<Long, IBlockState> placed;
+	private static java.util.HashSet<Long> placedChunks;
 	private static World placedWorld;
 	private static final int MAX_PLACED = 4096;
 
@@ -194,15 +232,15 @@ public final class TCViaGuess {
 			}
 			if (placed == null) {
 				placed = new java.util.HashMap<Long, IBlockState>();
+				placedChunks = new java.util.HashSet<Long>();
 			}
-			if (placedWorld != w) {
-				placed.clear();
+			if (placedWorld != w || placed.size() >= MAX_PLACED) {
+				placed.clear(); // a new world, or keep it small (older spots fall back to guessing)
+				placedChunks.clear();
 				placedWorld = w;
 			}
-			if (placed.size() >= MAX_PLACED) {
-				placed.clear(); // keep it small; older spots fall back to guessing
-			}
 			placed.put(Long.valueOf(pos.toLong()), st);
+			placedChunks.add(Long.valueOf(((long) (pos.getX() >> 4) << 32) ^ ((pos.getZ() >> 4) & 0xffffffffL)));
 		} catch (Throwable t) {
 		}
 	}
@@ -220,6 +258,9 @@ public final class TCViaGuess {
 			return;
 		}
 		int cx = c.xPosition, cz = c.zPosition;
+		if (!placedChunks.contains(Long.valueOf(((long) cx << 32) ^ (cz & 0xffffffffL)))) {
+			return; // nothing remembered in this chunk
+		}
 		for (java.util.Map.Entry<Long, IBlockState> e : placed.entrySet()) {
 			BlockPos p = BlockPos.fromLong(e.getKey().longValue());
 			if ((p.getX() >> 4) != cx || (p.getZ() >> 4) != cz || p.getY() < 0 || p.getY() > 255) {
@@ -234,6 +275,63 @@ public final class TCViaGuess {
 					&& Block.getIdFromBlock(cur.getBlock()) < ViaBlocks.FIRST_ID) {
 				sec.set(p.getX() & 15, p.getY() & 15, p.getZ() & 15, e.getValue());
 			}
+		}
+	}
+
+	// chunk scan buffers, made once and reused (no garbage per chunk)
+	private static final int MAX_IRON = 8192;
+	private static int[] idxBuf, ironList, queue;
+	private static boolean[] wantBuf;
+	private static byte[] grid; // y << 8 | z << 4 | x inside one chunk: 1 = iron look-alike, 2 = counted
+
+	/** Labels each connected group of iron look-alikes in the chunk once: 10+ is copper. */
+	private static void decideVeins(Chunk c, int count) {
+		ExtendedBlockStorage[] secs = c.getBlockStorageArray();
+		for (int s = 0; s < count; s++) {
+			int start = ironList[s];
+			if (grid[start] != 1) {
+				continue; // already part of a counted vein
+			}
+			int n = 0, head = 0;
+			grid[start] = 2;
+			queue[n++] = start;
+			while (head < n) {
+				int p = queue[head++];
+				int px = p & 15, pz = (p >> 4) & 15, py = p >> 8;
+				for (int dy = -1; dy <= 1; dy++) {
+					int ny = py + dy;
+					if (ny < 0 || ny > 255) continue;
+					for (int dz = -1; dz <= 1; dz++) {
+						int nz = pz + dz;
+						if (nz < 0 || nz > 15) continue;
+						for (int dx = -1; dx <= 1; dx++) {
+							int nx = px + dx;
+							if (nx < 0 || nx > 15) continue;
+							int q = (ny << 8) | (nz << 4) | nx;
+							if (grid[q] == 1) {
+								grid[q] = 2;
+								queue[n++] = q;
+							}
+						}
+					}
+				}
+			}
+			boolean isCopper = n >= COPPER_VEIN;
+			for (int k = 0; k < n; k++) {
+				int p = queue[k];
+				int y = p >> 8;
+				boolean deep = y <= DEEP_MAX_Y;
+				IBlockState want = isCopper ? (deep ? dCopper : copper) : (deep ? dIron : null);
+				if (want != null) {
+					ExtendedBlockStorage sec = secs[y >> 4];
+					if (sec != Chunk.NULL_BLOCK_STORAGE) {
+						sec.getData().set(p & 15, y & 15, (p >> 4) & 15, want);
+					}
+				}
+			}
+		}
+		for (int s = 0; s < count; s++) {
+			grid[ironList[s]] = 0; // clean for the next chunk
 		}
 	}
 
@@ -267,12 +365,9 @@ public final class TCViaGuess {
 		}
 	}
 
-	private static boolean paletteHasCandidate(IBlockState[] pal, int dim, int baseY) {
-		for (int i = 0; i < pal.length; i++) {
-			IBlockState s = pal[i];
-			if (s == null) {
-				continue;
-			}
+	/** Whether blocks of this kind can be a look-alike worth guessing here. */
+	private static boolean isCandidate(IBlockState s, int dim, int baseY) {
+		{
 			int id = Block.getIdFromBlock(s.getBlock());
 			if (dim == 0) {
 				if (baseY <= DEEP_MAX_Y) {
@@ -490,6 +585,7 @@ public final class TCViaGuess {
 	private static int[] breakPos;
 	private static long[] breakAt;
 	private static int breakNext;
+	private static long lastBreakAt;
 
 	/** You are breaking this block (before the client removes it). */
 	public static void noteLocalBreak(World w, BlockPos pos) {
@@ -517,6 +613,7 @@ public final class TCViaGuess {
 		breakPos[i * 3 + 1] = pos.getY();
 		breakPos[i * 3 + 2] = pos.getZ();
 		breakAt[i] = net.lax1dude.eaglercraft.EagRuntime.steadyTimeMillis();
+		lastBreakAt = breakAt[i];
 	}
 
 	/**
@@ -526,8 +623,12 @@ public final class TCViaGuess {
 	 */
 	public static void onDrop(World w, net.minecraft.entity.Entity e, net.minecraft.item.ItemStack st) {
 		try {
-			if (breakPos == null || w == null || e == null || st == null || st.func_190926_b() || !active()) {
+			if (breakPos == null || w == null || e == null || st == null || st.func_190926_b()) {
 				return;
+			}
+			long now0 = net.lax1dude.eaglercraft.EagRuntime.steadyTimeMillis();
+			if (now0 - lastBreakAt > 4000L || !active()) {
+				return; // no ore broken just now: nothing to learn (most dropped items)
 			}
 			net.minecraft.item.Item it = st.getItem();
 			String name = String.valueOf(net.minecraft.item.Item.REGISTRY.getNameForObject(it));

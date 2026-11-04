@@ -122,6 +122,33 @@ public class BlockStateContainer implements IBlockStatePaletteResizer {
 	 * Treasure Client: the kinds of block this section's palette holds (entries may be
 	 * null), or null when it uses the global palette and every block has to be checked.
 	 */
+	/**
+	 * Treasure Client: fills out with the indices (y << 8 | z << 4 | x) of blocks whose
+	 * palette id is marked in want; returns how many. Reads the packed ids directly.
+	 */
+	public int tcFind(boolean[] want, int[] out) {
+		int n = 0;
+		BitArray st = this.storage;
+		int len = want.length;
+		for (int i = 0; i < 4096; ++i) {
+			int id = st.getAt(i);
+			if (id < len && want[id]) {
+				out[n++] = i;
+			}
+		}
+		return n;
+	}
+
+	/** Treasure Client: palette size, or -1 for the global palette. */
+	public int tcPaletteSize() {
+		return this.palette == REGISTRY_BASED_PALETTE ? -1 : 1 << this.bits;
+	}
+
+	/** Treasure Client: one palette entry (may be null). */
+	public IBlockState tcPaletteState(int id) {
+		return this.palette.getBlockState(id);
+	}
+
 	public IBlockState[] tcPaletteStates() {
 		if (this.palette == REGISTRY_BASED_PALETTE) {
 			return null;
