@@ -10,6 +10,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRotatedPillar;
 import net.minecraft.block.BlockSlab;
+import net.minecraft.block.BlockTrapDoor;
 import net.minecraft.block.ViaBlocks;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -366,6 +367,9 @@ public final class TuffViaBlocks {
 			String name = (br >= 0) ? s.substring(0, br) : s;
 			String props = (br >= 0) ? s.substring(br) : "";
 			Block b = Block.getBlockFromName(name);
+			if (b == null && name.contains("waxed_")) {
+				b = Block.getBlockFromName(name.replace("waxed_", "")); // waxed copper looks the same
+			}
 			if (b == null || Block.getIdFromBlock(b) < ViaBlocks.FIRST_ID) {
 				return null; // not one of our modern blocks (also skips name clashes like stone_slab)
 			}
@@ -375,6 +379,20 @@ public final class TuffViaBlocks {
 					st = st.withProperty(BlockRotatedPillar.AXIS, EnumFacing.Axis.X);
 				} else if (props.contains("axis=z")) {
 					st = st.withProperty(BlockRotatedPillar.AXIS, EnumFacing.Axis.Z);
+				}
+			} else if (b instanceof BlockTrapDoor) {
+				if (props.contains("facing=south")) {
+					st = st.withProperty(BlockTrapDoor.FACING, EnumFacing.SOUTH);
+				} else if (props.contains("facing=east")) {
+					st = st.withProperty(BlockTrapDoor.FACING, EnumFacing.EAST);
+				} else if (props.contains("facing=west")) {
+					st = st.withProperty(BlockTrapDoor.FACING, EnumFacing.WEST);
+				}
+				if (props.contains("half=top")) {
+					st = st.withProperty(BlockTrapDoor.HALF, BlockTrapDoor.DoorHalf.TOP);
+				}
+				if (props.contains("open=true")) {
+					st = st.withProperty(BlockTrapDoor.OPEN, Boolean.TRUE);
 				}
 			} else if (b instanceof BlockSlab) {
 				for (int i = 0; i < ViaBlocks.SLAB_HALF.length; i++) {

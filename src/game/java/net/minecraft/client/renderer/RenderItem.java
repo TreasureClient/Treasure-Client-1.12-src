@@ -500,6 +500,11 @@ public class RenderItem implements IResourceManagerReloadListener {
 			}
 		}
 		// Treasure Client — item models for the ViaBlocks cross-model plants.
+		for (int viaT = 0; viaT < net.minecraft.block.ViaBlocks.TRAPDOORS.length; viaT++) {
+			if (net.minecraft.block.ViaBlocks.TRAPDOORS[viaT] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.TRAPDOORS[viaT], net.minecraft.block.ViaBlocks.TRAPDOOR_NAMES[viaT]);
+			}
+		}
 		for (int viaE = 0; viaE < net.minecraft.block.ViaBlocks.EXTRA.length; viaE++) {
 			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null) {
 				this.registerBlock(net.minecraft.block.ViaBlocks.EXTRA[viaE], net.minecraft.block.ViaBlocks.EXTRA_NAMES[viaE]);

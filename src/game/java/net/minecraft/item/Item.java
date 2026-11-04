@@ -537,6 +537,12 @@ public class Item {
 				registerItemBlock(net.minecraft.block.ViaBlocks.EXTRA[viaE]);
 			}
 		}
+		// Treasure Client — modern trapdoors: a plain ItemBlock each.
+		for (int viaT = 0; viaT < net.minecraft.block.ViaBlocks.TRAPDOORS.length; viaT++) {
+			if (net.minecraft.block.ViaBlocks.TRAPDOORS[viaT] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.TRAPDOORS[viaT]);
+			}
+		}
 		// Treasure Client — ViaBlocks walls: a plain ItemBlock each.
 		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
 			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {

@@ -53,6 +53,7 @@ public final class ViaItemRemap {
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.SLAB_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.WALL_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.EXTRA_NAMES);
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.TRAPDOOR_NAMES);
 		exactNames = ex;
 		List<String[]> p = new ArrayList<String[]>();
 		for (int i = 0; i < ViaItems.NAMES.length; i++) {

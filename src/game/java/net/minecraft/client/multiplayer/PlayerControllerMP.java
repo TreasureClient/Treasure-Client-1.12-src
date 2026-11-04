@@ -127,6 +127,7 @@ public class PlayerControllerMP {
 	}
 
 	public boolean onPlayerDestroyBlock(BlockPos pos) {
+		net.minecraft.client.network.TCViaGuess.noteLocalBreak(this.mc.world, pos); // Treasure Client: copper or iron
 		if (this.currentGameType.isAdventure()) {
 			if (this.currentGameType == GameType.SPECTATOR) {
 				return false;
