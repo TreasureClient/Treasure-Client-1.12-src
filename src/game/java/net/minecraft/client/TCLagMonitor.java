@@ -573,9 +573,15 @@ public class TCLagMonitor {
 				nowW += (mLogicAll[m] + mDrawAll[m]) / 1000L;
 				nf += mFrames[m];
 			}
-			nowW = nf > 0 ? nowW / nf : 0L;
-			say(mc, "§7Device speed: §f" + speed + "% §7of its best (heat slows it down) · game work per frame: §f"
-					+ ms1(early) + " §7(min " + (first + 1) + ") → §f" + ms1(nowW) + "ms §7(last 5 min)");
+			if (nf > 0) {
+				nowW /= nf;
+				say(mc, "§7Device speed: §f" + speed + "% §7of its best (heat slows it down) · game work per frame: §f"
+						+ ms1(early) + " §7(min " + (first + 1) + ") → §f" + ms1(nowW) + "ms §7(last 5 min)");
+			} else {
+				// only one minute of play so far: nothing to compare with yet
+				say(mc, "§7Device speed: §f" + speed + "% §7of its best (heat slows it down) · game work per frame: §f"
+						+ ms1(early) + "ms §7(first minute)");
+			}
 		}
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}

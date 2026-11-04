@@ -42,6 +42,7 @@ public final class TCHudCache {
 	private static int drawnVersionS = -1;
 	private static long drawnAtS;
 	private static boolean validS;
+	private static boolean lastChatOpen;
 	/** Most time between redraws of your own layer (it is redrawn whenever it changes anyway). */
 	private static final long OWN_MAX_AGE_MS = 1000L;
 	/** Redraw interval of the server layer while something on it animates. */
@@ -89,6 +90,13 @@ public final class TCHudCache {
 	/** How to draw the server's layer this frame (after {@link #decide} said it isn't DIRECT). */
 	public static int decideServer(GuiIngame gui) {
 		long now = EagRuntime.steadyTimeMillis();
+		// chat opened or closed: the chat looks different (all lines, no fading), redraw right away.
+		// The HUD stays cached while chat is open; it used to be drawn from scratch every frame.
+		boolean chatOpen = gui.getChatGUI().getChatOpen();
+		if (chatOpen != lastChatOpen) {
+			lastChatOpen = chatOpen;
+			validS = false;
+		}
 		if (gui.tcServerAnimating()) {
 			// titles, the tab list and fading chat change over ticks: redraw 20 times a second
 			// instead of every frame (a busy chat always has a line fading out)
