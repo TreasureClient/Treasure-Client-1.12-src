@@ -1686,6 +1686,15 @@ public class Block {
 			registerBlock(ViaBlocks.EXTRA_FIRST_ID + i, ViaBlocks.EXTRA_NAMES[i], extra);
 			ViaBlocks.EXTRA[i] = extra;
 		}
+		// Modern trapdoors: wooden ones like the oak trapdoor, copper ones metal (open by hand).
+		for (int i = 0; i < ViaBlocks.TRAPDOOR_NAMES.length; i++) {
+			String tn = ViaBlocks.TRAPDOOR_NAMES[i];
+			boolean metal = tn.endsWith("copper_trapdoor");
+			Block td = (new BlockViaTrapDoor(metal ? Material.IRON : Material.WOOD, metal)).setHardness(3.0F)
+					.setSoundType(metal ? SoundType.METAL : SoundType.WOOD).setUnlocalizedName(tn).disableStats();
+			registerBlock(ViaBlocks.TRAPDOOR_FIRST_ID + i, tn, td);
+			ViaBlocks.TRAPDOORS[i] = td;
+		}
 		// Cross-model plants (coral plants, kelp, seagrass, berry bush).
 		for (int i = 0; i < ViaBlocks.CROSS_NAMES.length; i++) {
 			Block cross = (new BlockViaCross()).setHardness(0.0F).setUnlocalizedName(ViaBlocks.CROSS_NAMES[i]);

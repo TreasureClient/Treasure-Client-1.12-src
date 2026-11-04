@@ -266,6 +266,20 @@ public final class ViaBlocks {
 	/** Registered cross-plant instances, filled in by Block.registerViaBlocks(). */
 	public static final Block[] CROSS = new Block[CROSS_NAMES.length];
 
+	// ---- modern trapdoors (Treasure Client) -------------------------------------
+	/** First numeric id for the modern trapdoors. */
+	public static final int TRAPDOOR_FIRST_ID = 1600;
+
+	/** Modern trapdoors; the ones ending in copper_trapdoor are metal. */
+	public static final String[] TRAPDOOR_NAMES = {
+		"spruce_trapdoor", "birch_trapdoor", "jungle_trapdoor", "acacia_trapdoor", "dark_oak_trapdoor",
+		"crimson_trapdoor", "warped_trapdoor", "mangrove_trapdoor", "cherry_trapdoor", "bamboo_trapdoor",
+		"pale_oak_trapdoor", "copper_trapdoor", "exposed_copper_trapdoor", "weathered_copper_trapdoor",
+		"oxidized_copper_trapdoor"
+	};
+
+	public static final Block[] TRAPDOORS = new Block[TRAPDOOR_NAMES.length];
+
 	/** Look up a registered ViaBlocks full-cube block by its name in {@link #NAMES}. */
 	public static Block blockByName(String name) {
 		for (int i = 0; i < NAMES.length; i++) {

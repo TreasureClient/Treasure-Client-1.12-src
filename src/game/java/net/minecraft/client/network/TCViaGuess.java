@@ -44,8 +44,13 @@ public final class TCViaGuess {
 	private static final int DEEP_MAX_Y = 7;
 	/** Amethyst geodes are underground. */
 	private static final int GEODE_MAX_Y = 40;
+	/** Copper ore doesn't generate above this. */
+	private static final int COPPER_MAX_Y = 112;
+	/** Iron veins are at most 9 blocks; a vein this big is copper. */
+	private static final int COPPER_VEIN = 10;
 
 	private static boolean ready, failed;
+	private static IBlockState copper, dCopper, ironOre;
 	private static IBlockState deepslate, tuff, amethyst, budding, calcite, smoothBasalt, basalt, crimsonStem,
 			crimsonHyphae, warpedStem, warpedHyphae, crimsonNylium, warpedNylium, warpedWart, shroomlight, soulSoil,
 			debris, blackstoneBricks, netherGold, dCoal, dIron, dGold, dDiamond, dEmerald, dLapis, dRedstone;
@@ -86,6 +91,9 @@ public final class TCViaGuess {
 			netherGold = get("nether_gold_ore");
 			dCoal = get("deepslate_coal_ore");
 			dIron = get("deepslate_iron_ore");
+			copper = get("copper_ore");
+			dCopper = get("deepslate_copper_ore");
+			ironOre = net.minecraft.init.Blocks.IRON_ORE.getDefaultState();
 			dGold = get("deepslate_gold_ore");
 			dDiamond = get("deepslate_diamond_ore");
 			dEmerald = get("deepslate_emerald_ore");
@@ -142,7 +150,7 @@ public final class TCViaGuess {
 					continue;
 				}
 				int baseY = si << 4;
-				if (dim == 0 && baseY > GEODE_MAX_Y) {
+				if (dim == 0 && baseY > COPPER_MAX_Y) {
 					break; // nothing to guess higher up in the overworld
 				}
 				BlockStateContainer data = sec.getData();
@@ -235,6 +243,9 @@ public final class TCViaGuess {
 			return st;
 		}
 		try {
+			if (st.getBlock() == net.minecraft.init.Blocks.AIR) {
+				noteBreak(w, pos);
+			}
 			IBlockState mine = placedAt(w, pos.toLong());
 			if (mine != null) {
 				if (st.getBlock() == net.minecraft.init.Blocks.AIR) {
@@ -271,8 +282,11 @@ public final class TCViaGuess {
 						return true;
 					}
 				}
-				if (id == PURPUR_BLOCK || id == PURPUR_PILLAR || id == GRAY_GLAZED
-						|| (id == STONE && meta(s) == 4)) {
+				if (id == IRON_ORE && baseY <= COPPER_MAX_Y) {
+					return true;
+				}
+				if (baseY < GEODE_MAX_Y && (id == PURPUR_BLOCK || id == PURPUR_PILLAR || id == GRAY_GLAZED
+						|| (id == STONE && meta(s) == 4))) {
 					return true;
 				}
 			} else {
@@ -336,7 +350,7 @@ public final class TCViaGuess {
 				case COAL_ORE:
 					return dCoal;
 				case IRON_ORE:
-					return dIron;
+					return veinSize(c, w, x, y, z) >= COPPER_VEIN ? dCopper : dIron;
 				case GOLD_ORE:
 					return dGold;
 				case DIAMOND_ORE:
@@ -352,6 +366,9 @@ public final class TCViaGuess {
 					// tuff blobs sit in deepslate (cobblestone doesn't generate down there)
 					return countAround(c, w, x, y, z, DEEPSLATE_LIKE) >= 2 ? tuff : null;
 				}
+			}
+			if (id == IRON_ORE && y > DEEP_MAX_Y && y <= COPPER_MAX_Y) {
+				return veinSize(c, w, x, y, z) >= COPPER_VEIN ? copper : null;
 			}
 			if (y < GEODE_MAX_Y && y >= 0) {
 				// amethyst geodes: amethyst inside, calcite around it, smooth basalt outside
@@ -407,6 +424,162 @@ public final class TCViaGuess {
 			return null;
 		}
 		return null;
+	}
+
+	// ---- copper or iron ------------------------------------------------------------
+	// Both arrive as iron ore. A vein of 10+ is copper (iron veins are smaller), and when
+	// one is broken its drop ("1.17 Raw Copper" / "1.17 Raw Iron") says for sure.
+
+	private static boolean ironLike(IBlockState s) {
+		if (s == null) {
+			return false;
+		}
+		Block b = s.getBlock();
+		return b == net.minecraft.init.Blocks.IRON_ORE || (copper != null && b == copper.getBlock())
+				|| (dCopper != null && b == dCopper.getBlock()) || (dIron != null && b == dIron.getBlock());
+	}
+
+	/** Connected ore blocks (touching faces, edges or corners), counted up to 24. */
+	private static int veinSize(Chunk c, World w, int x, int y, int z) {
+		return vein(c, w, x, y, z, 24, null);
+	}
+
+	/** Flood fill over ore blocks; fills out (x,y,z triples) when given. Returns the count. */
+	private static int vein(Chunk c, World w, int x, int y, int z, int max, int[] out) {
+		int[] q = new int[max * 3];
+		int n = 0, head = 0;
+		q[n * 3] = x;
+		q[n * 3 + 1] = y;
+		q[n * 3 + 2] = z;
+		++n;
+		while (head < n && n < max) {
+			int bx = q[head * 3], by = q[head * 3 + 1], bz = q[head * 3 + 2];
+			++head;
+			for (int dx = -1; dx <= 1 && n < max; dx++) {
+				for (int dy = -1; dy <= 1 && n < max; dy++) {
+					for (int dz = -1; dz <= 1 && n < max; dz++) {
+						if (dx == 0 && dy == 0 && dz == 0) {
+							continue;
+						}
+						int nx = bx + dx, ny = by + dy, nz = bz + dz;
+						boolean seen = false;
+						for (int k = 0; k < n; k++) {
+							if (q[k * 3] == nx && q[k * 3 + 1] == ny && q[k * 3 + 2] == nz) {
+								seen = true;
+								break;
+							}
+						}
+						if (!seen && ironLike(at(c, w, nx, ny, nz))) {
+							q[n * 3] = nx;
+							q[n * 3 + 1] = ny;
+							q[n * 3 + 2] = nz;
+							++n;
+						}
+					}
+				}
+			}
+		}
+		if (out != null) {
+			System.arraycopy(q, 0, out, 0, Math.min(out.length, n * 3));
+		}
+		return n;
+	}
+
+	// recently broken ore blocks: x, y, z and when (a few at once while mining a vein)
+	private static final int BREAKS = 8;
+	private static int[] breakPos;
+	private static long[] breakAt;
+	private static int breakNext;
+
+	/** You are breaking this block (before the client removes it). */
+	public static void noteLocalBreak(World w, BlockPos pos) {
+		try {
+			if (w != null && pos != null && active()) {
+				noteBreak(w, pos);
+			}
+		} catch (Throwable t) {
+		}
+	}
+
+	/** A block was just broken (the server set it to air): remember ore spots for the drop. */
+	private static void noteBreak(World w, BlockPos pos) {
+		IBlockState old = w.getBlockState(pos);
+		if (!ironLike(old)) {
+			return;
+		}
+		if (breakPos == null) {
+			breakPos = new int[BREAKS * 3];
+			breakAt = new long[BREAKS];
+		}
+		int i = breakNext;
+		breakNext = (breakNext + 1) % BREAKS;
+		breakPos[i * 3] = pos.getX();
+		breakPos[i * 3 + 1] = pos.getY();
+		breakPos[i * 3 + 2] = pos.getZ();
+		breakAt[i] = net.lax1dude.eaglercraft.EagRuntime.steadyTimeMillis();
+	}
+
+	/**
+	 * A dropped item showed up (after its name was turned into the modern item). If it is
+	 * raw copper / copper ore or raw iron / iron ore next to an ore just broken, the rest
+	 * of that vein is that ore too.
+	 */
+	public static void onDrop(World w, net.minecraft.entity.Entity e, net.minecraft.item.ItemStack st) {
+		try {
+			if (breakPos == null || w == null || e == null || st == null || st.func_190926_b() || !active()) {
+				return;
+			}
+			net.minecraft.item.Item it = st.getItem();
+			String name = String.valueOf(net.minecraft.item.Item.REGISTRY.getNameForObject(it));
+			boolean isCopper = name.endsWith("raw_copper") || name.endsWith("copper_ore");
+			boolean isIron = name.endsWith("raw_iron") || name.endsWith("iron_ore");
+			if (!isCopper && !isIron) {
+				return;
+			}
+			long now = net.lax1dude.eaglercraft.EagRuntime.steadyTimeMillis();
+			for (int i = 0; i < BREAKS; i++) {
+				if (now - breakAt[i] > 4000L) {
+					continue;
+				}
+				double dx = e.posX - (breakPos[i * 3] + 0.5), dy = e.posY - (breakPos[i * 3 + 1] + 0.5),
+						dz = e.posZ - (breakPos[i * 3 + 2] + 0.5);
+				if (dx * dx + dy * dy + dz * dz > 4.0D) {
+					continue;
+				}
+				breakAt[i] = 0L; // used
+				relabelVein(w, breakPos[i * 3], breakPos[i * 3 + 1], breakPos[i * 3 + 2], isCopper);
+				return;
+			}
+		} catch (Throwable t) {
+		}
+	}
+
+	private static void relabelVein(World w, int x, int y, int z, boolean isCopper) {
+		int[] out = new int[64 * 3];
+		int n = 0;
+		// start from the ore blocks around the broken one (it is air now)
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dy = -1; dy <= 1; dy++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					if (ironLike(at(null, w, x + dx, y + dy, z + dz))) {
+						n = vein(null, w, x + dx, y + dy, z + dz, 64, out);
+						dx = dy = dz = 2; // found the vein
+					}
+				}
+			}
+		}
+		for (int i = 0; i < n; i++) {
+			BlockPos p = new BlockPos(out[i * 3], out[i * 3 + 1], out[i * 3 + 2]);
+			IBlockState cur = w.getBlockState(p);
+			boolean deep = (dIron != null && cur.getBlock() == dIron.getBlock())
+					|| (dCopper != null && cur.getBlock() == dCopper.getBlock())
+					|| (p.getY() <= DEEP_MAX_Y && p.getY() >= 0);
+			IBlockState want = isCopper ? (deep ? dCopper : copper) : (deep ? dIron : ironOre);
+			if (want != null && cur != want) {
+				w.setBlockState(p, want, 3);
+				rememberPlaced(w, p, want); // keep it if the chunk is sent again
+			}
+		}
 	}
 
 	private static IBlockState withAxis(IBlockState s, int logAxis) {

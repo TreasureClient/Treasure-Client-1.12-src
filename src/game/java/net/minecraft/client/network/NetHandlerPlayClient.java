@@ -638,6 +638,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 						net.minecraft.network.datasync.EntityDataManager.DataEntry<ItemStack> ie =
 								(net.minecraft.network.datasync.EntityDataManager.DataEntry<ItemStack>) e;
 						ie.setValue(net.minecraft.item.ViaItemRemap.remap(ie.getValue()));
+						if (entity instanceof EntityItem) {
+							TCViaGuess.onDrop(this.clientWorldController, entity, ie.getValue()); // copper or iron
+						}
 					}
 				}
 			} catch (Throwable t) {
