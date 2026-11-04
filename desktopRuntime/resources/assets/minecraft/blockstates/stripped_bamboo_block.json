@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "stripped_bamboo_block"
+        },
+        "axis=z": {
+            "model": "stripped_bamboo_block",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "stripped_bamboo_block",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

@@ -533,7 +533,8 @@ public class Item {
 		}
 		// Treasure Client — extra simple ViaBlocks: a plain ItemBlock each.
 		for (int viaE = 0; viaE < net.minecraft.block.ViaBlocks.EXTRA.length; viaE++) {
-			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null) {
+			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null
+					&& !net.minecraft.block.ViaBlocks.hasViaItem(net.minecraft.block.ViaBlocks.EXTRA_NAMES[viaE])) {
 				registerItemBlock(net.minecraft.block.ViaBlocks.EXTRA[viaE]);
 			}
 		}
@@ -551,7 +552,8 @@ public class Item {
 		}
 		// Treasure Client — ViaBlocks cross-model plants: a plain ItemBlock each.
 		for (int viaC = 0; viaC < net.minecraft.block.ViaBlocks.CROSS.length; viaC++) {
-			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null) {
+			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null
+					&& !net.minecraft.block.ViaBlocks.hasViaItem(net.minecraft.block.ViaBlocks.CROSS_NAMES[viaC])) {
 				registerItemBlock(net.minecraft.block.ViaBlocks.CROSS[viaC]);
 			}
 		}

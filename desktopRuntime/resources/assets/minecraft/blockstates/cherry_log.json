@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "cherry_log"
+        },
+        "axis=z": {
+            "model": "cherry_log",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "cherry_log",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

@@ -506,12 +506,14 @@ public class RenderItem implements IResourceManagerReloadListener {
 			}
 		}
 		for (int viaE = 0; viaE < net.minecraft.block.ViaBlocks.EXTRA.length; viaE++) {
-			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null) {
+			if (net.minecraft.block.ViaBlocks.EXTRA[viaE] != null
+					&& !net.minecraft.block.ViaBlocks.hasViaItem(net.minecraft.block.ViaBlocks.EXTRA_NAMES[viaE])) {
 				this.registerBlock(net.minecraft.block.ViaBlocks.EXTRA[viaE], net.minecraft.block.ViaBlocks.EXTRA_NAMES[viaE]);
 			}
 		}
 		for (int viaC = 0; viaC < net.minecraft.block.ViaBlocks.CROSS.length; viaC++) {
-			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null) {
+			if (net.minecraft.block.ViaBlocks.CROSS[viaC] != null
+					&& !net.minecraft.block.ViaBlocks.hasViaItem(net.minecraft.block.ViaBlocks.CROSS_NAMES[viaC])) {
 				this.registerBlock(net.minecraft.block.ViaBlocks.CROSS[viaC], net.minecraft.block.ViaBlocks.CROSS_NAMES[viaC]);
 			}
 		}
