@@ -118,6 +118,22 @@ public class BlockStateContainer implements IBlockStatePaletteResizer {
 		out[1] = ticking;
 	}
 
+	/**
+	 * Treasure Client: the kinds of block this section's palette holds (entries may be
+	 * null), or null when it uses the global palette and every block has to be checked.
+	 */
+	public IBlockState[] tcPaletteStates() {
+		if (this.palette == REGISTRY_BASED_PALETTE) {
+			return null;
+		}
+		int n = 1 << this.bits;
+		IBlockState[] out = new IBlockState[n];
+		for (int i = 0; i < n; ++i) {
+			out[i] = this.palette.getBlockState(i);
+		}
+		return out;
+	}
+
 	protected IBlockState get(int index) {
 		IBlockState iblockstate = this.palette.getBlockState(this.storage.getAt(index));
 		return iblockstate == null ? AIR_BLOCK_STATE : iblockstate;
