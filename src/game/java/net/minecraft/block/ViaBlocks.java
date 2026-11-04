@@ -240,7 +240,35 @@ public final class ViaBlocks {
 		// Non-solid decorations (custom box/podium models, not the cross model).
 		"lantern",
 		"soul_lantern",
-		"lectern"
+		"lectern",
+		// Treasure Client: natural plants for Modern Block Guessing
+		"cornflower",
+		"lily_of_the_valley",
+		"wither_rose",
+		"torchflower",
+		"crimson_roots",
+		"warped_roots",
+		"nether_sprouts",
+		"crimson_fungus",
+		"warped_fungus",
+		"weeping_vines",
+		"twisting_vines",
+		"small_amethyst_bud",
+		"medium_amethyst_bud",
+		"large_amethyst_bud",
+		"amethyst_cluster",
+		"hanging_roots",
+		"cherry_sapling",
+		"mangrove_propagule",
+		"pale_hanging_moss",
+		"open_eyeblossom",
+		"closed_eyeblossom",
+		"short_dry_grass",
+		"tall_dry_grass",
+		"bush",
+		"firefly_bush",
+		"pointed_dripstone",
+		"cave_vines"
 	};
 
 	/** The texture each cross/non-solid block uses (parallel to {@link #CROSS_NAMES}). */
@@ -260,7 +288,35 @@ public final class ViaBlocks {
 		"sweet_berry_bush_stage3",
 		"lantern",
 		"soul_lantern",
-		"lectern"
+		"lectern",
+		// Treasure Client: natural plants
+		"cornflower",
+		"lily_of_the_valley",
+		"wither_rose",
+		"torchflower",
+		"crimson_roots",
+		"warped_roots",
+		"nether_sprouts",
+		"crimson_fungus",
+		"warped_fungus",
+		"weeping_vines_plant",
+		"twisting_vines_plant",
+		"small_amethyst_bud",
+		"medium_amethyst_bud",
+		"large_amethyst_bud",
+		"amethyst_cluster",
+		"hanging_roots",
+		"cherry_sapling",
+		"mangrove_propagule",
+		"pale_hanging_moss",
+		"open_eyeblossom",
+		"closed_eyeblossom",
+		"short_dry_grass",
+		"tall_dry_grass",
+		"bush",
+		"firefly_bush",
+		"pointed_dripstone_down_tip",
+		"cave_vines_plant"
 	};
 
 	/** Registered cross-plant instances, filled in by Block.registerViaBlocks(). */
@@ -279,6 +335,19 @@ public final class ViaBlocks {
 	};
 
 	public static final Block[] TRAPDOORS = new Block[TRAPDOOR_NAMES.length];
+
+	/** Blocks whose item already exists as a modern item (ViaItems): no second item for them. */
+	public static final String[] HAS_VIA_ITEM = { "nether_sprouts", "mangrove_propagule", "firefly_bush",
+			"pointed_dripstone", "pink_petals" };
+
+	public static boolean hasViaItem(String name) {
+		for (int i = 0; i < HAS_VIA_ITEM.length; i++) {
+			if (HAS_VIA_ITEM[i].equals(name)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	/** Look up a registered ViaBlocks full-cube block by its name in {@link #NAMES}. */
 	public static Block blockByName(String name) {
@@ -403,11 +472,23 @@ public final class ViaBlocks {
 		"poplar_wood",
 		"red_poplar_leaves",
 		"orange_poplar_leaves",
-		"yellow_poplar_leaves"
+		"yellow_poplar_leaves",
+		// Treasure Client: natural blocks for Modern Block Guessing
+		"cherry_log",
+		"stripped_cherry_log",
+		"cherry_leaves",
+		"mangrove_leaves",
+		"pale_oak_leaves",
+		"stripped_bamboo_block",
+		"reinforced_deepslate",
+		"mangrove_roots",
+		"moss_carpet",
+		"pale_moss_carpet",
+		"pink_petals"
 	};
 
-	/** 0 = cube, 1 = pillar (axis), 2 = see-through cube (parallel to EXTRA_NAMES). */
-	public static final int[] EXTRA_KIND = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2};
+	/** 0 = cube, 1 = pillar (axis), 2 = see-through cube, 3 = carpet, 4 = flat ground cover (parallel to EXTRA_NAMES). */
+	public static final int[] EXTRA_KIND = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 1, 1, 2, 2, 2, 1, 1, 2, 3, 3, 4};
 
 	public static final Block[] EXTRA = new Block[EXTRA_NAMES.length];
 

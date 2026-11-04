@@ -54,6 +54,7 @@ public final class ViaItemRemap {
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.WALL_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.EXTRA_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.TRAPDOOR_NAMES);
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.CROSS_NAMES);
 		exactNames = ex;
 		List<String[]> p = new ArrayList<String[]>();
 		for (int i = 0; i < ViaItems.NAMES.length; i++) {
@@ -140,12 +141,20 @@ public final class ViaItemRemap {
 			String lower = clean(disp);
 			at = 4;
 			String[] names = candidates(st, lower);
-			if (names == null) {
-				return st;
-			}
 			at = 5;
-			for (int i = 0; i < names.length; i++) {
-				ItemStack r = swap(st, names[i]);
+			if (names != null) {
+				for (int i = 0; i < names.length; i++) {
+					ItemStack r = swap(st, names[i]);
+					if (r != null) {
+						return r;
+					}
+				}
+			}
+			// 6) The name didn't help but ViaBackwards labelled it ("1.20.5 ..."): use the
+			//    model number it stamps on every down-mapped item.
+			at = 6;
+			if (stripVersion(lower) != lower) {
+				ItemStack r = fromCmd(st);
 				if (r != null) {
 					return r;
 				}
@@ -187,6 +196,12 @@ public final class ViaItemRemap {
 					sb.append(" swap(").append(c[i]).append(")-error=").append(t);
 				}
 			}
+			try {
+				ItemStack cm = fromCmd(st);
+				sb.append(" cmd=").append(cm == null ? "none" : cm.getItem().getUnlocalizedName());
+			} catch (Throwable t) {
+				sb.append(" cmd-error");
+			}
 			sb.append(" lastError=").append(lastError);
 			return sb.toString();
 		} catch (Throwable t) {
@@ -204,6 +219,18 @@ public final class ViaItemRemap {
 		String exact = exactNames.get(bare);
 		if (exact == null && bare != lower) {
 			exact = exactNames.get(lower);
+		}
+		if (exact == null) {
+			// An untranslated name ("item.minecraft.breeze_rod") already is the registry name.
+			String key = null;
+			if (bare.startsWith("item.minecraft.")) {
+				key = bare.substring(15);
+			} else if (bare.startsWith("block.minecraft.")) {
+				key = bare.substring(16);
+			}
+			if (key != null && key.length() > 0) {
+				exact = key;
+			}
 		}
 		if (exact != null) {
 			out = new ArrayList<String>();
@@ -241,6 +268,38 @@ public final class ViaItemRemap {
 			arr[i] = out.get(i);
 		}
 		return arr;
+	}
+
+	/** CustomModelData number -> registry name, parsed from {@link ViaItemCmd} on first use. */
+	private static java.util.Map<Integer, String> cmdTable;
+
+	/** Our item for the CustomModelData ViaBackwards stamped on this stack, or null. */
+	private static ItemStack fromCmd(ItemStack st) {
+		if (!st.hasTagCompound()) {
+			return null;
+		}
+		net.minecraft.nbt.NBTTagCompound tag = st.getTagCompound();
+		if (!tag.hasKey("CustomModelData", 99)) {
+			return null;
+		}
+		int v = tag.getInteger("CustomModelData");
+		if (v < 102) {
+			return null; // low numbers are common server-made models, not ViaBackwards'
+		}
+		java.util.Map<Integer, String> m = cmdTable;
+		if (m == null) {
+			m = new java.util.HashMap<Integer, String>();
+			String[] pairs = ViaItemCmd.TABLE.split(";");
+			for (int j = 0; j < pairs.length; j++) {
+				int eq = pairs[j].indexOf('=');
+				if (eq > 0) {
+					m.put(Integer.valueOf(Integer.parseInt(pairs[j].substring(0, eq))), pairs[j].substring(eq + 1));
+				}
+			}
+			cmdTable = m;
+		}
+		String name = m.get(Integer.valueOf(v));
+		return name == null ? null : swap(st, name);
 	}
 
 	/** version ("1_21_11") -> (id -> registry name), parsed from {@link ViaItemIds} on first use. */

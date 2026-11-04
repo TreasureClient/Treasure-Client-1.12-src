@@ -1678,9 +1678,12 @@ public class Block {
 			String en = ViaBlocks.EXTRA_NAMES[i];
 			Material em = ViaBlocks.materialFor(en);
 			Block extra = kind == 1 ? new BlockRotatedPillar(em)
-					: (kind == 2 ? new BlockViaCutout() : new Block(em));
-			extra.setHardness(kind == 2 ? 0.3F : ViaBlocks.hardnessFor(en, 2.0F)).setResistance(kind == 2 ? 1.5F : 10.0F)
-					.setSoundType(kind == 2 ? SoundType.GLASS : ViaBlocks.soundFor(en, SoundType.STONE))
+					: (kind == 2 ? new BlockViaCutout() : (kind >= 3 ? new BlockViaCarpet(kind == 4) : new Block(em)));
+			boolean leafy = kind == 2 && en.endsWith("_leaves");
+			extra.setHardness(kind >= 3 ? 0.1F : (kind == 2 ? (leafy ? 0.2F : 0.3F) : ViaBlocks.hardnessFor(en, 2.0F)))
+					.setResistance(kind >= 2 ? 1.5F : 10.0F)
+					.setSoundType(kind >= 3 || leafy ? SoundType.PLANT
+							: (kind == 2 ? SoundType.GLASS : ViaBlocks.soundFor(en, SoundType.STONE)))
 					.setUnlocalizedName(ViaBlocks.EXTRA_NAMES[i])
 					.setCreativeTab(net.minecraft.creativetab.CreativeTabs.BUILDING_BLOCKS);
 			registerBlock(ViaBlocks.EXTRA_FIRST_ID + i, ViaBlocks.EXTRA_NAMES[i], extra);
