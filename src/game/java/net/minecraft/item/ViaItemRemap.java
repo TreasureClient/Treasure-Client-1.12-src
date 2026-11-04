@@ -47,6 +47,12 @@ public final class ViaItemRemap {
 				ex.put(phrase, ViaItems.NAMES[i]);
 			}
 		}
+		// Modern blocks too ("1.17 Cobbled Deepslate", "1.16 Soul Soil"): exact names only,
+		// so a block name never matches part of some other item's name.
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.NAMES);
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.SLAB_NAMES);
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.WALL_NAMES);
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.EXTRA_NAMES);
 		exactNames = ex;
 		List<String[]> p = new ArrayList<String[]>();
 		for (int i = 0; i < ViaItems.NAMES.length; i++) {
@@ -318,10 +324,36 @@ public final class ViaItemRemap {
 	}
 
 	/** Our item in place of {@code st} (same count, NBT kept), or null if not applicable. */
+	private static void addBlockNames(java.util.Map<String, String> ex, String[] names) {
+		for (int i = 0; i < names.length; i++) {
+			String phrase = names[i].replace('_', ' ');
+			if (!ex.containsKey(phrase)) {
+				ex.put(phrase, names[i]);
+			}
+		}
+	}
+
+	/** The item form of one of our modern blocks, or null. */
+	private static Item blockItem(String name) {
+		try {
+			net.minecraft.block.Block b = net.minecraft.block.Block.getBlockFromName(name);
+			if (b == null || net.minecraft.block.Block.getIdFromBlock(b) < net.minecraft.block.ViaBlocks.FIRST_ID) {
+				return null;
+			}
+			Item it = Item.getItemFromBlock(b);
+			return it == null || it == net.minecraft.init.Items.AIR ? null : it;
+		} catch (Throwable t) {
+			return null;
+		}
+	}
+
 	private static ItemStack swap(ItemStack st, String name) {
 		// Direct array lookup, not Item.getByNameOrId — the registry can fail to
 		// resolve our high ids in some runtimes.
 		Item via = ViaItems.getByName(name);
+		if (via == null) {
+			via = blockItem(name); // a modern block (dropped or in your inventory)
+		}
 		if (via == null || via == st.getItem()) {
 			return null;
 		}
