@@ -279,6 +279,10 @@ public class RenderManager {
 			RenderPlayer renderplayer = this.skinMap.get(s);
 			return (Render<T>) (renderplayer != null ? renderplayer : this.playerRenderer);
 		} else {
+			if (entityIn.tcViaMob != 0) { // Treasure Client: modern mob behind a ViaBackwards stand-in
+				Render<T> via = (Render<T>) (Render<?>) TCViaMobs.renderer(this, entityIn.tcViaMob);
+				if (via != null) return via;
+			}
 			return this.<T>getEntityClassRenderObject(entityIn.getClass());
 		}
 	}

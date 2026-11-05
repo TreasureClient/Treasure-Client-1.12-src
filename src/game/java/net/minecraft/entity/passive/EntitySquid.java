@@ -151,9 +151,11 @@ public class EntitySquid extends EntityWaterMob {
 			}
 
 			float f1 = MathHelper.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
-			this.renderYawOffset += (-((float) MathHelper.atan2(this.motionX, this.motionZ)) * (180F / (float) Math.PI)
-					- this.renderYawOffset) * 0.1F;
-			this.rotationYaw = this.renderYawOffset;
+			if (!net.minecraft.client.renderer.entity.TCViaMobs.ownsFacing(this)) { // fish keep the server's facing
+				this.renderYawOffset += (-((float) MathHelper.atan2(this.motionX, this.motionZ)) * (180F / (float) Math.PI)
+						- this.renderYawOffset) * 0.1F;
+				this.rotationYaw = this.renderYawOffset;
+			}
 			this.squidYaw = (float) ((double) this.squidYaw + Math.PI * (double) this.rotateSpeed * 1.5D);
 			this.squidPitch += (-((float) MathHelper.atan2((double) f1, this.motionY)) * (180F / (float) Math.PI)
 					- this.squidPitch) * 0.1F;
