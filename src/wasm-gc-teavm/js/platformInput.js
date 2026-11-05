@@ -294,13 +294,17 @@ async function initPlatformInput(inputImports) {
 		});
 	}));
 
+	var tcLastMouseX = 0, tcLastMouseY = 0;
 	canvasElement.addEventListener("mousemove", /** @type {function(Event)} */ (currentEventListeners.mousemove = function(/** MouseEvent */ evt) {
 		evt.preventDefault();
 		evt.stopPropagation();
+		// Treasure Client: while aiming (pointer locked) the cursor position isn't used, and reading
+		// offsetX/offsetY can make the browser lay out the page again on every mouse move
+		const locked = (document.pointerLockElement === canvasElement);
 		pushEvent(EVENT_TYPE_INPUT, EVENT_INPUT_MOUSE, {
 			"eventType": EVENT_MOUSE_MOVE,
-			"posX": evt.offsetX,
-			"posY": evt.offsetY,
+			"posX": locked ? tcLastMouseX : (tcLastMouseX = evt.offsetX),
+			"posY": locked ? tcLastMouseY : (tcLastMouseY = evt.offsetY),
 			"movementX": evt.movementX,
 			"movementY": evt.movementY
 		});
@@ -668,7 +672,81 @@ async function initPlatformInput(inputImports) {
 	 * @param {number} vsync
 	 * @return {Promise}
 	 */
+	// Treasure Client: GPU time per frame (.lag), from a WebGL timer query around each frame.
+	// Results arrive a few frames later and are read without waiting (never stalls the GPU).
+	const tcGpu = { tried: false, ext: null, free: [], pending: [], active: null, lastUs: -1 };
+
+	function tcGpuFrameEnd() {
+		const gl = webglContext;
+		if (!gl) return;
+		if (!tcGpu.tried) {
+			tcGpu.tried = true;
+			try {
+				tcGpu.ext = (webglGLESVer >= 300) ? gl.getExtension("EXT_disjoint_timer_query_webgl2") : null;
+			} catch (e) {
+				tcGpu.ext = null;
+			}
+		}
+		const ext = tcGpu.ext;
+		if (!ext) return;
+		try {
+			if (tcGpu.active) {
+				gl.endQuery(ext["TIME_ELAPSED_EXT"]);
+				tcGpu.pending.push(tcGpu.active);
+				tcGpu.active = null;
+			}
+			while (tcGpu.pending.length > 0) {
+				const q = tcGpu.pending[0];
+				if (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) break;
+				tcGpu.pending.shift();
+				const ns = gl.getQueryParameter(q, gl.QUERY_RESULT);
+				if (!gl.getParameter(ext["GPU_DISJOINT_EXT"])) {
+					tcGpu.lastUs = Math.floor(ns / 1000);
+				}
+				tcGpu.free.push(q);
+			}
+			if (tcGpu.pending.length > 6) {
+				// results stopped coming: give up quietly
+				tcGpu.ext = null;
+				tcGpu.lastUs = -1;
+			}
+		} catch (e) {
+			tcGpu.ext = null;
+			tcGpu.lastUs = -1;
+		}
+	}
+
+	function tcGpuFrameBegin() {
+		const gl = webglContext;
+		const ext = tcGpu.ext;
+		if (!gl || !ext || tcGpu.active) return;
+		try {
+			const q = tcGpu.free.length > 0 ? tcGpu.free.pop() : gl.createQuery();
+			gl.beginQuery(ext["TIME_ELAPSED_EXT"], q);
+			tcGpu.active = q;
+		} catch (e) {
+			tcGpu.ext = null;
+		}
+	}
+
+	/**
+	 * @return {number}
+	 */
+	inputImports["tcGpuFrameUs"] = function() {
+		return tcGpu.lastUs;
+	};
+
+	/**
+	 * @param {number} fpsLimit
+	 * @param {number} vsync
+	 * @return {Promise}
+	 */
 	function updatePlatformAndSleepImpl(fpsLimit, vsync) {
+		tcGpuFrameEnd();
+		return updatePlatformAndSleepImpl0(fpsLimit, vsync).then(tcGpuFrameBegin);
+	}
+
+	function updatePlatformAndSleepImpl0(fpsLimit, vsync) {
 		reportWindowSize();
 		if((typeof document.visibilityState !== "string") || (document.visibilityState === "visible")) {
 			if(vsyncSupport && vsync) {

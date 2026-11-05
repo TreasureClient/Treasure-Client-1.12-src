@@ -44,8 +44,8 @@ public class TreasureHud {
 		try {
 			if (mc == null) return;
 			long now = EagRuntime.steadyTimeMillis();
-			// push ~10x/second — plenty smooth for a HUD, cheap on the tick loop
-			if (now - lastPush < 100L) return;
+			// push ~5x/second: each push is a storage write the browser has to do
+			if (now - lastPush < 200L) return;
 			lastPush = now;
 
 			EntityPlayer player = mc.player;

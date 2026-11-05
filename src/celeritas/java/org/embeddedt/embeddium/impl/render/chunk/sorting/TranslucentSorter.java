@@ -145,18 +145,47 @@ public final class TranslucentSorter {
             return new SortState.Static(sortNormalRelative(quads.centers(), quadCount, nx, ny, nz, flipped));
         }
 
-        if (quadCount <= MAX_TOPO_QUADS) {
-            int[] order = topologicalOrder(quads);
+        // Treasure Client: finding a fixed order compares quads pair by pair (up to 4 million pairs for
+        // water full of kelp/seagrass), in one step that can't pause: 65-150 ms spikes on a slow computer.
+        // Past a limit, give up and sort by distance when the camera moves instead (cheap, spread out).
+        tcWork = TC_WORK_LIMIT;
+        try {
+            if (quadCount <= MAX_TOPO_QUADS) {
+                int[] order = topologicalOrder(quads);
 
-            if (order != null) {
-                return new SortState.Static(order);
+                if (order != null) {
+                    return new SortState.Static(order);
+                }
             }
+
+            PartitionTree tree = PartitionTree.build(quads);
+            if (tree != null) return tree;
+        } catch (TcOutOfWork e) {
+            // too costly: fall through to the distance sort
         }
 
-        PartitionTree tree = PartitionTree.build(quads);
-        if (tree != null) return tree;
-
         return new SortState.Dynamic(quads.centers());
+    }
+
+    /** Treasure Client: quad pair checks one section's sort analysis may do. */
+    static final int TC_WORK_LIMIT = 40000;
+    static int tcWork;
+
+    static final class TcOutOfWork extends RuntimeException {
+    }
+
+    private static final TcOutOfWork TC_OUT = new TcOutOfWork();
+
+    /** Counts one pair check; stops the analysis when the limit is used up. */
+    static void tcSpend() {
+        if (--tcWork < 0) {
+            throw TC_OUT;
+        }
+    }
+
+    private static boolean tcSeen(QuadSet quads, int a, int b) {
+        tcSpend();
+        return quads.isSeenThrough(a, b);
     }
 
     /**
@@ -257,7 +286,7 @@ public final class TranslucentSorter {
 
                 // advance to the next quad that must be drawn after the current one
                 while (candidate >= 0 && (state[candidate] == 2 || candidate == current
-                        || !quads.isSeenThrough(group[current], group[candidate]))) {
+                        || !tcSeen(quads, group[current], group[candidate]))) {
                     candidate--;
                 }
 

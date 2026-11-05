@@ -631,6 +631,8 @@ public class TreasureMods {
 	private static int tcInWorldWritten = -1;
 	private static long tcInWorldWriteAt;
 
+	private static int tcPauseTick = 0;
+
 	public static void tick(Minecraft mc) {
 		try {
 			if (mc == null || mc.gameSettings == null) return;
@@ -703,7 +705,9 @@ public class TreasureMods {
 			// We open the in-game menu (same as pressing Escape) so the world pauses
 			// in singleplayer and the mouse is released — the user no longer has to
 			// press Escape after their Mod Menu hotkey.
-			try {
+			// read every 3rd tick (150 ms is still instant for a menu key)
+			if (++tcPauseTick >= 3) try {
+				tcPauseTick = 0;
 				byte[] pz = EagRuntime.getStorage("tcpause");
 				if (pz != null && pz.length > 0) {
 					if (pz[0] == 1) {

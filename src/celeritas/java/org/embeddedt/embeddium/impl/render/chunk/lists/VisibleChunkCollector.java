@@ -48,8 +48,24 @@ public class VisibleChunkCollector implements OcclusionCuller.Visitor {
         }
     }
 
+    /** Treasure Client: lists from an older search, by region id, to reuse instead of making new ones. */
+    ChunkRenderList[] tcPool;
+
     private ChunkRenderList createRenderList(RenderRegion region) {
-        ChunkRenderList renderList = new ChunkRenderList(region);
+        ChunkRenderList renderList = null;
+        ChunkRenderList[] pool = this.tcPool;
+        int id = region.getId();
+        if (pool != null && id >= 0 && id < pool.length) {
+            ChunkRenderList old = pool[id];
+            pool[id] = null;
+            if (old != null && old.getRegion() == region) {
+                old.tcReset();
+                renderList = old;
+            }
+        }
+        if (renderList == null) {
+            renderList = new ChunkRenderList(region);
+        }
         this.sortedRenderLists.add(renderList);
         this.renderListsByRegion[region.getId()] = renderList;
         return renderList;

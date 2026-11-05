@@ -41,6 +41,11 @@ public final class TCParticleCore {
 			return true;
 		}
 		double dx = p.posX - Particle.interpPosX, dy = p.posY - Particle.interpPosY, dz = p.posZ - Particle.interpPosZ;
-		return dx * dx + dy * dy + dz * dz > FAR_SQ;
+		if (dx * dx + dy * dy + dz * dz > FAR_SQ) {
+			return true;
+		}
+		// behind the camera (more than 2 blocks): nobody sees it bump into a block
+		net.minecraft.util.math.Vec3d v = Particle.cameraViewDir;
+		return v != null && dx * v.xCoord + dy * v.yCoord + dz * v.zCoord < -2.0D;
 	}
 }

@@ -274,6 +274,100 @@ public class TCLagMonitor {
 	private static int worstMinute = -1;
 	private static int ringPos, ringCount;
 
+	// ---- frame time governor ----------------------------------------------------
+	// Chunk building and sorting can wait a frame; a frame that runs past the screen refresh
+	// can't (with VSync it costs a whole extra refresh: 60 fps becomes 30 for that frame).
+	// So building only gets the time left in this frame.
+
+	/** When this frame's game work started (EagRuntime.nanoTime), set by Minecraft.runGameLoop. */
+	public static long frameStartNs;
+	/** Game work this frame should stay under, leaving room for the browser and GPU. */
+	private static final long FRAME_TARGET_NS = 12500000L;
+	/** Drawing done after the chunk builder runs (the rest of the frame), smoothed. */
+	private static long restEmaNs = 6000000L;
+	private static long builderAtNs = -1L;
+
+	/** How much time chunk building may use now without pushing this frame past the target (can be negative). */
+	public static long buildHeadroomNs() {
+		long start = frameStartNs;
+		if (start == 0L) {
+			return Long.MAX_VALUE;
+		}
+		long at = EagRuntime.nanoTime() - start;
+		if (at < 0L || at > 1000000000L) {
+			return Long.MAX_VALUE;
+		}
+		if (builderAtNs < 0L) {
+			builderAtNs = at;
+		}
+		return FRAME_TARGET_NS - at - restEmaNs;
+	}
+
+	// ---- moving vs standing still, and why frames miss the screen refresh ----------
+	private static final int MV_FRAMES = 0, MV_MS = 1, MV_WORK = 2, MV_GPU = 3, MV_GPUN = 4, MV_SLOW = 5,
+			MV_SLOW_GAME = 6, MV_SLOW_GPU = 7, MV_TERRAIN = 8, MV_BUILD = 9, MV_VIS = 10, MV_ENT = 11, MV_HUD = 12,
+			MV_LOGIC = 13, MV_N = 14;
+	/** [0] standing still, [1] moving or turning; times in microseconds. Reset after each .lag. */
+	private static final long[][] mv = new long[2][MV_N];
+	private static float mvYaw, mvPitch;
+	private static boolean mvHave;
+
+	private static void addMoving(Minecraft mc, long total, long logicNs, long drawNs) {
+		net.minecraft.client.entity.EntityPlayerSP p = mc.player;
+		boolean moving = mvHave && (Math.abs(p.rotationYaw - mvYaw) > 0.05F || Math.abs(p.rotationPitch - mvPitch) > 0.05F
+				|| Math.abs(p.posX - p.prevPosX) + Math.abs(p.posY - p.prevPosY) + Math.abs(p.posZ - p.prevPosZ) > 0.001D);
+		mvYaw = p.rotationYaw;
+		mvPitch = p.rotationPitch;
+		mvHave = true;
+		long[] a = mv[moving ? 1 : 0];
+		long work = (logicNs + drawNs) / 1000L;
+		int gpu = net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuFrameUs();
+		a[MV_FRAMES]++;
+		a[MV_MS] += total;
+		a[MV_WORK] += work;
+		if (gpu >= 0) {
+			a[MV_GPU] += gpu;
+			a[MV_GPUN]++;
+		}
+		if (total > 20L) { // missed the 60 Hz refresh
+			a[MV_SLOW]++;
+			if (work > 15000L) {
+				a[MV_SLOW_GAME]++;
+			} else if (gpu > 15000) {
+				a[MV_SLOW_GPU]++;
+			}
+		}
+		a[MV_TERRAIN] += cur[TERRAIN] / 1000L;
+		a[MV_BUILD] += tBuild / 1000L;
+		a[MV_VIS] += tGraph / 1000L;
+		a[MV_ENT] += (cur[ENTITIES] + cur[BLOCK_ENTS] + cur[NAME_TAGS]) / 1000L;
+		a[MV_HUD] += cur[HUD] / 1000L;
+		a[MV_LOGIC] += logicNs / 1000L;
+	}
+
+	private static void printMoving(Minecraft mc) {
+		for (int i = 1; i >= 0; i--) {
+			long[] a = mv[i];
+			long f = a[MV_FRAMES];
+			if (f < 30L) {
+				continue;
+			}
+			say(mc, "§7" + (i == 1 ? "Moving/turning" : "Standing still") + ": §f" + (a[MV_MS] > 0L ? f * 1000L / a[MV_MS] : 0L)
+					+ " fps §7· game work §f" + ms1(a[MV_WORK] / f) + "ms §7(logic " + ms1(a[MV_LOGIC] / f) + ", terrain "
+					+ ms1(a[MV_TERRAIN] / f) + " [builds " + ms1(a[MV_BUILD] / f) + ", visibility " + ms1(a[MV_VIS] / f)
+					+ "], entities " + ms1(a[MV_ENT] / f) + ", HUD " + ms1(a[MV_HUD] / f) + ") · GPU §f"
+					+ (a[MV_GPUN] > 0L ? ms1(a[MV_GPU] / a[MV_GPUN]) + "ms" : "not measurable"));
+			long slow = a[MV_SLOW];
+			long other = Math.max(0L, slow - a[MV_SLOW_GAME] - a[MV_SLOW_GPU]);
+			say(mc, "§7  missed refreshes: §f" + (slow * 100L / f) + "% §7of frames (because of game work "
+					+ (a[MV_SLOW_GAME] * 100L / f) + "%, GPU " + (a[MV_SLOW_GPU] * 100L / f) + "%, browser/other "
+					+ (other * 100L / f) + "%)");
+		}
+		for (int i = 0; i < 2; i++) {
+			for (int k = 0; k < MV_N; k++) mv[i][k] = 0L;
+		}
+	}
+
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
 	public static void frame(long logicNs, long drawNs, long browserNs) {
 		long now = EagRuntime.steadyTimeMillis();
@@ -290,8 +384,21 @@ public class TCLagMonitor {
 		}
 		long total = now - lastEnd;
 		lastEnd = now;
+		if (builderAtNs >= 0L) {
+			long rest = logicNs + drawNs - builderAtNs - tBuild; // drawing after the builder, not the building itself
+			if (rest >= 0L && rest < 200000000L) {
+				restEmaNs += (rest - restEmaNs) / 8L;
+			}
+			builderAtNs = -1L;
+		}
 		reportWindow(now, logicNs);
 		Minecraft tcMc = Minecraft.getMinecraft();
+		if (total > 2000L) {
+			// the tab was hidden or the computer slept (53 s once): not lag, and it ruined the averages
+			skipFrame = false;
+			clearParts();
+			return;
+		}
 		if (tcMc.world == null || tcMc.player == null || skipFrame) {
 			skipFrame = false;
 			// menus and the login handshake (which waits for the server) aren't gameplay
@@ -396,6 +503,7 @@ public class TCLagMonitor {
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
+		addMoving(tcMc, total, logicNs, drawNs);
 		clearParts();
 	}
 
@@ -583,6 +691,7 @@ public class TCLagMonitor {
 						+ ms1(early) + "ms §7(first minute)");
 			}
 		}
+		printMoving(mc);
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}
 

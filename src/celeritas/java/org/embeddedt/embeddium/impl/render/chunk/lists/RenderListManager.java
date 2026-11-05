@@ -111,6 +111,7 @@ public class RenderListManager {
             throw new IllegalStateException("Occlusion work in progress while trying to submit next task");
         }
         var visitor = new VisibleChunkCollector(this.lattice, frame, regionIdsLength, targetQueueSize, viewport.getBlockCoord());
+        visitor.tcPool = this.tcPool;
         Supplier<VisibleChunkCollector> occlusionTask = () -> {
             this.pendingVisibilitySnapshot = search.apply(visitor);
             // Sort the rebuild lists here rather than on the render thread when the result is joined
@@ -133,6 +134,7 @@ public class RenderListManager {
     public void finishPreviousGraphUpdate() {
         if (currentOcclusionFuture != null) {
             VisibleChunkCollector visitor = currentOcclusionFuture.join();
+            this.tcRecycle(this.renderLists);
             this.renderLists = visitor.createRenderLists();
             this.rebuildLists = visitor.getRebuildLists();
             // Publish the finished search's snapshot before advancing lastUpdatedFrame, so any concurrent
@@ -148,6 +150,31 @@ public class RenderListManager {
         // so the search thread's writes to the lattice arrays are visible here. A no-op while the other
         // pass's search is still running.
         this.graph.runDeferredTasks();
+    }
+
+    // Treasure Client: the lists of the search before last, reused by the next search. Turning the
+    // camera runs a search every frame, and each one made a new 1 KB list per region (garbage the
+    // browser has to clean up, which shows up as random frame drops).
+    private ChunkRenderList[] tcPool = new ChunkRenderList[64];
+
+    private void tcRecycle(SortedRenderLists old) {
+        if (old == null) {
+            return;
+        }
+        int n = old.getNumRegions();
+        for (int i = 0; i < n; i++) {
+            ChunkRenderList list = old.getRegion(i);
+            int id = list.getRegion().getId();
+            if (id < 0) {
+                continue;
+            }
+            if (id >= this.tcPool.length) {
+                ChunkRenderList[] bigger = new ChunkRenderList[Math.max(id + 1, this.tcPool.length * 2)];
+                System.arraycopy(this.tcPool, 0, bigger, 0, this.tcPool.length);
+                this.tcPool = bigger;
+            }
+            this.tcPool[id] = list;
+        }
     }
 
     public void destroy() {

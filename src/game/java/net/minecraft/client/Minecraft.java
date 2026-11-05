@@ -981,6 +981,7 @@ public class Minecraft implements IThreadListener {
 		}
 
 		long l = EagRuntime.nanoTime();
+		TCLagMonitor.frameStartNs = l; // Treasure Client: chunk building only uses the time left in the frame
 
 		for (int j = 0; j < this.timer.elapsedTicks; ++j) {
 			this.runTick();

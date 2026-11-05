@@ -119,8 +119,12 @@ public abstract class BlockLiquid extends Block {
 
 	public boolean shouldSideBeRendered(IBlockState blockState, IBlockAccess blockAccess, BlockPos pos,
 			EnumFacing side) {
-		if (blockAccess.getBlockState(pos.offset(side)).getMaterial() == this.blockMaterial) {
+		IBlockState tcNext = blockAccess.getBlockState(pos.offset(side));
+		if (tcNext.getMaterial() == this.blockMaterial) {
 			return false;
+		} else if (this.blockMaterial == Material.WATER && tcNext.getBlock() instanceof BlockViaCross
+				&& ((BlockViaCross) tcNext.getBlock()).tcInWater) {
+			return false; // Treasure Client: kelp/seagrass/coral stand in water, no water wall around them
 		} else {
 			return side == EnumFacing.UP ? true : super.shouldSideBeRendered(blockState, blockAccess, pos, side);
 		}
