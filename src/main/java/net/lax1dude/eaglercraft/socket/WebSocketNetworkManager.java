@@ -151,7 +151,13 @@ public class WebSocketNetworkManager extends NetworkManager {
 	public static void tcFrameStart() {
 		tcFrameUsedNs = 0L;
 		tcFrameHandled = 0;
+		tcFrameFull = false;
 	}
+
+	/** A slow packet (a map chunk) ran past this frame's packet time: the rest waits for the next frame. */
+	private static boolean tcFrameFull;
+	/** A packet slower than this (map chunks are 1-4 ms on a slow device) doesn't count toward the minimum. */
+	private static final long TC_HEAVY_NS = 1000000L;
 
 	/** Packet time allowed per frame, more when packets are piling up. */
 	/** Video Settings: packet time per frame (more when packets pile up). */
@@ -205,10 +211,15 @@ public class WebSocketNetworkManager extends NetworkManager {
 				&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient;
 		long start = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
 		long deadline = start + tcBudgetNs(tcBacklog.size()) - tcFrameUsedNs;
-		if (spread && tcFrameHandled >= TC_MIN_PER_FRAME && start >= deadline) {
+		if (spread && (tcFrameFull || tcFrameHandled >= TC_MIN_PER_FRAME) && start >= deadline) {
 			return; // this frame's packet time is used up
 		}
+		// Treasure Client: a tick handles what's waiting, but shares this frame's packet time: a tick
+		// used to add up to 10 ms of chunks on top of the frame's own packet time (25+ ms frames
+		// when a duel's map arrives). Never less than 2 ms, so a tick always gets something done.
+		long tickBudget = Math.min(TC_TICK_DRAIN_NS, Math.max(2000000L, tcBudgetNs(tcBacklog.size()) - tcFrameUsedNs));
 		int handled = 0;
+		boolean mustDrain = false;
 		IWebSocketFrame next;
 		while((next = tcBacklog.poll()) != null) {
 			++debugPacketCounter;
@@ -256,18 +267,27 @@ public class WebSocketNetworkManager extends NetworkManager {
 			net.minecraft.client.TCLagMonitor.addPacketType(tcPkt, net.lax1dude.eaglercraft.EagRuntime.nanoTime() - tcT);
 			// at least a few packets per frame, then stop once this frame's time is used up
 			++handled;
-			if(spread && tcFrameHandled + handled >= TC_MIN_PER_FRAME
-					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() > deadline) {
-				break;
+			long tcNowNs = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
+			if(spread && tcNowNs > deadline) {
+				if (tcFrameHandled + handled >= TC_MIN_PER_FRAME) {
+					break;
+				}
+				// the minimum of 8 packets a frame is for small packets: 8 map chunks in a row on a
+				// slow device made one frame 25+ ms long
+				if (tcNowNs - tcT > TC_HEAVY_NS) {
+					tcFrameFull = true;
+					break;
+				}
 			}
 			// Treasure Client: a tick handles everything waiting (so it never moves you from before a
 			// server teleport), but a huge burst (a duel's worth of chunks) is cut off after ~10 ms
 			// when no teleport is waiting; the rest is handled next frame, like ordinary network delay.
-			if(!spread && tcDrainAll && tcSpreadBursts && (handled & 7) == 0
-					&& net.lax1dude.eaglercraft.EagRuntime.nanoTime() - start > TC_TICK_DRAIN_NS
-					&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient
-					&& !tcTeleportWaiting()) {
-				break;
+			if(!spread && tcDrainAll && tcSpreadBursts && !mustDrain && tcNowNs - start > tickBudget
+					&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient) {
+				if (!tcTeleportWaiting()) {
+					break;
+				}
+				mustDrain = true; // a teleport is queued: handle everything (checked once, not per packet)
 			}
 		}
 		tcFrameHandled += handled;

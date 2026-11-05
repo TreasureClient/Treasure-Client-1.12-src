@@ -226,21 +226,30 @@ public class Chunk {
 		int i = this.getTopFilledSegment();
 		this.heightMapMinimum = Integer.MAX_VALUE;
 
+		// Treasure Client: same result, but empty 16-block sections are skipped in one step. Each
+		// column used to be checked block by block down to the bottom of the world; on duel maps
+		// floating over the void that was tens of thousands of lookups for every chunk received.
+		int topSec = (i + 15) >> 4;
 		for (int j = 0; j < 16; ++j) {
 			for (int k = 0; k < 16; ++k) {
 				this.precipitationHeightMap[j + (k << 4)] = -999;
 
-				for (int l = i + 16; l > 0; --l) {
-					IBlockState iblockstate = this.getBlockState(j, l - 1, k);
+				column: for (int sec = topSec; sec >= 0; --sec) {
+					ExtendedBlockStorage st = sec < this.storageArrays.length ? this.storageArrays[sec] : null;
+					if (st == NULL_BLOCK_STORAGE || st.tcNoBlocks()) {
+						continue;
+					}
+					for (int y = 15; y >= 0; --y) {
+						if (st.get(j, y, k).getLightOpacity() != 0) {
+							int l = (sec << 4) + y + 1;
+							this.heightMap[k << 4 | j] = l;
 
-					if (iblockstate.getLightOpacity() != 0) {
-						this.heightMap[k << 4 | j] = l;
+							if (l < this.heightMapMinimum) {
+								this.heightMapMinimum = l;
+							}
 
-						if (l < this.heightMapMinimum) {
-							this.heightMapMinimum = l;
+							break column;
 						}
-
-						break;
 					}
 				}
 			}
