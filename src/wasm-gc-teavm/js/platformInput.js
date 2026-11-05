@@ -746,12 +746,24 @@ async function initPlatformInput(inputImports) {
 		return updatePlatformAndSleepImpl0(fpsLimit, vsync).then(tcGpuFrameBegin);
 	}
 
+	var tcFrameStartMs = 0;
+	function tcMarkFrameStart() {
+		tcFrameStartMs = performance.now();
+	}
+
 	function updatePlatformAndSleepImpl0(fpsLimit, vsync) {
 		reportWindowSize();
 		if((typeof document.visibilityState !== "string") || (document.visibilityState === "visible")) {
 			if(vsyncSupport && vsync) {
 				manualSyncTimer = 0;
-				return asyncRequestAnimationFrame();
+				// Treasure Client: adaptive VSync. A frame whose work already took longer than one
+				// screen refresh has missed it; waiting for the next one too turned every slightly
+				// slow frame into a 30 fps frame. Such frames are shown right away instead.
+				var tcNow = performance.now();
+				if(tcFrameStartMs > 0 && (tcNow - tcFrameStartMs) > 16.0) {
+					return swapDelayImpl().then(tcMarkFrameStart);
+				}
+				return asyncRequestAnimationFrame().then(tcMarkFrameStart);
 			}else {
 				if(fpsLimit <= 0) {
 					manualSyncTimer = 0;

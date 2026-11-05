@@ -1674,7 +1674,10 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	}
 
 	public void handlePlayerListHeaderFooter(SPacketPlayerListHeaderFooter packetIn) {
-		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		// Treasure Client: animated headers arrive every tick but only show while Tab is held
+		if (this.gameController.gameSettings.keyBindPlayerList.isKeyDown()) {
+			net.minecraft.client.gui.TCHudCache.markDirty();
+		}
 		this.gameController.ingameGUI.getTabList()
 				.setHeader(packetIn.getHeader().getFormattedText().isEmpty() ? null : packetIn.getHeader());
 		this.gameController.ingameGUI.getTabList()
@@ -1936,7 +1939,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * update an objectives' displayname
 	 */
 	public void handleScoreboardObjective(SPacketScoreboardObjective packetIn) {
-		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		if (packetIn.getAction() != 2 || tcScoreShown(packetIn.getObjectiveName())) {
+			net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		}
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 
 		if (packetIn.getAction() == 0) {
@@ -1961,7 +1966,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * objective
 	 */
 	public void handleUpdateScore(SPacketUpdateScore packetIn) {
-		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		if (tcScoreShown(packetIn.getObjectiveName())) {
+			net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		}
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 		ScoreObjective scoreobjective = scoreboard.getObjective(packetIn.getObjectiveName());
 
@@ -1998,8 +2005,42 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * registration, Register/Remove the player-team- memberships, Set team
 	 * displayname/prefix/suffix and/or whether friendly fire is enabled
 	 */
+	/**
+	 * Treasure Client: true when a change to this objective can be seen on the HUD (the
+	 * sidebar, or the tab list while Tab is held). Below-name and hidden objectives no
+	 * longer redraw the HUD.
+	 */
+	private boolean tcScoreShown(String objective) {
+		if (objective == null || objective.isEmpty()) return true;
+		if (this.gameController.gameSettings.keyBindPlayerList.isKeyDown()) return true;
+		ScoreObjective side = this.clientWorldController.getScoreboard().getObjectiveInDisplaySlot(1);
+		return side != null && objective.equals(side.getName());
+	}
+
+	/**
+	 * Treasure Client: team updates (name tag prefixes) arrive constantly on many servers;
+	 * they only change the HUD when the team holds a sidebar line or Tab is held.
+	 */
+	private boolean tcTeamShown(SPacketTeams packetIn) {
+		if (this.gameController.gameSettings.keyBindPlayerList.isKeyDown()) return true;
+		Scoreboard sb = this.clientWorldController.getScoreboard();
+		ScoreObjective side = sb.getObjectiveInDisplaySlot(1);
+		if (side == null) return false;
+		ScorePlayerTeam team = sb.getTeam(packetIn.getName());
+		if (team == null) return true;
+		for (String member : team.getMembershipCollection()) {
+			if (sb.entityHasObjective(member, side)) return true;
+		}
+		for (String member : packetIn.getPlayers()) {
+			if (sb.entityHasObjective(member, side)) return true;
+		}
+		return false;
+	}
+
 	public void handleTeams(SPacketTeams packetIn) {
-		net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		if (tcTeamShown(packetIn)) {
+			net.minecraft.client.gui.TCHudCache.markDirty(); // Treasure Client: shown on the HUD
+		}
 		Scoreboard scoreboard = this.clientWorldController.getScoreboard();
 		ScorePlayerTeam scoreplayerteam;
 
