@@ -106,9 +106,15 @@ public class ChunkProviderClient implements IChunkProvider {
 
 		Iterator<ObjectCursor<Chunk>> objectiterator = this.chunkMapping.values().iterator();
 
+		// Treasure Client: read the clock every 32 chunks, not once per chunk (a browser call each)
+		boolean late = false;
+		int n = 0;
 		while (objectiterator.hasNext()) {
 			Chunk chunk = objectiterator.next().value;
-			chunk.onTick(EagRuntime.steadyTimeMillis() - i > 5L);
+			if (!late && (++n & 31) == 0) {
+				late = EagRuntime.steadyTimeMillis() - i > 5L;
+			}
+			chunk.onTick(late);
 		}
 
 		if (EagRuntime.steadyTimeMillis() - i > 100L) {

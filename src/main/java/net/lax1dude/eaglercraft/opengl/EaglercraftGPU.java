@@ -123,6 +123,11 @@ public class EaglercraftGPU {
 	static boolean tcCompilingList() {
 		return currentList != null;
 	}
+
+	/** Treasure Client: same, for code outside this package (item model cache). */
+	public static boolean tcIsCompilingList() {
+		return currentList != null;
+	}
 	private static ByteBuffer displayListBuffer = EagRuntime.allocateByteBuffer(0x100000);
 
 	public static void glNewList(int target, int op) {

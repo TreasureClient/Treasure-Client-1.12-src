@@ -326,8 +326,9 @@ public class Particle {
 		double origZ = z;
 
 		if (this.canCollide && !TCParticleCore.skipCollision(this, x, y, z)) {
-			List<AxisAlignedBB> list = this.worldObj.getCollisionBoxes((Entity) null,
-					this.getEntityBoundingBox().addCoord(x, y, z));
+			List<AxisAlignedBB> list = TCParticleCore.enabled
+					? TCParticleCore.boxes(this.worldObj, this.getEntityBoundingBox().addCoord(x, y, z))
+					: this.worldObj.getCollisionBoxes((Entity) null, this.getEntityBoundingBox().addCoord(x, y, z));
 
 			for (AxisAlignedBB axisalignedbb : list) {
 				y = axisalignedbb.calculateYOffset(this.getEntityBoundingBox(), y);

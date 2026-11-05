@@ -1131,9 +1131,11 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
         }
 		
 		// Treasure Client: light changes come in bursts (one torch changes hundreds of spots) and each
-		// one asked for chunk redraws right away. Collected over 8 ticks, many changes in one area
-		// become one redraw (light spreading into the next area shows up to 0.4 s later).
-		if (this.cloudTickCounter % 8 == 0) {
+		// one asked for chunk redraws right away. Collected over 16 ticks, many changes in one area
+		// become one redraw. The block you place or break is redrawn at once (with its new light);
+		// only light spreading further away (shadows under a bridge) shows up to 0.8 s later.
+		// Bridging in duels changed light ~150 times a second, about 30 chunk redraws a second.
+		if (this.cloudTickCounter % 16 == 0) {
 			alfheim$processLightUpdates();
 		}
 	}

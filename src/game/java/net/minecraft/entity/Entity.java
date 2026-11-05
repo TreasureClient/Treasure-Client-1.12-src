@@ -2801,7 +2801,8 @@ public abstract class Entity implements ICommandSender {
 	public byte tcViaMob;
 
 	public void notifyDataManagerChange(DataParameter<?> key) {
-		if (key == CUSTOM_NAME && this.world != null && this.world.isRemote) {
+		// keys from the server are new objects, so compare the slot number, not the object
+		if (key.getSerializerID() == CUSTOM_NAME.getSerializerID() && this.world != null && this.world.isRemote) {
 			net.minecraft.client.renderer.entity.TCViaMobs.onName(this);
 		}
 	}

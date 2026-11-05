@@ -95,6 +95,9 @@ public class VintageRenderSectionManager extends RenderSectionManager {
     @Override
     
     protected ChunkBuilderTask<ChunkBuildOutput> createRebuildTask(RenderSection render, int frame) {
+        // Treasure Client: finish waiting light changes first, so a rebuilt area (a block you just
+        // placed) always shows its new light. Light redraws further away are grouped (RenderGlobal).
+        this.world.alfheim$getLightingEngine().processLightUpdates();
         ChunkRenderContext context = WorldSlice.prepare(this.world, new SectionPos(render.getChunkX(), render.getChunkY(), render.getChunkZ()), this.sectionCache);
         if (context == null) {
             return null;
