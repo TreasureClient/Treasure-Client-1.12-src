@@ -81,6 +81,11 @@ public class ExtendedBlockStorage {
 	 * Returns whether or not this block storage's Chunk is fully empty, based on
 	 * its internal reference count.
 	 */
+	/** Treasure Client: true when the section holds no blocks at all (ignores its light, unlike isEmpty). */
+	public boolean tcNoBlocks() {
+		return this.blockRefCount == 0;
+	}
+
 	public boolean isEmpty() {
 		if (blockRefCount != 0)
 			return false;
