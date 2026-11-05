@@ -2294,6 +2294,16 @@ public abstract class EntityLivingBase extends Entity {
 	}
 
 	protected void collideWithNearbyEntities() {
+		// Treasure Client: on a server, mobs pushing mobs does nothing on your side (the server
+		// moves them), but each push check searched every nearby entity every tick. Only mobs
+		// close enough to touch you still check, so you are pushed exactly as before.
+		if (this.world.isRemote && !(this instanceof EntityPlayer)) {
+			Entity me = net.minecraft.client.Minecraft.getMinecraft().player;
+			if (me == null || Math.abs(this.posX - me.posX) > 3.0D || Math.abs(this.posZ - me.posZ) > 3.0D
+					|| Math.abs(this.posY - me.posY) > 4.0D) {
+				return;
+			}
+		}
 		List<Entity> list = this.world.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox(),
 				EntitySelectors.getTeamCollisionPredicate(this));
 

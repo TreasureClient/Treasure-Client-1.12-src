@@ -30,9 +30,9 @@ public final class TCHudCache {
 	}
 
 	/** Most time between redraws, so nothing can stay out of date for long. */
-	private static final long MAX_AGE_MS = 200L;
+	private static final long MAX_AGE_MS = 1000L;
 	/** Least time between redraws caused by the server (chat, scoreboard, boss bars, tab list). */
-	private static final long SERVER_CHANGE_MS = 100L;
+	private static final long SERVER_CHANGE_MS = 150L;
 
 	private static int version;
 	private static long drawnSignature;

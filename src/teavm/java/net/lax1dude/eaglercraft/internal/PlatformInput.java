@@ -823,6 +823,7 @@ public class PlatformInput {
 	}
 
 	private static double syncTimer = 0.0;
+	private static double tcFrameStartMs = 0.0;
 
 	public static void update(int fpsLimit) {
 		double r = getDevicePixelRatio(win);
@@ -878,7 +879,15 @@ public class PlatformInput {
 		if(getVisibilityState(win.getDocument())) {
 			if(vsyncSupport && vsync) {
 				syncTimer = 0.0;
-				asyncRequestAnimationFrame();
+				// Treasure Client: adaptive VSync. A frame whose work already took longer than one
+				// screen refresh has missed it; waiting for the next one too turned every slightly
+				// slow frame into a 30 fps frame. Such frames are shown right away instead.
+				if(tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0) {
+					PlatformRuntime.swapDelayTeaVM();
+				}else {
+					asyncRequestAnimationFrame();
+				}
+				tcFrameStartMs = PlatformRuntime.steadyTimeMillisTeaVM();
 			}else {
 				if(fpsLimit <= 0 || fpsLimit > 1000) {
 					syncTimer = 0.0;

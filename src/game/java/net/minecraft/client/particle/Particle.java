@@ -347,7 +347,20 @@ public class Particle {
 
 			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(0.0D, 0.0D, z));
 		} else {
-			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(x, y, z));
+			// Treasure Client: no collision check, so just remember the move instead of making a new
+			// box every tick (thousands of particles made a lot of garbage for the browser to clean)
+			if (x != 0.0D || y != 0.0D || z != 0.0D) {
+				this.tcDX += x;
+				this.tcDY += y;
+				this.tcDZ += z;
+				this.tcPending = true;
+			}
+			AxisAlignedBB bb = this.boundingBox;
+			this.posX = (bb.minX + bb.maxX) / 2.0D + this.tcDX;
+			this.posY = bb.minY + this.tcDY;
+			this.posZ = (bb.minZ + bb.maxZ) / 2.0D + this.tcDZ;
+			this.isCollided = false;
+			return;
 		}
 
 		this.resetPositionToBB();
@@ -372,7 +385,8 @@ public class Particle {
 	}
 
 	public int getBrightnessForRender(float p_189214_1_) {
-		BlockPos blockpos = new BlockPos(this.posX, this.posY, this.posZ);
+		// Treasure Client: one shared position (called for every particle every frame)
+		BlockPos blockpos = TC_LIGHT_POS.setPos(this.posX, this.posY, this.posZ);
 		return this.worldObj.isBlockLoaded(blockpos) ? this.worldObj.getCombinedLight(blockpos, 0) : 0;
 	}
 
@@ -384,11 +398,24 @@ public class Particle {
 		return !this.isExpired;
 	}
 
+	private static final BlockPos TC_LIGHT_POS = new BlockPos();
+
+	// Treasure Client: moves not yet applied to the box (see moveEntity)
+	private double tcDX, tcDY, tcDZ;
+	private boolean tcPending;
+
 	public AxisAlignedBB getEntityBoundingBox() {
+		if (this.tcPending) {
+			this.boundingBox = this.boundingBox.offset(this.tcDX, this.tcDY, this.tcDZ);
+			this.tcDX = this.tcDY = this.tcDZ = 0.0D;
+			this.tcPending = false;
+		}
 		return this.boundingBox;
 	}
 
 	public void setEntityBoundingBox(AxisAlignedBB bb) {
+		this.tcDX = this.tcDY = this.tcDZ = 0.0D;
+		this.tcPending = false;
 		this.boundingBox = bb;
 	}
 

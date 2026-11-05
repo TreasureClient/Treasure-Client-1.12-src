@@ -308,7 +308,9 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 	}
 
 	protected void playMoodSoundAndCheckLight(int p_147467_1_, int p_147467_2_, Chunk chunkIn) {
-		super.playMoodSoundAndCheckLight(p_147467_1_, p_147467_2_, chunkIn);
+		// Treasure Client: no client relight pass. It re-checked the server's light in every air
+		// block nearby (~5,000 checks a second) and any disagreement (often around modern
+		// stand-in blocks) redrew chunks. The server sends the light; block changes still relight.
 
 		if (this.ambienceTicks == 0) {
 			this.updateLCG = this.updateLCG * 3 + 1013904223;
