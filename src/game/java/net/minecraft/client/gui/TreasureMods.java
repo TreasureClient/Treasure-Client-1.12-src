@@ -75,6 +75,10 @@ public class TreasureMods {
 	// Default ON; viaguess=0 turns it off.
 	private static boolean viaGuess = true;
 	public static boolean viaGuess() { return via && viaGuess; }
+	// Modern Villager Trading: the 1.14+ trading screen (trade list on the left) on servers.
+	// Default ON; viatrade=0 turns it off.
+	private static boolean viaTrade = true;
+	public static boolean viaTrade() { return via && viaTrade; }
 
 	// Performance modpack: one switch for all ported performance mods. Default ON; overlay
 	// writes perfpack=0 to turn it off, which runs the game like vanilla. The single mods'
@@ -470,6 +474,7 @@ public class TreasureMods {
 			badOpt = true;
 			xCull = true;
 			viaGuess = true;
+			viaTrade = true;
 			dynRes = false;
 			dynFov = false;
 			entityDistance = 0;
@@ -522,6 +527,7 @@ public class TreasureMods {
 				else if (k.equals("badopt")) badOpt = v.equals("1");
 				else if (k.equals("xcull")) xCull = v.equals("1");
 				else if (k.equals("viaguess")) viaGuess = v.equals("1");
+				else if (k.equals("viatrade")) viaTrade = v.equals("1");
 				else if (k.equals("dynres")) dynRes = v.equals("1");
 				else if (k.equals("dynfov")) dynFov = v.equals("1");
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
