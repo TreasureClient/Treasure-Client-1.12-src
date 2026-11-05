@@ -336,18 +336,62 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 		}
 	}
 
+	// Treasure Client: ambient block effects (torch smoke, dripping leaves, portal sparkles) pick
+	// 1334 random spots around you every tick. The same picks are made, but with a cheap number
+	// generator (3 steps a spot instead of 6 slow ones) and the last chunk remembered, instead of
+	// a full world lookup for every spot. Most spots are air or empty chunk sections.
+	private final EaglercraftRandom tcAmbientRand = new EaglercraftRandom();
+	private final BlockPos tcAmbientPos = new BlockPos();
+	private int tcAmbientSeed = 0x9E3779B9;
+
 	public void doVoidFogParticles(int posX, int posY, int posZ) {
-		int i = 32;
-		EaglercraftRandom random = new EaglercraftRandom();
 		ItemStack itemstack = this.mc.player.getHeldItemMainhand();
 		boolean flag = this.mc.playerController.getCurrentGameType() == GameType.CREATIVE && !itemstack.func_190926_b()
 				&& itemstack.getItem() == Item.getItemFromBlock(Blocks.BARRIER);
-		BlockPos blockpos$mutableblockpos = new BlockPos();
+		EaglercraftRandom random = this.tcAmbientRand;
+		BlockPos pos = this.tcAmbientPos;
+		int seed = this.tcAmbientSeed ^ (int) this.getTotalWorldTime() * 0x61C88647;
+		Chunk last = null;
+		int lastCx = Integer.MIN_VALUE, lastCz = Integer.MIN_VALUE;
 
-		for (int j = 0; j < 667; ++j) {
-			this.showBarrierParticles(posX, posY, posZ, 16, random, flag, blockpos$mutableblockpos);
-			this.showBarrierParticles(posX, posY, posZ, 32, random, flag, blockpos$mutableblockpos);
+		for (int j = 0; j < 1334; ++j) {
+			// alternate 16 and 32 block reach like vanilla; each offset is (a - b), a and b in 0..reach-1
+			int sh = (j & 1) == 0 ? 4 : 5, m = (1 << sh) - 1;
+			seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+			int x = posX + (seed & m) - ((seed >>> sh) & m);
+			seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+			int y = posY + (seed & m) - ((seed >>> sh) & m);
+			seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+			int z = posZ + (seed & m) - ((seed >>> sh) & m);
+			if (y < 0 || y > 255) {
+				continue;
+			}
+			int cx = x >> 4, cz = z >> 4;
+			if (cx != lastCx || cz != lastCz) {
+				last = this.clientChunkProvider.getLoadedChunk(cx, cz);
+				lastCx = cx;
+				lastCz = cz;
+			}
+			if (last == null) {
+				continue;
+			}
+			net.minecraft.world.chunk.storage.ExtendedBlockStorage sec = last.getBlockStorageArray()[y >> 4];
+			if (sec == Chunk.NULL_BLOCK_STORAGE) {
+				continue;
+			}
+			IBlockState st = sec.get(x & 15, y & 15, z & 15);
+			net.minecraft.block.Block b = st.getBlock();
+			if (b == Blocks.AIR) {
+				continue;
+			}
+			pos.setPos(x, y, z);
+			b.randomDisplayTick(st, this, pos, random);
+			if (flag && b == Blocks.BARRIER) {
+				this.spawnParticle(EnumParticleTypes.BARRIER, (double) ((float) x + 0.5F), (double) ((float) y + 0.5F),
+						(double) ((float) z + 0.5F), 0.0D, 0.0D, 0.0D, new int[0]);
+			}
 		}
+		this.tcAmbientSeed = seed;
 	}
 
 	public void showBarrierParticles(int p_184153_1_, int p_184153_2_, int p_184153_3_, int p_184153_4_,

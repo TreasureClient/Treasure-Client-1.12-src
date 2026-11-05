@@ -114,6 +114,15 @@ public class RenderItem implements IResourceManagerReloadListener {
 	}
 
 	private void func_191967_a(IBakedModel p_191967_1_, int p_191967_2_, ItemStack p_191967_3_) {
+		// Treasure Client: draw the model's stored copy (TCItemModelCache) when it can
+		if (TCItemModelCache.draw(this, p_191967_1_, p_191967_2_, p_191967_3_)) {
+			return;
+		}
+		this.tcDrawModelDirect(p_191967_1_, p_191967_2_, p_191967_3_);
+	}
+
+	/** Treasure Client: the vanilla way, building the model's vertices now (also fills TCItemModelCache). */
+	void tcDrawModelDirect(IBakedModel p_191967_1_, int p_191967_2_, ItemStack p_191967_3_) {
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
 		bufferbuilder.begin(7, DefaultVertexFormats.ITEM);
@@ -1161,5 +1170,6 @@ public class RenderItem implements IResourceManagerReloadListener {
 
 	public void onResourceManagerReload(IResourceManager resourceManager) {
 		this.itemModelMesher.rebuildCache();
+		TCItemModelCache.clear(); // models are rebuilt, the stored copies belong to the old ones
 	}
 }
