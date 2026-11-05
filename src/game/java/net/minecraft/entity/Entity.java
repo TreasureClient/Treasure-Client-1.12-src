@@ -2797,7 +2797,13 @@ public abstract class Entity implements ICommandSender {
 		return this.getAlwaysRenderNameTag();
 	}
 
+	/** Treasure Client: modern mob type for ViaBackwards stand-ins (see TCViaMobs), 0 = none. */
+	public byte tcViaMob;
+
 	public void notifyDataManagerChange(DataParameter<?> key) {
+		if (key == CUSTOM_NAME && this.world != null && this.world.isRemote) {
+			net.minecraft.client.renderer.entity.TCViaMobs.onName(this);
+		}
 	}
 
 	/**
