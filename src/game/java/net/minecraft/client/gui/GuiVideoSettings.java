@@ -476,7 +476,7 @@ public class GuiVideoSettings extends GuiScreen {
 		g = perf.group();
 		g.add(new Header("Entity Culling", "entcull"));
 		g.add(new EntityDistance());
-		g.add(new VsSlider("vsCullMs", 15, 5, 40, 5, "tenthsMs", "entcull", "Culling Time",
+		g.add(new VsSlider("vsCullMs2", 5, 2, 40, 1, "tenthsMs", "entcull", "Culling Time",
 				"How long each frame can be spent checking which mobs and chests are hidden behind blocks. Higher hides more of them in crowded places, lower leaves more time for the rest of the frame.",
 				"Medium"));
 		g.add(new VsSlider("vsCullNear", 4, 0, 16, 1, " blocks", "entcull", "Always Draw Within",
