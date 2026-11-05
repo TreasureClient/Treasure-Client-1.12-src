@@ -448,6 +448,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return on ? "§aOn" : "§7Off";
 			}
 		});
+		this.entries.add(new Entry("Modern Villager Trading", "Treasure Client", "Built in",
+				"Uses the modern (1.14+) villager trading screen on servers: every trade is listed on the left, and clicking one picks it. On 1.14+ servers the server also moves the items you need into the trade slots. Singleplayer keeps the classic screen.",
+				"viatrade") {
+			boolean setting() {
+				return TreasureMods.viaTrade();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 	}
 
 	// ---------------- layout ----------------
@@ -506,7 +517,7 @@ public class GuiTreasureModList extends GuiScreen {
 
 	private static String categoryOf(Entry e) {
 		if (e.key.equals("vanillafix")) return "Bug fixes";
-		if (e.key.equals("via") || e.key.equals("viaguess")) return "Compatibility";
+		if (e.key.equals("via") || e.key.equals("viaguess") || e.key.equals("viatrade")) return "Compatibility";
 		return "Performance";
 	}
 

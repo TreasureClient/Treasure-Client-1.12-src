@@ -106,7 +106,8 @@ public class ItemPotion extends Item {
 	}
 
 	public boolean hasEffect(ItemStack stack) {
-		return super.hasEffect(stack) || !PotionUtils.getEffectsFromStack(stack).isEmpty();
+		// Treasure Client: potions don't shine (like modern versions); an enchanted one still does
+		return super.hasEffect(stack);
 	}
 
 	/**
