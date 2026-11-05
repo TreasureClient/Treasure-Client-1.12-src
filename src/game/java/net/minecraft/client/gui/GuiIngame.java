@@ -209,9 +209,9 @@ public class GuiIngame extends Gui {
 			h = tcMix(h, Item.getIdFromItem(s.getItem()));
 			h = tcMix(h, s.func_190916_E());
 			h = tcMix(h, s.getItemDamage());
-			if (s.hasEffect()) {
-				perTwoTicks = true; // enchantment glint moves (5 updates a second: each one redraws the hotbar)
-			}
+			// Treasure Client: the enchantment glint on hotbar icons stays still. Animating it redrew
+			// all nine 3D hotbar items five times a second, a slow frame each time, whenever you
+			// held enchanted gear (always, in PvP).
 			if (p.getCooldownTracker().hasCooldown(s.getItem())) {
 				perTick = true; // ender pearl / shield cooldown sweep
 			}

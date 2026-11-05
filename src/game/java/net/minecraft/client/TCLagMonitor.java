@@ -200,6 +200,8 @@ public class TCLagMonitor {
 	// parts of the terrain time with Celeritas, this frame: chunk builds, slowest single build,
 	// uploads to the graphics chip, visibility search (ns)
 	public static long tBuild, tBuildMax, tUpload, tGraph;
+	/** Time spent tracing entity culling rays this frame (ns). */
+	public static long tCull;
 
 	// parts of a HUD redraw this frame: hotbar, chat, scoreboard (ns); the rest of the HUD is "other"
 	public static long hHotbar, hChat, hBoard, hBoss, hEffects, hTitle, hTab, hTotem;
@@ -306,7 +308,7 @@ public class TCLagMonitor {
 	// ---- moving vs standing still, and why frames miss the screen refresh ----------
 	private static final int MV_FRAMES = 0, MV_MS = 1, MV_WORK = 2, MV_GPU = 3, MV_GPUN = 4, MV_SLOW = 5,
 			MV_SLOW_GAME = 6, MV_SLOW_GPU = 7, MV_TERRAIN = 8, MV_BUILD = 9, MV_VIS = 10, MV_ENT = 11, MV_HUD = 12,
-			MV_LOGIC = 13, MV_N = 14;
+			MV_LOGIC = 13, MV_CULL = 14, MV_BE = 15, MV_N = 16;
 	/** [0] standing still, [1] moving or turning; times in microseconds. Reset after each .lag. */
 	private static final long[][] mv = new long[2][MV_N];
 	private static float mvYaw, mvPitch;
@@ -340,7 +342,10 @@ public class TCLagMonitor {
 		a[MV_TERRAIN] += cur[TERRAIN] / 1000L;
 		a[MV_BUILD] += tBuild / 1000L;
 		a[MV_VIS] += tGraph / 1000L;
-		a[MV_ENT] += (cur[ENTITIES] + cur[BLOCK_ENTS] + cur[NAME_TAGS]) / 1000L;
+		// block entities and name tags are drawn inside the entity pass (already counted in it)
+		a[MV_ENT] += cur[ENTITIES] / 1000L;
+		a[MV_BE] += cur[BLOCK_ENTS] / 1000L;
+		a[MV_CULL] += tCull / 1000L;
 		a[MV_HUD] += cur[HUD] / 1000L;
 		a[MV_LOGIC] += logicNs / 1000L;
 	}
@@ -355,7 +360,8 @@ public class TCLagMonitor {
 			say(mc, "§7" + (i == 1 ? "Moving/turning" : "Standing still") + ": §f" + (a[MV_MS] > 0L ? f * 1000L / a[MV_MS] : 0L)
 					+ " fps §7· game work §f" + ms1(a[MV_WORK] / f) + "ms §7(logic " + ms1(a[MV_LOGIC] / f) + ", terrain "
 					+ ms1(a[MV_TERRAIN] / f) + " [builds " + ms1(a[MV_BUILD] / f) + ", visibility " + ms1(a[MV_VIS] / f)
-					+ "], entities " + ms1(a[MV_ENT] / f) + ", HUD " + ms1(a[MV_HUD] / f) + ") · GPU §f"
+					+ "], entities " + ms1(a[MV_ENT] / f) + " [block ents " + ms1(a[MV_BE] / f) + ", culling "
+					+ ms1(a[MV_CULL] / f) + "], HUD " + ms1(a[MV_HUD] / f) + ") · GPU §f"
 					+ (a[MV_GPUN] > 0L ? ms1(a[MV_GPU] / a[MV_GPUN]) + "ms" : "not measurable"));
 			long slow = a[MV_SLOW];
 			long other = Math.max(0L, slow - a[MV_SLOW_GAME] - a[MV_SLOW_GPU]);
@@ -544,7 +550,7 @@ public class TCLagMonitor {
 		for (int k = 0; k < LPARTS; k++) lcur[k] = 0L;
 		for (int k = 0, n = pktTouched.size(); k < n; k++) pktTouched.get(k)[3] = 0L;
 		pktTouched.clear();
-		tBuild = tBuildMax = tUpload = tGraph = 0L;
+		tBuild = tBuildMax = tUpload = tGraph = tCull = 0L;
 		buildJobs = mkLight = mkBlock = mkRange = 0;
 		hHotbar = hChat = hBoard = hBoss = hEffects = hTitle = hTab = hTotem = 0L;
 	}

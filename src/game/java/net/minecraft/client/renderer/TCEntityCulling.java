@@ -39,11 +39,11 @@ public final class TCEntityCulling {
 	}
 
 	/** How long a "hidden" result is trusted before checking again (ms). Short, so things don't pop in late. */
-	private static final long HIDDEN_RECHECK_MS = 40L;
+	private static final long HIDDEN_RECHECK_MS = 100L;
 	/** How long a "visible" result is trusted (ms). Becoming hidden late only costs a little FPS. */
-	private static final long VISIBLE_RECHECK_MS = 150L;
+	private static final long VISIBLE_RECHECK_MS = 400L;
 	/** Max time spent casting rays per frame (ns). */
-	public static long FRAME_BUDGET_NS = 1_500_000L; // Culling Time setting
+	public static long FRAME_BUDGET_NS = 500_000L; // Culling Time setting
 	/** Anything this close (blocks) is always drawn. */
 	public static double ALWAYS_VISIBLE_DIST_SQ = 4.0 * 4.0; // Always Draw Within setting
 	/** Rays never step further than this many blocks. Past that, just draw it. */
@@ -134,10 +134,12 @@ public final class TCEntityCulling {
 			return !e.tcCullHidden;
 		}
 		AxisAlignedBB b = e.getRenderBoundingBox();
+		long t0 = EagRuntime.nanoTime();
 		boolean visible = isBoxVisible(b.minX - 0.25, b.minY - 0.25, b.minZ - 0.25, b.maxX + 0.25, b.maxY + 0.25,
 				b.maxZ + 0.25);
+		net.minecraft.client.TCLagMonitor.tCull += EagRuntime.nanoTime() - t0;
 		e.tcCullHidden = !visible;
-		e.tcCullCheckedAt = nowMs;
+		e.tcCullCheckedAt = nowMs - (e.getEntityId() & 31); // spread rechecks over frames
 		if (!visible) {
 			++frameCulledEntities;
 		}
@@ -168,9 +170,11 @@ public final class TCEntityCulling {
 		}
 		BlockPos p = te.getPos();
 		// Big enough for double chests (+1 x/z), standing banners (+1 up) and wall banners (1 down)
+		long t0 = EagRuntime.nanoTime();
 		boolean visible = isBoxVisible(p.getX(), p.getY() - 1, p.getZ(), p.getX() + 2, p.getY() + 2, p.getZ() + 2);
+		net.minecraft.client.TCLagMonitor.tCull += EagRuntime.nanoTime() - t0;
 		te.tcCullHidden = !visible;
-		te.tcCullCheckedAt = nowMs;
+		te.tcCullCheckedAt = nowMs - ((p.getX() * 7 + p.getZ() * 13 + p.getY()) & 31); // spread rechecks
 		if (!visible) {
 			++frameCulledTiles;
 		}
@@ -204,11 +208,13 @@ public final class TCEntityCulling {
 		if (ray(mx, my, mz, bx0, by0, bz0, bx1, by1, bz1)) {
 			return true;
 		}
+		// Treasure Client: then the 8 corners. Edge and face middles (18 more rays) almost never
+		// found anything the corners missed, but made every hidden thing 3x as expensive.
 		for (int i = 0; i < 27; ++i) {
-			if (i == 13) {
-				continue; // centre, done above
-			}
 			int ix = i % 3, iy = (i / 3) % 3, iz = i / 9;
+			if (ix == 1 || iy == 1 || iz == 1) {
+				continue; // only corners
+			}
 			double tx = ix == 0 ? x0 + ex : ix == 1 ? mx : x1 - ex;
 			double ty = iy == 0 ? y0 + ey : iy == 1 ? my : y1 - ey;
 			double tz = iz == 0 ? z0 + ez : iz == 1 ? mz : z1 - ez;

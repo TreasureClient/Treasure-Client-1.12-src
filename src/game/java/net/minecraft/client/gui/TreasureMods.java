@@ -404,7 +404,7 @@ public class TreasureMods {
 			po.useBlockFaceCulling = vsOn("vsFaceCull", true);
 			po.useEntityCulling = vsOn("vsChunkEnt", true);
 		} catch (Throwable t) {}
-		net.minecraft.client.renderer.TCEntityCulling.FRAME_BUDGET_NS = vsInt("vsCullMs", 15, 5, 40) * 100000L;
+		net.minecraft.client.renderer.TCEntityCulling.FRAME_BUDGET_NS = vsInt("vsCullMs2", 5, 2, 40) * 100000L;
 		int near = vsInt("vsCullNear", 4, 0, 16);
 		net.minecraft.client.renderer.TCEntityCulling.ALWAYS_VISIBLE_DIST_SQ = near * near;
 		net.minecraft.client.renderer.TCBlockEntities.bakeChests = vsOn("vsChests", true);
