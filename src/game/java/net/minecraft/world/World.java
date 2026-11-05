@@ -1470,6 +1470,10 @@ public abstract class World implements IBlockAccess {
 		this.unloadedEntityList.clear();
 		this.tickPlayers();
 
+		boolean tcTickCull = this.isRemote; // Treasure Client: far entities update every 4th tick
+		if (tcTickCull) {
+			net.minecraft.client.renderer.TCEntityTickCull.beginTick();
+		}
 		for (int i1 = 0; i1 < this.loadedEntityList.size(); ++i1) {
 			Entity entity2 = this.loadedEntityList.get(i1);
 			Entity entity3 = entity2.getRidingEntity();
@@ -1482,7 +1486,8 @@ public abstract class World implements IBlockAccess {
 				entity2.dismountRidingEntity();
 			}
 
-			if (!entity2.isDead && !(entity2 instanceof EntityPlayerMP)) {
+			if (!entity2.isDead && !(entity2 instanceof EntityPlayerMP)
+					&& !(tcTickCull && net.minecraft.client.renderer.TCEntityTickCull.skip(entity2))) {
 				try {
 					this.updateEntity(entity2);
 				} catch (Throwable throwable1) {

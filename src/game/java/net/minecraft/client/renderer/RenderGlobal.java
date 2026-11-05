@@ -1130,7 +1130,12 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
             }
         }
 		
-		alfheim$processLightUpdates();
+		// Treasure Client: light changes come in bursts (one torch changes hundreds of spots) and each
+		// one asked for chunk redraws right away. Collected over 8 ticks, many changes in one area
+		// become one redraw (light spreading into the next area shows up to 0.4 s later).
+		if (this.cloudTickCounter % 8 == 0) {
+			alfheim$processLightUpdates();
+		}
 	}
 
 	private void renderSkyEnd() {

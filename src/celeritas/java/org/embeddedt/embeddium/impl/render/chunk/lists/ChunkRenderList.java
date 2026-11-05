@@ -27,6 +27,15 @@ public class ChunkRenderList {
         this.region = region;
     }
 
+    /** Treasure Client: empties the list so the next visibility search can reuse it (no new arrays). */
+    void tcReset() {
+        this.sectionsWithGeometryCount = 0;
+        this.sectionsWithSpritesCount = 0;
+        this.sectionsWithEntitiesCount = 0;
+        this.sectionsNeedingDynamicSortCount = 0;
+        this.size = 0;
+    }
+
     public void add(int index, int flags) {
         if (this.size >= RenderRegion.REGION_SIZE) {
             throw new ArrayIndexOutOfBoundsException("Render list is full");

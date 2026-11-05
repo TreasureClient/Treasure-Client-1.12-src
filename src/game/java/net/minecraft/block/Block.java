@@ -1700,7 +1700,10 @@ public class Block {
 		}
 		// Cross-model plants (coral plants, kelp, seagrass, berry bush).
 		for (int i = 0; i < ViaBlocks.CROSS_NAMES.length; i++) {
-			Block cross = (new BlockViaCross()).setHardness(0.0F).setUnlocalizedName(ViaBlocks.CROSS_NAMES[i]);
+			BlockViaCross viaCross = new BlockViaCross();
+			String cn = ViaBlocks.CROSS_NAMES[i];
+			viaCross.tcInWater = cn.endsWith("_coral") || cn.equals("kelp") || cn.equals("seagrass");
+			Block cross = viaCross.setHardness(0.0F).setUnlocalizedName(cn);
 			registerBlock(ViaBlocks.CROSS_FIRST_ID + i, ViaBlocks.CROSS_NAMES[i], cross);
 			ViaBlocks.CROSS[i] = cross;
 		}

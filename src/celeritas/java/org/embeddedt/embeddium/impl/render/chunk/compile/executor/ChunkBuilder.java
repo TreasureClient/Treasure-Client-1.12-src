@@ -376,9 +376,15 @@ public class ChunkBuilder {
         // Treasure Client: capped lower than before (16 / 10 ms): together with drawing and packets,
         // 16 ms of chunk building made the frames at the start of a duel into lag spikes
         // Treasure Client: lower again for weak computers; a big arena loads over a few more frames instead
-        if (tcBacklog >= 48) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(6));
-        if (tcBacklog >= 12) return Math.max(base, TimeUnit.MILLISECONDS.toNanos(5));
-        return base;
+        long cap = base;
+        if (tcBacklog >= 48) cap = Math.max(base, TimeUnit.MILLISECONDS.toNanos(6));
+        else if (tcBacklog >= 12) cap = Math.max(base, TimeUnit.MILLISECONDS.toNanos(5));
+        // Treasure Client: only the time left in this frame, so building never pushes a frame past
+        // the screen refresh (a missed refresh is what makes FPS jump between 60 and 30-50).
+        // A small minimum keeps land loading even when frames are full.
+        long min = TimeUnit.MICROSECONDS.toNanos(tcBacklog >= 48 ? 1500 : 750);
+        long head = net.minecraft.client.TCLagMonitor.buildHeadroomNs();
+        return Math.max(min, Math.min(cap, head));
     }
 
     /** Set by a build that paused. */

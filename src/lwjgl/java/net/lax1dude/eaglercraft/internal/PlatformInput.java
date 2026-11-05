@@ -828,4 +828,9 @@ public class PlatformInput {
 		return ret;
 	}
 
+
+	/** Treasure Client: GPU time per frame isn't measured in this build. */
+	public static int tcGpuFrameUs() {
+		return -1;
+	}
 }

@@ -1771,4 +1771,9 @@ public class PlatformInput {
 		visualViewportH = sh;
 	}
 
+
+	/** Treasure Client: GPU time per frame isn't measured in this build. */
+	public static int tcGpuFrameUs() {
+		return -1;
+	}
 }

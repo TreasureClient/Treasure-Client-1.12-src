@@ -569,6 +569,18 @@ public class PlatformInput {
 	@Import(module = "platformInput", name = "updatePlatformAndSleep")
 	private static native void updatePlatformAndSleep(int fpsLimit, boolean vsync);
 
+	/** Treasure Client: GPU time of a recent frame in microseconds, or -1 if the browser can't measure it. */
+	public static int tcGpuFrameUs() {
+		try {
+			return tcGpuFrameUs0();
+		} catch (Throwable t) {
+			return -1;
+		}
+	}
+
+	@Import(module = "platformInput", name = "tcGpuFrameUs")
+	private static native int tcGpuFrameUs0();
+
 	public static boolean isVSyncSupported() {
 		return vsyncSupport;
 	}

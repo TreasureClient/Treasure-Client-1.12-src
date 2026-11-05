@@ -24,6 +24,13 @@ import net.minecraft.world.IBlockAccess;
 public class BlockViaCross extends Block {
 	protected static final AxisAlignedBB CROSS_AABB = new AxisAlignedBB(0.1D, 0.0D, 0.1D, 0.9D, 0.8D, 0.9D);
 
+	/**
+	 * Treasure Client: grows under water (kelp, seagrass, corals). Water around it doesn't draw a wall
+	 * towards it (in modern versions these blocks are waterlogged), which also saves a lot of work
+	 * when sorting see-through water.
+	 */
+	public boolean tcInWater;
+
 	public BlockViaCross() {
 		super(Material.PLANTS);
 		this.setCreativeTab(CreativeTabs.DECORATIONS);

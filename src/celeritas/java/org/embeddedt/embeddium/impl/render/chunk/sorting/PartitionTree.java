@@ -232,6 +232,7 @@ public final class PartitionTree implements SortState.Resortable {
     }
 
     private static boolean intersects(QuadSet quads, int p, int q) {
+        TranslucentSorter.tcSpend(); // Treasure Client: counts toward the analysis limit
         for (int axis = 0; axis < 3; axis++) {
             if (quads.boundsMin(p, axis) >= quads.boundsMax(q, axis) - QuadSet.OVERLAP_EPSILON
                     || quads.boundsMin(q, axis) >= quads.boundsMax(p, axis) - QuadSet.OVERLAP_EPSILON) return false;
