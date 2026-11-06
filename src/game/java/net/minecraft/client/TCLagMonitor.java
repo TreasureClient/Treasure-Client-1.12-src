@@ -340,6 +340,10 @@ public class TCLagMonitor {
 		mvPitch = p.rotationPitch;
 		mvHave = true;
 		long[] a = mv[moving ? 1 : 0];
+		glDraws += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcDraws;
+		glAttribs += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcAttribSets;
+		glUp += net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcUpBytes;
+		glFrames++;
 		long work = (logicNs + drawNs) / 1000L;
 		int gpu = net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuFrameUs();
 		a[MV_FRAMES]++;
@@ -418,6 +422,14 @@ public class TCLagMonitor {
 
 	/** Called once per frame from Minecraft.runGameLoop with the time of each part in nanoseconds. */
 	public static void frame(long logicNs, long drawNs, long browserNs) {
+		try {
+			frame0(logicNs, drawNs, browserNs);
+		} finally {
+			frameEndGl();
+		}
+	}
+
+	private static void frame0(long logicNs, long drawNs, long browserNs) {
 		long now = EagRuntime.steadyTimeMillis();
 		int pkts = packets;
 		packets = 0;
@@ -554,6 +566,11 @@ public class TCLagMonitor {
 		addSecond(now, total, logicNs, drawNs);
 		addMoving(tcMc, total, logicNs, drawNs);
 		clearParts();
+	}
+
+	/** Treasure Client: WebGL counters start fresh every frame, including skipped ones. */
+	private static void frameEndGl() {
+		resetGlCounters();
 	}
 
 	// ---- slow seconds: FPS dips made of many medium frames (none over the 60 ms spike limit) ----
@@ -818,6 +835,8 @@ public class TCLagMonitor {
 			}
 			say(mc, "§7Draw: " + topParts(all, PART_NAMES, 3) + " §7· Logic: " + topParts(lall, LPART_NAMES, 2)
 					+ " §7· §f" + (bj / Math.max(1L, ms / 60000L)) + "§7 chunk builds/min");
+			String gl = glLine();
+			if (gl != null) say(mc, gl);
 		}
 		printMovingShort(mc);
 		if (worstMinute >= 0 && worstMinute >= from) {
@@ -873,6 +892,24 @@ public class TCLagMonitor {
 		return "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4] + "/"
 				+ r[5] + " · " + PART_NAMES[r[9]] + " " + r[10] + ", " + LPART_NAMES[r[11]] + " " + r[12]
 				+ (r[7] > 0 ? " · " + r[7] + " chunks" : "");
+	}
+
+	// WebGL work sent per frame: draw calls, terrain vertex-layout changes, bytes uploaded
+	private static long glDraws, glAttribs, glUp, glFrames;
+
+	/** Called every frame (gameplay or not) so the counters cover exactly one frame. */
+	private static void resetGlCounters() {
+		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcDraws = 0;
+		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcAttribSets = 0;
+		net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcUpBytes = 0;
+	}
+
+	private static String glLine() {
+		if (glFrames < 30L) return null;
+		String r = "§7WebGL per frame: §f" + (glDraws / glFrames) + "§7 draw calls, §f" + (glAttribs / glFrames)
+				+ "§7 terrain layout changes, §f" + (glUp / glFrames / 1024L) + " KB§7 uploaded";
+		glDraws = glAttribs = glUp = glFrames = 0L;
+		return r;
 	}
 
 	private static void printMovingShort(Minecraft mc) {

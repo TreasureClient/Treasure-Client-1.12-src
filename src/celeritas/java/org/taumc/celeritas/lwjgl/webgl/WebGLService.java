@@ -409,6 +409,7 @@ public final class WebGLService implements LWJGLService {
         ArrayList<Attrib> attribs = vao.attribs;
         for (int i = 0, n = attribs.size(); i < n; ++i) {
             Attrib a = attribs.get(i);
+            ++EaglercraftGPU.tcAttribSets;
             EaglercraftGPU.bindGLArrayBuffer(a.buffer);
             int offset = a.offset + baseVertex * a.stride;
             if (a.integer) {
@@ -609,12 +610,14 @@ public final class WebGLService implements LWJGLService {
 
     @Override
     public void glDrawArrays(int mode, int first, int count) {
+        ++EaglercraftGPU.tcDraws;
         _wglDrawArrays(mode, first, count);
     }
 
     @Override
     public void glDrawElementsBaseVertex(int mode, int count, int type, long indices, int basevertex) {
         applyBaseVertex(basevertex);
+        ++EaglercraftGPU.tcDraws;
         _wglDrawElements(mode, count, type, (int) indices);
     }
 
@@ -629,6 +632,7 @@ public final class WebGLService implements LWJGLService {
             long indices = ptrSize == 8 ? TCNativeMemory.getLong(pIndices + ((long) i << 3))
                     : (TCNativeMemory.getInt(pIndices + ((long) i << 2)) & 0xFFFFFFFFL);
             applyBaseVertex(TCNativeMemory.getInt(pBaseVertex + ((long) i << 2)));
+            ++EaglercraftGPU.tcDraws;
             _wglDrawElements(mode, count, type, (int) indices);
         }
     }
