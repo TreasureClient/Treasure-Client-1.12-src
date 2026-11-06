@@ -1467,6 +1467,7 @@ public class Minecraft implements IThreadListener {
 			TCLagMonitor.skipThisFrame(); // the login handshake waits for the server
 		}
 		long tcS = TCLagMonitor.now(); // .lag "menus"
+		GuiScreen tcScr = this.currentScreen;
 
 		if (this.currentScreen == null && this.player != null) {
 			if (this.player.getHealth() <= 0.0F && !(this.currentScreen instanceof GuiGameOver)) {
@@ -1524,6 +1525,7 @@ public class Minecraft implements IThreadListener {
 			}
 		}
 
+		TCLagMonitor.screenTime(tcScr != null ? tcScr : this.currentScreen, tcS); // .lag: which menu was slow
 		TCLagMonitor.addLogic(TCLagMonitor.L_SCREEN, tcS);
 		if (this.currentScreen == null || this.currentScreen.allowUserInput) {
 			long tcI = TCLagMonitor.now(); // .lag "input/clicks"

@@ -845,7 +845,11 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * Updates the specified chunk with the supplied data, marks it for re-rendering
 	 * and lighting recalculation
 	 */
+	private static final long[] tcCk = new long[net.minecraft.client.TCLagMonitor.CK_N];
+
 	public void handleChunkData(SPacketChunkData packetIn) {
+		long[] ck = tcCk; // Treasure Client: lag monitor, time of each step
+		long t0 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(), t1;
 		if (packetIn.doChunkLoad()) {
 			this.clientWorldController.doPreChunk(packetIn.getChunkX(), packetIn.getChunkZ(), true);
 		}
@@ -853,8 +857,11 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.clientWorldController.invalidateBlockReceiveRegion(packetIn.getChunkX() << 4, 0, packetIn.getChunkZ() << 4,
 				(packetIn.getChunkX() << 4) + 15, 256, (packetIn.getChunkZ() << 4) + 15);
 		Chunk chunk = this.clientWorldController.getChunkFromChunkCoords(packetIn.getChunkX(), packetIn.getChunkZ());
+		t1 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); ck[0] = t1 - t0; t0 = t1;
 		chunk.fillChunk(packetIn.getReadBuffer(), packetIn.getExtractedSize(), packetIn.doChunkLoad());
+		t1 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); ck[1] = t1 - t0; t0 = t1;
 		TCViaGuess.onChunk(this.clientWorldController, chunk); // Treasure Client: Modern Block Guessing
+		t1 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); ck[2] = t1 - t0; t0 = t1;
 		this.clientWorldController.markBlockRangeForRenderUpdate(packetIn.getChunkX() << 4, 0,
 				packetIn.getChunkZ() << 4, (packetIn.getChunkX() << 4) + 15, 256, (packetIn.getChunkZ() << 4) + 15);
 
@@ -862,6 +869,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			chunk.resetRelightChecks();
 		}
 		
+		t1 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); ck[3] = t1 - t0; t0 = t1;
 		List<NBTTagCompound> list = packetIn.getTileEntityTags();		
 		for(int i = 0, j = list.size(); i < j; ++i) {
 			NBTTagCompound nbttagcompound = list.get(i);
@@ -873,9 +881,12 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 				tileentity.readFromNBT(nbttagcompound);
 			}
 		}
+		t1 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); ck[4] = t1 - t0; t0 = t1;
 		// Treasure Client — TuffX+ ViaBlocks: modern blocks for this chunk
 		TuffViaBlocks.onChunkLoaded(packetIn.getChunkX(), packetIn.getChunkZ());
 		TuffViaBlocks.handleTrailer(packetIn.tuffTrailer);
+		ck[5] = net.lax1dude.eaglercraft.EagRuntime.nanoTime() - t0;
+		net.minecraft.client.TCLagMonitor.chunkLoad(ck);
 	}
 
 	public void processChunkUnload(SPacketUnloadChunk packetIn) {
