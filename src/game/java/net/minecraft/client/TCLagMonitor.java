@@ -213,6 +213,9 @@ public class TCLagMonitor {
 	// why chunks get redrawn: light changes, single block changes, whole areas (chunk data, modern blocks)
 	public static int mkLight, mkBlock, mkRange;
 	private static int buildJobs;
+	/** Builds that only re-sorted see-through blocks (water, glass) for the camera. */
+	public static int sortJobs;
+	private static final int[] mSorts = new int[MINUTES];
 	private static final long[] mLogicAll = new long[MINUTES];
 	private static final long[] mDrawAll = new long[MINUTES];
 	private static final int[] mBuilds = new int[MINUTES];
@@ -496,6 +499,7 @@ public class TCLagMonitor {
 		mLogicAll[minute] += logicNs;
 		mDrawAll[minute] += drawNs;
 		mBuilds[minute] += buildJobs;
+		mSorts[minute] += sortJobs;
 		mMkLight[minute] += mkLight;
 		mMkBlock[minute] += mkBlock;
 		mMkRange[minute] += mkRange;
@@ -750,7 +754,7 @@ public class TCLagMonitor {
 			eNs[k] = 0L;
 			eCnt[k] = 0;
 		}
-		buildJobs = mkLight = mkBlock = mkRange = 0;
+		buildJobs = sortJobs = mkLight = mkBlock = mkRange = 0;
 		hHotbar = hChat = hBoard = hBoss = hEffects = hTitle = hTab = hTotem = 0L;
 	}
 
@@ -827,14 +831,16 @@ public class TCLagMonitor {
 			say(mc, "§7Frame §f" + ms1(frameUs) + "ms §7(logic " + ms1(lUs) + ", draw " + ms1(dUs) + ", browser "
 					+ ms1(Math.max(0L, frameUs - lUs - dUs)) + ")" + sp);
 			long[] all = new long[PARTS], lall = new long[LPARTS];
-			int bj = 0;
+			int bj = 0, sj = 0;
 			for (int m = from; m <= last; m++) {
 				bj += mBuilds[m];
+				sj += mSorts[m];
 				for (int k = 0; k < PARTS; k++) all[k] += mPartAll[m][k];
 				for (int k = 0; k < LPARTS; k++) lall[k] += mLPartAll[m][k];
 			}
 			say(mc, "§7Draw: " + topParts(all, PART_NAMES, 3) + " §7· Logic: " + topParts(lall, LPART_NAMES, 2)
-					+ " §7· §f" + (bj / Math.max(1L, ms / 60000L)) + "§7 chunk builds/min");
+					+ " §7· §f" + (bj / Math.max(1L, ms / 60000L)) + "§7 chunk builds/min (§f"
+					+ (sj / Math.max(1L, ms / 60000L)) + "§7 water re-sorts)");
 			String gl = glLine();
 			if (gl != null) say(mc, gl);
 		}
@@ -1040,12 +1046,13 @@ public class TCLagMonitor {
 		if (frames > 0) {
 			// every frame, not only spikes: shows why the game is slow when it is slow all the time
 			long la = 0L, da = 0L;
-			int bj = 0, ml = 0, mb = 0, mr = 0;
+			int bj = 0, sj = 0, ml = 0, mb = 0, mr = 0;
 			long[] all = new long[PARTS], lall = new long[LPARTS];
 			for (int m = from; m <= last; m++) {
 				la += mLogicAll[m];
 				da += mDrawAll[m];
 				bj += mBuilds[m];
+				sj += mSorts[m];
 				ml += mMkLight[m];
 				mb += mMkBlock[m];
 				mr += mMkRange[m];
@@ -1058,7 +1065,7 @@ public class TCLagMonitor {
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
-					+ (mb / mins) + ", areas " + (mr / mins) + ")");
+					+ (mb / mins) + ", areas " + (mr / mins) + "; water re-sorts " + (sj / mins) + ")");
 		}
 		int speed = cpuSpeed(last);
 		int first = -1;

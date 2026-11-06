@@ -31,6 +31,7 @@ public class ChunkBuilderSortTask extends ChunkBuilderTask<ChunkSortOutput> {
 
     @Override
     public ChunkSortOutput execute(ChunkBuildContext context, CancellationToken cancellationSource) {
+        ++net.minecraft.client.TCLagMonitor.sortJobs; // Treasure Client: .lag counts re-sorts apart from builds
         var meshes = new Reference2ReferenceOpenHashMap<TerrainRenderPass, ChunkSortOutput.SortedMesh>();
         for(Map.Entry<TerrainRenderPass, SortState.Resortable> entry : translucentMeshes.entrySet()) {
             var sortInfo = entry.getValue();
