@@ -1813,7 +1813,10 @@ public abstract class EntityLivingBase extends Entity {
 							this.motionZ += vec3d.zCoord * d2 / d6;
 						}
 
-						if (f < 0.0F) {
+						// Treasure Client: d6 > 0 like 1.13+. Looking straight up gives a look vector with
+						// no sideways part (always with Fast Math's table), so this divided 0 by 0: your
+						// speed became NaN, you teleported into a block and the server kicked you.
+						if (f < 0.0F && d6 > 0.0D) {
 							double d10 = d8 * (double) (-MathHelper.sin(f)) * 0.04D;
 							this.motionY += d10 * 3.2D;
 							this.motionX -= vec3d.xCoord * d10 / d6;
