@@ -34,6 +34,10 @@ import org.lwjgl.opengles.GLESCapabilities;
  */
 public class PlatformOpenGL {
 
+	/** Treasure Client (.lag): bytes of vertex/index data sent to the GPU (not counted here). */
+	public static int tcUpBytes;
+
+
 	private static int glesVers = -1;
 
 	private static boolean hasANGLEInstancedArrays = false;

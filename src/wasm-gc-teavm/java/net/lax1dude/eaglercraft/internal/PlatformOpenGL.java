@@ -45,6 +45,10 @@ import net.lax1dude.eaglercraft.internal.wasm_gc_teavm.WebGLVertexArray;
 
 public class PlatformOpenGL {
 
+	/** Treasure Client (.lag): bytes of vertex/index data sent to the GPU. */
+	public static int tcUpBytes;
+
+
 	static int glesVers = -1;
 
 	static final int VAO_IMPL_NONE = -1;
@@ -311,14 +315,17 @@ public class PlatformOpenGL {
 	public static native void _wglBufferData(int target, int size, int usage);
 
 	public static void _wglBufferData(int target, ByteBuffer buffer, int usage) {
+		tcUpBytes += buffer.remaining(); // Treasure Client (.lag)
 		_wglBufferDataN(target, WASMGCBufferAllocator.getUnsignedByteBufferView(buffer), usage);
 	}
 
 	public static void _wglBufferData(int target, IntBuffer buffer, int usage) {
+		tcUpBytes += buffer.remaining() * 4; // Treasure Client (.lag)
 		_wglBufferDataN(target, WASMGCBufferAllocator.getIntBufferView(buffer), usage);
 	}
 
 	public static void _wglBufferData(int target, FloatBuffer buffer, int usage) {
+		tcUpBytes += buffer.remaining() * 4; // Treasure Client (.lag)
 		_wglBufferDataN(target, WASMGCBufferAllocator.getFloatBufferView(buffer), usage);
 	}
 
@@ -326,14 +333,17 @@ public class PlatformOpenGL {
 	static native void _wglBufferDataN(int target, ArrayBufferView typedArray, int usage);
 
 	public static void _wglBufferSubData(int target, int dstOffset, ByteBuffer buffer) {
+		tcUpBytes += buffer.remaining(); // Treasure Client (.lag)
 		_wglBufferSubDataN(target, dstOffset, WASMGCBufferAllocator.getUnsignedByteBufferView(buffer));
 	}
 
 	public static void _wglBufferSubData(int target, int dstOffset, IntBuffer buffer) {
+		tcUpBytes += buffer.remaining() * 4; // Treasure Client (.lag)
 		_wglBufferSubDataN(target, dstOffset, WASMGCBufferAllocator.getIntBufferView(buffer));
 	}
 
 	public static void _wglBufferSubData(int target, int dstOffset, FloatBuffer buffer) {
+		tcUpBytes += buffer.remaining() * 4; // Treasure Client (.lag)
 		_wglBufferSubDataN(target, dstOffset, WASMGCBufferAllocator.getFloatBufferView(buffer));
 	}
 

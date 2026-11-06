@@ -36,6 +36,10 @@ import net.lax1dude.eaglercraft.opengl.EaglercraftGPU;
  * 
  */
 public class PlatformOpenGL {
+
+	/** Treasure Client (.lag): bytes of vertex/index data sent to the GPU. */
+	public static int tcUpBytes;
+
 	
 	private static final Logger logger = LogManager.getLogger("PlatformOpenGL");
 	
@@ -356,14 +360,17 @@ public class PlatformOpenGL {
 	}
 	
 	public static final void _wglBufferData(int target, ByteBuffer data, int usage) {
+		tcUpBytes += data.remaining(); // Treasure Client (.lag)
 		ctx.bufferData(target, EaglerArrayBufferAllocator.getDataView8(data), usage);
 	}
 	
 	public static final void _wglBufferData(int target, IntBuffer data, int usage) {
+		tcUpBytes += data.remaining() * 4; // Treasure Client (.lag)
 		ctx.bufferData(target, EaglerArrayBufferAllocator.getDataView32(data), usage);
 	}
 	
 	public static final void _wglBufferData(int target, FloatBuffer data, int usage) {
+		tcUpBytes += data.remaining() * 4; // Treasure Client (.lag)
 		ctx.bufferData(target, EaglerArrayBufferAllocator.getDataView32F(data), usage);
 	}
 	
@@ -372,14 +379,17 @@ public class PlatformOpenGL {
 	}
 	
 	public static final void _wglBufferSubData(int target, int offset, ByteBuffer data) {
+		tcUpBytes += data.remaining(); // Treasure Client (.lag)
 		ctx.bufferSubData(target, offset, EaglerArrayBufferAllocator.getDataView8(data));
 	}
 	
 	public static final void _wglBufferSubData(int target, int offset, IntBuffer data) {
+		tcUpBytes += data.remaining() * 4; // Treasure Client (.lag)
 		ctx.bufferSubData(target, offset, EaglerArrayBufferAllocator.getDataView32(data));
 	}
 	
 	public static final void _wglBufferSubData(int target, int offset, FloatBuffer data) {
+		tcUpBytes += data.remaining() * 4; // Treasure Client (.lag)
 		ctx.bufferSubData(target, offset, EaglerArrayBufferAllocator.getDataView32F(data));
 	}
 	

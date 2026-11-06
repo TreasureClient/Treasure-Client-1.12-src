@@ -542,6 +542,7 @@ public class EaglercraftGPU {
 			}
 			((SoftGLVertexArray)currentVertexArray).transitionToState(emulatedVAOState, false);
 		}
+		++tcDraws;
 		_wglDrawArrays(mode, first, count);
 	}
 
@@ -554,6 +555,7 @@ public class EaglercraftGPU {
 			}
 			((SoftGLVertexArray)currentVertexArray).transitionToState(emulatedVAOState, true);
 		}
+		++tcDraws;
 		_wglDrawElements(mode, count, type, offset);
 	}
 
@@ -566,6 +568,7 @@ public class EaglercraftGPU {
 			}
 			((SoftGLVertexArray)currentVertexArray).transitionToState(emulatedVAOState, false);
 		}
+		++tcDraws;
 		_wglDrawArraysInstanced(mode, first, count, instances);
 	}
 
@@ -578,8 +581,12 @@ public class EaglercraftGPU {
 			}
 			((SoftGLVertexArray)currentVertexArray).transitionToState(emulatedVAOState, true);
 		}
+		++tcDraws;
 		_wglDrawElementsInstanced(mode, count, type, offset, instances);
 	}
+
+	/** Treasure Client (.lag): draw calls and terrain vertex-layout changes sent to WebGL. */
+	public static int tcDraws, tcAttribSets;
 
 	static IVertexArrayGL currentVertexArray = null;
 	
