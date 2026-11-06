@@ -132,9 +132,59 @@ public abstract class Render<T extends Entity> {
 	public static void tcBeginFireBatch() {
 		tcFireBatch = true;
 		tcFireFloats = 0;
+		tcShadowFloats = 0;
+	}
+
+	// Treasure Client: shadows are collected the same way (6 floats a vertex: x y z u v alpha) and
+	// drawn for every entity in one call; each entity's shadow used to be its own draw call.
+	private static float[] tcShadowVerts = new float[6 * 4 * 64];
+	private static int tcShadowFloats = 0;
+
+	private static void tcShadowVertex(WorldRenderer b, double x, double y, double z, float u, float v, float a) {
+		if (!tcFireBatch) {
+			b.pos(x, y, z).tex((double) u, (double) v).color(1.0F, 1.0F, 1.0F, a).endVertex();
+			return;
+		}
+		if (tcShadowFloats + 6 > tcShadowVerts.length) {
+			float[] bigger = new float[tcShadowVerts.length * 2];
+			System.arraycopy(tcShadowVerts, 0, bigger, 0, tcShadowFloats);
+			tcShadowVerts = bigger;
+		}
+		float[] t = tcShadowVerts;
+		int i = tcShadowFloats;
+		t[i] = (float) x;
+		t[i + 1] = (float) y;
+		t[i + 2] = (float) z;
+		t[i + 3] = u;
+		t[i + 4] = v;
+		t[i + 5] = a;
+		tcShadowFloats = i + 6;
+	}
+
+	private static void tcDrawShadows() {
+		if (tcShadowFloats == 0) {
+			return;
+		}
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+		Minecraft.getMinecraft().getTextureManager().bindTexture(SHADOW_TEXTURES);
+		GlStateManager.depthMask(false);
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer b = tessellator.getBuffer();
+		b.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		float[] t = tcShadowVerts;
+		for (int i = 0, n = tcShadowFloats; i < n; i += 6) {
+			b.pos(t[i], t[i + 1], t[i + 2]).tex(t[i + 3], t[i + 4]).color(1.0F, 1.0F, 1.0F, t[i + 5]).endVertex();
+		}
+		tessellator.draw();
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		GlStateManager.disableBlend();
+		GlStateManager.depthMask(true);
+		tcShadowFloats = 0;
 	}
 
 	public static void tcEndFireBatch() {
+		tcDrawShadows();
 		tcFireBatch = false;
 		if (tcFireFloats == 0) {
 			return;
@@ -282,11 +332,14 @@ public abstract class Render<T extends Entity> {
 	 * Renders the entities shadow.
 	 */
 	private void renderShadow(Entity entityIn, double x, double y, double z, float shadowAlpha, float partialTicks) {
-		GlStateManager.enableBlend();
-		GlStateManager.blendFunc(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
-		this.renderManager.renderEngine.bindTexture(SHADOW_TEXTURES);
+		boolean batch = tcFireBatch;
+		if (!batch) {
+			GlStateManager.enableBlend();
+			GlStateManager.blendFunc(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA);
+			this.renderManager.renderEngine.bindTexture(SHADOW_TEXTURES);
+			GlStateManager.depthMask(false);
+		}
 		World world = this.getWorldFromRenderManager();
-		GlStateManager.depthMask(false);
 		float f = this.shadowSize;
 
 		if (entityIn instanceof EntityLiving) {
@@ -312,22 +365,37 @@ public abstract class Render<T extends Entity> {
 		double d4 = z - d1;
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer bufferbuilder = tessellator.getBuffer();
-		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		if (!batch) {
+			bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		}
 
-		for (BlockPos blockpos : BlockPos.getAllInBoxMutable(new BlockPos(i, k, i1), new BlockPos(j, l, j1))) {
-			IBlockState iblockstate = world.getBlockState(blockpos.down());
+		// Treasure Client: plain loops with two reused positions (the iterator made new objects)
+		BlockPos blockpos = TC_SHADOW_POS, below = TC_SHADOW_BELOW;
+		for (int bx = i; bx <= j; ++bx) {
+			for (int bz = i1; bz <= j1; ++bz) {
+				for (int by = k; by <= l; ++by) {
+					blockpos.setPos(bx, by, bz);
+					below.setPos(bx, by - 1, bz);
+					IBlockState iblockstate = world.getBlockState(below);
 
-			if (iblockstate.getRenderType() != EnumBlockRenderType.INVISIBLE
-					&& world.getLightFromNeighbors(blockpos) > 3) {
-				this.renderShadowSingle(iblockstate, x, y, z, blockpos, shadowAlpha, f, d2, d3, d4);
+					// cheap test first: only full cubes get a shadow, so skip the light lookup otherwise
+					if (iblockstate.getRenderType() != EnumBlockRenderType.INVISIBLE && iblockstate.isFullCube()
+							&& world.getLightFromNeighbors(blockpos) > 3) {
+						this.renderShadowSingle(iblockstate, x, y, z, blockpos, shadowAlpha, f, d2, d3, d4);
+					}
+				}
 			}
 		}
 
-		tessellator.draw();
-		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		GlStateManager.disableBlend();
-		GlStateManager.depthMask(true);
+		if (!batch) {
+			tessellator.draw();
+			GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+			GlStateManager.disableBlend();
+			GlStateManager.depthMask(true);
+		}
 	}
+
+	private static final BlockPos TC_SHADOW_POS = new BlockPos(), TC_SHADOW_BELOW = new BlockPos();
 
 	/**
 	 * Returns the render manager's world object
@@ -360,14 +428,10 @@ public abstract class Render<T extends Entity> {
 				float f1 = (float) ((p_188299_2_ - d2) / 2.0D / (double) p_188299_10_ + 0.5D);
 				float f2 = (float) ((p_188299_6_ - d4) / 2.0D / (double) p_188299_10_ + 0.5D);
 				float f3 = (float) ((p_188299_6_ - d5) / 2.0D / (double) p_188299_10_ + 0.5D);
-				bufferbuilder.pos(d1, d3, d4).tex((double) f, (double) f2).color(1.0F, 1.0F, 1.0F, (float) d0)
-						.endVertex();
-				bufferbuilder.pos(d1, d3, d5).tex((double) f, (double) f3).color(1.0F, 1.0F, 1.0F, (float) d0)
-						.endVertex();
-				bufferbuilder.pos(d2, d3, d5).tex((double) f1, (double) f3).color(1.0F, 1.0F, 1.0F, (float) d0)
-						.endVertex();
-				bufferbuilder.pos(d2, d3, d4).tex((double) f1, (double) f2).color(1.0F, 1.0F, 1.0F, (float) d0)
-						.endVertex();
+				tcShadowVertex(bufferbuilder, d1, d3, d4, f, f2, (float) d0);
+				tcShadowVertex(bufferbuilder, d1, d3, d5, f, f3, (float) d0);
+				tcShadowVertex(bufferbuilder, d2, d3, d5, f1, f3, (float) d0);
+				tcShadowVertex(bufferbuilder, d2, d3, d4, f1, f2, (float) d0);
 			}
 		}
 	}

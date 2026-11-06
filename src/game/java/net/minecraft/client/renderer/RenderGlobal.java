@@ -580,7 +580,9 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 								&& (entity2.posY < 0.0D || entity2.posY >= 256.0D || this.theWorld
 										.isBlockLoaded(blockpos$pooledmutableblockpos.setPos(entity2)))) {
 							++this.countEntitiesRendered;
+							long tcE = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); // .lag entities by kind
 							this.renderManager.renderEntityStatic(entity2, partialTicks, false);
+							net.minecraft.client.TCLagMonitor.addEntity(entity2, tcE);
 							if (this.isOutlineActive(entity2, entity, camera)) {
 								list1.add(entity2);
 							}
@@ -615,7 +617,9 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 									&& (entity2.posY < 0.0D || entity2.posY >= 256.0D || this.theWorld
 											.isBlockLoaded(blockpos$pooledmutableblockpos.setPos(entity2)))) {
 								++this.countEntitiesRendered;
+								long tcE = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); // .lag entities by kind
 								this.renderManager.renderEntityStatic(entity2, partialTicks, false);
+								net.minecraft.client.TCLagMonitor.addEntity(entity2, tcE);
 								if (this.isOutlineActive(entity2, entity, camera)) {
 									list1.add(entity2);
 								}
