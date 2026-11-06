@@ -308,7 +308,21 @@ public class TCLagMonitor {
 	// ---- moving vs standing still, and why frames miss the screen refresh ----------
 	private static final int MV_FRAMES = 0, MV_MS = 1, MV_WORK = 2, MV_GPU = 3, MV_GPUN = 4, MV_SLOW = 5,
 			MV_SLOW_GAME = 6, MV_SLOW_GPU = 7, MV_TERRAIN = 8, MV_BUILD = 9, MV_VIS = 10, MV_ENT = 11, MV_HUD = 12,
-			MV_LOGIC = 13, MV_CULL = 14, MV_BE = 15, MV_N = 16;
+			MV_LOGIC = 13, MV_CULL = 14, MV_BE = 15, MV_TAGS = 16, MV_PART = 17, MV_SKY = 18, MV_HAND = 19,
+			MV_SCR = 20, MV_OTHER = 21, MV_E0 = 22, MV_C0 = 26, MV_N = 30;
+	/** Entity drawing by kind this frame: players, armor stands (holograms), other mobs, everything else. */
+	public static final long[] eNs = new long[4];
+	public static final int[] eCnt = new int[4];
+	private static final String[] E_NAMES = { "players", "armor stands", "mobs", "other" };
+
+	/** Adds one entity's drawing time (RenderGlobal.renderEntities). */
+	public static void addEntity(net.minecraft.entity.Entity e, long startNs) {
+		int k = e instanceof net.minecraft.entity.player.EntityPlayer ? 0
+				: e instanceof net.minecraft.entity.item.EntityArmorStand ? 1
+						: e instanceof net.minecraft.entity.EntityLivingBase ? 2 : 3;
+		eNs[k] += EagRuntime.nanoTime() - startNs;
+		eCnt[k]++;
+	}
 	/** [0] standing still, [1] moving or turning; times in microseconds. Reset after each .lag. */
 	private static final long[][] mv = new long[2][MV_N];
 	private static float mvYaw, mvPitch;
@@ -348,6 +362,19 @@ public class TCLagMonitor {
 		a[MV_CULL] += tCull / 1000L;
 		a[MV_HUD] += cur[HUD] / 1000L;
 		a[MV_LOGIC] += logicNs / 1000L;
+		// the rest of the frame, so the parts add up to the whole game work
+		a[MV_TAGS] += cur[NAME_TAGS] / 1000L;
+		a[MV_PART] += cur[PARTICLES] / 1000L;
+		a[MV_SKY] += (cur[SKY] + cur[SETUP]) / 1000L;
+		a[MV_HAND] += cur[HAND] / 1000L;
+		a[MV_SCR] += cur[SCREENS] / 1000L;
+		a[MV_OTHER] += cur[OTHER] / 1000L;
+		for (int k = 0; k < 4; k++) {
+			a[MV_E0 + k] += eNs[k] / 1000L;
+			a[MV_C0 + k] += eCnt[k];
+			eNs[k] = 0L;
+			eCnt[k] = 0;
+		}
 	}
 
 	private static void printMoving(Minecraft mc) {
@@ -363,6 +390,17 @@ public class TCLagMonitor {
 					+ "], entities " + ms1(a[MV_ENT] / f) + " [block ents " + ms1(a[MV_BE] / f) + ", culling "
 					+ ms1(a[MV_CULL] / f) + "], HUD " + ms1(a[MV_HUD] / f) + ") · GPU §f"
 					+ (a[MV_GPUN] > 0L ? ms1(a[MV_GPU] / a[MV_GPUN]) + "ms" : "not measurable"));
+			say(mc, "§7  rest of the work: name tags " + ms1(a[MV_TAGS] / f) + ", particles " + ms1(a[MV_PART] / f)
+					+ ", sky+camera " + ms1(a[MV_SKY] / f) + ", hand " + ms1(a[MV_HAND] / f) + ", menus/chat "
+					+ ms1(a[MV_SCR] / f) + ", other " + ms1(a[MV_OTHER] / f));
+			StringBuilder eb = new StringBuilder("§7  entities by kind (each incl. its name tag):");
+			for (int k = 0; k < 4; k++) {
+				if (a[MV_C0 + k] > 0L) {
+					eb.append(' ').append(E_NAMES[k]).append(' ').append(a[MV_C0 + k] / f).append(" = §f")
+							.append(ms1(a[MV_E0 + k] / f)).append("ms§7");
+				}
+			}
+			say(mc, eb.toString());
 			long slow = a[MV_SLOW];
 			long other = Math.max(0L, slow - a[MV_SLOW_GAME] - a[MV_SLOW_GPU]);
 			say(mc, "§7  missed refreshes: §f" + (slow * 100L / f) + "% §7of frames (because of game work "
@@ -551,6 +589,10 @@ public class TCLagMonitor {
 		for (int k = 0, n = pktTouched.size(); k < n; k++) pktTouched.get(k)[3] = 0L;
 		pktTouched.clear();
 		tBuild = tBuildMax = tUpload = tGraph = tCull = 0L;
+		for (int k = 0; k < 4; k++) {
+			eNs[k] = 0L;
+			eCnt[k] = 0;
+		}
 		buildJobs = mkLight = mkBlock = mkRange = 0;
 		hHotbar = hChat = hBoard = hBoss = hEffects = hTitle = hTab = hTotem = 0L;
 	}
