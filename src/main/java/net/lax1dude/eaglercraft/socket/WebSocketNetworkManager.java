@@ -120,26 +120,31 @@ public class WebSocketNetworkManager extends NetworkManager {
 	private static final long TC_TICK_DRAIN_NS = 10000000L;
 	private int tcPosLookId = -2;
 
-	/** True if a server teleport (or anything we can't identify) is still waiting in the queue. */
-	private boolean tcTeleportWaiting() {
+	/**
+	 * How many queued packets must be handled so that every server teleport (or anything we
+	 * can't identify) waiting in the queue has been handled; 0 when none is waiting.
+	 */
+	private int tcPacketsThroughTeleport() {
 		try {
 			if (tcPosLookId == -2) {
 				tcPosLookId = packetState.getPacketId(EnumPacketDirection.CLIENTBOUND,
 						new net.minecraft.network.play.server.SPacketPlayerPosLook());
 			}
 			if (tcPosLookId < 0 || tcPosLookId > 127) {
-				return true;
+				return Integer.MAX_VALUE;
 			}
+			int i = 0, last = 0;
 			for (IWebSocketFrame f : tcBacklog) {
+				++i;
 				byte[] b = f.getByteArray();
 				if (b.length == 0 || (b[0] & 0x80) != 0 || b[0] == tcPosLookId) {
-					return true;
+					last = i;
 				}
 			}
-			return false;
+			return last;
 		} catch (Throwable t) {
 			tcPosLookId = -1;
-			return true;
+			return Integer.MAX_VALUE;
 		}
 	}
 	private static final int TC_MIN_PER_FRAME = 8;
@@ -220,6 +225,7 @@ public class WebSocketNetworkManager extends NetworkManager {
 		long tickBudget = Math.min(TC_TICK_DRAIN_NS, Math.max(2000000L, tcBudgetNs(tcBacklog.size()) - tcFrameUsedNs));
 		int handled = 0;
 		boolean mustDrain = false;
+		int drainLeft = 0; // packets still to handle up to the last queued teleport
 		IWebSocketFrame next;
 		while((next = tcBacklog.poll()) != null) {
 			++debugPacketCounter;
@@ -282,12 +288,18 @@ public class WebSocketNetworkManager extends NetworkManager {
 			// Treasure Client: a tick handles everything waiting (so it never moves you from before a
 			// server teleport), but a huge burst (a duel's worth of chunks) is cut off after ~10 ms
 			// when no teleport is waiting; the rest is handled next frame, like ordinary network delay.
+			// When a teleport is queued, only the packets up to it are handled; the map chunks after
+			// it used to all load in this one frame (the 100-300 ms freeze when a map starts).
+			if (mustDrain && --drainLeft <= 0) {
+				mustDrain = false;
+			}
 			if(!spread && tcDrainAll && tcSpreadBursts && !mustDrain && tcNowNs - start > tickBudget
 					&& nethandler instanceof net.minecraft.client.network.NetHandlerPlayClient) {
-				if (!tcTeleportWaiting()) {
+				drainLeft = tcPacketsThroughTeleport();
+				if (drainLeft <= 0) {
 					break;
 				}
-				mustDrain = true; // a teleport is queued: handle everything (checked once, not per packet)
+				mustDrain = true; // a teleport is queued: handle up to it (checked again after it)
 			}
 		}
 		tcFrameHandled += handled;
