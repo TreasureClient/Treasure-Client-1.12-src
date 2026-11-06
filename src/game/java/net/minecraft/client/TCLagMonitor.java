@@ -135,6 +135,10 @@ public class TCLagMonitor {
 
 	/** The packet types that took the most time (in spikes if there were any), slowest first. */
 	private static String slowestPackets(boolean spikes) {
+		return slowestPackets(spikes, 3);
+	}
+
+	private static String slowestPackets(boolean spikes, int max) {
 		java.util.ArrayList<java.util.Map.Entry<Class<?>, long[]>> list =
 				new java.util.ArrayList<java.util.Map.Entry<Class<?>, long[]>>(pktTypes.entrySet());
 		final int key = spikes ? 2 : 0;
@@ -144,7 +148,7 @@ public class TCLagMonitor {
 			}
 		});
 		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < Math.min(3, list.size()); i++) {
+		for (int i = 0; i < Math.min(max, list.size()); i++) {
 			long[] st = list.get(i).getValue();
 			if (st[key] <= 0L) break;
 			String name = list.get(i).getKey().getSimpleName();
@@ -764,7 +768,123 @@ public class TCLagMonitor {
 		skipFrame = true;
 	}
 
+	/** ".lag": a short report that fits in the open chat. ".lag full" prints everything. */
 	public static void print(Minecraft mc) {
+		skipFrame = true;
+		if (start < 0L || curMinute < 0) {
+			say(mc, "§6[Lag] §7no data yet");
+			return;
+		}
+		int last = Math.min(curMinute, MINUTES - 1);
+		int from = Math.max(0, last - 4);
+		long frames = 0L, ms = 0L, l = 0, d = 0, b = 0, la = 0L, da = 0L;
+		int spikes = 0, worst = 0;
+		for (int m = from; m <= last; m++) {
+			frames += mFrames[m];
+			ms += mMs[m];
+			spikes += mSpikes[m];
+			worst = Math.max(worst, mWorst[m]);
+			l += mLogic[m];
+			d += mDraw[m];
+			b += mBrowser[m];
+			la += mLogicAll[m];
+			da += mDrawAll[m];
+		}
+		int speed = cpuSpeed(last);
+		int heap = mHeap[last];
+		say(mc, "§6[Lag] §f" + (last + 1) + " min §7· §f" + (ms > 0 ? frames * 1000L / ms : 0L) + " fps §7· §f" + spikes
+				+ " §7spikes, worst §f" + worst + "ms" + (speed > 0 ? " §7· speed §f" + speed + "%" : "")
+				+ (heap > 0 ? " §7· §f" + heap + " MB" : ""));
+		if (frames > 0) {
+			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
+			String sp = "";
+			long sum = l + d + b;
+			if (sum > 0) {
+				sp = " §7· spikes: logic " + (l * 100 / sum) + "% draw " + (d * 100 / sum) + "% browser "
+						+ (b * 100 / sum) + "%";
+			}
+			say(mc, "§7Frame §f" + ms1(frameUs) + "ms §7(logic " + ms1(lUs) + ", draw " + ms1(dUs) + ", browser "
+					+ ms1(Math.max(0L, frameUs - lUs - dUs)) + ")" + sp);
+		}
+		printMovingShort(mc);
+		if (worstMinute >= 0 && worstMinute >= from) {
+			say(mc, "§7Worst " + shortRow(worstRow));
+		}
+		if (ringCount > 0) {
+			say(mc, "§7Last " + shortRow(ring[(ringPos - 1 + RING * 2) % RING]));
+		}
+		if (scrSlowName != null) {
+			say(mc, "§7Slowest menu: §f" + scrSlowName + " " + (scrSlowNs / 1000000L) + "ms §7at " + (scrSlowSec / 60)
+					+ ":" + (scrSlowSec % 60 < 10 ? "0" : "") + (scrSlowSec % 60));
+		}
+		if (ckCount > 0) {
+			int big = 0;
+			for (int i = 1; i < CK_N; i++) if (ckWorst[i] > ckWorst[big]) big = i;
+			say(mc, "§7Map chunks §f" + ckCount + "§7: avg " + ms1(sumOf(ckSum) / 1000L / ckCount) + "ms, worst §f"
+					+ ms1(ckWorstTotal / 1000L) + "ms §7(" + CK_NAMES[big] + " " + ms1(ckWorst[big] / 1000L) + ")");
+		}
+		if (!pktTypes.isEmpty()) {
+			say(mc, "§7Packets: " + slowestPackets(true, 2));
+		}
+		printSlowShort(mc);
+		String v = verdict(last);
+		int vi = v.indexOf("Most spike time");
+		say(mc, "§6[Lag] §7" + (vi >= 0 ? v.substring(vi) : v) + " §8(.lag full for more)");
+	}
+
+	private static String shortRow(int[] r) {
+		return "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4] + "/"
+				+ r[5] + " · " + PART_NAMES[r[9]] + " " + r[10] + ", " + LPART_NAMES[r[11]] + " " + r[12]
+				+ (r[7] > 0 ? " · " + r[7] + " chunks" : "");
+	}
+
+	private static void printMovingShort(Minecraft mc) {
+		for (int i = 1; i >= 0; i--) {
+			long[] a = mv[i];
+			long f = a[MV_FRAMES];
+			if (f < 30L) {
+				continue;
+			}
+			say(mc, "§7" + (i == 1 ? "Moving" : "Still") + " §f" + (a[MV_MS] > 0L ? f * 1000L / a[MV_MS] : 0L)
+					+ " fps §7work §f" + ms1(a[MV_WORK] / f) + "§7 (logic " + ms1(a[MV_LOGIC] / f) + ", terrain "
+					+ ms1(a[MV_TERRAIN] / f) + ", entities " + ms1(a[MV_ENT] / f) + ", HUD " + ms1(a[MV_HUD] / f)
+					+ ")" + (a[MV_GPUN] > 0L ? " GPU " + ms1(a[MV_GPU] / a[MV_GPUN]) : ""));
+		}
+		for (int i = 0; i < 2; i++) {
+			for (int k = 0; k < MV_N; k++) mv[i][k] = 0L;
+		}
+	}
+
+	private static final String[] SS_SHORT = { "chunk pkts", "other pkts", "entity upd", "builds", "uploads",
+			"visibility", "entities", "HUD", "other drawing", "browser" };
+
+	/** The two newest slow seconds, each with its three biggest costs. */
+	private static void printSlowShort(Minecraft mc) {
+		if (ssCount == 0) {
+			say(mc, "§7Slow seconds: §fnone");
+			return;
+		}
+		for (int i = 0; i < Math.min(2, ssCount); i++) {
+			long[] r = ssRing[(ssPos - 1 - i + SS_KEEP * 2) % SS_KEEP];
+			long f = Math.max(1L, r[0]);
+			long[] v = { r[12], r[13], r[14], r[7], r[8], r[9], r[10], r[11],
+					Math.max(0L, r[4] - r[6] - r[10] - r[11]), r[5] };
+			StringBuilder sb = new StringBuilder();
+			boolean[] used = new boolean[v.length];
+			for (int n = 0; n < 3; n++) {
+				int big = -1;
+				for (int k = 0; k < v.length; k++) if (!used[k] && (big < 0 || v[k] > v[big])) big = k;
+				used[big] = true;
+				if (sb.length() > 0) sb.append(", ");
+				sb.append(SS_SHORT[big]).append(' ').append(ms1(v[big] / f));
+			}
+			long sec = r[16];
+			say(mc, "§7Slow " + (sec / 60) + ":" + (sec % 60 < 10 ? "0" : "") + (sec % 60) + " §f" + r[0] + " fps§7: "
+					+ sb + " ms/frame");
+		}
+	}
+
+	public static void printFull(Minecraft mc) {
 		skipFrame = true;
 		if (start < 0L || curMinute < 0) {
 			say(mc, "§6[Lag] §7no data yet");
