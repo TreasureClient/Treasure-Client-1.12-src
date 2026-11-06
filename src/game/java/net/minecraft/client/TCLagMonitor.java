@@ -641,6 +641,10 @@ public class TCLagMonitor {
 		if (screen == null) {
 			return;
 		}
+		if (screen instanceof net.minecraft.client.multiplayer.GuiConnecting) {
+			skipThisFrame(); // joining a server waits for the server's answer: not the game lagging
+			return;
+		}
 		long ns = now() - startNs;
 		if (ns > scrSlowNs && ns > 20000000L) {
 			scrSlowNs = ns;
@@ -805,6 +809,15 @@ public class TCLagMonitor {
 			}
 			say(mc, "§7Frame §f" + ms1(frameUs) + "ms §7(logic " + ms1(lUs) + ", draw " + ms1(dUs) + ", browser "
 					+ ms1(Math.max(0L, frameUs - lUs - dUs)) + ")" + sp);
+			long[] all = new long[PARTS], lall = new long[LPARTS];
+			int bj = 0;
+			for (int m = from; m <= last; m++) {
+				bj += mBuilds[m];
+				for (int k = 0; k < PARTS; k++) all[k] += mPartAll[m][k];
+				for (int k = 0; k < LPARTS; k++) lall[k] += mLPartAll[m][k];
+			}
+			say(mc, "§7Draw: " + topParts(all, PART_NAMES, 3) + " §7· Logic: " + topParts(lall, LPART_NAMES, 2)
+					+ " §7· §f" + (bj / Math.max(1L, ms / 60000L)) + "§7 chunk builds/min");
 		}
 		printMovingShort(mc);
 		if (worstMinute >= 0 && worstMinute >= from) {
@@ -826,10 +839,34 @@ public class TCLagMonitor {
 		if (!pktTypes.isEmpty()) {
 			say(mc, "§7Packets: " + slowestPackets(true, 2));
 		}
+		StringBuilder once = new StringBuilder();
+		if (wcCount > 0) once.append(wcCount).append(" world changes (slowest ").append(wcTotal / 1000000L).append("ms) · ");
+		if (sndLoads > 0) once.append("sound loads ").append(sndLoadNs / 1000000L).append("ms · ");
+		once.append("shader compiles ").append(net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompiles)
+				.append(" (").append(net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompileNs / 1000000L).append("ms)");
+		say(mc, "§7Loads: " + once);
 		printSlowShort(mc);
 		String v = verdict(last);
 		int vi = v.indexOf("Most spike time");
 		say(mc, "§6[Lag] §7" + (vi >= 0 ? v.substring(vi) : v) + " §8(.lag full for more)");
+	}
+
+	/** The n biggest parts with their share: "terrain 30% · entities 20%". */
+	private static String topParts(long[] sum, String[] names, int n) {
+		long all = 0L;
+		for (int k = 0; k < sum.length; k++) all += sum[k];
+		if (all <= 0L) return "§7none";
+		boolean[] used = new boolean[sum.length];
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < n; i++) {
+			int big = -1;
+			for (int k = 0; k < sum.length; k++) if (!used[k] && (big < 0 || sum[k] > sum[big])) big = k;
+			used[big] = true;
+			if (sum[big] <= 0L) break;
+			if (sb.length() > 0) sb.append(", ");
+			sb.append("§f").append(names[big]).append(' ').append(sum[big] * 100L / all).append("%§7");
+		}
+		return sb.toString();
 	}
 
 	private static String shortRow(int[] r) {
@@ -848,7 +885,28 @@ public class TCLagMonitor {
 			say(mc, "§7" + (i == 1 ? "Moving" : "Still") + " §f" + (a[MV_MS] > 0L ? f * 1000L / a[MV_MS] : 0L)
 					+ " fps §7work §f" + ms1(a[MV_WORK] / f) + "§7 (logic " + ms1(a[MV_LOGIC] / f) + ", terrain "
 					+ ms1(a[MV_TERRAIN] / f) + ", entities " + ms1(a[MV_ENT] / f) + ", HUD " + ms1(a[MV_HUD] / f)
-					+ ")" + (a[MV_GPUN] > 0L ? " GPU " + ms1(a[MV_GPU] / a[MV_GPUN]) : ""));
+					+ ")" + (a[MV_GPUN] > 0L ? " GPU " + ms1(a[MV_GPU] / a[MV_GPUN]) : "")
+					+ " · missed " + (a[MV_SLOW] * 100L / f) + "% §8(game " + (a[MV_SLOW_GAME] * 100L / f) + "%, GPU "
+					+ (a[MV_SLOW_GPU] * 100L / f) + "%)");
+		}
+		long[] t = new long[MV_N];
+		for (int i = 0; i < 2; i++) {
+			for (int k = 0; k < MV_N; k++) t[k] += mv[i][k];
+		}
+		long f = t[MV_FRAMES];
+		if (f >= 30L) {
+			StringBuilder eb = new StringBuilder("§7Per frame: ");
+			for (int k = 0; k < 4; k++) {
+				if (t[MV_C0 + k] > 0L) {
+					long n = (t[MV_C0 + k] + f / 2) / f;
+					eb.append(n).append(' ').append(E_NAMES[k]).append(" §f").append(ms1(t[MV_E0 + k] / f))
+							.append("§7, ");
+				}
+			}
+			eb.append("name tags ").append(ms1(t[MV_TAGS] / f)).append(", particles ").append(ms1(t[MV_PART] / f))
+					.append(", block ents ").append(ms1(t[MV_BE] / f)).append(", hand ").append(ms1(t[MV_HAND] / f))
+					.append(", sky ").append(ms1(t[MV_SKY] / f));
+			say(mc, eb.toString());
 		}
 		for (int i = 0; i < 2; i++) {
 			for (int k = 0; k < MV_N; k++) mv[i][k] = 0L;
