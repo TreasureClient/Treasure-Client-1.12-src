@@ -547,8 +547,140 @@ public class TCLagMonitor {
 			ringPos = (ringPos + 1) % RING;
 			if (ringCount < RING) ringCount++;
 		}
+		addSecond(now, total, logicNs, drawNs);
 		addMoving(tcMc, total, logicNs, drawNs);
 		clearParts();
+	}
+
+	// ---- slow seconds: FPS dips made of many medium frames (none over the 60 ms spike limit) ----
+	// A second at 30 fps is 30 frames of 33 ms: no single spike, so the spike list never showed it.
+	// Each second is summed; a second under 50 fps is kept with where its time went.
+	private static final int SS_N = 17, SS_KEEP = 6;
+	// frames, ms, worst frame ms, logic, drawing, browser, terrain, builds, uploads, visibility,
+	// entities (with block entities and name tags), HUD, chunk packets, other packets, entity updates,
+	// chunks built, second of the session  (times in microseconds)
+	private static final long[] ssCur = new long[SS_N];
+	private static final long[][] ssRing = new long[SS_KEEP][SS_N];
+	private static int ssPos, ssCount;
+	private static long ssSecond = -1L;
+
+	private static void addSecond(long now, long total, long logicNs, long drawNs) {
+		long sec = (now - start) / 1000L;
+		if (sec != ssSecond) {
+			long f = ssCur[0];
+			if (ssSecond >= 0L && f >= 5L && f < 50L && ssCur[1] >= 700L) {
+				long[] r = ssRing[ssPos];
+				System.arraycopy(ssCur, 0, r, 0, SS_N);
+				r[16] = ssSecond;
+				ssPos = (ssPos + 1) % SS_KEEP;
+				if (ssCount < SS_KEEP) ssCount++;
+			}
+			java.util.Arrays.fill(ssCur, 0L);
+			ssSecond = sec;
+		}
+		long[] c = ssCur;
+		c[0]++;
+		c[1] += total;
+		if (total > c[2]) c[2] = total;
+		c[3] += logicNs / 1000L;
+		c[4] += drawNs / 1000L;
+		c[5] += Math.max(0L, total * 1000L - (logicNs + drawNs) / 1000L);
+		c[6] += cur[TERRAIN] / 1000L;
+		c[7] += tBuild / 1000L;
+		c[8] += tUpload / 1000L;
+		c[9] += tGraph / 1000L;
+		c[10] += (cur[ENTITIES] + cur[BLOCK_ENTS] + cur[NAME_TAGS]) / 1000L;
+		c[11] += cur[HUD] / 1000L;
+		c[12] += lcur[L_CHUNK_PKTS] / 1000L;
+		c[13] += (lcur[L_ENTITY_PKTS] + lcur[L_OTHER_PKTS]) / 1000L;
+		c[14] += lcur[L_ENTITIES] / 1000L;
+		c[15] += buildJobs;
+	}
+
+	// ---- map chunk loads: where each SPacketChunkData's handling time goes ----
+	public static final int CK_NEW = 0, CK_UNPACK = 1, CK_GUESS = 2, CK_MARK = 3, CK_TILES = 4, CK_TUFF = 5, CK_N = 6;
+	private static final String[] CK_NAMES = { "new chunk", "unpack", "block guessing", "redraw marks",
+			"block entities", "TuffX blocks" };
+	private static final long[] ckSum = new long[CK_N], ckWorst = new long[CK_N];
+	private static long ckWorstTotal;
+	private static int ckCount;
+
+	/** One chunk packet handled; steps in ns. */
+	public static void chunkLoad(long[] steps) {
+		long t = 0L;
+		for (int i = 0; i < CK_N; i++) {
+			ckSum[i] += steps[i];
+			t += steps[i];
+		}
+		ckCount++;
+		if (t > ckWorstTotal) {
+			ckWorstTotal = t;
+			System.arraycopy(steps, 0, ckWorst, 0, CK_N);
+		}
+	}
+
+	private static String ckParts(long[] a, long div) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < CK_N; i++) {
+			if (sb.length() > 0) sb.append(", ");
+			sb.append(CK_NAMES[i]).append(' ').append(ms1(a[i] / 1000L / div));
+		}
+		return sb.toString();
+	}
+
+	// slowest menu update (its screen's name), so a multi-second "menus" spike says which menu it was
+	private static String scrSlowName;
+	private static long scrSlowNs;
+	private static int scrSlowSec;
+
+	public static void screenTime(Object screen, long startNs) {
+		if (screen == null) {
+			return;
+		}
+		long ns = now() - startNs;
+		if (ns > scrSlowNs && ns > 20000000L) {
+			scrSlowNs = ns;
+			scrSlowName = screen.getClass().getSimpleName();
+			scrSlowSec = start < 0L ? 0 : (int) ((EagRuntime.steadyTimeMillis() - start) / 1000L);
+		}
+	}
+
+	private static long sumOf(long[] a) {
+		long t = 0L;
+		for (int i = 0; i < a.length; i++) t += a[i];
+		return t;
+	}
+
+	private static void printSlowSeconds(Minecraft mc) {
+		if (scrSlowName != null) {
+			say(mc, "§7Slowest menu: §f" + scrSlowName + " " + (scrSlowNs / 1000000L) + "ms §7at "
+					+ (scrSlowSec / 60) + ":" + (scrSlowSec % 60 < 10 ? "0" : "") + (scrSlowSec % 60));
+		}
+		if (ckCount > 0) {
+			say(mc, "§7Map chunks loaded: §f" + ckCount + "§7, average §f" + ms1(sumOf(ckSum) / 1000L / ckCount)
+					+ "ms §7(" + ckParts(ckSum, ckCount) + ") · slowest §f" + ms1(ckWorstTotal / 1000L) + "ms §7("
+					+ ckParts(ckWorst, 1L) + ")");
+		}
+		if (!pktTypes.isEmpty()) {
+			say(mc, "§7Slowest packets: " + slowestPackets(true) + " §7· overall: " + slowestPackets(false));
+		}
+		if (ssCount == 0) {
+			say(mc, "§7Slow seconds (under 50 fps): §fnone recorded");
+			return;
+		}
+		say(mc, "§7Slow seconds (under 50 fps), newest first, ms per frame:");
+		for (int i = 0; i < Math.min(4, ssCount); i++) {
+			long[] r = ssRing[(ssPos - 1 - i + SS_KEEP * 2) % SS_KEEP];
+			long f = Math.max(1L, r[0]);
+			long sec = r[16];
+			say(mc, "§f " + (sec / 60) + ":" + (sec % 60 < 10 ? "0" : "") + (sec % 60) + " " + r[0] + " fps §7(worst "
+					+ r[2] + "ms): logic §f" + ms1(r[3] / f) + "§7 [chunk pkts " + ms1(r[12] / f) + ", other pkts "
+					+ ms1(r[13] / f) + ", entity upd " + ms1(r[14] / f) + "] · terrain §f" + ms1(r[6] / f)
+					+ "§7 [builds " + ms1(r[7] / f) + ", uploads " + ms1(r[8] / f) + ", visibility " + ms1(r[9] / f)
+					+ ", " + r[15] + " chunks] · entities §f" + ms1(r[10] / f) + "§7 · HUD " + ms1(r[11] / f)
+					+ " · other drawing " + ms1(Math.max(0L, r[4] - r[6] - r[10] - r[11]) / f)
+					+ " · browser/GPU §f" + ms1(r[5] / f));
+		}
 	}
 
 	/**
@@ -740,6 +872,7 @@ public class TCLagMonitor {
 			}
 		}
 		printMoving(mc);
+		printSlowSeconds(mc);
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}
 
