@@ -148,8 +148,12 @@ public final class WebGLService implements LWJGLService {
 
     // ===================== BUFFER OPERATIONS =====================
 
+    /** Treasure Client: .lag counts live terrain buffers. */
+    public static int tcLiveBuffers;
+
     @Override
     public int glGenBuffers() {
+        ++tcLiveBuffers;
         int name = store(this.buffers, _wglGenBuffers());
         setElement(name, false);
         return name;
@@ -214,6 +218,7 @@ public final class WebGLService implements LWJGLService {
                 glBindBuffer(GL_ARRAY_BUFFER, 0);
             }
             EaglercraftGPU.destroyGLArrayBuffer(buf);
+            --tcLiveBuffers;
             this.buffers.set(buffer, null);
             setElement(buffer, false);
             if (this.logicalArray == buffer) this.logicalArray = 0;

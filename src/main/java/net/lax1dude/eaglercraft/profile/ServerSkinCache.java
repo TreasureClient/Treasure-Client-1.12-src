@@ -291,6 +291,11 @@ public class ServerSkinCache {
 		}
 	}
 	
+	/** Treasure Client: .lag counts cached skins. */
+	public int tcSize() {
+		return skinsCache.size();
+	}
+
 	public void flush() {
 		long millis = EagRuntime.steadyTimeMillis();
 		if(millis - lastFlushReq > 5000l) {

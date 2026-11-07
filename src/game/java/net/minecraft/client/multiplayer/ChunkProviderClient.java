@@ -127,6 +127,11 @@ public class ChunkProviderClient implements IChunkProvider {
 	/**
 	 * Converts the instance data to a readable string.
 	 */
+	/** Treasure Client: .lag counts loaded chunks. */
+	public int tcChunkCount() {
+		return this.chunkMapping.size();
+	}
+
 	public String makeString() {
 		return "MultiplayerChunkCache: " + this.chunkMapping.size() + ", " + this.chunkMapping.size();
 	}

@@ -447,6 +447,11 @@ public class EaglercraftGPU {
 		}
 	}
 
+	/** Treasure Client: .lag counts live textures. */
+	public static int tcTextureCount() {
+		return mapTexturesGL.allocatedObjects;
+	}
+
 	public static IBufferGL createGLArrayBuffer() {
 		return arrayBufferRecycler.create();
 	}
