@@ -824,6 +824,7 @@ public class PlatformInput {
 
 	private static double syncTimer = 0.0;
 	private static double tcFrameStartMs = 0.0;
+	private static boolean tcSkipped = false;
 
 	public static void update(int fpsLimit) {
 		double r = getDevicePixelRatio(win);
@@ -882,9 +883,14 @@ public class PlatformInput {
 				// Treasure Client: adaptive VSync. A frame whose work already took longer than one
 				// screen refresh has missed it; waiting for the next one too turned every slightly
 				// slow frame into a 30 fps frame. Such frames are shown right away instead.
-				if(tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0) {
+				// Only once in a row, though: always skipping let frames pile up in the browser
+				// once the game fell behind, and the browser's own work then slowed the game down
+				// more (the lag that built up mid-game and went away on rejoin).
+				if(!tcSkipped && tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0) {
+					tcSkipped = true;
 					PlatformRuntime.swapDelayTeaVM();
 				}else {
+					tcSkipped = false;
 					asyncRequestAnimationFrame();
 				}
 				tcFrameStartMs = PlatformRuntime.steadyTimeMillisTeaVM();
