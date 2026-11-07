@@ -747,6 +747,7 @@ async function initPlatformInput(inputImports) {
 	}
 
 	var tcFrameStartMs = 0;
+	var tcSkipped = false;
 	function tcMarkFrameStart() {
 		tcFrameStartMs = performance.now();
 	}
@@ -759,10 +760,15 @@ async function initPlatformInput(inputImports) {
 				// Treasure Client: adaptive VSync. A frame whose work already took longer than one
 				// screen refresh has missed it; waiting for the next one too turned every slightly
 				// slow frame into a 30 fps frame. Such frames are shown right away instead.
+				// Only once in a row, though: always skipping let frames pile up in the browser
+				// once the game fell behind, and the browser's own work then slowed the game down
+				// more (the lag that built up mid-game and went away on rejoin).
 				var tcNow = performance.now();
-				if(tcFrameStartMs > 0 && (tcNow - tcFrameStartMs) > 16.0) {
+				if(!tcSkipped && tcFrameStartMs > 0 && (tcNow - tcFrameStartMs) > 16.0) {
+					tcSkipped = true;
 					return swapDelayImpl().then(tcMarkFrameStart);
 				}
+				tcSkipped = false;
 				return asyncRequestAnimationFrame().then(tcMarkFrameStart);
 			}else {
 				if(fpsLimit <= 0) {
