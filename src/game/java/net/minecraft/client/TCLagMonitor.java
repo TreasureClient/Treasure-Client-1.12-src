@@ -434,6 +434,7 @@ public class TCLagMonitor {
 
 	private static void frame0(long logicNs, long drawNs, long browserNs) {
 		long now = EagRuntime.steadyTimeMillis();
+		growCheck(now);
 		int pkts = packets;
 		packets = 0;
 		int chunks = RenderChunk.renderChunksUpdated;
@@ -871,9 +872,86 @@ public class TCLagMonitor {
 				.append(" (").append(net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompileNs / 1000000L).append("ms)");
 		say(mc, "§7Loads: " + once);
 		printSlowShort(mc);
+		printGrowth(mc, false);
 		String v = verdict(last);
 		int vi = v.indexOf("Most spike time");
 		say(mc, "§6[Lag] §7" + (vi >= 0 ? v.substring(vi) : v) + " §8(.lag full for more)");
+	}
+
+
+	// ---- things that can pile up while you stay on a server (rejoining clears them) ----
+	private static final String[] GROW_NAMES = { "entities", "block ents", "ticking blocks", "chunks",
+			"score names", "teams", "tab players", "skins", "textures", "terrain sections", "terrain buffers",
+			"particles" };
+	private static Object growConn;
+	private static long growConnMs;
+	private static int[] growStart;
+	private static int growStartMinute = -1;
+
+	/** A new server connection restarts the comparison; one minute in, the starting counts are taken. */
+	private static void growCheck(long now) {
+		Minecraft mc = Minecraft.getMinecraft();
+		Object conn = mc.getConnection();
+		if (conn != growConn) {
+			growConn = conn;
+			growConnMs = now;
+			growStart = null;
+			growStartMinute = -1;
+		}
+		if (conn != null && growStart == null && now - growConnMs > 60000L && mc.world != null) {
+			growStart = growSample(mc);
+			growStartMinute = curMinute;
+		}
+	}
+
+	private static int[] growSample(Minecraft mc) {
+		int[] v = new int[GROW_NAMES.length];
+		java.util.Arrays.fill(v, -1);
+		net.minecraft.client.multiplayer.WorldClient w = mc.world;
+		net.minecraft.client.network.NetHandlerPlayClient c = mc.getConnection();
+		try { v[0] = w.loadedEntityList.size(); } catch (Throwable t) { }
+		try { v[1] = w.loadedTileEntityList.size(); } catch (Throwable t) { }
+		try { v[2] = w.tickableTileEntities.size(); } catch (Throwable t) { }
+		try { v[3] = ((net.minecraft.client.multiplayer.ChunkProviderClient) w.getChunkProvider()).tcChunkCount(); } catch (Throwable t) { }
+		try { v[4] = w.getScoreboard().tcNameCount(); } catch (Throwable t) { }
+		try { v[5] = w.getScoreboard().getTeams().size(); } catch (Throwable t) { }
+		try { v[6] = c.getPlayerInfoMap().size(); } catch (Throwable t) { }
+		try { v[7] = c.getSkinCache().tcSize(); } catch (Throwable t) { }
+		try { v[8] = net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcTextureCount(); } catch (Throwable t) { }
+		try { v[9] = org.taumc.celeritas.impl.TreasureCeleritas.getRenderer().getRenderSectionManager().getTotalSections(); } catch (Throwable t) { }
+		try { v[10] = org.taumc.celeritas.lwjgl.webgl.WebGLService.tcLiveBuffers; } catch (Throwable t) { }
+		try { v[11] = Integer.parseInt(mc.effectRenderer.getStatistics().trim()); } catch (Throwable t) { }
+		return v;
+	}
+
+	/** "Since 1:00: work 5.4 -> 10.6ms, speed 80 -> 31%, grew: score names 40 -> 9000". */
+	private static void printGrowth(Minecraft mc, boolean all) {
+		if (growStart == null) {
+			say(mc, "§7Grew: §fneeds 1 min on this server");
+			return;
+		}
+		int[] now = growSample(mc);
+		int last = Math.min(curMinute, MINUTES - 1), m0 = Math.min(growStartMinute, MINUTES - 1);
+		StringBuilder sb = new StringBuilder();
+		sb.append("§7Since ").append(m0 + 1).append(" min:");
+		if (m0 >= 0 && mFrames[m0] > 0 && mFrames[last] > 0) {
+			sb.append(" work §f").append(ms1((mLogicAll[m0] + mDrawAll[m0]) / 1000L / mFrames[m0])).append("→")
+					.append(ms1((mLogicAll[last] + mDrawAll[last]) / 1000L / mFrames[last])).append("ms§7");
+		}
+		if (m0 >= 0 && mCpu[m0] > 0 && mCpu[last] > 0) {
+			sb.append(", speed §f").append(cpuPct(mCpu[m0])).append("→").append(cpuPct(mCpu[last])).append("%§7");
+		}
+		StringBuilder g = new StringBuilder();
+		for (int i = 0; i < now.length; i++) {
+			int a = growStart[i], b = now[i];
+			if (a < 0 || b < 0) continue;
+			boolean grew = b - a >= 50 && b > a + a / 2;
+			if (!all && !grew) continue;
+			if (g.length() > 0) g.append(", ");
+			g.append(grew ? "§c" : "§f").append(GROW_NAMES[i]).append(' ').append(a).append("→").append(b).append("§7");
+		}
+		sb.append(all ? " · counts: " : " · grew: ").append(g.length() > 0 ? g.toString() : "§fnothing");
+		say(mc, sb.toString());
 	}
 
 	/** The n biggest parts with their share: "terrain 30% · entities 20%". */
@@ -1095,6 +1173,7 @@ public class TCLagMonitor {
 		}
 		printMoving(mc);
 		printSlowSeconds(mc);
+		printGrowth(mc, true);
 		say(mc, "§6[Lag] §7" + verdict(last));
 	}
 
@@ -1120,6 +1199,13 @@ public class TCLagMonitor {
 				+ (r[7] > 0 ? " · " + r[7] + " chunks" : "")
 				+ (r[13] + r[15] + r[16] > 0 ? " · build " + r[13] + " (max " + r[14] + ") upload " + r[15]
 						+ " vis " + r[16] : "");
+	}
+
+	/** A minute's CPU test time as a speed compared to the fastest minute (100 = no slowdown). */
+	private static int cpuPct(int t) {
+		int best = 0;
+		for (int m = 0; m < MINUTES; m++) if (mCpu[m] > 0 && (best == 0 || mCpu[m] < best)) best = mCpu[m];
+		return t > 0 && best > 0 ? (int) ((long) best * 100L / t) : 0;
 	}
 
 	/** CPU test speed in the last minute compared to the fastest minute (100 = no slowdown). */

@@ -193,8 +193,16 @@ public class Scoreboard {
 			list.remove(objective);
 		}
 
-		for (Map<ScoreObjective, Score> map : this.entitiesScoreObjectives.values()) {
+		// Treasure Client: names left with no scores are dropped too. Vanilla kept them forever, so
+		// servers that rebuild their sidebar piled up thousands of empty names (cleared only by
+		// rejoining), and the sidebar went through all of them every time it was drawn.
+		java.util.Iterator<Map<ScoreObjective, Score>> tcIt = this.entitiesScoreObjectives.values().iterator();
+		while (tcIt.hasNext()) {
+			Map<ScoreObjective, Score> map = tcIt.next();
 			map.remove(objective);
+			if (map.isEmpty()) {
+				tcIt.remove();
+			}
 		}
 
 		this.onScoreObjectiveRemoved(objective);
@@ -303,6 +311,11 @@ public class Scoreboard {
 
 	public Collection<String> getTeamNames() {
 		return this.teams.keySet();
+	}
+
+	/** Treasure Client: .lag counts names with scores. */
+	public int tcNameCount() {
+		return this.entitiesScoreObjectives.size();
 	}
 
 	public Collection<ScorePlayerTeam> getTeams() {
