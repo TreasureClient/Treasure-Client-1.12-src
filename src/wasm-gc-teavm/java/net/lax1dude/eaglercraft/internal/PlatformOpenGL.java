@@ -45,6 +45,9 @@ import net.lax1dude.eaglercraft.internal.wasm_gc_teavm.WebGLVertexArray;
 
 public class PlatformOpenGL {
 
+	/** Treasure Client: live GL objects for .lag (buffers, textures, VAOs, framebuffers, renderbuffers, queries). */
+	public static final int[] tcGL = new int[6];
+
 	/** Treasure Client (.lag): bytes of vertex/index data sent to the GPU. */
 	public static int tcUpBytes;
 
@@ -193,6 +196,7 @@ public class PlatformOpenGL {
 	public static native void _wglLineWidth(float width);
 
 	public static IBufferGL _wglGenBuffers() {
+		++tcGL[0];
 		return new OpenGLObjects.BufferGL(_wglGenBuffersN());
 	}
 
@@ -200,6 +204,7 @@ public class PlatformOpenGL {
 	static native WebGLBuffer _wglGenBuffersN();
 
 	public static ITextureGL _wglGenTextures() {
+		++tcGL[1];
 		return new OpenGLObjects.TextureGL(_wglGenTexturesN());
 	}
 
@@ -207,6 +212,7 @@ public class PlatformOpenGL {
 	static native WebGLTexture _wglGenTexturesN();
 
 	public static IVertexArrayGL _wglGenVertexArrays() {
+		++tcGL[2];
 		return new OpenGLObjects.VertexArrayGL(_wglGenVertexArraysN());
 	}
 
@@ -228,6 +234,7 @@ public class PlatformOpenGL {
 	static native WebGLShader _wglCreateShaderN(int type);
 
 	public static IFramebufferGL _wglCreateFramebuffer() {
+		++tcGL[3];
 		return new OpenGLObjects.FramebufferGL(_wglCreateFramebufferN());
 	}
 
@@ -235,6 +242,7 @@ public class PlatformOpenGL {
 	static native WebGLFramebuffer _wglCreateFramebufferN();
 
 	public static IRenderbufferGL _wglCreateRenderbuffer() {
+		++tcGL[4];
 		return new OpenGLObjects.RenderbufferGL(_wglCreateRenderbufferN());
 	}
 
@@ -242,6 +250,7 @@ public class PlatformOpenGL {
 	static native WebGLRenderbuffer _wglCreateRenderbufferN();
 
 	public static IQueryGL _wglGenQueries() {
+		++tcGL[5];
 		return new OpenGLObjects.QueryGL(_wglGenQueriesN());
 	}
 
@@ -249,6 +258,7 @@ public class PlatformOpenGL {
 	static native WebGLQuery _wglGenQueriesN();
 
 	public static void _wglDeleteBuffers(IBufferGL objId) {
+		--tcGL[0];
 		_wglDeleteBuffersN(((OpenGLObjects.BufferGL)objId).ptr);
 	}
 
@@ -256,6 +266,7 @@ public class PlatformOpenGL {
 	static native void _wglDeleteBuffersN(WebGLBuffer objId);
 
 	public static void _wglDeleteTextures(ITextureGL objId) {
+		--tcGL[1];
 		_wglDeleteTexturesN(((OpenGLObjects.TextureGL)objId).ptr);
 	}
 
@@ -263,6 +274,7 @@ public class PlatformOpenGL {
 	static native void _wglDeleteTexturesN(WebGLTexture objId);
 
 	public static void _wglDeleteVertexArrays(IVertexArrayGL objId) {
+		--tcGL[2];
 		_wglDeleteVertexArraysN(((OpenGLObjects.VertexArrayGL)objId).ptr);
 	}
 
@@ -284,6 +296,7 @@ public class PlatformOpenGL {
 	static native void _wglDeleteShaderN(WebGLShader objId);
 
 	public static void _wglDeleteFramebuffer(IFramebufferGL objId) {
+		--tcGL[3];
 		_wglDeleteFramebufferN(((OpenGLObjects.FramebufferGL)objId).ptr);
 	}
 
@@ -291,6 +304,7 @@ public class PlatformOpenGL {
 	static native void _wglDeleteFramebufferN(WebGLFramebuffer objId);
 
 	public static void _wglDeleteRenderbuffer(IRenderbufferGL objId) {
+		--tcGL[4];
 		_wglDeleteRenderbufferN(((OpenGLObjects.RenderbufferGL)objId).ptr);
 	}
 
@@ -298,6 +312,7 @@ public class PlatformOpenGL {
 	static native void _wglDeleteRenderbufferN(WebGLRenderbuffer objId);
 
 	public static void _wglDeleteQueries(IQueryGL objId) {
+		--tcGL[5];
 		_wglDeleteQueriesN(((OpenGLObjects.QueryGL)objId).ptr);
 	}
 
