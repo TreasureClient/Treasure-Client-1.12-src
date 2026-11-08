@@ -43,6 +43,7 @@ public final class TCHudCache {
 	private static long drawnAtS;
 	private static boolean validS;
 	private static boolean lastChatOpen;
+	private static long lastChatSig = Long.MIN_VALUE;
 	/** Most time between redraws of your own layer (it is redrawn whenever it changes anyway). */
 	private static final long OWN_MAX_AGE_MS = 1000L;
 	/** Redraw interval of the server layer while something on it animates. */
@@ -97,9 +98,15 @@ public final class TCHudCache {
 			lastChatOpen = chatOpen;
 			validS = false;
 		}
+		// a chat line started fading (it is drawn live from now on), or lines moved one that is
+		// fading: redraw right away so the cached picture and the live lines never overlap
+		long chatSig = gui.getChatGUI().tcCacheSignature(gui.getUpdateCounter());
+		if (chatSig != lastChatSig) {
+			lastChatSig = chatSig;
+			validS = false;
+		}
 		if (gui.tcServerAnimating()) {
-			// titles, the tab list and fading chat change over ticks: redraw 20 times a second
-			// instead of every frame (a busy chat always has a line fading out)
+			// titles and the tab list change over ticks: redraw 20 times a second instead of every frame
 			if (!validS || now - drawnAtS >= ANIM_MS) {
 				drawnVersionS = version;
 				drawnAtS = now;

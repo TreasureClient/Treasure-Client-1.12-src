@@ -28,6 +28,44 @@ public class GuiNewChat extends Gui {
 	}
 
 	/** Treasure Client: the tick the newest shown chat line arrived at (HUD cache). */
+	/**
+	 * Treasure Client: which chat lines {@link #drawChat} draws. The HUD cache keeps the fully
+	 * visible lines in its picture (TC_PASS_OPAQUE) and draws the one or two lines fading out
+	 * live each frame (TC_PASS_FADING), so a busy chat no longer redraws the HUD 20 times a second.
+	 */
+	public static final int TC_PASS_ALL = 0, TC_PASS_OPAQUE = 1, TC_PASS_FADING = 2;
+	public static int tcPass = TC_PASS_ALL;
+	/** Lines older than this many ticks are fading out (alpha below full). */
+	private static final int TC_FADE_AGE = 181;
+	private int tcChanges;
+
+	/**
+	 * Treasure Client: changes whenever the cached chat picture would differ from the live one:
+	 * a line starts fading, or (while one is fading) lines are added or removed and move it.
+	 */
+	public long tcCacheSignature(int updateCounter) {
+		if (this.getChatOpen()) {
+			return -1L;
+		}
+		int n = Math.min(this.drawnChatLines.size(), this.scrollPos + this.getLineCount());
+		int opaque = 0;
+		boolean fading = false;
+		for (int k = this.scrollPos; k < n; ++k) {
+			ChatLine line = this.drawnChatLines.get(k);
+			if (line == null) {
+				continue;
+			}
+			int age = updateCounter - line.getUpdatedCounter();
+			if (age < TC_FADE_AGE) {
+				++opaque;
+			} else {
+				fading = age < 200;
+				break;
+			}
+		}
+		return fading ? ((long) this.tcChanges << 8) | opaque : opaque;
+	}
+
 	public int tcNewestLineCounter() {
 		return this.drawnChatLines.isEmpty() ? Integer.MIN_VALUE : this.drawnChatLines.get(0).getUpdatedCounter();
 	}
@@ -80,6 +118,15 @@ public class GuiNewChat extends Gui {
 
 					if (chatline != null) {
 						int j1 = updateCounter - chatline.getUpdatedCounter();
+
+						// Treasure Client: draw only this pass's lines, each still in its own slot
+						boolean tcFade = !flag && j1 >= TC_FADE_AGE;
+						if (tcPass != TC_PASS_ALL && tcFade != (tcPass == TC_PASS_FADING)) {
+							if (j1 < 200 || flag) {
+								++l;
+							}
+							continue;
+						}
 
 						if (j1 < 200 || flag) {
 							double d0 = (double) j1 / 200.0D;
@@ -137,6 +184,7 @@ public class GuiNewChat extends Gui {
 	 */
 	public void clearChatMessages(boolean p_146231_1_) {
 		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
+		++this.tcChanges;
 		this.drawnChatLines.clear();
 		this.chatLines.clear();
 
@@ -162,6 +210,7 @@ public class GuiNewChat extends Gui {
 
 	private void setChatLine(ITextComponent chatComponent, int chatLineId, int updateCounter, boolean displayOnly) {
 		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
+		++this.tcChanges;
 		if (chatLineId != 0) {
 			this.deleteChatLine(chatLineId);
 		}
@@ -195,6 +244,7 @@ public class GuiNewChat extends Gui {
 
 	public void refreshChat() {
 		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
+		++this.tcChanges;
 		this.drawnChatLines.clear();
 		this.resetScroll();
 
@@ -224,6 +274,7 @@ public class GuiNewChat extends Gui {
 	 */
 	public void resetScroll() {
 		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
+		++this.tcChanges;
 		this.scrollPos = 0;
 		this.isScrolled = false;
 	}
@@ -233,6 +284,7 @@ public class GuiNewChat extends Gui {
 	 */
 	public void scroll(int amount) {
 		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
+		++this.tcChanges;
 		this.scrollPos += amount;
 		int i = this.drawnChatLines.size();
 
@@ -309,6 +361,7 @@ public class GuiNewChat extends Gui {
 	 */
 	public void deleteChatLine(int id) {
 		TCHudCache.markDirty(); // Treasure Client: the HUD shows chat
+		++this.tcChanges;
 		Iterator<ChatLine> iterator = this.drawnChatLines.iterator();
 
 		while (iterator.hasNext()) {
