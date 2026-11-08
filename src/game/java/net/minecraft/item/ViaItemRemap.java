@@ -127,6 +127,11 @@ public final class ViaItemRemap {
 					return r;
 				}
 			}
+			if (backup == null && lastScanSawBackup) {
+				// ViaBackwards saved what this item really was, and it's not a modern item we
+				// draw (a renamed diamond sword, say): never guess it from its name
+				return st;
+			}
 			// Down-mapped modern items always carry a custom name ("1.20.5 Mace"); plain
 			// items don't, so they skip the name matching (keeps equipment packets cheap).
 			at = 2;
@@ -362,6 +367,7 @@ public final class ViaItemRemap {
 	 * key. Returns our item name for the newest backup that names one, or null.
 	 */
 	static String fromBackup(ItemStack st) {
+		lastScanSawBackup = false;
 		if (!st.hasTagCompound()) {
 			return null;
 		}
@@ -371,30 +377,60 @@ public final class ViaItemRemap {
 		return best[0];
 	}
 
+	/** The last {@link #fromBackup} found an id backup at all (even one we have no item for). */
+	private static boolean lastScanSawBackup;
+
+	/**
+	 * ViaBackwards writes the original id in three ways (all seen on real servers):
+	 * {@code "VB|Protocol1_16To1_15_2|id": 609} (the id in 1.16),
+	 * {@code {backup_tag: "VB|Protocol1_21_5To1_21_4", id: 886}} (the id in 1.21.5), and
+	 * {@code "VB|Protocol1_21_11To1_21_9": {...}} next to an {@code id}.
+	 */
 	private static void scan(net.minecraft.nbt.NBTTagCompound c, String[] best, int depth) {
 		if (c == null || depth > 8) {
 			return;
 		}
 		boolean hasId = c.hasKey("id", 99);
+		if (hasId && c.hasKey("backup_tag", 8)) {
+			consider(c.getString("backup_tag"), c.getInteger("id"), best);
+		}
 		for (String key : c.getKeySet()) {
-			if (hasId && key.startsWith("VB|Protocol")) {
-				int to = key.indexOf("To", 11);
-				if (to > 11) {
-					String ver = key.substring(11, to);
-					java.util.Map<Integer, String> m = idTables.get(ver);
-					if (m != null) {
-						String name = m.get(Integer.valueOf(c.getInteger("id")));
-						if (name != null && (best[1] == null || idOrder.indexOf(ver) > idOrder.indexOf(best[1]))) {
-							best[0] = name;
-							best[1] = ver;
-						}
+			if (key.startsWith("VB|Protocol")) {
+				int bar = key.indexOf('|', 11);
+				if (bar < 0) {
+					if (hasId) {
+						consider(key, c.getInteger("id"), best);
 					}
+				} else if (key.endsWith("|id") && c.hasKey(key, 99)) {
+					consider(key, c.getInteger(key), best);
 				}
 			}
 			net.minecraft.nbt.NBTBase child = c.getTag(key);
 			if (child instanceof net.minecraft.nbt.NBTTagCompound) {
 				scan((net.minecraft.nbt.NBTTagCompound) child, best, depth + 1);
 			}
+		}
+	}
+
+	/** One backup: key "VB|Protocol<version>To...", the item's id in that version. */
+	private static void consider(String key, int id, String[] best) {
+		if (!key.startsWith("VB|Protocol")) {
+			return;
+		}
+		int to = key.indexOf("To", 11);
+		if (to <= 11) {
+			return;
+		}
+		String ver = key.substring(11, to);
+		java.util.Map<Integer, String> m = idTables.get(ver);
+		if (m == null) {
+			return;
+		}
+		lastScanSawBackup = true;
+		String name = m.get(Integer.valueOf(id));
+		if (name != null && (best[1] == null || idOrder.indexOf(ver) > idOrder.indexOf(best[1]))) {
+			best[0] = name;
+			best[1] = ver;
 		}
 	}
 
