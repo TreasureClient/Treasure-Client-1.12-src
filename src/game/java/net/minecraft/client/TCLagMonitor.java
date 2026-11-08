@@ -102,6 +102,20 @@ public class TCLagMonitor {
 		}
 	}
 
+	// textures loaded on first use while playing (font sheets, GUI images, ...): count, total, slowest
+	public static long texLoads, texLoadNs, texSlowNs;
+	public static String texSlow;
+
+	/** Adds one texture loaded on first use (TextureManager.bindTexture) while in a world. */
+	public static void addTextureLoad(String name, long ns) {
+		texLoads++;
+		texLoadNs += ns;
+		if (ns > texSlowNs) {
+			texSlowNs = ns;
+			texSlow = name;
+		}
+	}
+
 	// plugin message time per channel, so a slow CustomPayload can be traced to its sender
 	private static final java.util.HashMap<String, long[]> chanTimes = new java.util.HashMap<String, long[]>();
 
@@ -926,6 +940,7 @@ public class TCLagMonitor {
 		StringBuilder once = new StringBuilder();
 		if (wcCount > 0) once.append(wcCount).append(" world changes (slowest ").append(wcTotal / 1000000L).append("ms) · ");
 		if (sndLoads > 0) once.append("sound loads ").append(sndLoadNs / 1000000L).append("ms · ");
+		if (texLoads > 0) once.append("texture loads ").append(texLoadNs / 1000000L).append("ms · ");
 		once.append("shader compiles ").append(net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompiles)
 				.append(" (").append(net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompileNs / 1000000L).append("ms)");
 		say(mc, "§7Loads: " + once);
@@ -1051,6 +1066,39 @@ public class TCLagMonitor {
 		net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcUpBytes = 0;
 	}
 
+	private static final String[] GPU_NAMES = { "other", "sky+clouds", "terrain", "entities", "particles",
+			"rain/border", "water/glass", "hand", "HUD/menus" };
+
+	/** "GPU per frame: 7.4ms (terrain 3.1, entities 1.2, ...)" from the per-part timer queries. */
+	private static String gpuLine() {
+		int frames = net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuTakeFrames();
+		long[] us = new long[GPU_NAMES.length];
+		long tot = 0L;
+		for (int i = 0; i < us.length; i++) {
+			us[i] = net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuTakePart(i);
+			tot += us[i];
+		}
+		if (frames < 0) {
+			return "§7GPU parts: §fthis browser can't measure GPU time";
+		}
+		if (frames < 30) {
+			return "§7GPU parts: §fonly " + frames + " frames measured";
+		}
+		StringBuilder sb = new StringBuilder("§7GPU per frame: §f").append(ms1(tot / frames)).append("ms §7(");
+		boolean[] used = new boolean[us.length];
+		for (int n = 0; n < us.length; n++) {
+			int big = -1;
+			for (int i = 0; i < us.length; i++) {
+				if (!used[i] && (big < 0 || us[i] > us[big])) big = i;
+			}
+			used[big] = true;
+			if (us[big] * 20L < tot) break; // under 5%
+			if (n > 0) sb.append(", ");
+			sb.append(GPU_NAMES[big]).append(" §f").append(ms1(us[big] / frames)).append("§7");
+		}
+		return sb.append(")").toString();
+	}
+
 	private static String glLine() {
 		if (glFrames < 30L) return null;
 		String md = !net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcMultiDrawSupported() ? "not supported"
@@ -1174,6 +1222,13 @@ public class TCLagMonitor {
 				say(mc, "§7Sound loads: §f" + sndLoads + " §7taking §f" + (sndLoadNs / 1000000L) + "ms§7, slowest §f" + sn
 						+ " " + (sndSlowNs / 1000000L) + "ms");
 			}
+			if (texLoads > 0) {
+				String tn = texSlow == null ? "?" : texSlow;
+				int tl = tn.lastIndexOf('/');
+				if (tl >= 0) tn = tn.substring(tl + 1);
+				say(mc, "§7Textures loaded mid-game: §f" + texLoads + " §7taking §f" + (texLoadNs / 1000000L)
+						+ "ms§7, slowest §f" + tn + " " + (texSlowNs / 1000000L) + "ms");
+			}
 		}
 		say(mc, "§7Shader compiles on demand: §f" + net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompiles
 				+ " §7taking §f" + (net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompileNs / 1000000L)
@@ -1210,6 +1265,7 @@ public class TCLagMonitor {
 			say(mc, TCFramePacer.describe() + " §7· " + TCSteadyFps.describe());
 			String gl = glLine();
 			if (gl != null) say(mc, gl);
+			say(mc, gpuLine());
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "

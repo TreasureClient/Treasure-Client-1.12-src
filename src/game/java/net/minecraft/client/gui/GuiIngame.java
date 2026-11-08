@@ -227,14 +227,20 @@ public class GuiIngame extends Gui {
 				return Long.MIN_VALUE; // item pick-up pop, animated every frame
 			}
 			h = tcMix(h, Item.getIdFromItem(s.getItem()));
-			h = tcMix(h, s.func_190916_E());
-			h = tcMix(h, s.getItemDamage());
+			// the count, the durability bar and the cooldown sweep are drawn live (renderHotbar, TC_OWN);
+			// only what changes the 3D item itself counts here: its kind and, for items with variants
+			// (wool colors, dyes, potions...), its metadata
+			if (!s.isItemStackDamageable()) {
+				h = tcMix(h, s.getItemDamage());
+			}
+			h = tcMix(h, s.isItemEnchanted() ? 1 : 0);
+			if (s.getItem() instanceof net.minecraft.item.ItemPotion
+					|| s.getItem() instanceof net.minecraft.item.ItemTippedArrow) {
+				h = tcMix(h, net.minecraft.potion.PotionUtils.getPotionFromItem(s).hashCode());
+			}
 			// Treasure Client: the enchantment glint on hotbar icons stays still. Animating it redrew
 			// all nine 3D hotbar items five times a second, a slow frame each time, whenever you
 			// held enchanted gear (always, in PvP).
-			if (p.getCooldownTracker().hasCooldown(s.getItem())) {
-				perTick = true; // ender pearl / shield cooldown sweep
-			}
 		}
 		// Treasure Client: health, food, XP, effects, the item name and the attack icon are drawn
 		// live every frame now (cheap flat icons); only the hotbar items are cached
@@ -651,6 +657,27 @@ public class GuiIngame extends Gui {
 				CustomItems.setRenderOffHand(false);
 			}
 			} // Treasure Client: end of the cached hotbar part
+
+			if (tcLayer == TC_OWN) {
+				// Treasure Client: item counts, durability bars and cooldowns change all the time (crystals,
+				// totems, pearls); they are cheap flat drawings, so they are drawn live over the cached
+				// items instead of making all ten 3D items draw again each time one of them changes
+				GlStateManager.enableBlend();
+				GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
+						RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
+				for (int l = 0; l < 9; ++l) {
+					ItemStack st = entityplayer.inventory.mainInventory.get(l);
+					if (!st.func_190926_b()) {
+						this.itemRenderer.renderItemOverlays(this.mc.fontRendererObj, st, i - 90 + l * 20 + 2,
+								sr.getScaledHeight() - 16 - 3);
+					}
+				}
+				if (!itemstack.func_190926_b()) {
+					this.itemRenderer.renderItemOverlays(this.mc.fontRendererObj, itemstack,
+							enumhandside == EnumHandSide.LEFT ? i - 91 - 26 : i + 91 + 10, sr.getScaledHeight() - 16 - 3);
+				}
+				GlStateManager.disableBlend();
+			}
 
 			if (tcLayer != TC_HOTBAR && this.mc.gameSettings.attackIndicator == 2) {
 				float f1 = this.mc.player.getCooledAttackStrength(0.0F);
@@ -1205,7 +1232,9 @@ public class GuiIngame extends Gui {
 				GlStateManager.popMatrix();
 			}
 
-			this.itemRenderer.renderItemOverlays(this.mc.fontRendererObj, stack, p_184044_1_, p_184044_2_);
+			if (tcLayer != TC_HOTBAR) { // the cached hotbar leaves counts and bars to the live layer
+				this.itemRenderer.renderItemOverlays(this.mc.fontRendererObj, stack, p_184044_1_, p_184044_2_);
+			}
 		}
 	}
 

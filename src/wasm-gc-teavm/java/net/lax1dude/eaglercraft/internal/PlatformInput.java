@@ -581,6 +581,41 @@ public class PlatformInput {
 	@Import(module = "platformInput", name = "tcGpuFrameUs")
 	private static native int tcGpuFrameUs0();
 
+	/** Treasure Client: the GPU time from here on belongs to this part of the frame (.lag). */
+	public static void tcGpuMark(int part) {
+		try {
+			tcGpuMark0(part);
+		} catch (Throwable t) {
+		}
+	}
+
+	@Import(module = "platformInput", name = "tcGpuMark")
+	private static native void tcGpuMark0(int part);
+
+	/** Treasure Client: GPU microseconds spent in a part since the last call. */
+	public static int tcGpuTakePart(int part) {
+		try {
+			return tcGpuTakePart0(part);
+		} catch (Throwable t) {
+			return 0;
+		}
+	}
+
+	@Import(module = "platformInput", name = "tcGpuTakePart")
+	private static native int tcGpuTakePart0(int part);
+
+	/** Treasure Client: frames measured since the last call, or -1 when GPU time can't be measured. */
+	public static int tcGpuTakeFrames() {
+		try {
+			return tcGpuTakeFrames0();
+		} catch (Throwable t) {
+			return -1;
+		}
+	}
+
+	@Import(module = "platformInput", name = "tcGpuTakeFrames")
+	private static native int tcGpuTakeFrames0();
+
 	public static boolean isVSyncSupported() {
 		return vsyncSupport;
 	}

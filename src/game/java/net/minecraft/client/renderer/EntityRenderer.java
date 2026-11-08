@@ -999,6 +999,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 //                    }
 				}
 				final boolean b = !this.mc.gameSettings.hideGUI || this.mc.currentScreen != null;
+				net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(8); // HUD, chat, menus (to the end of the frame)
 				if (b) {
 					// Treasure Client: HUD cache (ImmediatelyFast). The HUD is drawn into its own image only
 					// when something on it changed (TCHudCache), and that image is pasted over the world
@@ -1225,6 +1226,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SETUP, tcSetup);
 
 		long tcT = net.minecraft.client.TCLagMonitor.now(); // Treasure Client: lag monitor timing
+		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(1); // .lag GPU parts: sky (and low clouds)
 		if (this.mc.gameSettings.renderDistanceChunks >= 4) {
 			this.setupFog(-1, partialTicks);
 			GlStateManager.matrixMode(5889);
@@ -1247,6 +1249,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		}
 		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SKY, tcT);
 		tcT = net.minecraft.client.TCLagMonitor.now();
+		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(2); // terrain
 
 		this.setupFog(0, partialTicks);
 		this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
@@ -1279,7 +1282,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 			GlStateManager.pushMatrix();
 			RenderHelper.enableStandardItemLighting();
 			tcT = net.minecraft.client.TCLagMonitor.now();
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(3); // entities and block entities
 			renderglobal.renderEntities(entity, icamera, partialTicks);
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(0);
 			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.ENTITIES, tcT);
 			RenderHelper.disableStandardItemLighting();
 			this.disableLightmap();
@@ -1310,6 +1315,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 
 		if (!this.debugView) {
 			tcT = net.minecraft.client.TCLagMonitor.now();
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(4); // particles
 			this.enableLightmap();
 			particlemanager.renderLitParticles(entity, partialTicks);
 			RenderHelper.disableStandardItemLighting();
@@ -1319,6 +1325,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.PARTICLES, tcT);
 		}
 
+		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(5); // rain, snow, world border
 		GlStateManager.depthMask(false);
 		GlStateManager.enableCull();
 		this.renderRainSnow(partialTicks);
@@ -1335,7 +1342,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 		GlStateManager.shadeModel(7425);
 		tcT = net.minecraft.client.TCLagMonitor.now();
+		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(6); // water, glass and other see-through blocks
 		renderglobal.renderBlockLayer(BlockRenderLayer.TRANSLUCENT, (double) partialTicks, pass, entity);
+		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(0);
 		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.TERRAIN, tcT);
 		GlStateManager.shadeModel(7424);
 		GlStateManager.depthMask(true);
@@ -1345,14 +1354,18 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 
 		if (entity.posY + (double) entity.getEyeHeight() >= 128.0D) {
 			tcT = net.minecraft.client.TCLagMonitor.now();
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(1);
 			this.renderCloudsCheck(renderglobal, partialTicks, pass, d0, d1, d2);
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(0);
 			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SKY, tcT);
 		}
 
 		if (this.renderHand) {
 			GlStateManager.clear(256);
 			long tcHand = net.minecraft.client.TCLagMonitor.now(); // .lag "hand"
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(7); // hand
 			this.renderHand(partialTicks, pass);
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(0);
 			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HAND, tcHand);
 		}
 	}

@@ -672,9 +672,56 @@ async function initPlatformInput(inputImports) {
 	 * @param {number} vsync
 	 * @return {Promise}
 	 */
-	// Treasure Client: GPU time per frame (.lag), from a WebGL timer query around each frame.
-	// Results arrive a few frames later and are read without waiting (never stalls the GPU).
-	const tcGpu = { tried: false, ext: null, free: [], pending: [], active: null, lastUs: -1 };
+	// Treasure Client: GPU time per frame, split into parts of the frame (sky, terrain, entities...).
+	// Each part is one EXT_disjoint_timer_query; the game marks where a new part starts (tcGpuMark).
+	// Results come back a few frames late; if too many are waiting, measuring pauses until they
+	// catch up (it used to stop for the whole session, the "GPU not measurable" in .lag).
+	const TC_GPU_PARTS = 10;
+	const TC_GPU_MAX_PENDING = 80;
+	const tcGpu = { tried: false, ext: null, free: [], pending: [], active: null, activePart: 0, inFrame: false,
+		frame: 0, curFrame: -1, curSum: 0, curOk: true, lastUs: -1, partUs: new Float64Array(TC_GPU_PARTS), partFrames: 0 };
+
+	function tcGpuEndActive(gl, ext) {
+		if (tcGpu.active) {
+			gl.endQuery(ext["TIME_ELAPSED_EXT"]);
+			tcGpu.pending.push({ q: tcGpu.active, part: tcGpu.activePart, frame: tcGpu.frame });
+			tcGpu.active = null;
+		}
+	}
+
+	function tcGpuBeginPart(gl, ext, part) {
+		if (tcGpu.pending.length >= TC_GPU_MAX_PENDING) return; // results are late: skip until they catch up
+		const q = tcGpu.free.length > 0 ? tcGpu.free.pop() : gl.createQuery();
+		gl.beginQuery(ext["TIME_ELAPSED_EXT"], q);
+		tcGpu.active = q;
+		tcGpu.activePart = part;
+	}
+
+	function tcGpuCollect(gl, ext) {
+		while (tcGpu.pending.length > 0) {
+			const e = tcGpu.pending[0];
+			if (!gl.getQueryParameter(e.q, gl.QUERY_RESULT_AVAILABLE)) break;
+			tcGpu.pending.shift();
+			const ns = gl.getQueryParameter(e.q, gl.QUERY_RESULT);
+			const disjoint = gl.getParameter(ext["GPU_DISJOINT_EXT"]);
+			if (e.frame !== tcGpu.curFrame) {
+				if (tcGpu.curFrame >= 0 && tcGpu.curOk) {
+					tcGpu.lastUs = Math.floor(tcGpu.curSum / 1000);
+					tcGpu.partFrames++;
+				}
+				tcGpu.curFrame = e.frame;
+				tcGpu.curSum = 0;
+				tcGpu.curOk = true;
+			}
+			if (disjoint) {
+				tcGpu.curOk = false;
+			} else {
+				tcGpu.curSum += ns;
+				tcGpu.partUs[e.part] += ns / 1000;
+			}
+			tcGpu.free.push(e.q);
+		}
+	}
 
 	function tcGpuFrameEnd() {
 		const gl = webglContext;
@@ -688,28 +735,11 @@ async function initPlatformInput(inputImports) {
 			}
 		}
 		const ext = tcGpu.ext;
+		tcGpu.inFrame = false;
 		if (!ext) return;
 		try {
-			if (tcGpu.active) {
-				gl.endQuery(ext["TIME_ELAPSED_EXT"]);
-				tcGpu.pending.push(tcGpu.active);
-				tcGpu.active = null;
-			}
-			while (tcGpu.pending.length > 0) {
-				const q = tcGpu.pending[0];
-				if (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) break;
-				tcGpu.pending.shift();
-				const ns = gl.getQueryParameter(q, gl.QUERY_RESULT);
-				if (!gl.getParameter(ext["GPU_DISJOINT_EXT"])) {
-					tcGpu.lastUs = Math.floor(ns / 1000);
-				}
-				tcGpu.free.push(q);
-			}
-			if (tcGpu.pending.length > 6) {
-				// results stopped coming: give up quietly
-				tcGpu.ext = null;
-				tcGpu.lastUs = -1;
-			}
+			tcGpuEndActive(gl, ext);
+			tcGpuCollect(gl, ext);
 		} catch (e) {
 			tcGpu.ext = null;
 			tcGpu.lastUs = -1;
@@ -719,15 +749,53 @@ async function initPlatformInput(inputImports) {
 	function tcGpuFrameBegin() {
 		const gl = webglContext;
 		const ext = tcGpu.ext;
-		if (!gl || !ext || tcGpu.active) return;
+		if (!gl || !ext) return;
 		try {
-			const q = tcGpu.free.length > 0 ? tcGpu.free.pop() : gl.createQuery();
-			gl.beginQuery(ext["TIME_ELAPSED_EXT"], q);
-			tcGpu.active = q;
+			tcGpu.frame++;
+			tcGpu.inFrame = true;
+			tcGpu.active = null;
+			tcGpuBeginPart(gl, ext, 0);
 		} catch (e) {
 			tcGpu.ext = null;
+			tcGpu.lastUs = -1;
 		}
 	}
+
+	/**
+	 * @param {number} part
+	 */
+	inputImports["tcGpuMark"] = function(part) {
+		const gl = webglContext;
+		const ext = tcGpu.ext;
+		if (!gl || !ext || !tcGpu.inFrame) return;
+		try {
+			tcGpuEndActive(gl, ext);
+			tcGpuBeginPart(gl, ext, part);
+		} catch (e) {
+			tcGpu.ext = null;
+			tcGpu.lastUs = -1;
+		}
+	};
+
+	/**
+	 * @param {number} part
+	 * @return {number}
+	 */
+	inputImports["tcGpuTakePart"] = function(part) {
+		if (part < 0 || part >= TC_GPU_PARTS) return 0;
+		const v = Math.floor(tcGpu.partUs[part]);
+		tcGpu.partUs[part] = 0;
+		return v;
+	};
+
+	/**
+	 * @return {number}
+	 */
+	inputImports["tcGpuTakeFrames"] = function() {
+		const v = tcGpu.partFrames;
+		tcGpu.partFrames = 0;
+		return tcGpu.ext ? v : -1;
+	};
 
 	/**
 	 * @return {number}
@@ -1330,6 +1398,10 @@ function initNoPlatformInput(inputImports) {
 	setUnsupportedFunc(inputImports, platfInputName, "iterateKeyboardLayout");
 	setUnsupportedFunc(inputImports, platfInputName, "updateCanvasSize");
 	setUnsupportedFunc(inputImports, platfInputName, "updatePlatformAndSleep");
+	setUnsupportedFunc(inputImports, platfInputName, "tcGpuFrameUs");
+	setUnsupportedFunc(inputImports, platfInputName, "tcGpuMark");
+	setUnsupportedFunc(inputImports, platfInputName, "tcGpuTakePart");
+	setUnsupportedFunc(inputImports, platfInputName, "tcGpuTakeFrames");
 	setUnsupportedFunc(inputImports, platfInputName, "isVSyncSupported");
 	setUnsupportedFunc(inputImports, platfInputName, "mouseSetGrabbed");
 	setUnsupportedFunc(inputImports, platfInputName, "isMouseGrabSupported");

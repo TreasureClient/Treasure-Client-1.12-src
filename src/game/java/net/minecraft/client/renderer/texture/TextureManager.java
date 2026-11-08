@@ -41,8 +41,13 @@ public class TextureManager implements ITickable, IResourceManagerReloadListener
 		} else {
 			Object object = (ITextureObject) this.mapTextureObjects.get(resource);
 			if (object == null) {
+				long tcT = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); // Treasure Client (.lag)
 				object = new SimpleTexture(resource);
 				this.loadTexture(resource, (ITextureObject) object);
+				if (net.minecraft.client.Minecraft.getMinecraft().world != null) {
+					net.minecraft.client.TCLagMonitor.addTextureLoad(resource.getResourcePath(),
+							net.lax1dude.eaglercraft.EagRuntime.nanoTime() - tcT);
+				}
 			}
 
 			resource.cachedPointer = object;
