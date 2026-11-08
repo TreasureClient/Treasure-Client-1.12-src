@@ -1875,4 +1875,15 @@ public class PlatformInput {
 	public static int tcGpuFrameUs() {
 		return -1;
 	}
+
+	public static void tcGpuMark(int part) {
+	}
+
+	public static int tcGpuTakePart(int part) {
+		return 0;
+	}
+
+	public static int tcGpuTakeFrames() {
+		return -1;
+	}
 }

@@ -170,7 +170,9 @@ public class FontRenderer implements IResourceManagerReloadListener {
 					|| !this.locationFontTexture.getResourcePath().endsWith("ascii.png")) {
 				return;
 			}
-			int[] pages = { 0x20, 0x21, 0x22, 0x23, 0x25, 0x26, 0x27 };
+			// + small-caps letters (ᴅᴜᴇʟꜱ), which many servers write their scoreboards and tab lists in:
+			// pages 01 (ǫ), 02 (ʙ ɢ ʜ ɪ ʟ ɴ ʀ ʏ), 1D (ᴀ ᴄ ᴅ ᴇ ...), A7 (ꜰ ꜱ)
+			int[] pages = { 0x20, 0x21, 0x22, 0x23, 0x25, 0x26, 0x27, 0x01, 0x02, 0x1D, 0xA7 };
 			for (int i = 0; i < pages.length; i++) {
 				ResourceLocation loc = this.getUnicodePageLocation(pages[i]);
 				if (this.renderEngine.getTexture(loc) == null) {
