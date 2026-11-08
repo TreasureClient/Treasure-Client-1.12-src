@@ -468,6 +468,9 @@ public class GuiVideoSettings extends GuiScreen {
 				"Skips the sides of chunks that face away from you.", "Medium"));
 		g.add(new VsBool("vsChunkEnt", true, "celeritas", "Hide Entities in Hidden Chunks",
 				"Skips mobs and players inside chunks you can't see.", "Medium"));
+		g.add(new VsBool("vsMultiDraw", true, "celeritas", "Terrain Multi-Draw",
+				"Sends the visible chunks to the graphics chip in a few big batches instead of one by one. Turn it off only if terrain flickers or goes missing.",
+				"High"));
 		g.add(new VanillaOpt(GameSettings.Options.CHUNK_UPDATES,
 				"How many chunks are rebuilt per frame when Celeritas isn't running. Lower is smoother, higher loads changes faster.",
 				"Medium"));
@@ -525,6 +528,10 @@ public class GuiVideoSettings extends GuiScreen {
 		g.add(new VsBool("vsPacer", true, "dynfps", "Frame Pacing",
 				"When frames start missing the screen refresh, the work that can wait (loading chunks, packets) gets less time per frame until they don't, so a weak or slowed-down computer holds a steady frame rate. Strong computers never need it.",
 				"High"));
+		g.add(new VsCycle("vsSteady", "0", new String[] { "0", "-1", "45", "40", "30" },
+				new String[] { "Off", "Auto", "45", "40", "30" }, "dynfps", "Steady FPS",
+				"Holds a frame rate your screen can show evenly, so motion stays smooth instead of jumping between 44 and 60 fps. Auto picks the highest rate your computer keeps up with. Works with VSync on. It also makes a fanless laptop heat up slower.",
+				"Medium"));
 		g.add(new VsSlider("vsBgFps", 10, 1, 60, 1, " FPS", "dynfps", "Background FPS",
 				"The frame rate while another window is focused. Lower keeps your device cooler.", "Varies"));
 		g.add(new Header("FPS Reducer", "vsFpsReducer"));

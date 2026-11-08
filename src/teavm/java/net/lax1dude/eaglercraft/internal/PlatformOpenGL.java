@@ -618,6 +618,15 @@ public class PlatformOpenGL {
 		//checkErr("_wglDrawArraysInstanced(" + mode + ", " + first + ", " + count + ", " + instanced + ");");
 	}
 	
+	/** Treasure Client: WEBGL_multi_draw is only used by the WebAssembly build. */
+	public static boolean tcMultiDrawSupported() {
+		return false;
+	}
+
+	public static void _wglTCMultiDrawElements(int mode, int pCounts, int type, int pOffsets, int drawcount) {
+		throw new UnsupportedOperationException("multi-draw");
+	}
+
 	public static final void _wglDrawElements(int mode, int count, int type, int offset) {
 		ctx.drawElements(mode, count, type, offset);
 		//checkErr("_wglDrawElements(" + mode + ", " + count + ", " + type + ", " + offset + ");");

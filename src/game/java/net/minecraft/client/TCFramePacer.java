@@ -73,7 +73,10 @@ public final class TCFramePacer {
 			winFrames = winMissed = 0;
 		}
 		++winFrames;
-		if (frameMs >= MISSED_MS) {
+		// with Steady FPS a frame owns several refreshes; it only missed when it overran its slot
+		int steady = TCSteadyFps.target();
+		long missedMs = steady > 0 ? 1000L / steady + 3L : MISSED_MS;
+		if (frameMs >= missedMs) {
 			++winMissed;
 		}
 		if (now - winStart < WINDOW_MS) {

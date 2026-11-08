@@ -1081,7 +1081,8 @@ public class Minecraft implements IThreadListener {
 		} else if (!this.gameSettings.enableVsync && this.isFramerateLimitBelowMax()) {
 			Display.update(this.getLimitFramerate());
 		} else {
-			Display.update(0);
+			// Treasure Client: Steady FPS hands its rate to the VSync wait (0 = every refresh)
+			Display.update(this.world != null ? TCSteadyFps.target() : 0);
 		}
 		this.checkWindowResize();
 	}

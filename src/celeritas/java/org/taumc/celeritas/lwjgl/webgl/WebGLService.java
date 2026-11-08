@@ -629,6 +629,32 @@ public final class WebGLService implements LWJGLService {
     @Override
     public void glMultiDrawElementsBaseVertex(int mode, long pCount, int type, long pIndices, int drawcount, long pBaseVertex) {
         int ptrSize = TCNativeMemory.pointerSize();
+        if (drawcount > 1 && ptrSize == 4 && EaglercraftGPU.tcMultiDrawOn && tcMultiDrawSupported()) {
+            // Treasure Client: commands that share a base vertex (after folding, usually all of a
+            // region's) go to the browser as ONE multi-draw instead of one call each
+            int i = 0;
+            while (i < drawcount) {
+                int baseVertex = TCNativeMemory.getInt(pBaseVertex + ((long) i << 2));
+                int j = i + 1;
+                while (j < drawcount && TCNativeMemory.getInt(pBaseVertex + ((long) j << 2)) == baseVertex) {
+                    ++j;
+                }
+                applyBaseVertex(baseVertex);
+                ++EaglercraftGPU.tcDraws;
+                ++EaglercraftGPU.tcTerrainDraws;
+                if (j - i == 1) {
+                    _wglDrawElements(mode, TCNativeMemory.getInt(pCount + ((long) i << 2)), type,
+                            TCNativeMemory.getInt(pIndices + ((long) i << 2)));
+                } else {
+                    ++EaglercraftGPU.tcMultiDraws;
+                    EaglercraftGPU.tcMultiParts += j - i;
+                    _wglTCMultiDrawElements(mode, (int) (pCount + ((long) i << 2)), type,
+                            (int) (pIndices + ((long) i << 2)), j - i);
+                }
+                i = j;
+            }
+            return;
+        }
         for (int i = 0; i < drawcount; ++i) {
             int count = TCNativeMemory.getInt(pCount + ((long) i << 2));
             if (count == 0) {
@@ -638,6 +664,7 @@ public final class WebGLService implements LWJGLService {
                     : (TCNativeMemory.getInt(pIndices + ((long) i << 2)) & 0xFFFFFFFFL);
             applyBaseVertex(TCNativeMemory.getInt(pBaseVertex + ((long) i << 2)));
             ++EaglercraftGPU.tcDraws;
+            ++EaglercraftGPU.tcTerrainDraws;
             _wglDrawElements(mode, count, type, (int) indices);
         }
     }

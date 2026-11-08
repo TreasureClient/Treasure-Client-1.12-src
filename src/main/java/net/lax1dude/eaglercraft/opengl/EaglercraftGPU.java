@@ -592,6 +592,10 @@ public class EaglercraftGPU {
 
 	/** Treasure Client (.lag): draw calls and terrain vertex-layout changes sent to WebGL. */
 	public static int tcDraws, tcAttribSets;
+	/** Treasure Client (.lag): terrain draw calls, how many of them were multi-draws, and the pieces those drew. */
+	public static int tcTerrainDraws, tcMultiDraws, tcMultiParts;
+	/** Treasure Client: Video Settings "Terrain Multi-Draw" (used when the browser supports WEBGL_multi_draw). */
+	public static boolean tcMultiDrawOn = true;
 
 	static IVertexArrayGL currentVertexArray = null;
 	

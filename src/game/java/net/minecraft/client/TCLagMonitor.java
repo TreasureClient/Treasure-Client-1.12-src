@@ -320,6 +320,41 @@ public class TCLagMonitor {
 	public static final int[] eCnt = new int[4];
 	private static final String[] E_NAMES = { "players", "armor stands", "mobs", "other" };
 
+	// players drawn, part by part (body, armor, armor shine, held item, cape/elytra, other layers)
+	private static final long[] pNs = new long[6];
+	public static long pRenders;
+	private static final String[] P_NAMES = { "body", "armor", "armor shine", "held item", "cape/elytra",
+			"other layers" };
+
+	public static void playerPart(int part, long startNs) {
+		pNs[part] += EagRuntime.nanoTime() - startNs;
+	}
+
+	/** "Each player: body 0.4, armor 1.2 (shine 0.6), ..." in ms per player drawn; null if none were. */
+	private static String playerParts() {
+		if (pRenders < 30L) {
+			return null;
+		}
+		StringBuilder sb = new StringBuilder("§7  each player drawn (");
+		sb.append(pRenders).append(" times): ");
+		for (int i = 0; i < pNs.length; i++) {
+			if (i == 2) continue;
+			if (i > 0) sb.append(", ");
+			sb.append(P_NAMES[i]).append(" §f").append(ms2(pNs[i] / pRenders)).append("§7");
+			if (i == 1) {
+				sb.append(" (shine §f").append(ms2(pNs[2] / pRenders)).append("§7)");
+			}
+		}
+		for (int i = 0; i < pNs.length; i++) pNs[i] = 0L;
+		pRenders = 0L;
+		return sb.append(" ms").toString();
+	}
+
+	private static String ms2(long ns) {
+		long v = ns / 10000L; // hundredths of a ms
+		return (v / 100L) + "." + (v % 100L < 10L ? "0" : "") + (v % 100L);
+	}
+
 	/** Adds one entity's drawing time (RenderGlobal.renderEntities). */
 	public static void addEntity(net.minecraft.entity.Entity e, long startNs) {
 		int k = e instanceof net.minecraft.entity.player.EntityPlayer ? 0
@@ -343,6 +378,9 @@ public class TCLagMonitor {
 		long[] a = mv[moving ? 1 : 0];
 		glDraws += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcDraws;
 		glAttribs += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcAttribSets;
+		glTerrain += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcTerrainDraws;
+		glMulti += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDraws;
+		glParts += net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiParts;
 		glUp += net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcUpBytes;
 		glFrames++;
 		long work = (logicNs + drawNs) / 1000L;
@@ -416,6 +454,8 @@ public class TCLagMonitor {
 					+ (a[MV_SLOW_GAME] * 100L / f) + "%, GPU " + (a[MV_SLOW_GPU] * 100L / f) + "%, browser/other "
 					+ (other * 100L / f) + "%)");
 		}
+		String pp = playerParts();
+		if (pp != null) say(mc, pp);
 		for (int i = 0; i < 2; i++) {
 			for (int k = 0; k < MV_N; k++) mv[i][k] = 0L;
 		}
@@ -568,6 +608,7 @@ public class TCLagMonitor {
 		}
 		addSecond(now, total, logicNs, drawNs);
 		TCFramePacer.frame(now, total);
+		TCSteadyFps.frame(now, total);
 		addMoving(tcMc, total, logicNs, drawNs);
 		clearParts();
 	}
@@ -847,7 +888,7 @@ public class TCLagMonitor {
 			}
 			say(mc, "§7Frame §f" + ms1(frameUs) + "ms §7(logic " + ms1(lUs) + ", draw " + ms1(dUs) + ", browser "
 					+ ms1(Math.max(0L, frameUs - lUs - dUs)) + ")" + sp);
-			say(mc, TCFramePacer.describe());
+			say(mc, TCFramePacer.describe() + " §7· " + TCSteadyFps.describe());
 			long[] all = new long[PARTS], lall = new long[LPARTS];
 			int bj = 0, sj = 0;
 			for (int m = from; m <= last; m++) {
@@ -998,20 +1039,27 @@ public class TCLagMonitor {
 	}
 
 	// WebGL work sent per frame: draw calls, terrain vertex-layout changes, bytes uploaded
-	private static long glDraws, glAttribs, glUp, glFrames;
+	private static long glDraws, glAttribs, glUp, glFrames, glTerrain, glMulti, glParts;
 
 	/** Called every frame (gameplay or not) so the counters cover exactly one frame. */
 	private static void resetGlCounters() {
 		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcDraws = 0;
 		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcAttribSets = 0;
+		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcTerrainDraws = 0;
+		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDraws = 0;
+		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiParts = 0;
 		net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcUpBytes = 0;
 	}
 
 	private static String glLine() {
 		if (glFrames < 30L) return null;
-		String r = "§7WebGL per frame: §f" + (glDraws / glFrames) + "§7 draw calls, §f" + (glAttribs / glFrames)
-				+ "§7 terrain layout changes, §f" + (glUp / glFrames / 1024L) + " KB§7 uploaded";
-		glDraws = glAttribs = glUp = glFrames = 0L;
+		String md = !net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcMultiDrawSupported() ? "not supported"
+				: !net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDrawOn ? "off"
+						: (glMulti / glFrames) + " drawing " + (glParts / glFrames) + " pieces";
+		String r = "§7WebGL per frame: §f" + (glDraws / glFrames) + "§7 draw calls (terrain §f" + (glTerrain / glFrames)
+				+ "§7; multi-draw " + md + "), §f" + (glAttribs / glFrames) + "§7 terrain layout changes, §f"
+				+ (glUp / glFrames / 1024L) + " KB§7 uploaded";
+		glDraws = glAttribs = glUp = glFrames = glTerrain = glMulti = glParts = 0L;
 		return r;
 	}
 
@@ -1159,7 +1207,9 @@ public class TCLagMonitor {
 			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
 			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
 					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
-			say(mc, TCFramePacer.describe());
+			say(mc, TCFramePacer.describe() + " §7· " + TCSteadyFps.describe());
+			String gl = glLine();
+			if (gl != null) say(mc, gl);
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "

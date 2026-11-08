@@ -825,6 +825,29 @@ public class PlatformInput {
 	private static double syncTimer = 0.0;
 	private static double tcFrameStartMs = 0.0;
 	private static boolean tcSkipped = false;
+	private static double tcSteadyLast = 0.0;
+
+	/**
+	 * Treasure Client: Steady FPS. Waits for screen refreshes until this frame's slot comes up
+	 * (slots are 1000/fps ms apart), so 30 = every 2nd refresh, 40 = 2,1,2,1 and 45 = 2,1,1.
+	 */
+	private static void tcSteadyWait(double period) {
+		for(;;) {
+			asyncRequestAnimationFrame();
+			double now = PlatformRuntime.steadyTimeMillisTeaVM();
+			if(tcSteadyLast == 0.0 || now - tcSteadyLast > period * 3.0) {
+				tcSteadyLast = now; // first frame, or far behind: start the pattern again
+				return;
+			}
+			if(now - tcSteadyLast >= period - 4.0) {
+				tcSteadyLast += period;
+				if(now - tcSteadyLast > period) {
+					tcSteadyLast = now; // a slow frame: don't try to catch up
+				}
+				return;
+			}
+		}
+	}
 
 	public static void update(int fpsLimit) {
 		double r = getDevicePixelRatio(win);
@@ -886,10 +909,16 @@ public class PlatformInput {
 				// Only once in a row, though: always skipping let frames pile up in the browser
 				// once the game fell behind, and the browser's own work then slowed the game down
 				// more (the lag that built up mid-game and went away on rejoin).
-				if(!tcSkipped && tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0) {
+				if(fpsLimit > 0 && fpsLimit < 60) {
+					// Treasure Client: Steady FPS, frames on an even pattern of screen refreshes
+					tcSkipped = false;
+					tcSteadyWait(1000.0 / fpsLimit);
+				}else if(!tcSkipped && tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0) {
+					tcSteadyLast = 0.0;
 					tcSkipped = true;
 					PlatformRuntime.swapDelayTeaVM();
 				}else {
+					tcSteadyLast = 0.0;
 					tcSkipped = false;
 					asyncRequestAnimationFrame();
 				}
