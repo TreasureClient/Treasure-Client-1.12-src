@@ -169,9 +169,11 @@ public class WebSocketNetworkManager extends NetworkManager {
 	public static long tcBaseBudgetNs = 4000000L;
 
 	private static long tcBudgetNs(int backlog) {
-		if (backlog < 200) return tcBaseBudgetNs;
-		if (backlog < 1000) return tcBaseBudgetNs * 2L;
-		return tcBaseBudgetNs * 4L;
+		// Treasure Client: Frame Pacing gives packets less time while frames are missing the refresh
+		long base = net.minecraft.client.TCFramePacer.packetBudgetNs(tcBaseBudgetNs);
+		if (backlog < 200) return base;
+		if (backlog < 1000) return base * 2L;
+		return base * 4L;
 	}
 
 	/** True while packets are waiting for a later frame. */

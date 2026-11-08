@@ -290,8 +290,6 @@ public class TCLagMonitor {
 
 	/** When this frame's game work started (EagRuntime.nanoTime), set by Minecraft.runGameLoop. */
 	public static long frameStartNs;
-	/** Game work this frame should stay under, leaving room for the browser and GPU. */
-	private static final long FRAME_TARGET_NS = 12500000L;
 	/** Drawing done after the chunk builder runs (the rest of the frame), smoothed. */
 	private static long restEmaNs = 6000000L;
 	private static long builderAtNs = -1L;
@@ -309,7 +307,7 @@ public class TCLagMonitor {
 		if (builderAtNs < 0L) {
 			builderAtNs = at;
 		}
-		return FRAME_TARGET_NS - at - restEmaNs;
+		return TCFramePacer.workTargetNs() - at - restEmaNs;
 	}
 
 	// ---- moving vs standing still, and why frames miss the screen refresh ----------
@@ -569,6 +567,7 @@ public class TCLagMonitor {
 			if (ringCount < RING) ringCount++;
 		}
 		addSecond(now, total, logicNs, drawNs);
+		TCFramePacer.frame(now, total);
 		addMoving(tcMc, total, logicNs, drawNs);
 		clearParts();
 	}
@@ -831,6 +830,7 @@ public class TCLagMonitor {
 			}
 			say(mc, "§7Frame §f" + ms1(frameUs) + "ms §7(logic " + ms1(lUs) + ", draw " + ms1(dUs) + ", browser "
 					+ ms1(Math.max(0L, frameUs - lUs - dUs)) + ")" + sp);
+			say(mc, TCFramePacer.describe());
 			long[] all = new long[PARTS], lall = new long[LPARTS];
 			int bj = 0, sj = 0;
 			for (int m = from; m <= last; m++) {
@@ -882,7 +882,8 @@ public class TCLagMonitor {
 	// ---- things that can pile up while you stay on a server (rejoining clears them) ----
 	private static final String[] GROW_NAMES = { "entities", "block ents", "ticking blocks", "chunks",
 			"score names", "teams", "tab players", "skins", "textures", "terrain sections", "terrain buffers",
-			"particles" };
+			"particles", "GL buffers", "GL textures", "GL vertex arrays", "framebuffers", "renderbuffers",
+			"GL queries" };
 	private static Object growConn;
 	private static long growConnMs;
 	private static int[] growStart;
@@ -921,6 +922,7 @@ public class TCLagMonitor {
 		try { v[9] = org.taumc.celeritas.impl.TreasureCeleritas.getRenderer().getRenderSectionManager().getTotalSections(); } catch (Throwable t) { }
 		try { v[10] = org.taumc.celeritas.lwjgl.webgl.WebGLService.tcLiveBuffers; } catch (Throwable t) { }
 		try { v[11] = Integer.parseInt(mc.effectRenderer.getStatistics().trim()); } catch (Throwable t) { }
+		for (int k = 0; k < 6; k++) v[12 + k] = net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcGL[k];
 		return v;
 	}
 
@@ -1140,6 +1142,7 @@ public class TCLagMonitor {
 			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
 			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
 					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
+			say(mc, TCFramePacer.describe());
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "

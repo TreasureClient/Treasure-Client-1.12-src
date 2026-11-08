@@ -522,6 +522,9 @@ public class GuiVideoSettings extends GuiScreen {
 				"How long each frame can spend on packets from the server (more when they pile up). Lower is smoother, higher loads chunks faster.",
 				"Medium"));
 		g.add(new Header("Dynamic FPS", "dynfps"));
+		g.add(new VsBool("vsPacer", true, "dynfps", "Frame Pacing",
+				"When frames start missing the screen refresh, the work that can wait (loading chunks, packets) gets less time per frame until they don't, so a weak or slowed-down computer holds a steady frame rate. Strong computers never need it.",
+				"High"));
 		g.add(new VsSlider("vsBgFps", 10, 1, 60, 1, " FPS", "dynfps", "Background FPS",
 				"The frame rate while another window is focused. Lower keeps your device cooler.", "Varies"));
 		g.add(new Header("FPS Reducer", "vsFpsReducer"));

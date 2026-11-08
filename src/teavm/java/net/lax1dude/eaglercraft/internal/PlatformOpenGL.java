@@ -37,6 +37,9 @@ import net.lax1dude.eaglercraft.opengl.EaglercraftGPU;
  */
 public class PlatformOpenGL {
 
+	/** Treasure Client: live GL objects for .lag (buffers, textures, VAOs, framebuffers, renderbuffers, queries). */
+	public static final int[] tcGL = new int[6];
+
 	/** Treasure Client (.lag): bytes of vertex/index data sent to the GPU. */
 	public static int tcUpBytes;
 
@@ -275,14 +278,17 @@ public class PlatformOpenGL {
 	}
 	
 	public static final IBufferGL _wglGenBuffers() {
+		++tcGL[0];
 		return new OpenGLObjects.BufferGL(ctx.createBuffer());
 	}
 	
 	public static final ITextureGL _wglGenTextures() {
+		++tcGL[1];
 		return new OpenGLObjects.TextureGL(ctx.createTexture());
 	}
 	
 	public static final IVertexArrayGL _wglGenVertexArrays() {
+		++tcGL[2];
 		switch(vertexArrayImpl) {
 		case VAO_IMPL_CORE:
 			return new OpenGLObjects.VertexArrayGL(ctx.createVertexArray());
@@ -302,26 +308,32 @@ public class PlatformOpenGL {
 	}
 	
 	public static final IFramebufferGL _wglCreateFramebuffer() {
+		++tcGL[3];
 		return new OpenGLObjects.FramebufferGL(ctx.createFramebuffer());
 	}
 	
 	public static final IRenderbufferGL _wglCreateRenderbuffer() {
+		++tcGL[4];
 		return new OpenGLObjects.RenderbufferGL(ctx.createRenderbuffer());
 	}
 	
 	public static final IQueryGL _wglGenQueries() {
+		++tcGL[5];
 		return new OpenGLObjects.QueryGL(ctx.createQuery());
 	}
 	
 	public static final void _wglDeleteBuffers(IBufferGL obj) {
+		--tcGL[0];
 		ctx.deleteBuffer(((OpenGLObjects.BufferGL)obj).ptr);
 	}
 	
 	public static final void _wglDeleteTextures(ITextureGL obj) {
+		--tcGL[1];
 		ctx.deleteTexture(((OpenGLObjects.TextureGL)obj).ptr);
 	}
 	
 	public static final void _wglDeleteVertexArrays(IVertexArrayGL obj) {
+		--tcGL[2];
 		WebGLVertexArray ptr = ((OpenGLObjects.VertexArrayGL)obj).ptr;
 		switch(vertexArrayImpl) {
 		case VAO_IMPL_CORE:
@@ -344,14 +356,17 @@ public class PlatformOpenGL {
 	}
 	
 	public static final void _wglDeleteFramebuffer(IFramebufferGL obj) {
+		--tcGL[3];
 		ctx.deleteFramebuffer(((OpenGLObjects.FramebufferGL)obj).ptr);
 	}
 	
 	public static final void _wglDeleteRenderbuffer(IRenderbufferGL obj) {
+		--tcGL[4];
 		ctx.deleteRenderbuffer(((OpenGLObjects.RenderbufferGL)obj).ptr);
 	}
 	
 	public static final void _wglDeleteQueries(IQueryGL obj) {
+		--tcGL[5];
 		ctx.deleteQuery(((OpenGLObjects.QueryGL)obj).ptr);
 	}
 	
