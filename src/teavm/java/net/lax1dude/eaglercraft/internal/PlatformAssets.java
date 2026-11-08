@@ -118,10 +118,16 @@ public class PlatformAssets {
 	@JSBody(params = { "ctx" }, script = "ctx.imageSmoothingEnabled = false;")
 	private static native void disableImageSmoothing(CanvasRenderingContext2D ctx);
 	
-	@Async
-	public static native ImageData loadImageFile(byte[] data, String mime);
+	public static ImageData loadImageFile(byte[] data, String mime) {
+		// Treasure Client: small PNGs are decoded right here, without waiting for the browser
+		ImageData fast = net.lax1dude.eaglercraft.opengl.TCPngDecoder.decode(data, mime);
+		return fast != null ? fast : loadImageFileAsync(data, mime);
+	}
 	
-	private static void loadImageFile(byte[] data, String mime, final AsyncCallback<ImageData> ret) {
+	@Async
+	private static native ImageData loadImageFileAsync(byte[] data, String mime);
+	
+	private static void loadImageFileAsync(byte[] data, String mime, final AsyncCallback<ImageData> ret) {
 		final Document doc = Window.current().getDocument();
 		final HTMLImageElement toLoad = (HTMLImageElement) doc.createElement("img");
 		final TeaVMBlobURLHandle[] src = new TeaVMBlobURLHandle[1];

@@ -140,14 +140,38 @@ public final class ViaItemRemap {
 			at = 3;
 			String lower = clean(disp);
 			at = 4;
-			String[] names = candidates(st, lower);
-			at = 5;
-			if (names != null) {
-				for (int i = 0; i < names.length; i++) {
-					ItemStack r = swap(st, names[i]);
-					if (r != null) {
-						return r;
+			// Treasure Client: server menus resend the same named items over and over, and the
+			// name matching below compares against every modern item name. The answer only
+			// depends on the item and its name, so it is remembered ("" = nothing matched).
+			String ck = Item.getIdFromItem(st.getItem()) + "|" + lower;
+			String known = nameCache.get(ck);
+			if (known == null) {
+				String[] names = candidates(st, lower);
+				at = 5;
+				String hit = "";
+				ItemStack found = null;
+				if (names != null) {
+					for (int i = 0; i < names.length; i++) {
+						ItemStack r = swap(st, names[i]);
+						if (r != null) {
+							hit = names[i];
+							found = r;
+							break;
+						}
 					}
+				}
+				if (nameCache.size() >= 2048) {
+					nameCache.clear();
+				}
+				nameCache.put(ck, hit);
+				if (found != null) {
+					return found;
+				}
+			} else if (known.length() > 0) {
+				at = 5;
+				ItemStack r = swap(st, known);
+				if (r != null) {
+					return r;
 				}
 			}
 			// 6) The name didn't help but ViaBackwards labelled it ("1.20.5 ..."): use the
@@ -164,6 +188,9 @@ public final class ViaItemRemap {
 		}
 		return st;
 	}
+
+	/** Item id + cleaned name -> the registry name it matched, or "" when none did. */
+	private static final java.util.HashMap<String, String> nameCache = new java.util.HashMap<String, String>();
 
 	/** Last error inside remap (shown by the dump command), or null. */
 	public static String lastError;
