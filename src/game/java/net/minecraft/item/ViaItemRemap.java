@@ -127,10 +127,15 @@ public final class ViaItemRemap {
 					return r;
 				}
 			}
-			if (backup == null && lastScanSawBackup) {
-				// ViaBackwards saved what this item really was, and it's not a modern item we
-				// draw (a renamed diamond sword, say): never guess it from its name
-				return st;
+			if (backup == null && lastScanSawBackup && st.hasDisplayName()) {
+				// ViaBackwards saved what this item really was and it isn't one of our modern items.
+				// Its own label ("1.16 Stone Brick Wall": modern blocks aren't in the item table)
+				// still counts; a name without that label is a player's rename ("Mace Killer" on a
+				// diamond sword) and must not turn the item into something else.
+				String lbl = clean(st.getDisplayName());
+				if (stripVersion(lbl) == lbl) {
+					return st;
+				}
 			}
 			// Down-mapped modern items always carry a custom name ("1.20.5 Mace"); plain
 			// items don't, so they skip the name matching (keeps equipment packets cheap).

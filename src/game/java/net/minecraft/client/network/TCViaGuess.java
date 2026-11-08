@@ -111,6 +111,28 @@ public final class TCViaGuess {
 		}
 	}
 
+	/** Following the spike up and down through more wall look-alikes, one end is a dripstone block. */
+	private static boolean onDripstone(Chunk c, World w, int x, int y, int z) {
+		for (int dir = -1; dir <= 1; dir += 2) {
+			int yy = y + dir;
+			for (int n = 0; n < 16; n++, yy += dir) {
+				IBlockState s = at(c, w, x, yy, z);
+				if (s == null) {
+					break;
+				}
+				int id = Block.getIdFromBlock(s.getBlock());
+				if (id == COBBLE_WALL || (pointedDripId > 0 && id == pointedDripId)) {
+					continue; // more of the same spike
+				}
+				if ((id == STONE && meta(s) == 1) || (dripstoneId > 0 && id == dripstoneId)) {
+					return true;
+				}
+				break;
+			}
+		}
+		return false;
+	}
+
 	/** Light from torches and other lamps at a spot (0 when unknown). */
 	private static int blockLight(Chunk c, World w, int x, int y, int z) {
 		if (y < 0 || y > 255) {
@@ -200,7 +222,7 @@ public final class TCViaGuess {
 			cornflower, lily, openEye, closedEye, caveVines, hangingRoots, propagule, paleMoss, pinkPetals, dripstone,
 			pointedDrip, budSmall, budMedium, budLarge, cluster, crimsonRoots, warpedRoots, sprouts, crimsonFungus,
 			warpedFungus, weeping, twisting;
-	private static int pointedDripId, crimsonNyliumId, warpedNyliumId, mossId;
+	private static int pointedDripId, crimsonNyliumId, warpedNyliumId, mossId, dripstoneId;
 
 	private static IBlockState get(String name) {
 		Block b = Block.getBlockFromName(name);
@@ -293,6 +315,7 @@ public final class TCViaGuess {
 			calciteId = idOf(calcite);
 			smoothBasaltId = idOf(smoothBasalt);
 			mossId = idOf(moss);
+			dripstoneId = idOf(dripstone);
 		} catch (Throwable t) {
 			failed = true;
 		}
@@ -936,11 +959,14 @@ public final class TCViaGuess {
 			return null;
 		}
 		case COBBLE_WALL:
-			// dripstone caves are dark; a wall near torches is someone's build
-			return underground(c, w, x, y, z) && blockLight(c, w, x, y, z) < 8 ? pointedDrip : null;
+			// every modern wall (stone brick, deepslate, mud brick...) arrives as a cobblestone wall,
+			// so only call it pointed dripstone when it grows like dripstone: a spike hanging from
+			// or standing on a dripstone block (which arrives as granite)
+			return underground(c, w, x, y, z) && onDripstone(c, w, x, y, z) ? pointedDrip : null;
 		case STONE:
-			if (meta(st) == 1 && y < UNDER_MAX_Y && countAround(c, w, x, y, z, DRIP_LIKE) >= 1
-					&& blockLight(c, w, x, y, z) < 8) {
+			// spikes hang below or stand on top of it (a wall beside granite is a build)
+			if (meta(st) == 1 && y < UNDER_MAX_Y && ((kindOf(at(c, w, x, y + 1, z)) & DRIP_LIKE) != 0
+					|| (kindOf(at(c, w, x, y - 1, z)) & DRIP_LIKE) != 0)) {
 				return dripstone; // granite holding pointed dripstone
 			}
 			return null;
