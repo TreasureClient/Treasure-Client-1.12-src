@@ -127,11 +127,20 @@ public class BlockStateContainer implements IBlockStatePaletteResizer {
 	 * palette id is marked in want; returns how many. Reads the packed ids directly.
 	 */
 	public int tcFind(boolean[] want, int[] out) {
+		// reads the packed longs in one pass instead of decoding each index on its own
 		int n = 0;
-		BitArray st = this.storage;
+		long[] arr = this.storage.getBackingLongArray();
+		int bits = this.storage.tcBits();
+		long mask = (1L << bits) - 1L;
 		int len = want.length;
-		for (int i = 0; i < 4096; ++i) {
-			int id = st.getAt(i);
+		int bit = 0;
+		for (int i = 0; i < 4096; ++i, bit += bits) {
+			int w = bit >>> 6, off = bit & 63;
+			long v = arr[w] >>> off;
+			if (off + bits > 64) {
+				v |= arr[w + 1] << (64 - off);
+			}
+			int id = (int) (v & mask);
 			if (id < len && want[id]) {
 				out[n++] = i;
 			}

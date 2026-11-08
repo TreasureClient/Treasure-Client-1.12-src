@@ -35,12 +35,18 @@ public class BitArray {
 	 * Sets the entry at the given location to the given value
 	 */
 	public void setAt(int index, int value) {
-		Validate.inclusiveBetween(0L, (long) (this.arraySize - 1), (long) index);
-		Validate.inclusiveBetween(0L, this.maxEntryValue, (long) value);
+		// Treasure Client: plain checks and shifts instead of Validate calls and divisions
+		// (this runs for every block read and written: chunk loading, building, physics)
+		if (index < 0 || index >= this.arraySize) {
+			throw new IllegalArgumentException("BitArray index " + index + " out of range");
+		}
+		if (value < 0 || (long) value > this.maxEntryValue) {
+			throw new IllegalArgumentException("BitArray value " + value + " out of range");
+		}
 		int i = index * this.bitsPerEntry;
-		int j = i / 64;
-		int k = ((index + 1) * this.bitsPerEntry - 1) / 64;
-		int l = i % 64;
+		int j = i >>> 6;
+		int k = ((index + 1) * this.bitsPerEntry - 1) >>> 6;
+		int l = i & 63;
 		this.longArray[j] = this.longArray[j] & ~(this.maxEntryValue << l) | ((long) value & this.maxEntryValue) << l;
 
 		if (j != k) {
@@ -54,18 +60,23 @@ public class BitArray {
 	 * Gets the entry at the given index
 	 */
 	public int getAt(int index) {
-		Validate.inclusiveBetween(0L, (long) (this.arraySize - 1), (long) index);
+		if (index < 0 || index >= this.arraySize) {
+			throw new IllegalArgumentException("BitArray index " + index + " out of range");
+		}
 		int i = index * this.bitsPerEntry;
-		int j = i / 64;
-		int k = ((index + 1) * this.bitsPerEntry - 1) / 64;
-		int l = i % 64;
+		int j = i >>> 6;
+		int l = i & 63;
 
-		if (j == k) {
+		if (l + this.bitsPerEntry <= 64) {
 			return (int) (this.longArray[j] >>> l & this.maxEntryValue);
 		} else {
-			int i1 = 64 - l;
-			return (int) ((this.longArray[j] >>> l | this.longArray[k] << i1) & this.maxEntryValue);
+			return (int) ((this.longArray[j] >>> l | this.longArray[j + 1] << (64 - l)) & this.maxEntryValue);
 		}
+	}
+
+	/** Treasure Client: bits per entry (for fast whole-array scans). */
+	public int tcBits() {
+		return this.bitsPerEntry;
 	}
 
 	/**

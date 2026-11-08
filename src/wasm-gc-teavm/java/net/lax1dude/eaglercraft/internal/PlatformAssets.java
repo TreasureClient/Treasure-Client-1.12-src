@@ -166,6 +166,11 @@ public class PlatformAssets {
 	}
 
 	public static ImageData loadImageFile(byte[] data, String mime) {
+		// Treasure Client: small PNGs are decoded right here, without waiting for the browser
+		ImageData fast = net.lax1dude.eaglercraft.opengl.TCPngDecoder.decode(data, mime);
+		if (fast != null) {
+			return fast;
+		}
 		JSImageLoadResult asyncResult;
 		MemoryStack.push();
 		try {
