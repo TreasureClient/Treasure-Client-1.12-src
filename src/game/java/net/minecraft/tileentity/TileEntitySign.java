@@ -83,6 +83,11 @@ public class TileEntitySign extends TileEntity {
 
 		for (int i = 0; i < 4; ++i) {
 			String s = compound.getString("Text" + (i + 1));
+			// Treasure Client: empty lines skip the JSON parser (lobbies send chunks full of signs)
+			if (s.isEmpty() || s.equals("\"\"") || s.equals("{\"text\":\"\"}")) {
+				this.signText[i] = new net.minecraft.util.text.TextComponentString("");
+				continue;
+			}
 			ITextComponent itextcomponent = ITextComponent.Serializer.jsonToComponent(s);
 
 			try {

@@ -630,6 +630,17 @@ public class TCLagMonitor {
 	private static long ckWorstTotal;
 	private static int ckCount;
 
+	private static String beSlowName;
+	private static long beSlowNs;
+
+	/** One block entity read from a map chunk (finds which kind is slow to load). */
+	public static void blockEntityLoad(Object te, long ns) {
+		if (te != null && ns > beSlowNs) {
+			beSlowNs = ns;
+			beSlowName = te.getClass().getSimpleName();
+		}
+	}
+
 	/** One chunk packet handled; steps in ns. */
 	public static void chunkLoad(long[] steps) {
 		long t = 0L;
@@ -666,6 +677,9 @@ public class TCLagMonitor {
 			skipThisFrame(); // joining a server waits for the server's answer: not the game lagging
 			return;
 		}
+		if (skipFrame) {
+			return; // a screenshot or the .lag report: not the menu being slow
+		}
 		long ns = now() - startNs;
 		if (ns > scrSlowNs && ns > 20000000L) {
 			scrSlowNs = ns;
@@ -689,6 +703,9 @@ public class TCLagMonitor {
 			say(mc, "§7Map chunks loaded: §f" + ckCount + "§7, average §f" + ms1(sumOf(ckSum) / 1000L / ckCount)
 					+ "ms §7(" + ckParts(ckSum, ckCount) + ") · slowest §f" + ms1(ckWorstTotal / 1000L) + "ms §7("
 					+ ckParts(ckWorst, 1L) + ")");
+			if (beSlowName != null) {
+				say(mc, "§7  slowest block entity to load: §f" + beSlowName + " " + ms1(beSlowNs / 1000L) + "ms");
+			}
 		}
 		if (!pktTypes.isEmpty()) {
 			say(mc, "§7Slowest packets: " + slowestPackets(true) + " §7· overall: " + slowestPackets(false));

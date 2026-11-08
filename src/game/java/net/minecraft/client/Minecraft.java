@@ -2462,6 +2462,7 @@ public class Minecraft implements IThreadListener {
 				if (Keyboard.getEventKeyState()) {
 					if (i == this.gameSettings.keyBindScreenshot.getKeyCode()) {
 						this.ingameGUI.getChatGUI().printChatMessage(ScreenShotHelper.saveScreenshot());
+						TCLagMonitor.skipThisFrame(); // saving a screenshot is slow, but it isn't game lag
 					} else if (i == 48 && GuiScreen.isCtrlKeyDown() && (this.currentScreen == null
 							|| this.currentScreen != null && !this.currentScreen.func_193976_p())) {
 						// this.gameSettings.setOptionValue(GameSettings.Options.NARRATOR, 1);
