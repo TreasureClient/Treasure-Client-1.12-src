@@ -570,6 +570,26 @@ public class PlatformOpenGL {
 	@Import(module = "platformOpenGL", name = "glDrawElements")
 	public static native void _wglDrawElements(int mode, int count, int type, int offset);
 
+	@Import(module = "platformOpenGL", name = "tcHasMultiDraw")
+	private static native int tcHasMultiDraw0();
+
+	private static int tcMultiDraw = -1;
+
+	/** Treasure Client: the browser has WEBGL_multi_draw (many draws in one call). */
+	public static boolean tcMultiDrawSupported() {
+		if (tcMultiDraw < 0) {
+			tcMultiDraw = tcHasMultiDraw0() != 0 ? 1 : 0;
+		}
+		return tcMultiDraw == 1;
+	}
+
+	/**
+	 * Treasure Client: draws {@code drawcount} index ranges in one call. pCounts and pOffsets are
+	 * addresses of int arrays in WebAssembly memory (element counts, byte offsets).
+	 */
+	@Import(module = "platformOpenGL", name = "tcMultiDrawElements")
+	public static native void _wglTCMultiDrawElements(int mode, int pCounts, int type, int pOffsets, int drawcount);
+
 	@Import(module = "platformOpenGL", name = "glDrawArraysInstanced")
 	public static native void _wglDrawArraysInstanced(int mode, int first, int count, int instanced);
 

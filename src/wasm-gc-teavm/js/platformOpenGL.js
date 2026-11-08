@@ -148,6 +148,14 @@ function setCurrentGLContext(ctx, glesVersIn, allowExts, glImports) {
 	glImports["glGetProgramInfoLog"] = ctx.getProgramInfoLog.bind(ctx);
 	glImports["glDrawArrays"] = ctx.drawArrays.bind(ctx);
 	glImports["glDrawElements"] = ctx.drawElements.bind(ctx);
+	// Treasure Client: WEBGL_multi_draw draws many terrain pieces with one call instead of one call each
+	const tcExtMultiDraw = ctx.getExtension("WEBGL_multi_draw");
+	glImports["tcHasMultiDraw"] = function() {
+		return tcExtMultiDraw ? 1 : 0;
+	};
+	glImports["tcMultiDrawElements"] = tcExtMultiDraw ? function(mode, pCounts, type, pOffsets, drawcount) {
+		tcExtMultiDraw["multiDrawElementsWEBGL"](mode, heapI32Array, pCounts >>> 2, type, heapI32Array, pOffsets >>> 2, drawcount);
+	} : unsupportedFunc(platfOpenGLName, "tcMultiDrawElements");
 	glImports["glBindAttribLocation"] = ctx.bindAttribLocation.bind(ctx);
 	glImports["glGetAttribLocation"] = ctx.getAttribLocation.bind(ctx);
 	glImports["glGetUniformLocation"] = ctx.getUniformLocation.bind(ctx);
@@ -349,6 +357,8 @@ function setNoGLContext(glImports) {
 	setUnsupportedFunc(glImports, platfOpenGLName, "glGetProgramInfoLog");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glDrawArrays");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glDrawElements");
+	setUnsupportedFunc(glImports, platfOpenGLName, "tcHasMultiDraw");
+	setUnsupportedFunc(glImports, platfOpenGLName, "tcMultiDrawElements");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glBindAttribLocation");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glGetAttribLocation");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glGetUniformLocation");

@@ -147,7 +147,15 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 				}
 			} else {
 				boolean flag = this.setDoRenderBrightness(entity, partialTicks);
+				// Treasure Client (.lag): what one player costs, part by part
+				boolean tcP = entity instanceof EntityPlayer;
+				long tcT = tcP ? net.lax1dude.eaglercraft.EagRuntime.nanoTime() : 0L;
 				this.renderModel(entity, f6, f5, f8, f2, f7, f4);
+				if (tcP) {
+					net.lax1dude.eaglercraft.opengl.TCModelBatch.flushIfPending();
+					net.minecraft.client.TCLagMonitor.playerPart(0, tcT);
+					++net.minecraft.client.TCLagMonitor.pRenders;
+				}
 
 				if (flag) {
 					this.unsetBrightness();
@@ -323,10 +331,23 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 
 	protected void renderLayers(T entitylivingbaseIn, float limbSwing, float limbSwingAmount, float partialTicks,
 			float ageInTicks, float netHeadYaw, float headPitch, float scaleIn) {
+		boolean tcP = entitylivingbaseIn instanceof EntityPlayer;
 		for (LayerRenderer<T> layerrenderer : this.layerRenderers) {
+			long tcT = tcP ? net.lax1dude.eaglercraft.EagRuntime.nanoTime() : 0L;
 			boolean flag = this.setBrightness(entitylivingbaseIn, partialTicks, layerrenderer.shouldCombineTextures());
 			layerrenderer.doRenderLayer(entitylivingbaseIn, limbSwing, limbSwingAmount, partialTicks, ageInTicks,
 					netHeadYaw, headPitch, scaleIn);
+			if (tcP) {
+				// Treasure Client (.lag): time each layer of a player on its own
+				net.lax1dude.eaglercraft.opengl.TCModelBatch.flushIfPending();
+				net.minecraft.client.TCLagMonitor.playerPart(
+						layerrenderer instanceof net.minecraft.client.renderer.entity.layers.LayerArmorBase ? 1
+								: layerrenderer instanceof net.minecraft.client.renderer.entity.layers.LayerHeldItem ? 3
+										: layerrenderer instanceof net.minecraft.client.renderer.entity.layers.LayerCape
+												|| layerrenderer instanceof net.minecraft.client.renderer.entity.layers.LayerElytra
+														? 4 : 5,
+						tcT);
+			}
 
 			if (flag) {
 				this.unsetBrightness();

@@ -425,6 +425,8 @@ public class TreasureMods {
 		net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcBaseBudgetNs = vsInt("vsPktMs", 4, 2, 16) * 1000000L;
 		bgFps = vsInt("vsBgFps", 10, 1, 60);
 		net.minecraft.client.TCFramePacer.enabled = vsOn("vsPacer", true);
+		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDrawOn = vsOn("vsMultiDraw", true);
+		net.minecraft.client.TCSteadyFps.mode = vsInt("vsSteady", 0, -1, 60);
 		workerIdleSec = vsInt("vsWorkerSec", 5, 5, 300);
 		crashRecoveries = vsInt("vsCrashMax", 3, 1, 10);
 	}

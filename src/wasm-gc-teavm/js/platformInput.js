@@ -752,6 +752,27 @@ async function initPlatformInput(inputImports) {
 		tcFrameStartMs = performance.now();
 	}
 
+	// Treasure Client: Steady FPS. Waits for screen refreshes until this frame's slot comes up
+	// (slots are 1000/fps ms apart), so 30 = every 2nd refresh, 40 = 2,1,2,1 and 45 = 2,1,1.
+	var tcSteadyLast = 0;
+	async function tcSteadyWait(period) {
+		for(;;) {
+			await asyncRequestAnimationFrame();
+			var now = performance.now();
+			if(tcSteadyLast === 0 || now - tcSteadyLast > period * 3) {
+				tcSteadyLast = now; // first frame, or far behind: start the pattern again
+				return;
+			}
+			if(now - tcSteadyLast >= period - 4.0) {
+				tcSteadyLast += period;
+				if(now - tcSteadyLast > period) {
+					tcSteadyLast = now; // a slow frame: don't try to catch up
+				}
+				return;
+			}
+		}
+	}
+
 	function updatePlatformAndSleepImpl0(fpsLimit, vsync) {
 		reportWindowSize();
 		if((typeof document.visibilityState !== "string") || (document.visibilityState === "visible")) {
@@ -763,6 +784,12 @@ async function initPlatformInput(inputImports) {
 				// Only once in a row, though: always skipping let frames pile up in the browser
 				// once the game fell behind, and the browser's own work then slowed the game down
 				// more (the lag that built up mid-game and went away on rejoin).
+				if(fpsLimit > 0 && fpsLimit < 60) {
+					// Treasure Client: Steady FPS, frames on an even pattern of screen refreshes
+					tcSkipped = false;
+					return tcSteadyWait(1000.0 / fpsLimit).then(tcMarkFrameStart);
+				}
+				tcSteadyLast = 0;
 				var tcNow = performance.now();
 				if(!tcSkipped && tcFrameStartMs > 0 && (tcNow - tcFrameStartMs) > 16.0) {
 					tcSkipped = true;
