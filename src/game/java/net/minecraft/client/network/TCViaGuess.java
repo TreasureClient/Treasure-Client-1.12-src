@@ -111,6 +111,22 @@ public final class TCViaGuess {
 		}
 	}
 
+	/** Light from torches and other lamps at a spot (0 when unknown). */
+	private static int blockLight(Chunk c, World w, int x, int y, int z) {
+		if (y < 0 || y > 255) {
+			return 0;
+		}
+		try {
+			if (c != null) {
+				ExtendedBlockStorage sec = c.getBlockStorageArray()[y >> 4];
+				return sec == Chunk.NULL_BLOCK_STORAGE ? 0 : sec.getExtBlocklightValue(x & 15, y & 15, z & 15);
+			}
+			return w.getLightFor(net.minecraft.world.EnumSkyBlock.BLOCK, new BlockPos(x, y, z));
+		} catch (Throwable t) {
+			return 0;
+		}
+	}
+
 	/** Cheap position hash (picks one of several looks the same way every time). */
 	private static int hash(int x, int y, int z) {
 		int h = x * 73856093 ^ y * 19349663 ^ z * 83492791;
@@ -184,7 +200,7 @@ public final class TCViaGuess {
 			cornflower, lily, openEye, closedEye, caveVines, hangingRoots, propagule, paleMoss, pinkPetals, dripstone,
 			pointedDrip, budSmall, budMedium, budLarge, cluster, crimsonRoots, warpedRoots, sprouts, crimsonFungus,
 			warpedFungus, weeping, twisting;
-	private static int pointedDripId, crimsonNyliumId, warpedNyliumId;
+	private static int pointedDripId, crimsonNyliumId, warpedNyliumId, mossId;
 
 	private static IBlockState get(String name) {
 		Block b = Block.getBlockFromName(name);
@@ -276,6 +292,7 @@ public final class TCViaGuess {
 			buddingId = idOf(budding);
 			calciteId = idOf(calcite);
 			smoothBasaltId = idOf(smoothBasalt);
+			mossId = idOf(moss);
 		} catch (Throwable t) {
 			failed = true;
 		}
@@ -375,6 +392,9 @@ public final class TCViaGuess {
 				for (int k = 0; k < n; k++) {
 					int i = idxBuf[k];
 					int x = i & 15, z = (i >> 4) & 15, y = i >> 8;
+					if (skipCount > 0 && skipGrid[((baseY + y) << 8) | (z << 4) | x]) {
+						continue; // you placed this block yourself
+					}
 					IBlockState st = data.get(x, y, z);
 					if (dim == 0 && Block.getIdFromBlock(st.getBlock()) == IRON_ORE) {
 						// copper or iron: decided per vein below, once every ore block is known
@@ -401,6 +421,10 @@ public final class TCViaGuess {
 			}
 		} catch (Throwable t) {
 			// a guess must never break chunk loading
+		} finally {
+			if (skipCount > 0) {
+				clearSkips();
+			}
 		}
 	}
 
@@ -409,9 +433,10 @@ public final class TCViaGuess {
 	// sends it back as the old look-alike. Remembered per position (this world only).
 
 	private static java.util.HashMap<Long, IBlockState> placed;
-	private static java.util.HashSet<Long> placedChunks;
+	/** Chunk -> the remembered spots in it (may list spots since forgotten). */
+	private static java.util.HashMap<Long, java.util.ArrayList<Long>> placedChunks;
 	private static World placedWorld;
-	private static final int MAX_PLACED = 4096;
+	private static final int MAX_PLACED = 16384;
 
 	public static void rememberPlaced(World w, BlockPos pos, IBlockState st) {
 		try {
@@ -420,15 +445,23 @@ public final class TCViaGuess {
 			}
 			if (placed == null) {
 				placed = new java.util.HashMap<Long, IBlockState>();
-				placedChunks = new java.util.HashSet<Long>();
+				placedChunks = new java.util.HashMap<Long, java.util.ArrayList<Long>>();
 			}
 			if (placedWorld != w || placed.size() >= MAX_PLACED) {
 				placed.clear(); // a new world, or keep it small (older spots fall back to guessing)
 				placedChunks.clear();
 				placedWorld = w;
 			}
-			placed.put(Long.valueOf(pos.toLong()), st);
-			placedChunks.add(Long.valueOf(((long) (pos.getX() >> 4) << 32) ^ ((pos.getZ() >> 4) & 0xffffffffL)));
+			Long pk = Long.valueOf(pos.toLong());
+			if (placed.put(pk, st) == null) {
+				Long ck = Long.valueOf(((long) (pos.getX() >> 4) << 32) ^ ((pos.getZ() >> 4) & 0xffffffffL));
+				java.util.ArrayList<Long> l = placedChunks.get(ck);
+				if (l == null) {
+					l = new java.util.ArrayList<Long>();
+					placedChunks.put(ck, l);
+				}
+				l.add(pk);
+			}
 		} catch (Throwable t) {
 		}
 	}
@@ -442,15 +475,24 @@ public final class TCViaGuess {
 	}
 
 	private static void applyPlaced(World w, Chunk c) {
+		if (skipCount > 0) {
+			clearSkips();
+		}
 		if (placed == null || placed.isEmpty() || placedWorld != w) {
 			return;
 		}
 		int cx = c.xPosition, cz = c.zPosition;
-		if (!placedChunks.contains(Long.valueOf(((long) cx << 32) ^ (cz & 0xffffffffL)))) {
+		java.util.ArrayList<Long> spots = placedChunks.get(Long.valueOf(((long) cx << 32) ^ (cz & 0xffffffffL)));
+		if (spots == null) {
 			return; // nothing remembered in this chunk
 		}
-		for (java.util.Map.Entry<Long, IBlockState> e : placed.entrySet()) {
-			BlockPos p = BlockPos.fromLong(e.getKey().longValue());
+		for (int si = 0, sn = spots.size(); si < sn; si++) {
+			Long pk = spots.get(si);
+			IBlockState mine = placed.get(pk);
+			if (mine == null) {
+				continue; // forgotten (broken)
+			}
+			BlockPos p = BlockPos.fromLong(pk.longValue());
 			if ((p.getX() >> 4) != cx || (p.getZ() >> 4) != cz || p.getY() < 0 || p.getY() > 255) {
 				continue;
 			}
@@ -458,12 +500,36 @@ public final class TCViaGuess {
 			if (sec == Chunk.NULL_BLOCK_STORAGE) {
 				continue;
 			}
+			int key = (p.getY() << 8) | ((p.getZ() & 15) << 4) | (p.getX() & 15);
+			if (skipGrid == null) {
+				skipGrid = new boolean[65536];
+				skipList = new int[MAX_PLACED];
+			}
+			if (!skipGrid[key] && skipCount < skipList.length) {
+				skipGrid[key] = true; // the guesses leave this spot alone
+				skipList[skipCount++] = key;
+			}
+			if (Block.getIdFromBlock(mine.getBlock()) < ViaBlocks.FIRST_ID) {
+				continue; // an ordinary block you placed: the server's block is right
+			}
 			IBlockState cur = sec.get(p.getX() & 15, p.getY() & 15, p.getZ() & 15);
 			if (cur.getBlock() != net.minecraft.init.Blocks.AIR
 					&& Block.getIdFromBlock(cur.getBlock()) < ViaBlocks.FIRST_ID) {
-				sec.set(p.getX() & 15, p.getY() & 15, p.getZ() & 15, e.getValue());
+				sec.set(p.getX() & 15, p.getY() & 15, p.getZ() & 15, mine);
 			}
 		}
+	}
+
+	/** Spots in the chunk being scanned that you placed yourself (y << 8 | z << 4 | x). */
+	private static boolean[] skipGrid;
+	private static int[] skipList;
+	private static int skipCount;
+
+	private static void clearSkips() {
+		for (int i = 0; i < skipCount; i++) {
+			skipGrid[skipList[i]] = false;
+		}
+		skipCount = 0;
 	}
 
 	/** The section being scanned has pointed dripstone (or its look-alike) in it. */
@@ -542,7 +608,10 @@ public final class TCViaGuess {
 					return st;
 				}
 				if (Block.getIdFromBlock(st.getBlock()) < ViaBlocks.FIRST_ID) {
-					return mine;
+					if (Block.getIdFromBlock(mine.getBlock()) >= ViaBlocks.FIRST_ID) {
+						return mine; // a modern block you placed: keep its real look
+					}
+					return st; // an ordinary block you placed (dirt, a wall...): never guess it
 				}
 			}
 			int dim = dimOf(w);
@@ -680,7 +749,9 @@ public final class TCViaGuess {
 					return dRedstone;
 				case COBBLESTONE:
 					// tuff blobs sit in deepslate (cobblestone doesn't generate down there)
-					return countAround(c, w, x, y, z, DEEPSLATE_LIKE) >= 2 ? tuff : null;
+					// (a lone cobblestone in deepslate is one someone placed while mining)
+					return countAround(c, w, x, y, z, DEEPSLATE_LIKE) >= 2
+							&& countAround(c, w, x, y, z, COBBLE_LIKE) >= 1 ? tuff : null;
 				}
 			}
 			if (id == IRON_ORE && y > DEEP_MAX_Y && y <= COPPER_MAX_Y) {
@@ -813,10 +884,17 @@ public final class TCViaGuess {
 		case DIRT:
 			return meta(st) == 1 && (groupAt(c, w, x, z) & B_SWAMP) != 0 ? mud : null;
 		case GRASS:
-			return underground(c, w, x, y, z) ? moss : null; // lush caves
+			// lush caves. Real grass needs light to live, so grass in the dark is moss; grass
+			// lit by torches (a tunnel or base) stays grass unless it's part of a moss patch.
+			if (!underground(c, w, x, y, z)) return null;
+			return blockLight(c, w, x, y + 1, z) < 4 || countAround(c, w, x, y, z, MOSS_LIKE) >= 2 ? moss : null;
 		case CARPET:
 			if (meta(st) != 13) return null; // green
-			if (underground(c, w, x, y, z)) return mossCarpet;
+			if (underground(c, w, x, y, z) && (blockLight(c, w, x, y, z) < 4
+					|| (kindOf(at(c, w, x, y - 1, z)) & MOSS_LIKE) != 0)) {
+				return mossCarpet; // on moss, or in the dark (not a carpet in someone's base)
+			}
+			if (underground(c, w, x, y, z)) return null;
 			return (groupAt(c, w, x, z) & B_PALE) != 0 ? paleMossCarpet : null;
 		case TALLGRASS: {
 			int m = meta(st);
@@ -858,9 +936,11 @@ public final class TCViaGuess {
 			return null;
 		}
 		case COBBLE_WALL:
-			return underground(c, w, x, y, z) ? pointedDrip : null; // dripstone caves
+			// dripstone caves are dark; a wall near torches is someone's build
+			return underground(c, w, x, y, z) && blockLight(c, w, x, y, z) < 8 ? pointedDrip : null;
 		case STONE:
-			if (meta(st) == 1 && y < UNDER_MAX_Y && countAround(c, w, x, y, z, DRIP_LIKE) >= 1) {
+			if (meta(st) == 1 && y < UNDER_MAX_Y && countAround(c, w, x, y, z, DRIP_LIKE) >= 1
+					&& blockLight(c, w, x, y, z) < 8) {
 				return dripstone; // granite holding pointed dripstone
 			}
 			return null;
@@ -1047,7 +1127,8 @@ public final class TCViaGuess {
 
 	// neighbour kinds (bit flags), counting both the look-alike and an already guessed block
 	private static final int DEEPSLATE_LIKE = 1, CALCITE_LIKE = 2, AMETHYST_LIKE = 4, BUDDING_LIKE = 8,
-			BASALT_LIKE = 16, OBSIDIAN_LIKE = 32, NETHER_STONE = 64, DRIP_LIKE = 128;
+			BASALT_LIKE = 16, OBSIDIAN_LIKE = 32, NETHER_STONE = 64, DRIP_LIKE = 128, MOSS_LIKE = 256,
+			COBBLE_LIKE = 512;
 
 	private static int kindOf(IBlockState s) {
 		if (s == null) {
@@ -1069,13 +1150,19 @@ public final class TCViaGuess {
 			return OBSIDIAN_LIKE;
 		case COBBLE_WALL:
 			return DRIP_LIKE;
+		case GRASS:
+			return MOSS_LIKE;
+		case COBBLESTONE:
+			return COBBLE_LIKE;
 		case NETHERRACK: case SOUL_SAND: case MAGMA: case GRAVEL: case LAVA: case FLOWING_LAVA:
 			return NETHER_STONE;
 		}
 		if (id < ViaBlocks.FIRST_ID) {
 			return 0;
 		}
-		if (id == deepslateId || id == tuffId) return DEEPSLATE_LIKE;
+		if (id == tuffId) return DEEPSLATE_LIKE | COBBLE_LIKE;
+		if (id == deepslateId) return DEEPSLATE_LIKE;
+		if (id == mossId) return MOSS_LIKE;
 		if (id == calciteId) return CALCITE_LIKE;
 		if (id == amethystId) return AMETHYST_LIKE;
 		if (id == buddingId) return BUDDING_LIKE | AMETHYST_LIKE;

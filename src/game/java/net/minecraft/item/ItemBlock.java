@@ -51,8 +51,9 @@ public class ItemBlock extends Item {
 
 			if (playerIn.setBlockState(worldIn, iblockstate1, 11)) {
 				iblockstate1 = playerIn.getBlockState(worldIn);
-				if (playerIn.isRemote && Block.getIdFromBlock(this.block) >= net.minecraft.block.ViaBlocks.FIRST_ID) {
-					// Treasure Client: the server will send this back as its old look-alike; keep the real look
+				if (playerIn.isRemote) {
+					// Treasure Client: a modern block comes back from the server as its old look-alike
+					// (keep the real look); an ordinary one must never be "guessed" into a modern block
 					net.minecraft.client.network.TCViaGuess.rememberPlaced(playerIn, worldIn, iblockstate1);
 				}
 
