@@ -36,9 +36,16 @@ public final class TCFramePacer {
 	private static int winFrames, winMissed;
 	private static int calm;
 
+	/** Windows to judge a step by: if missed frames did not drop by a quarter, the step is undone. */
+	private static final int TRIAL_WINDOWS = 2;
+	/** After an undone step, windows to wait before trying another (10 s). */
+	private static final int HOLD_WINDOWS = 20;
+	private static int trial = -1, trialBase, trialSum;
+	private static int hold;
+
 	// for .lag
 	private static int maxLevelSeen;
-	private static int stepsDown, stepsUp;
+	private static int stepsDown, stepsUp, stepsUndone;
 	private static long levelFramesSum, levelFrames;
 
 	private TCFramePacer() {
@@ -51,6 +58,8 @@ public final class TCFramePacer {
 				level = 0;
 				calm = 0;
 			}
+			trial = -1;
+			hold = 0;
 			winStart = -1L;
 			return;
 		}
@@ -71,26 +80,51 @@ public final class TCFramePacer {
 			return;
 		}
 		if (winFrames >= 10) {
-			int missedPct = winMissed * 100 / winFrames;
-			if (missedPct > SHED_PERCENT) {
-				calm = 0;
-				if (level < MAX_LEVEL) {
-					++level;
-					++stepsDown;
-					if (level > maxLevelSeen) maxLevelSeen = level;
-				}
-			} else if (missedPct < CALM_PERCENT) {
-				if (++calm >= CALM_WINDOWS && level > 0) {
-					--level;
-					++stepsUp;
-					calm = 0;
-				}
-			} else {
-				calm = 0;
-			}
+			window(winMissed * 100 / winFrames);
 		}
 		winStart = now;
 		winFrames = winMissed = 0;
+	}
+
+	private static void window(int missedPct) {
+		if (hold > 0) {
+			--hold;
+		}
+		if (trial >= 0) {
+			// a step was just taken: keep it only if it helped
+			trialSum += missedPct;
+			if (++trial < TRIAL_WINDOWS) {
+				return;
+			}
+			int avg = trialSum / TRIAL_WINDOWS;
+			trial = -1;
+			if (avg * 4 > trialBase * 3) {
+				--level; // cutting the waitable work did not help: give it back
+				++stepsUndone;
+				hold = HOLD_WINDOWS;
+				calm = 0;
+				return;
+			}
+		}
+		if (missedPct > SHED_PERCENT) {
+			calm = 0;
+			if (level < MAX_LEVEL && hold == 0) {
+				++level;
+				++stepsDown;
+				if (level > maxLevelSeen) maxLevelSeen = level;
+				trial = 0;
+				trialBase = missedPct;
+				trialSum = 0;
+			}
+		} else if (missedPct < CALM_PERCENT) {
+			if (++calm >= CALM_WINDOWS && level > 0) {
+				--level;
+				++stepsUp;
+				calm = 0;
+			}
+		} else {
+			calm = 0;
+		}
 	}
 
 	/** Game work this frame should stay under (chunk building fills up to this). */
@@ -116,6 +150,6 @@ public final class TCFramePacer {
 		String avg = levelFrames > 0 ? String.valueOf((levelFramesSum * 10L / levelFrames) / 10.0) : "0";
 		return "§7Frame pacing: level §f" + level + "§7/" + MAX_LEVEL + " (work target §f"
 				+ (WORK_TARGET_NS[level] / 100000L) / 10.0 + "ms§7) · avg level " + avg + ", highest " + maxLevelSeen
-				+ " · " + stepsDown + " steps down, " + stepsUp + " up";
+				+ " · " + stepsDown + " steps down, " + stepsUp + " up, " + stepsUndone + " undone (did not help)";
 	}
 }

@@ -1021,8 +1021,14 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 					if (tcMode != net.minecraft.client.gui.TCHudCache.DIRECT
 							&& tcSrvMode == net.minecraft.client.gui.TCHudCache.REDRAW) {
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
-						this.tcRenderLayer(this.tcServerFramebuffer, net.minecraft.client.gui.GuiIngame.TC_SERVER, l,
-								i1, partialTicks);
+						// the cached picture holds only fully visible chat lines; fading ones are drawn live
+						net.minecraft.client.gui.GuiNewChat.tcPass = net.minecraft.client.gui.GuiNewChat.TC_PASS_OPAQUE;
+						try {
+							this.tcRenderLayer(this.tcServerFramebuffer, net.minecraft.client.gui.GuiIngame.TC_SERVER, l,
+									i1, partialTicks);
+						} finally {
+							net.minecraft.client.gui.GuiNewChat.tcPass = net.minecraft.client.gui.GuiNewChat.TC_PASS_ALL;
+						}
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
 					GlStateManager.disableLighting();
@@ -1049,6 +1055,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 							this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_SERVER, l, i1, partialTicks);
 						} else {
 							this.tcPasteLayer(this.tcServerFramebuffer, l, i1);
+							this.mc.ingameGUI.tcDrawFadingChat(i1);
 						}
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}

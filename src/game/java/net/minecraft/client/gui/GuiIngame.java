@@ -169,10 +169,30 @@ public class GuiIngame extends Gui {
 	 */
 	public boolean tcServerAnimating() {
 		GameSettings gs = this.mc.gameSettings;
-		return this.titlesTimer > 0 || gs.showSubtitles || gs.keyBindPlayerList.isKeyDown()
-				|| (!this.mc.ingameGUI.getChatGUI().getChatOpen()
-						&& this.persistantChatGUI.tcNewestLineCounter() > this.updateCounter - 202
-						&& this.persistantChatGUI.tcChatFading(this.updateCounter));
+		// fading chat lines are drawn live over the cached picture (tcDrawFadingChat)
+		return this.titlesTimer > 0 || gs.showSubtitles || gs.keyBindPlayerList.isKeyDown();
+	}
+
+	/** Treasure Client: draws the chat lines that are fading out, over the cached server layer. */
+	public void tcDrawFadingChat(int scaledHeight) {
+		if (this.persistantChatGUI.getChatOpen()) {
+			return;
+		}
+		GlStateManager.enableBlend();
+		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
+				RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
+		GlStateManager.disableAlpha();
+		GlStateManager.pushMatrix();
+		GlStateManager.translate(0.0F, (float) (scaledHeight - 48), 0.0F);
+		long tcC = net.minecraft.client.TCLagMonitor.now();
+		GuiNewChat.tcPass = GuiNewChat.TC_PASS_FADING;
+		try {
+			this.persistantChatGUI.drawChat(this.updateCounter);
+		} finally {
+			GuiNewChat.tcPass = GuiNewChat.TC_PASS_ALL;
+		}
+		net.minecraft.client.TCLagMonitor.hChat += net.minecraft.client.TCLagMonitor.now() - tcC;
+		GlStateManager.popMatrix();
 	}
 
 	public long tcHudSignature() {
