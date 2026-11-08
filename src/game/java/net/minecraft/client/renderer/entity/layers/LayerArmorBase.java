@@ -138,8 +138,12 @@ public abstract class LayerArmorBase<T extends ModelBase> implements LayerRender
 			GlStateManager.translate(0.0F, f * (0.001F + (float) i * 0.003F) * 20.0F, 0.0F);
 			GlStateManager.matrixMode(5888);
 			model.render(p_188364_1_, p_188364_3_, p_188364_4_, p_188364_6_, p_188364_7_, p_188364_8_, p_188364_9_);
-			GlStateManager.blendFunc(RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
+			// Treasure Client: the blend reset moved below the loop, so both shine layers
+			// (same settings, only the scroll differs) go to the graphics chip as one draw
 		}
+		GlStateManager.matrixMode(5888);
+		net.lax1dude.eaglercraft.opengl.TCModelBatch.flushIfPending();
+		GlStateManager.blendFunc(RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
 
 		GlStateManager.matrixMode(5890);
 		GlStateManager.loadIdentity();

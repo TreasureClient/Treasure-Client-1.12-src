@@ -659,6 +659,7 @@ public class TreasureMods {
 			net.minecraft.util.TCLithium.enabled = lithium();
 			net.lax1dude.eaglercraft.opengl.TCHudBatch.setEnabled(immediatelyFast() && hudBatch);
 			net.lax1dude.eaglercraft.opengl.TCModelBatch.setEnabled(immediatelyFast() && modelBatch);
+			net.lax1dude.eaglercraft.opengl.TCNameTagBatch.enabled = immediatelyFast() && modelBatch;
 			net.minecraft.client.particle.TCParticleCore.enabled = particleCore();
 			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcSpreadBursts = c2me();
 			net.lax1dude.eaglercraft.socket.WebSocketNetworkManager.tcFastPing = fastPing();

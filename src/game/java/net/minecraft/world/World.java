@@ -1488,6 +1488,7 @@ public abstract class World implements IBlockAccess {
 
 			if (!entity2.isDead && !(entity2 instanceof EntityPlayerMP)
 					&& !(tcTickCull && net.minecraft.client.renderer.TCEntityTickCull.skip(entity2))) {
+				long tcU = tcTickCull ? net.minecraft.client.TCLagMonitor.now() : 0L;
 				try {
 					this.updateEntity(entity2);
 				} catch (Throwable throwable1) {
@@ -1495,6 +1496,9 @@ public abstract class World implements IBlockAccess {
 					CrashReportCategory crashreportcategory1 = crashreport1.makeCategory("Entity being ticked");
 					entity2.addEntityCrashInfo(crashreportcategory1);
 					throw new ReportedException(crashreport1);
+				}
+				if (tcTickCull) { // Treasure Client: .lag full "entity updates per game tick"
+					net.minecraft.client.TCLagMonitor.entityTick(entity2, tcUpdateKind(entity2), tcU);
 				}
 			}
 
@@ -1530,8 +1534,13 @@ public abstract class World implements IBlockAccess {
 				BlockPos blockpos = tileentity.getPos();
 
 				if (this.isBlockLoaded(blockpos) && this.worldBorder.contains(blockpos)) {
+					long tcU = tcTickCull ? net.minecraft.client.TCLagMonitor.now() : 0L;
 					try {
 						((ITickable) tileentity).update();
+						if (tcTickCull) {
+							net.minecraft.client.TCLagMonitor.entityTick(tileentity,
+									net.minecraft.client.TCLagMonitor.U_BLOCK_ENTS, tcU);
+						}
 					} catch (Throwable throwable) {
 						CrashReport crashreport2 = CrashReport.makeCrashReport(throwable, "Ticking block entity");
 						CrashReportCategory crashreportcategory2 = crashreport2
@@ -1560,6 +1569,9 @@ public abstract class World implements IBlockAccess {
 		}
 
 		this.processingLoadedTiles = false;
+		if (tcTickCull) {
+			net.minecraft.client.TCLagMonitor.entityTickRound();
+		}
 
 		if (!this.addedTileEntityList.isEmpty()) {
 			for (int j1 = 0; j1 < this.addedTileEntityList.size(); ++j1) {
@@ -1584,6 +1596,24 @@ public abstract class World implements IBlockAccess {
 	}
 
 	protected void tickPlayers() {
+	}
+
+	/** Treasure Client: which .lag group an entity's update time goes to. */
+	private static int tcUpdateKind(Entity e) {
+		if (e instanceof EntityPlayer) {
+			return e instanceof net.minecraft.client.entity.EntityPlayerSP ? net.minecraft.client.TCLagMonitor.U_YOU
+					: net.minecraft.client.TCLagMonitor.U_PLAYERS;
+		}
+		if (e instanceof net.minecraft.entity.item.EntityArmorStand) {
+			return net.minecraft.client.TCLagMonitor.U_STANDS;
+		}
+		if (e instanceof net.minecraft.entity.EntityLiving) {
+			return net.minecraft.client.TCLagMonitor.U_MOBS;
+		}
+		if (e instanceof net.minecraft.entity.item.EntityItem || e instanceof net.minecraft.entity.item.EntityXPOrb) {
+			return net.minecraft.client.TCLagMonitor.U_ITEMS;
+		}
+		return net.minecraft.client.TCLagMonitor.U_OTHER;
 	}
 
 	public boolean addTileEntity(TileEntity tile) {

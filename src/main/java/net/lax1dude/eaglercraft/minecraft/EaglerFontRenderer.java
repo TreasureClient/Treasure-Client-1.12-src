@@ -52,7 +52,9 @@ public class EaglerFontRenderer extends FontRenderer {
 			this.posX = x + (dropShadow ? 1 : 0);
 			this.posY = y;
 		} else {
-			if (this.unicodeFlag || !decodeASCIICodepointsAndValidate(text)) {
+			// Treasure Client: batched name tags use the letter-by-letter path (see TCNameTagBatch)
+			if (this.unicodeFlag || net.lax1dude.eaglercraft.opengl.TCNameTagBatch.capturing
+					|| !decodeASCIICodepointsAndValidate(text)) {
 				return super.drawString(text, x, y, color, dropShadow);
 			}
 			this.resetStyles();
@@ -75,7 +77,8 @@ public class EaglerFontRenderer extends FontRenderer {
 	protected void renderStringAtPos(String parString1, boolean parFlag) {
 		if (parString1 == null)
 			return;
-		if (this.unicodeFlag || !decodeASCIICodepointsAndValidate(parString1)) {
+		if (this.unicodeFlag || net.lax1dude.eaglercraft.opengl.TCNameTagBatch.capturing
+				|| !decodeASCIICodepointsAndValidate(parString1)) {
 			super.renderStringAtPos(parString1, parFlag);
 		} else {
 			renderStringAtPos0(parString1, false);

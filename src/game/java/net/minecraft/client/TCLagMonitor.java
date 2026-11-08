@@ -454,7 +454,7 @@ public class TCLagMonitor {
 			say(mc, "§7  rest of the work: name tags " + ms1(a[MV_TAGS] / f) + ", particles " + ms1(a[MV_PART] / f)
 					+ ", sky+camera " + ms1(a[MV_SKY] / f) + ", hand " + ms1(a[MV_HAND] / f) + ", menus/chat "
 					+ ms1(a[MV_SCR] / f) + ", other " + ms1(a[MV_OTHER] / f));
-			StringBuilder eb = new StringBuilder("§7  entities by kind (each incl. its name tag):");
+			StringBuilder eb = new StringBuilder("§7  entities by kind (name tags are drawn together, see name tags):");
 			for (int k = 0; k < 4; k++) {
 				if (a[MV_C0 + k] > 0L) {
 					eb.append(' ').append(E_NAMES[k]).append(' ').append(a[MV_C0 + k] / f).append(" = §f")
@@ -470,6 +470,8 @@ public class TCLagMonitor {
 		}
 		String pp = playerParts();
 		if (pp != null) say(mc, pp);
+		String et = entityTicks();
+		if (et != null) say(mc, et);
 		for (int i = 0; i < 2; i++) {
 			for (int k = 0; k < MV_N; k++) mv[i][k] = 0L;
 		}
@@ -687,6 +689,61 @@ public class TCLagMonitor {
 
 	private static String beSlowName;
 	private static long beSlowNs;
+
+	// entity updates (World.updateEntities, once per game tick) by kind, for .lag full
+	public static final int U_YOU = 0, U_PLAYERS = 1, U_STANDS = 2, U_MOBS = 3, U_ITEMS = 4, U_OTHER = 5,
+			U_BLOCK_ENTS = 6;
+	private static final String[] U_NAMES = { "you", "other players", "armor stands", "mobs", "items/xp",
+			"other entities", "block entities" };
+	private static final long[] uNs = new long[7];
+	private static final long[] uCnt = new long[7];
+	private static long uTicks;
+	private static String uSlowName;
+	private static long uSlowNs;
+
+	/** One entity or block entity updated; kind is one of the U_ constants. */
+	public static void entityTick(Object e, int kind, long startNs) {
+		long d = EagRuntime.nanoTime() - startNs;
+		uNs[kind] += d;
+		uCnt[kind]++;
+		if (d > uSlowNs) {
+			uSlowNs = d;
+			uSlowName = e.getClass().getSimpleName();
+		}
+	}
+
+	/** One game tick of entity updates done. */
+	public static void entityTickRound() {
+		uTicks++;
+	}
+
+	/** "entity updates per tick: you 0.40, armor stands 0.30 (9), ..." in ms; null if too few ticks. */
+	private static String entityTicks() {
+		if (uTicks < 20L) {
+			return null;
+		}
+		StringBuilder sb = new StringBuilder("§7  entity updates per game tick (").append(uTicks).append(" ticks):");
+		boolean any = false;
+		for (int i = 0; i < uNs.length; i++) {
+			if (uCnt[i] == 0L) continue;
+			sb.append(any ? ", " : " ").append(U_NAMES[i]).append(" §f").append(ms2(uNs[i] / uTicks)).append("§7");
+			if (i != U_YOU) sb.append(" (").append((uCnt[i] + uTicks / 2L) / uTicks).append(')');
+			any = true;
+		}
+		sb.append(" ms");
+		if (uSlowName != null) {
+			sb.append(" · slowest single update: §f").append(uSlowName).append(' ').append(ms1(uSlowNs / 1000L))
+					.append("ms§7");
+		}
+		for (int i = 0; i < uNs.length; i++) {
+			uNs[i] = 0L;
+			uCnt[i] = 0L;
+		}
+		uTicks = 0L;
+		uSlowName = null;
+		uSlowNs = 0L;
+		return sb.toString();
+	}
 
 	/** One block entity read from a map chunk (finds which kind is slow to load). */
 	public static void blockEntityLoad(Object te, long ns) {

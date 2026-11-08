@@ -785,7 +785,9 @@ public class GlStateManager {
 
 	public static void matrixMode(int mode) {
 		if(mode == GL_TEXTURE && stateMatrixMode != GL_TEXTURE) {
-			TCHudBatch.flushIfPending(); // Treasure Client: texture matrix changes affect batched quads
+			// Treasure Client: texture matrix changes affect batched HUD quads. The entity model batch
+			// applies texture 0's matrix as it collects, but not the lightmap's.
+			if(activeTexture != 0) TCHudBatch.flushIfPending(); else TCHudBatch.flushHudIfPending();
 		}
 		stateMatrixMode = mode;
 	}
