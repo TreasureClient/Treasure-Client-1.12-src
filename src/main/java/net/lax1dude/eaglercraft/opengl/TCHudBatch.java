@@ -69,6 +69,14 @@ public final class TCHudBatch {
 		if (TCModelBatch.count > 0) {
 			TCModelBatch.flushIfPending(); // entity model batch (same hooks)
 		}
+		flushHudIfPending();
+	}
+
+	/**
+	 * Draws only the collected HUD quads and text. Used where only the HUD batch cares
+	 * (a texture matrix change: the entity model batch applies that matrix as it collects).
+	 */
+	public static void flushHudIfPending() {
 		if ((count > 0 || InstancedFontRenderer.tcPending) && !flushing && !EaglercraftGPU.tcCompilingList()) {
 			IProgramGL prog = EaglercraftGPU.currentShaderProgram;
 			IVertexArrayGL vao = EaglercraftGPU.currentVertexArray;

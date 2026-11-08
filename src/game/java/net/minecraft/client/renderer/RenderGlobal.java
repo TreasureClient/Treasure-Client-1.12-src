@@ -543,6 +543,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			net.minecraft.client.renderer.entity.Render.tcBeginFireBatch();
 			TCEntityCulling.beginFrame(entity, partialTicks);
 			net.lax1dude.eaglercraft.opengl.TCModelBatch.begin(); // Treasure Client: entity model batching
+			net.lax1dude.eaglercraft.opengl.TCNameTagBatch.begin();
 			try {
 
 			for (int i = 0; i < this.theWorld.weatherEffects.size(); ++i) {
@@ -702,7 +703,13 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			this.postRenderDamagedBlocks();
 			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.BLOCK_ENTS, tcT);
 			} finally {
-				net.lax1dude.eaglercraft.opengl.TCModelBatch.end();
+				long tcTags = net.minecraft.client.TCLagMonitor.now();
+				try {
+					net.lax1dude.eaglercraft.opengl.TCNameTagBatch.end();
+				} finally {
+					net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.NAME_TAGS, tcTags);
+					net.lax1dude.eaglercraft.opengl.TCModelBatch.end();
+				}
 			}
 			this.mc.entityRenderer.disableLightmap();
 		}

@@ -20,8 +20,10 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
  * The picture stays the same: positions and normals end up exactly where the
  * shader would have put them, each part keeps its own color, and anything else
  * that draws, or any change to a graphics setting (texture, blending, lights,
- * fog, lightmap, hurt tint...), first draws what has been collected. Parts drawn
- * with special settings (enchantment glint, shaders) are drawn the normal way.
+ * fog, lightmap, hurt tint...), first draws what has been collected. The
+ * enchantment glint's moving texture matrix is applied to each part as it is
+ * added, so armor shine is batched too. Parts drawn with shaders are drawn the
+ * normal way.
  */
 public final class TCModelBatch {
 
@@ -81,6 +83,11 @@ public final class TCModelBatch {
 		float m20 = m.m20, m21 = m.m21, m22 = m.m22, m30 = m.m30, m31 = m.m31, m32 = m.m32;
 		int r = clamp(GlStateManager.stateColorR), g = clamp(GlStateManager.stateColorG);
 		int b = clamp(GlStateManager.stateColorB), a = clamp(GlStateManager.stateColorA);
+		// a texture matrix (the enchantment glint scrolls with one) is applied here, like the shader does
+		Matrix4f tm = GlStateManager.textureMatrixStack[0][GlStateManager.textureMatrixStackPointer[0]];
+		boolean texMat = !isIdentity(tm);
+		float t00 = tm.m00, t01 = tm.m01, t03 = tm.m03, t10 = tm.m10, t11 = tm.m11, t13 = tm.m13;
+		float t30 = tm.m30, t31 = tm.m31, t33 = tm.m33;
 		WorldRenderer w = buffer;
 		int n = quads * 4 * 8;
 		int lastNormal = 0;
@@ -105,23 +112,42 @@ public final class TCModelBatch {
 				lastNormal = ((byte) (int) (tx * 127.0f) & 255) | (((byte) (int) (ty * 127.0f) & 255) << 8)
 						| (((byte) (int) (tz * 127.0f) & 255) << 16);
 			}
+			float u = data[i + 3], v = data[i + 4];
+			if (texMat) {
+				float tw = t03 * u + t13 * v + t33;
+				float tu = (t00 * u + t10 * v + t30) / tw;
+				v = (t01 * u + t11 * v + t31) / tw;
+				u = tu;
+			}
 			w.pos(m00 * x + m10 * y + m20 * z + m30, m01 * x + m11 * y + m21 * z + m31,
-					m02 * x + m12 * y + m22 * z + m32).tex(data[i + 3], data[i + 4]).color(r, g, b, a)
+					m02 * x + m12 * y + m22 * z + m32).tex(u, v).color(r, g, b, a)
 					.tcNormalPacked(lastNormal).endVertex();
 		}
 		count += quads;
 		return true;
 	}
 
-	/** Settings the batch can't reproduce: texture matrix (glint), texgen, shaders, display list compiling. */
+	/** Settings the batch can't reproduce: texgen, shaders, display list compiling. */
 	private static boolean canBatch() {
-		if (GlStateManager.activeTexture != 0 || GlStateManager.stateTexGen || GlStateManager.stateUseExtensionPipeline
-				|| EaglercraftGPU.tcCompilingList()) {
-			return false;
+		return GlStateManager.activeTexture == 0 && !GlStateManager.stateTexGen
+				&& !GlStateManager.stateUseExtensionPipeline && !EaglercraftGPU.tcCompilingList();
+	}
+
+	/** True when the matrix leaves texture coordinates (u, v, 0, 1) unchanged. */
+	private static boolean isIdentity(Matrix4f tm) {
+		return tm.m00 == 1.0f && tm.m11 == 1.0f && tm.m33 == 1.0f && tm.m30 == 0.0f && tm.m31 == 0.0f
+				&& tm.m10 == 0.0f && tm.m01 == 0.0f && tm.m03 == 0.0f && tm.m13 == 0.0f;
+	}
+
+	private static final Matrix4f savedTexMatrix = new Matrix4f();
+	private static int tcTexSerial = Integer.MIN_VALUE; // never equal to a serial the stacks hand out
+
+	/** Marks texture matrix 0 as changed, so the shader uniform is uploaded again. */
+	private static void touchTexMatrix() {
+		GlStateManager.textureMatrixStackAccessSerial[0][GlStateManager.textureMatrixStackPointer[0]] = ++tcTexSerial;
+		if (tcTexSerial > -1000000) {
+			tcTexSerial = Integer.MIN_VALUE;
 		}
-		Matrix4f tm = GlStateManager.textureMatrixStack[0][GlStateManager.textureMatrixStackPointer[0]];
-		return tm.m00 == 1.0f && tm.m11 == 1.0f && tm.m22 == 1.0f && tm.m30 == 0.0f && tm.m31 == 0.0f
-				&& tm.m10 == 0.0f && tm.m01 == 0.0f && tm.m20 == 0.0f && tm.m21 == 0.0f;
 	}
 
 	private static int clamp(float f) {
@@ -152,8 +178,23 @@ public final class TCModelBatch {
 			GlStateManager.pushMatrix();
 			GlStateManager.loadIdentity();
 			GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+			// texture coordinates were already moved by the texture matrix they were added under
+			Matrix4f tm = GlStateManager.textureMatrixStack[0][GlStateManager.textureMatrixStackPointer[0]];
+			boolean texFix = !isIdentity(tm);
+			if (texFix) {
+				savedTexMatrix.load(tm);
+				tm.setIdentity();
+				touchTexMatrix();
+			}
 			buffer.finishDrawing();
-			WorldVertexBufferUploader.func_181679_a(buffer);
+			try {
+				WorldVertexBufferUploader.func_181679_a(buffer);
+			} finally {
+				if (texFix) {
+					tm.load(savedTexMatrix);
+					touchTexMatrix();
+				}
+			}
 			GlStateManager.popMatrix();
 			GlStateManager.matrixMode(mode);
 			GlStateManager.color(r, g, b, a);

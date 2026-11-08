@@ -293,6 +293,12 @@ public class FontRenderer implements IResourceManagerReloadListener {
 
 	private void tcQuad(ResourceLocation tex, float xTopL, float xBotL, float xTopR, float xBotR, float yTop,
 			float yBot, float u0, float v0, float u1, float v1) {
+		if (net.lax1dude.eaglercraft.opengl.TCNameTagBatch.capturing) {
+			// a batched name tag: the letter is drawn later with all the others
+			net.lax1dude.eaglercraft.opengl.TCNameTagBatch.glyph(tex, xTopL, xBotL, xTopR, xBotR, yTop, yBot, u0, v0,
+					u1, v1, GlStateManager.tcColorARGB());
+			return;
+		}
 		if (this.tcBatchOpen && tex != this.tcBatchTex) {
 			this.tcFlush();
 		}
@@ -563,7 +569,11 @@ public class FontRenderer implements IResourceManagerReloadListener {
 					++f;
 				}
 
-				if (this.strikethroughStyle) {
+				if (this.strikethroughStyle && net.lax1dude.eaglercraft.opengl.TCNameTagBatch.capturing) {
+					net.lax1dude.eaglercraft.opengl.TCNameTagBatch.rect(this.posX,
+							this.posY + (float) (this.FONT_HEIGHT / 2) - 1.0F, this.posX + f,
+							this.posY + (float) (this.FONT_HEIGHT / 2), GlStateManager.tcColorARGB());
+				} else if (this.strikethroughStyle) {
 					this.tcFlush();
 					Tessellator tessellator = Tessellator.getInstance();
 					WorldRenderer bufferbuilder = tessellator.getBuffer();
@@ -583,7 +593,11 @@ public class FontRenderer implements IResourceManagerReloadListener {
 					GlStateManager.enableTexture2D();
 				}
 
-				if (this.underlineStyle) {
+				if (this.underlineStyle && net.lax1dude.eaglercraft.opengl.TCNameTagBatch.capturing) {
+					net.lax1dude.eaglercraft.opengl.TCNameTagBatch.rect(this.posX - 1.0F,
+							this.posY + (float) this.FONT_HEIGHT - 1.0F, this.posX + f,
+							this.posY + (float) this.FONT_HEIGHT, GlStateManager.tcColorARGB());
+				} else if (this.underlineStyle) {
 					this.tcFlush();
 					Tessellator tessellator1 = Tessellator.getInstance();
 					WorldRenderer bufferbuilder1 = tessellator1.getBuffer();

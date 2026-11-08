@@ -1899,6 +1899,10 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 
 	public static void drawNameplate(FontRenderer fontRendererIn, String str, float x, float y, float z,
 			int verticalShift, float viewerYaw, float viewerPitch, boolean isThirdPersonFrontal, boolean isSneaking) {
+		if (net.lax1dude.eaglercraft.opengl.TCNameTagBatch.defer(fontRendererIn, str, x, y, z, verticalShift,
+				viewerYaw, viewerPitch, isThirdPersonFrontal, isSneaking)) {
+			return; // Treasure Client: drawn with all the other name tags at the end of the entity pass
+		}
 		GlStateManager.pushMatrix();
 		GlStateManager.translate(x, y, z);
 		EaglercraftGPU.glNormal3f(0.0F, 1.0F, 0.0F);
