@@ -875,11 +875,14 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			NBTTagCompound nbttagcompound = list.get(i);
 			BlockPos blockpos = new BlockPos(nbttagcompound.getInteger("x"), nbttagcompound.getInteger("y"),
 					nbttagcompound.getInteger("z"));
+			long tcBe = net.lax1dude.eaglercraft.EagRuntime.nanoTime();
 			TileEntity tileentity = this.clientWorldController.getTileEntity(blockpos);
 
 			if (tileentity != null) {
 				tileentity.readFromNBT(nbttagcompound);
 			}
+			net.minecraft.client.TCLagMonitor.blockEntityLoad(tileentity,
+					net.lax1dude.eaglercraft.EagRuntime.nanoTime() - tcBe);
 		}
 		t1 = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); ck[4] = t1 - t0; t0 = t1;
 		// Treasure Client — TuffX+ ViaBlocks: modern blocks for this chunk
