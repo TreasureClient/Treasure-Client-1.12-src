@@ -542,6 +542,7 @@ public final class TCViaGuess {
 			if (ironCount > 0) {
 				decideVeins(c, ironCount);
 			}
+			wallPass(c);
 		} catch (Throwable t) {
 			// a guess must never break chunk loading
 		} finally {
@@ -746,6 +747,9 @@ public final class TCViaGuess {
 				fortressHint = wc != null && fortressNear(wc, w) ? 1 : 0;
 			}
 			IBlockState g = guess(dim, st, null, w, pos.getX(), pos.getY(), pos.getZ(), 1);
+			if (g == null && Block.getIdFromBlock(st.getBlock()) == COBBLE_WALL) {
+				g = wallGuess(null, w, pos.getX(), pos.getY(), pos.getZ(), meta(st));
+			}
 			return g != null ? g : st;
 		} catch (Throwable t) {
 			return st;
@@ -1079,6 +1083,264 @@ public final class TCViaGuess {
 			return null;
 		}
 		return null;
+	}
+
+	// ---- 1.14 walls -----------------------------------------------------------------
+	// Every modern wall (stone brick, brick, andesite, sandstone...) arrives as a
+	// cobblestone wall (mossy stone brick as a mossy cobblestone wall). People build a
+	// wall from the same stone as what it stands on or joins, so a run of connected walls
+	// takes the material of the blocks under and beside it. Any cobblestone touching the
+	// run means it really is a cobblestone wall, and with no clear material it is left alone.
+
+	private static final String[] WALL_MATS = { "stone_brick_wall", "mossy_stone_brick_wall", "brick_wall",
+			"andesite_wall", "granite_wall", "diorite_wall", "sandstone_wall", "red_sandstone_wall",
+			"prismarine_wall", "nether_brick_wall", "red_nether_brick_wall", "end_stone_brick_wall" };
+	private static final int W_STONE_BRICK = 0, W_MOSSY = 1, W_COBBLE = -2;
+	private static IBlockState[] wallStates;
+	private static int[] wallIds;
+	private static final int[] wallVotes = new int[12];
+	private static int[] wallRun;
+	private static boolean[] wallSeen;
+
+	private static boolean wallInit() {
+		if (wallStates == null) {
+			IBlockState[] st = new IBlockState[WALL_MATS.length];
+			int[] ids = new int[WALL_MATS.length];
+			for (int i = 0; i < st.length; i++) {
+				st[i] = get(WALL_MATS[i]);
+				ids[i] = idOf(st[i]);
+			}
+			wallIds = ids;
+			wallStates = st;
+		}
+		return wallStates[0] != null;
+	}
+
+	/** Which wall a neighbouring block suggests: a WALL_MATS index, W_COBBLE, or -1 for none. */
+	private static int wallMat(IBlockState s) {
+		if (s == null) {
+			return -1;
+		}
+		int id = Block.getIdFromBlock(s.getBlock());
+		switch (id) {
+		case 98: // stone bricks (mossy ones are meta 1)
+			return meta(s) == 1 ? W_MOSSY : W_STONE_BRICK;
+		case 109: // stone brick stairs
+			return W_STONE_BRICK;
+		case 45: case 108: // bricks, brick stairs
+			return 2;
+		case 1: {
+			int m = meta(s);
+			return m == 5 || m == 6 ? 3 : m == 1 || m == 2 ? 4 : m == 3 || m == 4 ? 5 : -1;
+		}
+		case 24: case 128:
+			return 6;
+		case 179: case 180:
+			return 7;
+		case 168:
+			return 8;
+		case 112: case 114:
+			return 9;
+		case 215:
+			return 10;
+		case 206:
+			return 11;
+		case 43: case 44: { // stone slabs
+			int m = meta(s) & 7;
+			return m == 1 ? 6 : m == 3 ? W_COBBLE : m == 4 ? 2 : m == 5 ? W_STONE_BRICK : m == 6 ? 9 : -1;
+		}
+		case 181: case 182:
+			return 7;
+		case COBBLESTONE: case 48: case 67: // cobblestone, mossy cobblestone, cobblestone stairs
+			return W_COBBLE;
+		}
+		if (id >= ViaBlocks.FIRST_ID && wallIds != null) {
+			for (int i = 0; i < wallIds.length; i++) {
+				if (wallIds[i] == id) {
+					return i; // a wall already worked out joins this one
+				}
+			}
+		}
+		return -1;
+	}
+
+	/** Adds one wall block's neighbours to the votes; false when cobblestone touches it. */
+	private static boolean voteAround(Chunk c, World w, int x, int y, int z) {
+		for (int d = 0; d < 6; d++) {
+			int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0), ny = y + (d == 2 ? 1 : d == 3 ? -1 : 0),
+					nz = z + (d == 4 ? 1 : d == 5 ? -1 : 0);
+			IBlockState n = at(c, w, nx, ny, nz);
+			if (n == null || Block.getIdFromBlock(n.getBlock()) == COBBLE_WALL) {
+				continue;
+			}
+			int m = wallMat(n);
+			if (m == W_COBBLE) {
+				return false;
+			}
+			if (m >= 0) {
+				wallVotes[m] += d == 3 ? 2 : 1; // what it stands on counts most
+			}
+		}
+		return true;
+	}
+
+	/** The wall the votes agree on (needs the block below or two touching blocks), or -1. */
+	private static int wallWinner(int lookMeta) {
+		int best = -1, bestV = 0;
+		for (int i = 0; i < wallVotes.length; i++) {
+			if (i == W_MOSSY) {
+				continue; // mossy and plain stone bricks count together
+			}
+			int v = i == W_STONE_BRICK ? wallVotes[W_STONE_BRICK] + wallVotes[W_MOSSY] : wallVotes[i];
+			if (v > bestV) {
+				best = i;
+				bestV = v;
+			}
+		}
+		if (bestV < 2) {
+			return -1;
+		}
+		boolean bricks = best == W_STONE_BRICK || best == W_MOSSY;
+		if (lookMeta == 1) {
+			// a mossy cobblestone wall look-alike is only ever the mossy stone brick wall
+			return bricks ? W_MOSSY : -1;
+		}
+		return bricks ? W_STONE_BRICK : best;
+	}
+
+	/** One wall changed on its own (world positions). */
+	private static IBlockState wallGuess(Chunk c, World w, int x, int y, int z, int lookMeta) {
+		if (!wallInit()) {
+			return null;
+		}
+		java.util.Arrays.fill(wallVotes, 0);
+		if (!voteAround(c, w, x, y, z)) {
+			return null;
+		}
+		int win = wallWinner(lookMeta);
+		return win >= 0 ? wallStates[win] : null;
+	}
+
+	/** Every cobblestone wall look-alike in a freshly loaded chunk, one connected run at a time. */
+	private static void wallPass(Chunk c) {
+		ExtendedBlockStorage[] secs = c.getBlockStorageArray();
+		boolean inited = false;
+		for (int si = 0; si < secs.length; si++) {
+			ExtendedBlockStorage sec = secs[si];
+			if (sec == Chunk.NULL_BLOCK_STORAGE || sec.isEmpty()) {
+				continue;
+			}
+			BlockStateContainer data = sec.getData();
+			int palSize = data.tcPaletteSize();
+			boolean[] want = wantBuf;
+			if (want == null) {
+				want = wantBuf = new boolean[256];
+			}
+			boolean any = false;
+			for (int i = 0; i < 256; i++) {
+				boolean wv = false;
+				if (palSize <= 0) {
+					wv = false;
+				} else if (i < palSize) {
+					IBlockState ps = data.tcPaletteState(i);
+					wv = ps != null && Block.getIdFromBlock(ps.getBlock()) == COBBLE_WALL;
+				}
+				want[i] = wv;
+				any |= wv;
+			}
+			if (!any) {
+				continue;
+			}
+			if (!inited) {
+				if (!wallInit()) {
+					return;
+				}
+				if (wallSeen == null) {
+					wallSeen = new boolean[65536];
+					wallRun = new int[64];
+				}
+				inited = true;
+			}
+			if (idxBuf == null) {
+				idxBuf = new int[4096];
+			}
+			int baseY = si << 4;
+			int n = data.tcFind(want, idxBuf);
+			int[] found = new int[n];
+			System.arraycopy(idxBuf, 0, found, 0, n);
+			for (int k = 0; k < n; k++) {
+				int i = found[k];
+				int key = ((baseY + (i >> 8)) << 8) | (i & 255);
+				if (!wallSeen[key]) {
+					wallRunAt(c, key);
+				}
+			}
+		}
+		if (inited) {
+			java.util.Arrays.fill(wallSeen, false);
+		}
+	}
+
+	/** Gathers the connected run of look-alike walls starting here, then votes for all of it. */
+	private static void wallRunAt(Chunk c, int start) {
+		IBlockState first = c.getBlockState(start & 15, start >> 8, (start >> 4) & 15);
+		if (Block.getIdFromBlock(first.getBlock()) != COBBLE_WALL) {
+			return;
+		}
+		int look = meta(first);
+		int len = 0, head = 0;
+		wallRun[len++] = start;
+		wallSeen[start] = true;
+		java.util.Arrays.fill(wallVotes, 0);
+		boolean cobble = false;
+		while (head < len) {
+			int key = wallRun[head++];
+			int x = key & 15, z = (key >> 4) & 15, y = key >> 8;
+			if (skipCount > 0 && skipGrid[key]) {
+				cobble = true; // a wall you placed yourself is part of this: leave the run as it is
+			}
+			if (!voteAround(c, null, x, y, z)) {
+				cobble = true;
+			}
+			for (int d = 0; d < 6; d++) {
+				int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0), ny = y + (d == 2 ? 1 : d == 3 ? -1 : 0),
+						nz = z + (d == 4 ? 1 : d == 5 ? -1 : 0);
+				if (nx < 0 || nx > 15 || nz < 0 || nz > 15 || ny < 0 || ny > 255) {
+					continue;
+				}
+				int nk = (ny << 8) | (nz << 4) | nx;
+				if (wallSeen[nk]) {
+					continue;
+				}
+				IBlockState ns = c.getBlockState(nx, ny, nz);
+				if (Block.getIdFromBlock(ns.getBlock()) == COBBLE_WALL && meta(ns) == look) {
+					wallSeen[nk] = true;
+					if (len == wallRun.length) {
+						int[] g = new int[len * 2];
+						System.arraycopy(wallRun, 0, g, 0, len);
+						wallRun = g;
+					}
+					wallRun[len++] = nk;
+				}
+			}
+		}
+		if (cobble) {
+			return;
+		}
+		int win = wallWinner(look);
+		if (win < 0) {
+			return;
+		}
+		IBlockState want = wallStates[win];
+		ExtendedBlockStorage[] secs = c.getBlockStorageArray();
+		for (int i = 0; i < len; i++) {
+			int key = wallRun[i];
+			int y = key >> 8;
+			ExtendedBlockStorage sec = secs[y >> 4];
+			if (sec != Chunk.NULL_BLOCK_STORAGE) {
+				sec.set(key & 15, y & 15, (key >> 4) & 15, want);
+			}
+		}
 	}
 
 	// ---- copper or iron ------------------------------------------------------------

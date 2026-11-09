@@ -1666,6 +1666,9 @@ public class Block {
 		for (int i = 0; i < ViaBlocks.WALL_NAMES.length; i++) {
 			Block model = ViaBlocks.blockByName(ViaBlocks.WALL_BASE[i]);
 			if (model == null) {
+				model = getBlockFromName(ViaBlocks.WALL_BASE[i]); // a vanilla base block
+			}
+			if (model == null) {
 				model = new Block(Material.ROCK);
 			}
 			Block wall = (new BlockViaWall(model)).setUnlocalizedName(ViaBlocks.WALL_NAMES[i]);
