@@ -1,0 +1,5 @@
+{
+    "variants": {
+        "variant=default": { "model": "blackstone_double_slab" }
+    }
+}

@@ -1635,10 +1635,15 @@ public class Block {
 			// stays a plain full cube. Both share the same rock material / sounds and
 			// flow through the identical registry + item pipeline.
 			String vn = ViaBlocks.NAMES[i];
+			if (REGISTRY.containsKey(new ResourceLocation(vn))) {
+				// 1.12 already has this block (nether_wart_block): a second one with the same
+				// name pushes the real one out of the registry and it loses its model
+				continue;
+			}
 			Material vm = ViaBlocks.materialFor(vn);
 			Block base = ViaBlocks.isPillar(vn)
 					? new BlockRotatedPillar(vm)
-					: new Block(vm);
+					: (vn.equals("smithing_table") ? new BlockViaWorkstation(vm) : new Block(vm));
 			Block viaBlock = base.setHardness(ViaBlocks.hardnessFor(vn, 2.0F))
 					.setResistance(vn.equals("ancient_debris") ? 1200.0F : 10.0F)
 					.setLightLevel(ViaBlocks.lightFor(vn))
@@ -1675,10 +1680,23 @@ public class Block {
 			registerBlock(ViaBlocks.WALL_FIRST_ID + i, ViaBlocks.WALL_NAMES[i], wall);
 			ViaBlocks.WALLS[i] = wall;
 		}
+		// Modern stairs, made of a modern cube.
+		for (int i = 0; i < ViaBlocks.STAIR_NAMES.length; i++) {
+			Block model = ViaBlocks.blockByName(ViaBlocks.STAIR_BASE[i]);
+			if (model == null) {
+				continue;
+			}
+			Block st = (new BlockViaStairs(model.getDefaultState())).setUnlocalizedName(ViaBlocks.STAIR_NAMES[i]);
+			registerBlock(ViaBlocks.STAIR_FIRST_ID + i, ViaBlocks.STAIR_NAMES[i], st);
+			ViaBlocks.STAIRS[i] = st;
+		}
 		// Extra simple modern blocks (cubes, pillars, see-through cubes) for TuffX+ servers.
 		for (int i = 0; i < ViaBlocks.EXTRA_NAMES.length; i++) {
 			int kind = ViaBlocks.EXTRA_KIND[i];
 			String en = ViaBlocks.EXTRA_NAMES[i];
+			if (REGISTRY.containsKey(new ResourceLocation(en))) {
+				continue; // 1.12 already has it
+			}
 			Material em = ViaBlocks.materialFor(en);
 			Block extra = kind == 1 ? new BlockRotatedPillar(em)
 					: (kind == 2 ? new BlockViaCutout() : (kind >= 3 ? new BlockViaCarpet(kind == 4) : new Block(em)));

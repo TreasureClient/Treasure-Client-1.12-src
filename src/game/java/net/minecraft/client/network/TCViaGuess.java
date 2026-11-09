@@ -41,7 +41,7 @@ public final class TCViaGuess {
 			SOUL_SAND = 88, MAGMA = 213, GRAVEL = 13, LAVA = 10, FLOWING_LAVA = 11, GRASS = 2, LOG = 17, LEAVES = 18,
 			TALLGRASS = 31, RED_FLOWER = 38, BROWN_MUSHROOM = 39, RED_MUSHROOM = 40, VINE = 106, NETHER_WART = 115,
 			COBBLE_WALL = 139, LEAVES2 = 161, CARPET = 171, NETHER_BRICK_FENCE = 113, MOB_SPAWNER = 52,
-			GOLD_BLOCK = 41;
+			GOLD_BLOCK = 41, NETHER_BRICK_STAIRS = 114, BRICK_STAIRS = 108, STONE_SLAB = 44, DOUBLE_STONE_SLAB = 43;
 
 	/** Lush and dripstone caves: underground rules only look below this height. */
 	private static final int UNDER_MAX_Y = 60;
@@ -161,6 +161,18 @@ public final class TCViaGuess {
 			}
 		}
 		return false;
+	}
+
+	/** A modern stair or slab facing the same way as the look-alike (same meta layout). */
+	private static IBlockState sameShape(IBlockState modern, IBlockState look) {
+		if (modern == null) {
+			return null;
+		}
+		try {
+			return modern.getBlock().getStateFromMeta(meta(look));
+		} catch (Throwable t) {
+			return null;
+		}
 	}
 
 	private static IBlockState netherBrickGuess(Chunk c, World w, int x, int y, int z) {
@@ -312,7 +324,8 @@ public final class TCViaGuess {
 			pointedDrip, budSmall, budMedium, budLarge, cluster, crimsonRoots, warpedRoots, sprouts, crimsonFungus,
 			warpedFungus, weeping, twisting;
 	private static int pointedDripId, crimsonNyliumId, warpedNyliumId, mossId, dripstoneId;
-	private static IBlockState blackstone;
+	private static IBlockState blackstone, bsStairs, pbbStairs, bsSlab, bsDouble, pbbSlab, pbbDouble;
+	private static int polishedBlackstoneId = -1;
 	private static int blackstoneId, basaltId, blackstoneBricksId, soulSoilId;
 
 	private static IBlockState get(String name) {
@@ -408,6 +421,13 @@ public final class TCViaGuess {
 			mossId = idOf(moss);
 			dripstoneId = idOf(dripstone);
 			blackstone = get("blackstone");
+			polishedBlackstoneId = idOf(get("polished_blackstone"));
+			bsStairs = get("blackstone_stairs");
+			pbbStairs = get("polished_blackstone_brick_stairs");
+			bsSlab = get("blackstone_slab");
+			bsDouble = get("blackstone_double_slab");
+			pbbSlab = get("polished_blackstone_brick_slab");
+			pbbDouble = get("polished_blackstone_brick_double_slab");
 			blackstoneId = idOf(blackstone);
 			basaltId = idOf(basalt);
 			blackstoneBricksId = idOf(blackstoneBricks);
@@ -444,6 +464,7 @@ public final class TCViaGuess {
 			return;
 		}
 		try {
+			applySmithing(w, c);
 			int dim = dimOf(w);
 			if (dim != 0 && dim != -1) {
 				return; // the End: purpur there is real (end cities)
@@ -548,6 +569,180 @@ public final class TCViaGuess {
 		} finally {
 			if (skipCount > 0) {
 				clearSkips();
+			}
+		}
+	}
+
+	// ---- smithing tables ----------------------------------------------------------
+	// ViaBackwards sends smithing tables as crafting tables; nothing in the block tells
+	// them apart. Once one opens the smithing menu (TCSmithing spots that), its spot is
+	// remembered for that server and dimension, kept between visits.
+
+	private static final int CRAFTING_TABLE = 58, MAX_SMITH = 512;
+	private static java.util.HashSet<Long> smithSpots;
+	private static String smithKey;
+	private static IBlockState smithingState;
+
+	private static String smithServer(World w) {
+		String srv = "local";
+		try {
+			net.minecraft.client.multiplayer.ServerData sd = net.minecraft.client.Minecraft.getMinecraft()
+					.getCurrentServerData();
+			if (sd != null && sd.serverIP != null) {
+				srv = sd.serverIP.toLowerCase();
+			}
+		} catch (Throwable t) {
+		}
+		return srv + "|" + dimOf(w);
+	}
+
+	private static String[] smithLines() {
+		byte[] b = net.lax1dude.eaglercraft.EagRuntime.getStorage("tcsmith");
+		return b == null ? new String[0] : new String(b, java.nio.charset.StandardCharsets.UTF_8).split("\n");
+	}
+
+	/** The remembered spots for the server and dimension this world is in. */
+	private static World smithWorld;
+
+	private static java.util.HashSet<Long> smithSet(World w) {
+		if (w == smithWorld && smithSpots != null) {
+			return smithSpots; // same world: no need to work out the key again
+		}
+		smithWorld = w;
+		String key = smithServer(w);
+		if (smithSpots == null || !key.equals(smithKey)) {
+			smithKey = key;
+			smithSpots = new java.util.HashSet<Long>();
+			try {
+				String[] lines = smithLines();
+				for (int i = 0; i < lines.length; i++) {
+					int bar = lines[i].lastIndexOf('|');
+					if (bar > 0 && lines[i].substring(0, bar).equals(key)) {
+						smithSpots.add(Long.valueOf(Long.parseLong(lines[i].substring(bar + 1))));
+					}
+				}
+			} catch (Throwable t) {
+			}
+		}
+		return smithSpots;
+	}
+
+	private static void saveSmith(World w) {
+		try {
+			String key = smithServer(w);
+			StringBuilder sb = new StringBuilder();
+			String[] lines = smithLines();
+			int kept = 0;
+			for (Long l : smithSpots) {
+				if (kept++ >= MAX_SMITH) {
+					break;
+				}
+				sb.append(key).append('|').append(l.longValue()).append('\n');
+			}
+			for (int i = 0; i < lines.length && kept < MAX_SMITH; i++) {
+				int bar = lines[i].lastIndexOf('|');
+				if (bar > 0 && !lines[i].substring(0, bar).equals(key)) {
+					sb.append(lines[i]).append('\n'); // other servers stay as they are
+					kept++;
+				}
+			}
+			net.lax1dude.eaglercraft.EagRuntime.setStorage("tcsmith",
+					sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		} catch (Throwable t) {
+		}
+	}
+
+	private static IBlockState smithing() {
+		if (smithingState == null) {
+			smithingState = get("smithing_table");
+		}
+		return smithingState;
+	}
+
+	/** Whether this block is a smithing table, or the crafting table look-alike of one. */
+	public static boolean isSmithingCandidate(IBlockState st) {
+		if (st == null) {
+			return false;
+		}
+		return Block.getIdFromBlock(st.getBlock()) == CRAFTING_TABLE
+				|| (smithing() != null && st.getBlock() == smithingState.getBlock());
+	}
+
+	/** The menu that opened was the smithing menu: remember this spot and show it now. */
+	public static void rememberSmithing(World w, BlockPos pos) {
+		try {
+			if (w == null || pos == null || smithing() == null) {
+				return;
+			}
+			if (smithSet(w).add(Long.valueOf(pos.toLong()))) {
+				saveSmith(w);
+			}
+			if (Block.getIdFromBlock(w.getBlockState(pos).getBlock()) == CRAFTING_TABLE) {
+				w.setBlockState(pos, smithingState, 3);
+			}
+		} catch (Throwable t) {
+		}
+	}
+
+	/** A remembered spot opened as a crafting table after all: forget it. */
+	public static void forgetSmithing(World w, BlockPos pos) {
+		try {
+			if (w == null || pos == null) {
+				return;
+			}
+			if (smithSet(w).remove(Long.valueOf(pos.toLong()))) {
+				saveSmith(w);
+				if (smithing() != null && w.getBlockState(pos).getBlock() == smithingState.getBlock()) {
+					w.setBlockState(pos, net.minecraft.init.Blocks.CRAFTING_TABLE.getDefaultState(), 3);
+				}
+			}
+		} catch (Throwable t) {
+		}
+	}
+
+	private static IBlockState smithingAt(World w, BlockPos pos, IBlockState st) {
+		if (smithing() == null) {
+			return null;
+		}
+		java.util.HashSet<Long> set = smithSet(w);
+		if (set.isEmpty()) {
+			return null;
+		}
+		Long k = Long.valueOf(pos.toLong());
+		if (!set.contains(k)) {
+			return null;
+		}
+		if (Block.getIdFromBlock(st.getBlock()) == CRAFTING_TABLE) {
+			return smithingState;
+		}
+		if (st.getBlock() != smithingState.getBlock()) {
+			set.remove(k); // broken or replaced
+			saveSmith(w);
+		}
+		return null;
+	}
+
+	private static void applySmithing(World w, Chunk c) {
+		if (smithing() == null) {
+			return;
+		}
+		java.util.HashSet<Long> set = smithSet(w);
+		if (set.isEmpty()) {
+			return;
+		}
+		int cx = c.xPosition, cz = c.zPosition;
+		for (Long l : set) {
+			BlockPos p = BlockPos.fromLong(l.longValue());
+			if ((p.getX() >> 4) != cx || (p.getZ() >> 4) != cz || p.getY() < 0 || p.getY() > 255) {
+				continue;
+			}
+			ExtendedBlockStorage sec = c.getBlockStorageArray()[p.getY() >> 4];
+			if (sec == Chunk.NULL_BLOCK_STORAGE) {
+				continue;
+			}
+			int x = p.getX() & 15, y = p.getY() & 15, z = p.getZ() & 15;
+			if (Block.getIdFromBlock(sec.get(x, y, z).getBlock()) == CRAFTING_TABLE) {
+				sec.set(x, y, z, smithingState);
 			}
 		}
 	}
@@ -738,11 +933,17 @@ public final class TCViaGuess {
 					return st; // an ordinary block you placed (dirt, a wall...): never guess it
 				}
 			}
+			IBlockState smith = smithingAt(w, pos, st);
+			if (smith != null) {
+				return smith;
+			}
 			int dim = dimOf(w);
 			if (dim != 0 && dim != -1) {
 				return st;
 			}
-			if (dim == -1 && Block.getIdFromBlock(st.getBlock()) == NETHER_BRICK) {
+			int sid = Block.getIdFromBlock(st.getBlock());
+			if (dim == -1 && (sid == NETHER_BRICK || sid == NETHER_BRICK_STAIRS || sid == STONE_SLAB
+					|| sid == DOUBLE_STONE_SLAB)) {
 				Chunk wc = w.getChunkFromBlockCoords(pos);
 				fortressHint = wc != null && fortressNear(wc, w) ? 1 : 0;
 			}
@@ -803,7 +1004,13 @@ public final class TCViaGuess {
 				case GRAY_GLAZED: case LOG2: case MYCELIUM: case LIT_PUMPKIN: case RED_NETHER_BRICK: case GOLD_ORE:
 				case NETHER_BRICK:
 				case OBSIDIAN: case NETHER_WART: case BROWN_MUSHROOM: case RED_MUSHROOM: case VINE:
+				case NETHER_BRICK_STAIRS: case BRICK_STAIRS:
 					return true;
+				case STONE_SLAB: case DOUBLE_STONE_SLAB: {
+					int sm = meta(s) & 7;
+					if (sm == 4 || sm == 6) return true; // brick or nether brick slabs
+					break;
+				}
 				case TALLGRASS:
 					if (meta(s) == 1) return true;
 					break;
@@ -935,6 +1142,22 @@ public final class TCViaGuess {
 			return blackstoneBricks; // bastions
 		case NETHER_BRICK:
 			return netherBrickGuess(c, w, x, y, z);
+		// blackstone stairs and slabs arrive as nether brick ones (fortresses have those too),
+		// polished blackstone stairs and slabs as brick ones (which never generate in the nether)
+		case NETHER_BRICK_STAIRS:
+			return fortressHint != 1 ? sameShape(bsStairs, st) : null;
+		case BRICK_STAIRS:
+			return sameShape(pbbStairs, st);
+		case STONE_SLAB: {
+			int sm = meta(st) & 7;
+			if (sm == 6) return fortressHint != 1 ? sameShape(bsSlab, st) : null;
+			return sm == 4 ? sameShape(pbbSlab, st) : null;
+		}
+		case DOUBLE_STONE_SLAB: {
+			int sm = meta(st) & 7;
+			if (sm == 6) return fortressHint != 1 ? bsDouble : null;
+			return sm == 4 ? pbbDouble : null;
+		}
 		case GOLD_ORE:
 			return netherGold;
 		case NETHER_WART: {
@@ -1094,11 +1317,13 @@ public final class TCViaGuess {
 
 	private static final String[] WALL_MATS = { "stone_brick_wall", "mossy_stone_brick_wall", "brick_wall",
 			"andesite_wall", "granite_wall", "diorite_wall", "sandstone_wall", "red_sandstone_wall",
-			"prismarine_wall", "nether_brick_wall", "red_nether_brick_wall", "end_stone_brick_wall" };
+			"prismarine_wall", "nether_brick_wall", "red_nether_brick_wall", "end_stone_brick_wall", "blackstone_wall",
+			"polished_blackstone_wall", "polished_blackstone_brick_wall" };
+	private static final int W_BLACKSTONE = 12, W_POLISHED_BS = 13, W_PBB = 14;
 	private static final int W_STONE_BRICK = 0, W_MOSSY = 1, W_COBBLE = -2;
 	private static IBlockState[] wallStates;
 	private static int[] wallIds;
-	private static final int[] wallVotes = new int[12];
+	private static final int[] wallVotes = new int[WALL_MATS.length];
 	private static int[] wallRun;
 	private static boolean[] wallSeen;
 
@@ -1153,6 +1378,12 @@ public final class TCViaGuess {
 			return 7;
 		case COBBLESTONE: case 48: case 67: // cobblestone, mossy cobblestone, cobblestone stairs
 			return W_COBBLE;
+		}
+		if (id >= ViaBlocks.FIRST_ID) {
+			// blocks the guesses already turned into blackstone
+			if (id == blackstoneId || id == idOf(bsStairs) || id == idOf(bsSlab) || id == idOf(bsDouble)) return W_BLACKSTONE;
+			if (id == polishedBlackstoneId) return W_POLISHED_BS;
+			if (id == blackstoneBricksId || id == idOf(pbbStairs) || id == idOf(pbbSlab) || id == idOf(pbbDouble)) return W_PBB;
 		}
 		if (id >= ViaBlocks.FIRST_ID && wallIds != null) {
 			for (int i = 0; i < wallIds.length; i++) {
@@ -1543,7 +1774,7 @@ public final class TCViaGuess {
 			return BASALT_LIKE | BLACKSTONE_HINT;
 		case NETHER_BRICK_FENCE: case NETHER_WART: case MOB_SPAWNER:
 			return FORTRESS_LIKE;
-		case RED_NETHER_BRICK: case GOLD_BLOCK: case DIRT: // bastion bricks, bastion gold, soul soil
+		case RED_NETHER_BRICK: case GOLD_BLOCK: case DIRT: case BRICK_STAIRS: // bastion bricks, bastion gold, soul soil
 			return BLACKSTONE_HINT;
 		case OBSIDIAN:
 			return OBSIDIAN_LIKE;

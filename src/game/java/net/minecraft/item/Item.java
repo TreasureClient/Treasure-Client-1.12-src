@@ -544,6 +544,12 @@ public class Item {
 				registerItemBlock(net.minecraft.block.ViaBlocks.TRAPDOORS[viaT]);
 			}
 		}
+		// Treasure Client — ViaBlocks stairs: a plain ItemBlock each.
+		for (int viaSt = 0; viaSt < net.minecraft.block.ViaBlocks.STAIRS.length; viaSt++) {
+			if (net.minecraft.block.ViaBlocks.STAIRS[viaSt] != null) {
+				registerItemBlock(net.minecraft.block.ViaBlocks.STAIRS[viaSt]);
+			}
+		}
 		// Treasure Client — ViaBlocks walls: a plain ItemBlock each.
 		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
 			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {
