@@ -59,6 +59,13 @@ public class TreasureHud {
 			sb.append("x=").append(fmt(player.posX)).append('\n');
 			sb.append("y=").append(fmt(player.posY)).append('\n');
 			sb.append("z=").append(fmt(player.posZ)).append('\n');
+			// biome the player stands in (from the chunk data the server sent)
+			try {
+				net.minecraft.util.math.BlockPos bp = new net.minecraft.util.math.BlockPos(player);
+				if (mc.world != null && mc.world.isBlockLoaded(bp)) {
+					sb.append("biome=").append(safe(mc.world.getBiome(bp).getBiomeName())).append('\n');
+				}
+			} catch (Throwable t) {}
 			sb.append("yaw=").append(fmt(normalizeYaw(player.rotationYaw))).append('\n');
 
 			int ping = -1;

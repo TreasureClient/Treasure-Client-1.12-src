@@ -872,6 +872,40 @@ public class GuiIngame extends Gui {
 		wr.pos((double) left, (double) top, 0.0D).color(r, g, b, a).endVertex();
 	}
 
+	// Treasure Client — Saturation Display
+	private final int[] tcSatX = new int[10], tcSatY = new int[10];
+	private int tcSatN;
+	private static net.minecraft.client.renderer.texture.DynamicTexture tcSatTex;
+
+	/** Gold shank outlines over the food bar, one per shank that still has saturation. */
+	private void drawSaturationOutlines() {
+		if (tcSatTex == null) {
+			// the outline of the food shank, in gold (pixels are A, B, G, R from the top byte down)
+			String[] mask = { "..##.....", ".#..#....", "#....#...", "#.....#..", ".#....#..", "..#...#..",
+					"...###.##", "......#.#", "......##." };
+			tcSatTex = new net.minecraft.client.renderer.texture.DynamicTexture(9, 9);
+			int[] px = tcSatTex.getTextureData();
+			for (int y = 0; y < 9; ++y) {
+				for (int x = 0; x < 9; ++x) {
+					px[y * 9 + x] = mask[y].charAt(x) == '#' ? 0xFF2AC8FF : 0;
+				}
+			}
+			tcSatTex.updateDynamicTexture();
+		}
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		GlStateManager.bindTexture(tcSatTex.getGlTextureId());
+		for (int i = 0; i < tcSatN; ++i) {
+			int x = tcSatX[i];
+			if (x >= 0) {
+				drawModalRectWithCustomSizedTexture(x, tcSatY[i], 0.0F, 0.0F, 9, 9, 9.0F, 9.0F);
+			} else {
+				drawModalRectWithCustomSizedTexture(-x - 1 + 4, tcSatY[i], 4.0F, 0.0F, 5, 9, 9.0F, 9.0F);
+			}
+		}
+		tcSatN = 0;
+		this.mc.getTextureManager().bindTexture(Gui.ICONS);
+	}
+
 	private void renderPlayerStats(ScaledResolution scaledRes) {
 		if (this.mc.getRenderViewEntity() instanceof EntityPlayer) {
 			EntityPlayer entityplayer = (EntityPlayer) this.mc.getRenderViewEntity();
@@ -1000,6 +1034,7 @@ public class GuiIngame extends Gui {
 
 			Entity entity = entityplayer.getRidingEntity();
 
+			tcSatN = 0;
 			if (entity == null || !(entity instanceof EntityLivingBase)) {
 				for (int l5 = 0; l5 < 10; ++l5) {
 					int j6 = j1;
@@ -1019,18 +1054,13 @@ public class GuiIngame extends Gui {
 					int l7 = i1 - l5 * 8 - 9;
 					this.drawTexturedModalRect(l7, j6, 16 + j7 * 9, 27, 9, 9);
 
-					// Treasure Client — Saturation Display: gold outline behind each shank that
-					// still has saturation (2 points per shank, half shank = right half)
+					// Treasure Client — Saturation Display: remember where each shank is; the gold
+					// outlines are drawn on top after the loop (2 points per shank, half = right half)
 					if (TreasureMods.saturationDisplay()) {
 						float sat = foodstats.getSaturationLevel() - (float) (l5 * 2);
 						if (sat >= 0.5F) {
-							GlStateManager.color(1.0F, 0.78F, 0.1F, 1.0F);
-							if (sat >= 1.5F) {
-								this.drawTexturedModalRect(l7, j6, 16, 27, 9, 9);
-							} else {
-								this.drawTexturedModalRect(l7 + 4, j6, 16 + 4, 27, 5, 9);
-							}
-							GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+							tcSatX[tcSatN] = sat >= 1.5F ? l7 : -l7 - 1;
+							tcSatY[tcSatN++] = j6;
 						}
 					}
 
@@ -1042,6 +1072,10 @@ public class GuiIngame extends Gui {
 						this.drawTexturedModalRect(l7, j6, l6 + 45, 27, 9, 9);
 					}
 				}
+			}
+
+			if (tcSatN > 0) {
+				drawSaturationOutlines();
 			}
 
 			if (entityplayer.isInsideOfMaterial(Material.WATER)) {
