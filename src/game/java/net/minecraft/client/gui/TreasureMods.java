@@ -196,7 +196,10 @@ public class TreasureMods {
 
 	// Fullbright (gamma is applied by the overlay) + its Clear Water option (less fog underwater)
 	private static boolean fullbright = false, clearWater = true;
-	public static boolean clearWater() { return fullbright && clearWater; }
+	public static boolean clearWater() { return (fullbright && clearWater) || clearLiquids; }
+	// Clear Liquids: no thick fog or overlay while you are inside water or lava
+	private static boolean clearLiquids = false;
+	public static boolean clearLava() { return clearLiquids; }
 
 	// Saturation Display (HUD): gold outlines on the food bar
 	private static boolean satDisplay = false;
@@ -485,7 +488,7 @@ public class TreasureMods {
 			tAnim = false; taPunch = true; taDraw = true; taSway = true; taBlockHit = true; taStyle = 0; taSpeed = 100;
 			taParticles = 1; taTotemFx = true; taHitFx = true; taEat = true; taThrow = true;
 			autoGG = false; agGlhf = false; agMessage = "gg"; agDelay = 1000;
-			fullbright = false; clearWater = true; satDisplay = false;
+			fullbright = false; clearWater = true; satDisplay = false; clearLiquids = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
 			tierTagger = false; ttMode = "highest";
 			passwordHider = false;
@@ -560,6 +563,7 @@ public class TreasureMods {
 				else if (k.equals("taSpeed")) { try { taSpeed = Math.max(50, Math.min(200, Integer.parseInt(v))); } catch (Throwable t) {} }
 				else if (k.equals("fullbright")) fullbright = v.equals("1");
 				else if (k.equals("clearWater")) clearWater = v.equals("1");
+				else if (k.equals("clearLiquids")) clearLiquids = v.equals("1");
 				else if (k.equals("satDisplay")) satDisplay = v.equals("1");
 				else if (k.equals("hitColorOn")) hitColorOn = v.equals("1");
 				else if (k.equals("hitColor")) { try { hitColor = Integer.parseInt(v, 16) & 0xFFFFFF; } catch (Throwable t) {} }
