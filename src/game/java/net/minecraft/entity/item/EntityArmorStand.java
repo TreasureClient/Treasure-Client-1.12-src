@@ -725,7 +725,7 @@ public class EntityArmorStand extends EntityLivingBase {
 		return (((Byte) this.dataManager.get(STATUS)).byteValue() & 1) != 0;
 	}
 
-	private void setShowArms(boolean showArms) {
+	public void setShowArms(boolean showArms) { // Treasure Client: public for the smithing preview
 		this.dataManager.set(STATUS,
 				Byte.valueOf(this.setBit(((Byte) this.dataManager.get(STATUS)).byteValue(), 4, showArms)));
 	}
@@ -734,7 +734,7 @@ public class EntityArmorStand extends EntityLivingBase {
 		return (((Byte) this.dataManager.get(STATUS)).byteValue() & 4) != 0;
 	}
 
-	private void setNoBasePlate(boolean noBasePlate) {
+	public void setNoBasePlate(boolean noBasePlate) { // Treasure Client: public for the smithing preview
 		this.dataManager.set(STATUS,
 				Byte.valueOf(this.setBit(((Byte) this.dataManager.get(STATUS)).byteValue(), 8, noBasePlate)));
 	}

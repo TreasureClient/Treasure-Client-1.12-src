@@ -1845,7 +1845,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
             }
         } else if (iblockstate.getMaterial() == Material.LAVA) {
             GlStateManager.setFog(RealOpenGLEnums.GL_EXP);
-            GlStateManager.setFogDensity(2.0F);
+            // Treasure Client — Clear Liquids: see through lava (vanilla can't see a block ahead)
+            GlStateManager.setFogDensity(net.minecraft.client.gui.TreasureMods.clearLava() ? 0.015F : 2.0F);
         } else {
             float f = this.farPlaneDistance;
             this.fogStandard = true;

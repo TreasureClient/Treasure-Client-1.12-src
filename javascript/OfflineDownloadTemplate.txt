@@ -668,6 +668,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Saturation Display</b><i>Gold outlines on the food bar show hidden saturation</i></div><div class="tc-sw" data-mod="satDisplay"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Clear Liquids</b><i>See clearly when you are inside water or lava</i></div><div class="tc-sw" data-mod="clearLiquids"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
@@ -1053,7 +1054,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       armorStatus:false, potionEffects:false, heldItem:false, fpsGraph:false, perfMonitor:false, sprintStatus:false, sneakStatus:false,
       // hitboxes — visual-only, uses vanilla's own F3+B renderer (see TreasureMods.java)
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
-      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
+      noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, clearLiquids:false, hitColorOn:false, hitColor:'red', hitAlpha:30, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
       pauseUnfocused:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1229,6 +1230,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'fullbright=' + (state.fullbright ? 1 : 0),
           'clearWater=' + (state.clearWater === false ? 0 : 1),
           'satDisplay=' + (state.satDisplay ? 1 : 0),
+          'clearLiquids=' + (state.clearLiquids ? 1 : 0),
           'hitColorOn=' + (state.hitColorOn ? 1 : 0),
           'hitColor=' + ({red:'ff0000', orange:'ff8800', yellow:'ffee00', green:'00ff44', cyan:'00ffff', blue:'2266ff', purple:'aa33ff', pink:'ff55cc', white:'ffffff'}[state.hitColor] || 'ff0000'),
           'hitAlpha=' + (state.hitAlpha || 30),
@@ -1526,6 +1528,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         coords: '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>',
         direction: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
         satDisplay: '<path d="M15 4a5 5 0 0 1 0 10l-4 .5-3.5 3.5a1.8 1.8 0 1 1-2.5-2.5L8.5 12 9 8a5 5 0 0 1 6-4z"/>',
+        clearLiquids: '<path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>',
         armorStatus: '<path d="M8 3L4 5v5h3v11h10V10h3V5l-4-2c-.6 1.5-2 2.5-4 2.5S8.6 4.5 8 3z"/>',
         potionEffects: '<path d="M10 3h4M10.5 3v5l-5 9a2.5 2.5 0 0 0 2.2 4h8.6a2.5 2.5 0 0 0 2.2-4l-5-9V3"/><path d="M7.5 14h9"/>',
         heldItem: '<path d="M19 3l2 2-11 11-3-3z"/><path d="M5 15l4 4M3 21l3-3"/>',
