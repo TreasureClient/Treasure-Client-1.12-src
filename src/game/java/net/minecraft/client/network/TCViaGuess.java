@@ -40,7 +40,8 @@ public final class TCViaGuess {
 			LOG2 = 162, PURPUR_BLOCK = 201, PURPUR_PILLAR = 202, RED_NETHER_BRICK = 215, GRAY_GLAZED = 242,
 			SOUL_SAND = 88, MAGMA = 213, GRAVEL = 13, LAVA = 10, FLOWING_LAVA = 11, GRASS = 2, LOG = 17, LEAVES = 18,
 			TALLGRASS = 31, RED_FLOWER = 38, BROWN_MUSHROOM = 39, RED_MUSHROOM = 40, VINE = 106, NETHER_WART = 115,
-			COBBLE_WALL = 139, LEAVES2 = 161, CARPET = 171;
+			COBBLE_WALL = 139, LEAVES2 = 161, CARPET = 171, NETHER_BRICK_FENCE = 113, MOB_SPAWNER = 52,
+			GOLD_BLOCK = 41;
 
 	/** Lush and dripstone caves: underground rules only look below this height. */
 	private static final int UNDER_MAX_Y = 60;
@@ -109,6 +110,94 @@ public final class TCViaGuess {
 		} catch (Throwable t) {
 			return false;
 		}
+	}
+
+	// ---- blackstone or nether bricks (the nether) ---------------------------------
+	// ViaBackwards sends blackstone as nether bricks, the block fortresses are built of.
+	// Fortresses come with nether brick fences, nether wart and blaze spawners; blackstone
+	// sits in netherrack next to basalt, magma, soul soil and bastion bricks.
+
+	/** 1: this chunk or a loaded neighbour has fortress-only blocks, 0: none, -1: not worked out. */
+	private static int fortressHint = -1;
+
+	private static boolean fortressNear(Chunk c, World w) {
+		if (hasFortressBlocks(c)) {
+			return true;
+		}
+		if (w == null) {
+			return false;
+		}
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				if ((dx != 0 || dz != 0) && w.getChunkProvider() != null) {
+					Chunk n = w.getChunkProvider().getLoadedChunk(c.xPosition + dx, c.zPosition + dz);
+					if (n != null && hasFortressBlocks(n)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/** Any section of the chunk lists a nether brick fence, nether wart or a mob spawner. */
+	private static boolean hasFortressBlocks(Chunk c) {
+		ExtendedBlockStorage[] secs = c.getBlockStorageArray();
+		for (int si = 0; si < secs.length; si++) {
+			ExtendedBlockStorage sec = secs[si];
+			if (sec == Chunk.NULL_BLOCK_STORAGE || sec.isEmpty()) {
+				continue;
+			}
+			BlockStateContainer data = sec.getData();
+			int n = data.tcPaletteSize();
+			for (int i = 0; i < n; i++) {
+				IBlockState ps = data.tcPaletteState(i);
+				if (ps != null) {
+					int id = Block.getIdFromBlock(ps.getBlock());
+					if (id == NETHER_BRICK_FENCE || id == NETHER_WART || id == MOB_SPAWNER) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	private static IBlockState netherBrickGuess(Chunk c, World w, int x, int y, int z) {
+		if (blackstone == null) {
+			return null;
+		}
+		if (fortressHint != 1) {
+			// no fortress in or next to this chunk: nether bricks are blackstone
+			// (basalt deltas, bastions, blobs in netherrack)
+			return blackstone;
+		}
+		// a fortress is near. Its walls sit in netherrack too, so it takes basalt, magma, soul
+		// soil or bastion blocks touching it (cheap test first), and no fence, wart or spawner close by
+		int hint = countBox(c, w, x, y, z, 1, BLACKSTONE_HINT);
+		if (hint == 0) {
+			return null;
+		}
+		int nat = countBox(c, w, x, y, z, 1, NETHER_STONE);
+		if (hint + nat < 3) {
+			return null;
+		}
+		return countBox(c, w, x, y, z, 2, FORTRESS_LIKE) > 0 ? null : blackstone;
+	}
+
+	/** Blocks of these kinds in the cube of the given radius around a spot (not the spot itself). */
+	private static int countBox(Chunk c, World w, int x, int y, int z, int r, int kinds) {
+		int n = 0;
+		for (int dy = -r; dy <= r; dy++) {
+			for (int dz = -r; dz <= r; dz++) {
+				for (int dx = -r; dx <= r; dx++) {
+					if ((dx | dy | dz) != 0 && (kindOf(at(c, w, x + dx, y + dy, z + dz)) & kinds) != 0) {
+						++n;
+					}
+				}
+			}
+		}
+		return n;
 	}
 
 	/** Following the spike up and down through more wall look-alikes, one end is a dripstone block. */
@@ -223,6 +312,8 @@ public final class TCViaGuess {
 			pointedDrip, budSmall, budMedium, budLarge, cluster, crimsonRoots, warpedRoots, sprouts, crimsonFungus,
 			warpedFungus, weeping, twisting;
 	private static int pointedDripId, crimsonNyliumId, warpedNyliumId, mossId, dripstoneId;
+	private static IBlockState blackstone;
+	private static int blackstoneId, basaltId, blackstoneBricksId, soulSoilId;
 
 	private static IBlockState get(String name) {
 		Block b = Block.getBlockFromName(name);
@@ -316,6 +407,11 @@ public final class TCViaGuess {
 			smoothBasaltId = idOf(smoothBasalt);
 			mossId = idOf(moss);
 			dripstoneId = idOf(dripstone);
+			blackstone = get("blackstone");
+			blackstoneId = idOf(blackstone);
+			basaltId = idOf(basalt);
+			blackstoneBricksId = idOf(blackstoneBricks);
+			soulSoilId = idOf(soulSoil);
 		} catch (Throwable t) {
 			failed = true;
 		}
@@ -354,6 +450,7 @@ public final class TCViaGuess {
 			}
 			applyPlaced(w, c);
 			cherryChunk = null; // this chunk's blocks are new
+			fortressHint = -1; // worked out when a nether section needs it
 			ExtendedBlockStorage[] secs = c.getBlockStorageArray();
 			int mycelium = 0; // nether: crimson or warped nylium, from the stems in this chunk
 			int groups = dim == 0 ? groupsIn(c) : 0;
@@ -407,6 +504,9 @@ public final class TCViaGuess {
 				}
 				if (dim == -1 && mycelium == 0) {
 					mycelium = nyliumHint(c);
+				}
+				if (dim == -1 && fortressHint < 0) {
+					fortressHint = fortressNear(c, w) ? 1 : 0;
 				}
 				if (idxBuf == null) {
 					idxBuf = new int[4096];
@@ -641,6 +741,10 @@ public final class TCViaGuess {
 			if (dim != 0 && dim != -1) {
 				return st;
 			}
+			if (dim == -1 && Block.getIdFromBlock(st.getBlock()) == NETHER_BRICK) {
+				Chunk wc = w.getChunkFromBlockCoords(pos);
+				fortressHint = wc != null && fortressNear(wc, w) ? 1 : 0;
+			}
 			IBlockState g = guess(dim, st, null, w, pos.getX(), pos.getY(), pos.getZ(), 1);
 			return g != null ? g : st;
 		} catch (Throwable t) {
@@ -693,6 +797,7 @@ public final class TCViaGuess {
 			} else {
 				switch (id) {
 				case GRAY_GLAZED: case LOG2: case MYCELIUM: case LIT_PUMPKIN: case RED_NETHER_BRICK: case GOLD_ORE:
+				case NETHER_BRICK:
 				case OBSIDIAN: case NETHER_WART: case BROWN_MUSHROOM: case RED_MUSHROOM: case VINE:
 					return true;
 				case TALLGRASS:
@@ -824,6 +929,8 @@ public final class TCViaGuess {
 			return meta(st) == 0 ? soulSoil : null;
 		case RED_NETHER_BRICK:
 			return blackstoneBricks; // bastions
+		case NETHER_BRICK:
+			return netherBrickGuess(c, w, x, y, z);
 		case GOLD_ORE:
 			return netherGold;
 		case NETHER_WART: {
@@ -1154,7 +1261,7 @@ public final class TCViaGuess {
 	// neighbour kinds (bit flags), counting both the look-alike and an already guessed block
 	private static final int DEEPSLATE_LIKE = 1, CALCITE_LIKE = 2, AMETHYST_LIKE = 4, BUDDING_LIKE = 8,
 			BASALT_LIKE = 16, OBSIDIAN_LIKE = 32, NETHER_STONE = 64, DRIP_LIKE = 128, MOSS_LIKE = 256,
-			COBBLE_LIKE = 512;
+			COBBLE_LIKE = 512, FORTRESS_LIKE = 1024, BLACKSTONE_HINT = 2048;
 
 	private static int kindOf(IBlockState s) {
 		if (s == null) {
@@ -1171,7 +1278,11 @@ public final class TCViaGuess {
 		case PURPUR_PILLAR:
 			return BUDDING_LIKE;
 		case GRAY_GLAZED:
-			return BASALT_LIKE;
+			return BASALT_LIKE | BLACKSTONE_HINT;
+		case NETHER_BRICK_FENCE: case NETHER_WART: case MOB_SPAWNER:
+			return FORTRESS_LIKE;
+		case RED_NETHER_BRICK: case GOLD_BLOCK: case DIRT: // bastion bricks, bastion gold, soul soil
+			return BLACKSTONE_HINT;
 		case OBSIDIAN:
 			return OBSIDIAN_LIKE;
 		case COBBLE_WALL:
@@ -1180,7 +1291,9 @@ public final class TCViaGuess {
 			return MOSS_LIKE;
 		case COBBLESTONE:
 			return COBBLE_LIKE;
-		case NETHERRACK: case SOUL_SAND: case MAGMA: case GRAVEL: case LAVA: case FLOWING_LAVA:
+		case MAGMA:
+			return NETHER_STONE | BLACKSTONE_HINT; // basalt deltas
+		case NETHERRACK: case SOUL_SAND: case GRAVEL: case LAVA: case FLOWING_LAVA:
 			return NETHER_STONE;
 		}
 		if (id < ViaBlocks.FIRST_ID) {
@@ -1193,6 +1306,9 @@ public final class TCViaGuess {
 		if (id == amethystId) return AMETHYST_LIKE;
 		if (id == buddingId) return BUDDING_LIKE | AMETHYST_LIKE;
 		if (id == smoothBasaltId) return BASALT_LIKE;
+		if (id == basaltId || id == blackstoneId || id == blackstoneBricksId || id == soulSoilId) {
+			return BLACKSTONE_HINT;
+		}
 		if (id == pointedDripId) return DRIP_LIKE;
 		return 0;
 	}
