@@ -4198,6 +4198,18 @@ tile.blackstone_wall.name=Blackstone Wall
 tile.polished_blackstone_wall.name=Polished Blackstone Wall
 tile.polished_blackstone_brick_wall.name=Polished Blackstone Brick Wall
 tile.mud_brick_wall.name=Mud Brick Wall
+tile.end_stone_brick_wall.name=End Stone Brick Wall
+tile.red_nether_brick_wall.name=Red Nether Brick Wall
+tile.nether_brick_wall.name=Nether Brick Wall
+tile.prismarine_wall.name=Prismarine Wall
+tile.red_sandstone_wall.name=Red Sandstone Wall
+tile.sandstone_wall.name=Sandstone Wall
+tile.diorite_wall.name=Diorite Wall
+tile.granite_wall.name=Granite Wall
+tile.andesite_wall.name=Andesite Wall
+tile.brick_wall.name=Brick Wall
+tile.mossy_stone_brick_wall.name=Mossy Stone Brick Wall
+tile.stone_brick_wall.name=Stone Brick Wall
 # Treasure Client — ViaEntities
 entity.CopperGolem.name=Copper Golem
 # Treasure Client — ViaBlocks deepslate ores

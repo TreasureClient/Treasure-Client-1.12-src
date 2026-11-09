@@ -202,7 +202,20 @@ public final class ViaBlocks {
 		"blackstone_wall",
 		"polished_blackstone_wall",
 		"polished_blackstone_brick_wall",
-		"mud_brick_wall"
+		"mud_brick_wall",
+		// 1.14 walls: ViaBackwards turns every one into a cobblestone wall
+		"stone_brick_wall",
+		"mossy_stone_brick_wall",
+		"brick_wall",
+		"andesite_wall",
+		"granite_wall",
+		"diorite_wall",
+		"sandstone_wall",
+		"red_sandstone_wall",
+		"prismarine_wall",
+		"nether_brick_wall",
+		"red_nether_brick_wall",
+		"end_stone_brick_wall"
 	};
 
 	/** The base cube (name in {@link #NAMES}) each wall is modelled on + textured from. */
@@ -212,7 +225,20 @@ public final class ViaBlocks {
 		"blackstone",
 		"polished_blackstone",
 		"polished_blackstone_bricks",
-		"mud_bricks"
+		"mud_bricks",
+		// vanilla blocks (hardness and sound come from these)
+		"stonebrick",
+		"stonebrick",
+		"brick_block",
+		"stone",
+		"stone",
+		"stone",
+		"sandstone",
+		"red_sandstone",
+		"prismarine",
+		"nether_brick",
+		"red_nether_brick",
+		"end_bricks"
 	};
 
 	/** Registered wall instances, filled in by Block.registerViaBlocks(). */
