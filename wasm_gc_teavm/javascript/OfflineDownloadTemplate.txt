@@ -377,7 +377,9 @@ ${classes_js}
 /* ---------- HUD data readouts (coords / direction / ping / armor / potions / held item) ---------- */
 .tc-hud-box { position: absolute; font: 600 12px 'JetBrains Mono', monospace; color: var(--a-1);
   background: var(--panel); border: 1px solid var(--bord); border-radius: 7px; padding: 6px 10px; line-height: 1.5; }
-#tc-coords { top: 18px; left: 18px; }
+#tc-coords { top: 18px; left: 18px; display: grid; grid-template-columns: auto auto; column-gap: 12px; row-gap: 1px; min-width: 112px; }
+#tc-coords b { color: var(--dim); font-weight: 700; }
+#tc-coords span { font-variant-numeric: tabular-nums; white-space: nowrap; }
 #tc-direction { top: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
 #tc-ping { top: 18px; right: 18px; }
 #tc-armor { top: 56px; right: 18px; display: flex; gap: 8px; padding: 8px 10px; }
@@ -526,7 +528,7 @@ ${classes_js}
     </div>
     <div id="tc-cps" class="tc-hidden">0 CPS</div>
     <div id="tc-fps" class="tc-hidden">0 FPS</div>
-    <div id="tc-coords" class="tc-hud-box tc-hidden">— , — , —</div>
+    <div id="tc-coords" class="tc-hud-box tc-hidden"><b>X</b><span>—</span><b>Y</b><span>—</span><b>Z</b><span>—</span><b>Biome</b><span>—</span></div>
     <div id="tc-direction" class="tc-hud-box tc-hidden">—</div>
     <div id="tc-ping" class="tc-hud-box tc-hidden">— ms</div>
     <div id="tc-armor" class="tc-hud-box tc-hidden"></div>
@@ -587,7 +589,7 @@ ${classes_js}
           <!-- hud -->
           <div class="tc-panel active" data-panel="hud" data-group="hud">
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Coordinates</b><i>Real X / Y / Z position</i></div><button class="tc-gear" data-gear="coordcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="coords"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Coordinates</b><i>X, Y, Z and biome</i></div><button class="tc-gear" data-gear="coordcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="coords"><i></i></div></div>
               <div class="tc-cfg" data-cfg="coordcfg">
                 <div class="tc-cfg-row"><span>Precision</span>
                   <div class="tc-seg" data-seg="coordPrecision">
@@ -1195,7 +1197,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 /* ---------- HUD data readouts (coords / direction / ping / armor / potions / held item) ---------- */
 .tc-hud-box { position: absolute; font: 600 12px 'JetBrains Mono', monospace; color: var(--a-1);
   background: var(--panel); border: 1px solid var(--bord); border-radius: 7px; padding: 6px 10px; line-height: 1.5; }
-#tc-coords { top: 18px; left: 18px; }
+#tc-coords { top: 18px; left: 18px; display: grid; grid-template-columns: auto auto; column-gap: 12px; row-gap: 1px; min-width: 112px; }
+#tc-coords b { color: var(--dim); font-weight: 700; }
+#tc-coords span { font-variant-numeric: tabular-nums; white-space: nowrap; }
 #tc-direction { top: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
 #tc-ping { top: 18px; right: 18px; }
 #tc-armor { top: 56px; right: 18px; display: flex; gap: 8px; padding: 8px 10px; }
@@ -1418,7 +1422,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     </div>
     <div id="tc-cps" class="tc-hidden">0 CPS</div>
     <div id="tc-fps" class="tc-hidden">0 FPS</div>
-    <div id="tc-coords" class="tc-hud-box tc-hidden">— , — , —</div>
+    <div id="tc-coords" class="tc-hud-box tc-hidden"><b>X</b><span>—</span><b>Y</b><span>—</span><b>Z</b><span>—</span><b>Biome</b><span>—</span></div>
     <div id="tc-direction" class="tc-hud-box tc-hidden">—</div>
     <div id="tc-ping" class="tc-hud-box tc-hidden">— ms</div>
     <div id="tc-armor" class="tc-hud-box tc-hidden"></div>
@@ -1479,7 +1483,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           <!-- hud -->
           <div class="tc-panel active" data-panel="hud" data-group="hud">
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Coordinates</b><i>Real X / Y / Z position</i></div><button class="tc-gear" data-gear="coordcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="coords"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Coordinates</b><i>X, Y, Z and biome</i></div><button class="tc-gear" data-gear="coordcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="coords"><i></i></div></div>
               <div class="tc-cfg" data-cfg="coordcfg">
                 <div class="tc-cfg-row"><span>Precision</span>
                   <div class="tc-seg" data-seg="coordPrecision">
@@ -2835,8 +2839,13 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     function tcSetHTML(el, s) { if (el && el.__tcH !== s) { el.__tcH = s; el.innerHTML = s; } }
     function updateDataHud() {
       if (state.coords) {
-        if (hud.active) tcSetText(coordsEl, 'XYZ  ' + fmtPrec(hud.x) + '  ' + fmtPrec(hud.y) + '  ' + fmtPrec(hud.z));
-        else tcSetText(coordsEl, 'XYZ  — — —');
+        // four rows: X, Y, Z and the biome you are standing in
+        var on = hud.active;
+        var bio = on && hud.biome ? String(hud.biome).replace(/&/g, '&amp;').replace(/</g, '&lt;') : '—';
+        tcSetHTML(coordsEl, '<b>X</b><span>' + (on ? fmtPrec(hud.x) : '—') + '</span>'
+          + '<b>Y</b><span>' + (on ? fmtPrec(hud.y) : '—') + '</span>'
+          + '<b>Z</b><span>' + (on ? fmtPrec(hud.z) : '—') + '</span>'
+          + '<b>Biome</b><span>' + bio + '</span>');
       }
       if (state.direction) {
         if (hud.active && hud.yaw != null) {
