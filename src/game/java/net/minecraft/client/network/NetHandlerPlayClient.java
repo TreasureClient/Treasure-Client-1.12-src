@@ -1232,6 +1232,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 */
 	public void handleOpenWindow(SPacketOpenWindow packetIn) {
 		EntityPlayerSP entityplayersp = this.gameController.player;
+		TCSmithing.onOpenWindow(packetIn.getGuiId()); // Treasure Client
 
 		if ("minecraft:container".equals(packetIn.getGuiId())) {
 			entityplayersp.displayGUIChest(new InventoryBasic(packetIn.getWindowTitle(), packetIn.getSlotCount()));
@@ -1326,6 +1327,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		EntityPlayer entityplayer = this.gameController.player;
 		// Treasure Client — ViaItems: remap modern items across the whole window.
 		net.minecraft.item.ViaItemRemap.remapList(packetIn.getItemStacks());
+		// Treasure Client: the hidden smithing menu of modern servers (see TCSmithing)
+		TCSmithing.onWindowItems(packetIn.getWindowId(), packetIn.getItemStacks().size());
 
 		if (packetIn.getWindowId() == 0) {
 			entityplayer.inventoryContainer.func_190896_a(packetIn.getItemStacks());

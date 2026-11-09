@@ -502,6 +502,12 @@ public class RenderItem implements IResourceManagerReloadListener {
 				this.registerBlock(net.minecraft.block.ViaBlocks.SLAB_HALF[viaS], net.minecraft.block.ViaBlocks.SLAB_NAMES[viaS]);
 			}
 		}
+		// Treasure Client — item models for the ViaBlocks stairs.
+		for (int viaSt = 0; viaSt < net.minecraft.block.ViaBlocks.STAIRS.length; viaSt++) {
+			if (net.minecraft.block.ViaBlocks.STAIRS[viaSt] != null) {
+				this.registerBlock(net.minecraft.block.ViaBlocks.STAIRS[viaSt], net.minecraft.block.ViaBlocks.STAIR_NAMES[viaSt]);
+			}
+		}
 		// Treasure Client — item models for the ViaBlocks walls.
 		for (int viaW = 0; viaW < net.minecraft.block.ViaBlocks.WALLS.length; viaW++) {
 			if (net.minecraft.block.ViaBlocks.WALLS[viaW] != null) {

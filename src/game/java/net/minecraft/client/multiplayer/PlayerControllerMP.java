@@ -403,6 +403,10 @@ public class PlayerControllerMP {
 		} else {
 			if (this.currentGameType != GameType.SPECTATOR) {
 				IBlockState iblockstate = worldIn.getBlockState(stack);
+				// Treasure Client: smithing tables (see TCSmithing)
+				net.minecraft.client.network.TCSmithing.noteClick(!player.isSneaking()
+						|| player.getHeldItemMainhand().func_190926_b() && player.getHeldItemOffhand().func_190926_b()
+								? stack : null, iblockstate);
 
 				if ((!player.isSneaking()
 						|| player.getHeldItemMainhand().func_190926_b() && player.getHeldItemOffhand().func_190926_b())

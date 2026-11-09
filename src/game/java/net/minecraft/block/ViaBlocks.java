@@ -172,7 +172,9 @@ public final class ViaBlocks {
 		"polished_tuff_slab",
 		"tuff_brick_slab",
 		"polished_blackstone_slab",
-		"cut_copper_slab"
+		"cut_copper_slab",
+		"blackstone_slab",
+		"polished_blackstone_brick_slab"
 	};
 
 	/** Base block texture each slab is made of (parallel to {@link #SLAB_NAMES}). */
@@ -184,7 +186,9 @@ public final class ViaBlocks {
 		"polished_tuff",
 		"tuff_bricks",
 		"polished_blackstone",
-		"cut_copper"
+		"cut_copper",
+		"blackstone",
+		"polished_blackstone_bricks"
 	};
 
 	/** Registered slab instances (half + double), filled in by Block.registerViaBlocks(). */
@@ -240,6 +244,27 @@ public final class ViaBlocks {
 		"red_nether_brick",
 		"end_bricks"
 	};
+
+	// ---- stairs ---------------------------------------------------------------
+	/** First numeric id for ViaBlocks stairs. */
+	public static final int STAIR_FIRST_ID = 1700;
+
+	/** Stair registry names. */
+	public static final String[] STAIR_NAMES = {
+		"blackstone_stairs",
+		"polished_blackstone_stairs",
+		"polished_blackstone_brick_stairs"
+	};
+
+	/** The modern cube (name in {@link #NAMES}) each stair is made of. */
+	public static final String[] STAIR_BASE = {
+		"blackstone",
+		"polished_blackstone",
+		"polished_blackstone_bricks"
+	};
+
+	/** Registered stair instances, filled in by Block.registerViaBlocks(). */
+	public static final Block[] STAIRS = new Block[STAIR_NAMES.length];
 
 	/** Registered wall instances, filled in by Block.registerViaBlocks(). */
 	public static final Block[] WALLS = new Block[WALL_NAMES.length];

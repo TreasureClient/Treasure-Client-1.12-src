@@ -52,6 +52,7 @@ public final class ViaItemRemap {
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.SLAB_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.WALL_NAMES);
+		addBlockNames(ex, net.minecraft.block.ViaBlocks.STAIR_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.EXTRA_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.TRAPDOOR_NAMES);
 		addBlockNames(ex, net.minecraft.block.ViaBlocks.CROSS_NAMES);
