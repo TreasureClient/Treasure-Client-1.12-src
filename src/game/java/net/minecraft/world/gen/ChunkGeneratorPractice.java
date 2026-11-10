@@ -17,13 +17,11 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkPrimer;
 
 /**
- * Treasure Client: builds the Practice world from {@link TCArena#blockAt} (flat grass
- * with the hub and arenas), then places the hub's signs and kit stands.
+ * Treasure Client: builds the Practice world, a plain superflat ({@link TCArena#blockAt}),
+ * then places the kit stands at spawn.
  */
 public class ChunkGeneratorPractice implements IChunkGenerator {
 
-	private static final int MIN_Y = 58;
-	private static final int MAX_Y = TCArena.GROUND + 14;
 
 	private final World world;
 
@@ -33,14 +31,11 @@ public class ChunkGeneratorPractice implements IChunkGenerator {
 
 	public Chunk provideChunk(int x, int z) {
 		ChunkPrimer primer = new ChunkPrimer();
-		int bx = x << 4, bz = z << 4;
-		for (int i = 0; i < 16; ++i) {
-			for (int k = 0; k < 16; ++k) {
-				for (int y = MIN_Y; y <= MAX_Y; ++y) {
-					IBlockState s = TCArena.blockAt(bx + i, y, bz + k);
-					if (s != null) {
-						primer.setBlockState(i, y, k, s);
-					}
+		for (int y = TCArena.BOTTOM; y <= TCArena.GROUND; ++y) {
+			IBlockState s = TCArena.blockAt(y);
+			for (int i = 0; i < 16; ++i) {
+				for (int k = 0; k < 16; ++k) {
+					primer.setBlockState(i, y, k, s);
 				}
 			}
 		}

@@ -34,6 +34,10 @@ public class TCBot extends EntityPlayerMP {
 	public float homeYaw, homePitch;
 	/** The kit it was given last (given again on respawn), or null. */
 	public String kit;
+	/** Duel bots: a totem saves them every time, without needing one in hand. */
+	public boolean infiniteTotems;
+	/** Duel bots: whether they were set to block with a shield. */
+	public boolean duelShield;
 
 	private boolean respawnQueued;
 

@@ -715,7 +715,9 @@ public abstract class ServerConfigurationManager {
 	}
 
 	public boolean canSendCommands(GameProfile profile) {
-		return this.mcServer.isSinglePlayer() && this.mcServer.worldServers[0].getWorldInfo().areCommandsAllowed()
+		return this.mcServer.isSinglePlayer()
+				&& (this.mcServer.worldServers[0].getWorldInfo().areCommandsAllowed()
+						|| net.minecraft.tcpvp.TCPractice.isPractice(this.mcServer.worldServers[0])) // Treasure Client
 				&& this.mcServer.getServerOwner().equalsIgnoreCase(profile.getName()) || this.commandsAllowedForAll;
 	}
 

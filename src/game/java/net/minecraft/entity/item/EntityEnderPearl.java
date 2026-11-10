@@ -43,13 +43,11 @@ public class EntityEnderPearl extends EntityThrowable {
 	protected void onImpact(RayTraceResult result) {
 		EntityLivingBase entitylivingbase = this.getThrower();
 
-		if (result.entityHit != null) {
-			if (result.entityHit == this.thrower) {
-				return;
-			}
-
+		if (result.entityHit != null && result.entityHit != this.thrower) {
 			result.entityHit.attackEntityFrom(DamageSource.causeThrownDamage(this, entitylivingbase), 0.0F);
 		}
+		// Treasure Client: like 1.21, a pearl can hit the one who threw it (pearl catching):
+		// it lands right there and teleports them as usual
 
 		if (result.typeOfHit == RayTraceResult.Type.BLOCK) {
 			BlockPos blockpos = result.getBlockPos();
