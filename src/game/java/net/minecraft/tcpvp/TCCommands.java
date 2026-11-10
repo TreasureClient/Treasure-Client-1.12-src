@@ -34,7 +34,7 @@ public final class TCCommands {
 
 	public static void register(CommandHandler h) {
 		h.registerCommand(new Kit());
-		h.registerCommand(new Arena());
+		h.registerCommand(new Duel());
 		h.registerCommand(new Spawn());
 		h.registerCommand(new Practice());
 		h.registerCommand(new PlayerSpawn());
@@ -89,47 +89,37 @@ public final class TCCommands {
 		}
 	}
 
-	static final class Arena extends Base {
+	static final class Duel extends Base {
 		public String getCommandName() {
-			return "arena";
+			return "duel";
 		}
 
 		public String getCommandUsage(ICommandSender s) {
-			return "/arena <duel|mace|cart|crystal|reset>";
+			return "/duel <" + String.join("|", TCPractice.KITS) + "> [shield|noshield]";
 		}
 
 		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-			if (args.length < 1) {
+			if (args.length < 1 || !TCPractice.isKit(args[0])) {
 				throw new WrongUsageException(getCommandUsage(sender));
 			}
 			EntityPlayerMP p = getCommandSenderAsPlayer(sender);
-			WorldServer w = p.getServerWorld();
-			if (!TCPractice.isPractice(w)) {
-				throw new CommandException("Arenas are only in Practice worlds");
+			if (p instanceof TCBot) {
+				throw new CommandException("Bots can't start duels");
 			}
-			if (args[0].equalsIgnoreCase("reset")) {
-				TCArena.Arena a = TCArena.at(p.posX, p.posZ);
-				if (a == null) {
-					throw new CommandException("Stand in an arena to reset it");
-				}
-				TCPractice.resetArena(w, a);
-				say(sender, "§aReset the " + a.title + " arena");
-				return;
+			if (!TCPractice.isPractice(p.world)) {
+				throw new CommandException("Duels are only in Practice worlds");
 			}
-			TCArena.Arena a = TCArena.byName(args[0]);
-			if (a == null) {
-				throw new WrongUsageException(getCommandUsage(sender));
-			}
-			TCPractice.resetArena(w, a);
-			double[] st = TCArena.start(a, 0);
-			TCPractice.teleport(p, st[0], TCArena.GROUND + 1, st[1], (float) st[2]);
-			say(sender, "§aWelcome to the " + a.title + " arena §7(bots: /playerspawn <name>, then /player <name> ...)");
+			boolean shield = args.length > 1 && (args[1].equalsIgnoreCase("shield") || args[1].equalsIgnoreCase("on")
+					|| args[1].equalsIgnoreCase("true"));
+			TCPractice.startDuel(p, args[0].toLowerCase(), shield);
 		}
 
 		public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
 				@Nullable BlockPos pos) {
-			return args.length == 1
-					? getListOfStringsMatchingLastWord(args, "duel", "mace", "cart", "crystal", "reset")
+			if (args.length == 1) {
+				return getListOfStringsMatchingLastWord(args, TCPractice.KITS);
+			}
+			return args.length == 2 ? getListOfStringsMatchingLastWord(args, "shield", "noshield")
 					: Collections.<String>emptyList();
 		}
 	}
@@ -146,6 +136,7 @@ public final class TCCommands {
 		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
 			EntityPlayerMP p = getCommandSenderAsPlayer(sender);
 			if (TCPractice.isPractice(p.world)) {
+				TCPractice.endDuel(p);
 				TCPractice.toSpawn(p);
 			} else {
 				BlockPos sp = p.world.getSpawnPoint();
@@ -177,14 +168,12 @@ public final class TCCommands {
 		}
 
 		public String getCommandUsage(ICommandSender s) {
-			return "/playerspawn <name> [at <x> <y> <z>] [facing <yaw> <pitch>]";
+			return "/playerspawn [name] [at <x> <y> <z>] [facing <yaw> <pitch>]";
 		}
 
 		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-			if (args.length < 1) {
-				throw new WrongUsageException(getCommandUsage(sender));
-			}
-			String name = args[0];
+			boolean named = args.length > 0 && !args[0].equalsIgnoreCase("at") && !args[0].equalsIgnoreCase("facing");
+			String name = named ? args[0] : TCBots.freeName(server, "Bot");
 			if (!name.matches("[A-Za-z0-9_]{1,16}")) {
 				throw new CommandException("Bot names are 1-16 letters, numbers or _");
 			}
@@ -200,11 +189,19 @@ public final class TCCommands {
 			double y = at != null ? at.posY : sender.getPosition().getY();
 			double z = at != null ? at.posZ : sender.getPosition().getZ() + 0.5D;
 			float yaw = at != null ? at.rotationYaw : 0.0F, pitch = 0.0F;
-			for (int i = 1; i < args.length; i++) {
+			double bx = x, by = y, bz = z;
+			if (at != null) {
+				// 3 blocks in front of you, turned to face you
+				double r = Math.toRadians(at.rotationYaw);
+				x += -Math.sin(r) * 3.0D;
+				z += Math.cos(r) * 3.0D;
+				yaw = at.rotationYaw + 180.0F;
+			}
+			for (int i = named ? 1 : 0; i < args.length; i++) {
 				if (args[i].equalsIgnoreCase("at") && i + 3 < args.length) {
-					x = parseDouble(x, args[i + 1], true);
-					y = parseDouble(y, args[i + 2], false);
-					z = parseDouble(z, args[i + 3], true);
+					x = parseDouble(bx, args[i + 1], true);
+					y = parseDouble(by, args[i + 2], false);
+					z = parseDouble(bz, args[i + 3], true);
 					i += 3;
 				} else if (args[i].equalsIgnoreCase("facing") && i + 2 < args.length) {
 					yaw = (float) parseDouble(yaw, args[i + 1], false);

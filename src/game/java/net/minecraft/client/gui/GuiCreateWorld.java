@@ -223,6 +223,13 @@ public class GuiCreateWorld extends GuiScreen {
 					}
 				}
 
+				boolean tcPractice = WorldType.WORLD_TYPES[this.selectedIndex] == WorldType.PRACTICE;
+				if (tcPractice) {
+					// Treasure Client: Practice worlds are always survival with cheats on
+					this.gameMode = "survival";
+					this.hardCoreMode = false;
+					this.allowCheats = true;
+				}
 				WorldSettings worldsettings = new WorldSettings(i, GameType.getByName(this.gameMode),
 						this.generateStructuresEnabled, this.hardCoreMode, WorldType.WORLD_TYPES[this.selectedIndex]);
 				worldsettings.setGeneratorOptions(this.chunkProviderSettingsJson);

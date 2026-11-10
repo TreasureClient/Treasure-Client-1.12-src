@@ -1058,6 +1058,11 @@ public abstract class EntityLivingBase extends Entity {
 				}
 			}
 
+			if (itemstack == null && this instanceof net.minecraft.tcpvp.TCBot
+					&& ((net.minecraft.tcpvp.TCBot) this).infiniteTotems) {
+				itemstack = new ItemStack(Items.TOTEM_OF_UNDYING); // Treasure Client: duel bots never run out
+			}
+
 			if (itemstack != null) {
 				if (this instanceof EntityPlayerMP) {
 					EntityPlayerMP entityplayermp = (EntityPlayerMP) this;

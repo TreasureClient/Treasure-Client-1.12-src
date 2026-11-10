@@ -36,6 +36,19 @@ public final class TCBots {
 		respawns.add(bot);
 	}
 
+	/** {@code base}, or base2, base3... whichever no one in the world is using. */
+	public static String freeName(MinecraftServer server, String base) {
+		if (server.getPlayerList().getPlayerByUsername(base) == null) {
+			return base;
+		}
+		for (int i = 2; i < 1000; i++) {
+			if (server.getPlayerList().getPlayerByUsername(base + i) == null) {
+				return base + i;
+			}
+		}
+		return base + server.getTickCounter();
+	}
+
 	/** Takes a bot out of the world, like a player leaving. */
 	public static void remove(TCBot bot) {
 		MinecraftServer server = bot.mcServer;
@@ -45,10 +58,12 @@ public final class TCBots {
 		server.getPlayerList().sendChatMsg(msg);
 		bot.mountEntityAndWakeUp();
 		server.getPlayerList().playerLoggedOut(bot);
+		TCPractice.forgetKit(bot);
 	}
 
 	/** Called at the end of every server tick. */
 	public static void tick(MinecraftServer server) {
+		TCPractice.refillAll(server);
 		if (respawns.isEmpty()) {
 			return;
 		}
@@ -69,8 +84,15 @@ public final class TCBots {
 					old.homePitch, false);
 			old.actions.copyTo(bot.actions);
 			bot.kit = old.kit;
+			bot.infiniteTotems = old.infiniteTotems;
+			bot.duelShield = old.duelShield;
+			TCPractice.replaced(old, bot);
 			if (bot.kit != null) {
 				TCPractice.giveKit(bot, bot.kit);
+				if (bot.duelShield) {
+					bot.setHeldItem(net.minecraft.util.EnumHand.OFF_HAND,
+							new net.minecraft.item.ItemStack(net.minecraft.init.Items.SHIELD));
+				}
 			} else {
 				bot.inventory.copyInventory(old.inventory); // keepInventory-style
 			}

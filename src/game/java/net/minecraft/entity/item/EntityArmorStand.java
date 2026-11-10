@@ -353,6 +353,9 @@ public class EntityArmorStand extends EntityLivingBase {
 	 * Applies the given player interaction to this Entity.
 	 */
 	public EnumActionResult applyPlayerInteraction(EntityPlayer player, Vec3d vec, EnumHand stack) {
+		if (net.minecraft.tcpvp.TCPractice.onStandClicked(this, player)) {
+			return EnumActionResult.SUCCESS; // Treasure Client: Practice kit stand (pick a duel)
+		}
 		ItemStack itemstack = player.getHeldItem(stack);
 
 		if (!this.hasMarker() && itemstack.getItem() != Items.NAME_TAG) {

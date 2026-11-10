@@ -47,6 +47,14 @@ public class ItemElytra extends Item {
 			worldIn.setItemStackToSlot(entityequipmentslot, itemstack.copy());
 			itemstack.func_190920_e(0);
 			return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, itemstack);
+		} else if ((!itemStackIn.isRemote || ItemArmor.tcClientSwap)
+				&& (!net.minecraft.enchantment.EnchantmentHelper.func_190938_b(itemstack1)
+						|| worldIn.capabilities.isCreativeMode)) {
+			// Treasure Client: like 1.19.4+, right click swaps with what you're wearing
+			// (elytra <-> chestplate), unless it has Curse of Binding
+			ItemStack worn = itemstack1.copy();
+			worldIn.setItemStackToSlot(entityequipmentslot, itemstack.copy());
+			return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, worn);
 		} else {
 			return new ActionResult<ItemStack>(EnumActionResult.FAIL, itemstack);
 		}
