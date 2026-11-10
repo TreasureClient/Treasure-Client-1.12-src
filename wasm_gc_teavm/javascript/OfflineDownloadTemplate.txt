@@ -612,7 +612,6 @@ ${classes_js}
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Saturation Display</b><i>Gold outlines on the food bar show hidden saturation</i></div><div class="tc-sw" data-mod="satDisplay"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Clear Liquids</b><i>See clearly when you are inside water or lava</i></div><div class="tc-sw" data-mod="clearLiquids"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
@@ -663,6 +662,9 @@ ${classes_js}
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>No Hurt Cam</b><i>Stop the camera tilting when you take damage</i></div><div class="tc-sw" data-mod="noHurtCam"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Clear Liquids</b><i>See clearly when you are inside water or lava</i></div><div class="tc-sw" data-mod="clearLiquids"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Dynamic FOV</b><i>Zoom the view when sprinting, flying, with Speed or drawing a bow</i></div><div class="tc-sw" data-mod="dynfov"><i></i></div></div>
@@ -1507,7 +1509,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Saturation Display</b><i>Gold outlines on the food bar show hidden saturation</i></div><div class="tc-sw" data-mod="satDisplay"><i></i></div></div>
-              <div class="tc-row"><div class="tc-lab"><b>Clear Liquids</b><i>See clearly when you are inside water or lava</i></div><div class="tc-sw" data-mod="clearLiquids"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
@@ -1558,6 +1559,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>No Hurt Cam</b><i>Stop the camera tilting when you take damage</i></div><div class="tc-sw" data-mod="noHurtCam"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Clear Liquids</b><i>See clearly when you are inside water or lava</i></div><div class="tc-sw" data-mod="clearLiquids"><i></i></div></div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Dynamic FOV</b><i>Zoom the view when sprinting, flying, with Speed or drawing a bow</i></div><div class="tc-sw" data-mod="dynfov"><i></i></div></div>
