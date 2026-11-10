@@ -1364,6 +1364,17 @@ public class TCLagMonitor {
 			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
 					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
 			say(mc, TCFramePacer.describe() + " §7· " + TCSteadyFps.describe());
+			{
+				// slow frames since the last .lag: shown at once (the GPU had caught up), or held for
+				// the next refresh because the GPU was still drawing the frame before (GPU is the limit)
+				int shown = net.lax1dude.eaglercraft.internal.PlatformInput.tcPaceTake(0);
+				int busy = net.lax1dude.eaglercraft.internal.PlatformInput.tcPaceTake(1);
+				int waited = net.lax1dude.eaglercraft.internal.PlatformInput.tcPaceTake(2);
+				if (shown >= 0) {
+					say(mc, "§7  slow frames since last .lag: §f" + shown + "§7 shown at once, §f" + busy
+							+ "§7 waited for a busy GPU" + (waited > 0 ? ", §f" + waited + "§7 waited (no GPU fences)" : ""));
+				}
+			}
 			String gl = glLine();
 			if (gl != null) say(mc, gl);
 			say(mc, gpuLine());

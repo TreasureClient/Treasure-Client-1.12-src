@@ -913,14 +913,24 @@ public class PlatformInput {
 					// Treasure Client: Steady FPS, frames on an even pattern of screen refreshes
 					tcSkipped = false;
 					tcSteadyWait(1000.0 / fpsLimit);
-				}else if(!tcSkipped && tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0) {
-					tcSteadyLast = 0.0;
-					tcSkipped = true;
-					PlatformRuntime.swapDelayTeaVM();
 				}else {
 					tcSteadyLast = 0.0;
-					tcSkipped = false;
-					asyncRequestAnimationFrame();
+					// Treasure Client: a frame that missed its refresh is shown at once when the GPU has
+					// finished the frame before it (a GPU fence); waiting turned frames a little over
+					// 16.7 ms into 33 ms ones (60 -> 40 fps). Without fences: once in a row.
+					int tcGpuDone = tcFenceFrameEnd(PlatformRuntime.webgl);
+					boolean tcSlow = tcFrameStartMs > 0.0 && PlatformRuntime.steadyTimeMillisTeaVM() - tcFrameStartMs > 16.0;
+					if(tcSlow && (tcGpuDone == 1 || (tcGpuDone < 0 && !tcSkipped))) {
+						tcSkipped = true;
+						++tcPaceShown;
+						PlatformRuntime.swapDelayTeaVM();
+					}else {
+						if(tcSlow) {
+							if(tcGpuDone == 0) ++tcPaceGpuBusy; else ++tcPaceWaited;
+						}
+						tcSkipped = false;
+						asyncRequestAnimationFrame();
+					}
 				}
 				tcFrameStartMs = PlatformRuntime.steadyTimeMillisTeaVM();
 			}else {
@@ -1870,6 +1880,28 @@ public class PlatformInput {
 		visualViewportH = sh;
 	}
 
+
+	private static int tcPaceShown, tcPaceGpuBusy, tcPaceWaited;
+
+	/**
+	 * Treasure Client: ends this frame with a GPU fence and says whether the GPU finished the
+	 * frame before it: 1 yes, 0 still busy, -1 can't tell (WebGL 1).
+	 */
+	@JSBody(params = { "gl" }, script = "if(!gl||typeof gl.fenceSync!==\"function\")return -1;"
+			+ "var f=window.__tcFence||(window.__tcFence={p:null,c:null,bad:false});if(f.bad)return -1;"
+			+ "try{var r=-1;if(f.p!==null){r=gl.getSyncParameter(f.p,gl.SYNC_STATUS)===gl.SIGNALED?1:0;gl.deleteSync(f.p);}"
+			+ "f.p=f.c;f.c=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();return r;}"
+			+ "catch(e){f.bad=true;return -1;}")
+	private static native int tcFenceFrameEnd(JSObject gl);
+
+	/** Treasure Client (.lag): 0 = slow frames shown at once, 1 = waited for a busy GPU, 2 = other waits. */
+	public static int tcPaceTake(int which) {
+		int v;
+		if (which == 0) { v = tcPaceShown; tcPaceShown = 0; }
+		else if (which == 1) { v = tcPaceGpuBusy; tcPaceGpuBusy = 0; }
+		else { v = tcPaceWaited; tcPaceWaited = 0; }
+		return v;
+	}
 
 	/** Treasure Client: GPU time per frame isn't measured in this build. */
 	public static int tcGpuFrameUs() {
