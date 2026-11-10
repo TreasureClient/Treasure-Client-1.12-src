@@ -56,7 +56,13 @@ public final class TCWarmup {
 			"textures/entity/iron_golem.png", "textures/entity/blaze.png", "textures/entity/slime/slime.png",
 			"textures/entity/witch.png", "textures/environment/rain.png", "textures/environment/sun.png",
 			"textures/environment/moon_phases.png", "textures/environment/clouds.png",
-			"textures/environment/snow.png", "textures/misc/forcefield.png" };
+			"textures/environment/snow.png", "textures/misc/forcefield.png", "textures/entity/bat.png",
+			"textures/entity/shulker/spark.png", "textures/entity/chest/christmas.png",
+			"textures/entity/chest/normal_double.png", "textures/entity/chest/trapped_double.png",
+			"textures/entity/enchanting_table_book.png", "textures/entity/end_portal.png",
+			"textures/entity/beacon_beam.png", "textures/entity/snowman.png",
+			"textures/entity/cow/cow.png", "textures/entity/pig/pig.png", "textures/entity/sheep/sheep.png",
+			"textures/entity/sheep/sheep_fur.png", "textures/entity/chicken.png" };
 
 	private static final String[] SOUNDS = { "entity.generic.explode", "entity.creeper.primed", "entity.creeper.hurt",
 			"entity.creeper.death", "entity.tnt.primed", "entity.player.hurt", "entity.player.death",
@@ -72,7 +78,16 @@ public final class TCWarmup {
 			"item.flintandsteel.use", "block.fire.extinguish", "entity.bobber.throw", "entity.snowball.throw",
 			"entity.egg.throw", "entity.firework.launch", "entity.blaze.shoot", "item.armor.equip_diamond",
 			"item.armor.equip_iron", "item.armor.equip_generic", "block.chest.open", "block.chest.close",
-			"ui.button.click", "block.note.pling" };
+			"ui.button.click", "block.note.pling",
+			// footsteps and landing on the common ground blocks (the first step on grass was a 22 ms load)
+			"block.grass.step", "block.stone.step", "block.wood.step", "block.sand.step", "block.gravel.step",
+			"block.cloth.step", "block.snow.step", "block.ladder.step", "block.grass.break", "block.grass.place",
+			"block.gravel.break", "block.sand.break", "block.cloth.break", "block.cloth.place",
+			"block.wood_button.click_on", "block.stone_pressureplate.click_on", "block.wooden_door.open",
+			"block.wooden_door.close", "block.lever.click", "entity.generic.splash", "entity.generic.swim",
+			"entity.player.splash", "entity.player.swim", "entity.generic.extinguish_fire", "entity.player.hurt_on_fire",
+			"entity.generic.big_fall", "entity.generic.small_fall", "entity.firework.blast", "entity.firework.twinkle",
+			"entity.bat.ambient", "entity.bat.takeoff", "entity.bat.hurt", "entity.bat.death", "entity.bat.loop" };
 
 	private static int texIdx, sndEventIdx, sndIdx;
 	private static boolean tcCopyDone;
