@@ -1079,10 +1079,11 @@ public class Minecraft implements IThreadListener {
 			Display.setVSync(false);
 			Display.update(net.minecraft.client.gui.TreasureMods.idleFps());
 		} else if (!this.gameSettings.enableVsync && this.isFramerateLimitBelowMax()) {
-			Display.update(this.getLimitFramerate());
+			Display.update(TCCalmFps.cap(this, this.getLimitFramerate()));
 		} else {
-			// Treasure Client: Steady FPS hands its rate to the VSync wait (0 = every refresh)
-			Display.update(this.world != null ? TCSteadyFps.target() : 0);
+			// Treasure Client: Steady FPS hands its rate to the VSync wait (0 = every refresh),
+			// lowered further by Calm FPS on menus and while standing still
+			Display.update(TCCalmFps.cap(this, this.world != null ? TCSteadyFps.target() : 0));
 		}
 		this.checkWindowResize();
 	}

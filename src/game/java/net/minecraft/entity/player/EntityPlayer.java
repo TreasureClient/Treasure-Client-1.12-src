@@ -1116,6 +1116,12 @@ public abstract class EntityPlayer extends EntityLivingBase {
 	 * Attacks for the player the targeted entity with the currently equipped item.
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
+	/**
+	 * Treasure Client: height where a wind burst last pushed this player (NaN = none).
+	 * Falling afterwards only hurts for the part below it, like 1.21.
+	 */
+	public double tcImpulseY = Double.NaN;
+
 	public void attackTargetEntityWithCurrentItem(Entity targetEntity) {
 		if (targetEntity.canBeAttackedWithItem()) {
 			if (!targetEntity.hitByEntity(this)) {
@@ -1158,13 +1164,20 @@ public abstract class EntityPlayer extends EntityLivingBase {
 					}
 
 					f = f + f1;
+					// Treasure Client: mace smash (singleplayer server): extra damage from the fall
+					float tcFell = this.fallDistance;
+					boolean tcSmash = !this.world.isRemote && net.minecraft.tcpvp.TCMace.canSmash(this);
+					if (tcSmash) {
+						f += net.minecraft.tcpvp.TCMace.bonus(tcFell);
+					}
 					boolean flag3 = false;
 					double d0 = (double) (this.distanceWalkedModified - this.prevDistanceWalkedModified);
 
 					if (flag && !flag2 && !flag1 && this.onGround && d0 < (double) this.getAIMoveSpeed()) {
 						ItemStack itemstack = this.getHeldItem(EnumHand.MAIN_HAND);
 
-						if (itemstack.getItem() instanceof ItemSword) {
+						if (itemstack.getItem() instanceof ItemSword
+								&& !(itemstack.getItem() instanceof net.minecraft.item.ItemTCMace)) { // the mace doesn't sweep
 							flag3 = true;
 						}
 					}
@@ -1186,6 +1199,10 @@ public abstract class EntityPlayer extends EntityLivingBase {
 					double d2 = targetEntity.motionY;
 					double d3 = targetEntity.motionZ;
 					boolean flag5 = targetEntity.attackEntityFrom(DamageSource.causePlayerDamage(this), f);
+
+					if (flag5 && tcSmash) {
+						net.minecraft.tcpvp.TCMace.afterSmash(this, targetEntity, tcFell);
+					}
 
 					if (flag5) {
 						if (i > 0) {
@@ -1226,7 +1243,7 @@ public abstract class EntityPlayer extends EntityLivingBase {
 							this.spawnSweepParticles();
 						}
 
-						if (targetEntity instanceof EntityPlayerMP && targetEntity.velocityChanged) {
+						if (targetEntity instanceof EntityPlayerMP && !(targetEntity instanceof net.minecraft.tcpvp.TCBot) && targetEntity.velocityChanged) {
 							((EntityPlayerMP) targetEntity).connection
 									.sendPacket(new SPacketEntityVelocity(targetEntity));
 							targetEntity.velocityChanged = false;
@@ -1322,6 +1339,9 @@ public abstract class EntityPlayer extends EntityLivingBase {
 			this.getCooldownTracker().setCooldown(Items.SHIELD, 100);
 			this.resetActiveHand();
 			this.world.setEntityState(this, (byte) 30);
+			if (net.minecraft.tcpvp.TCHerobot.shieldStunning(this.world)) {
+				this.tcClearIframes = true;
+			}
 		}
 	}
 
@@ -1733,6 +1753,12 @@ public abstract class EntityPlayer extends EntityLivingBase {
 	}
 
 	public void fall(float distance, float damageMultiplier) {
+		if (!Double.isNaN(this.tcImpulseY)) {
+			// Treasure Client: after a wind burst only the drop below where it hit you counts
+			double impact = this.tcImpulseY;
+			this.tcImpulseY = Double.NaN;
+			distance = this.posY >= impact ? 0.0F : Math.min(distance, (float) (impact - this.posY));
+		}
 		if (!this.capabilities.allowFlying) {
 			if (distance >= 2.0F) {
 				this.addStat(StatList.FALL_ONE_CM, (int) Math.round((double) distance * 100.0D));

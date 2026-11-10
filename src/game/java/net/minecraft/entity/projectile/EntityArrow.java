@@ -127,6 +127,9 @@ public abstract class EntityArrow extends Entity implements IProjectile {
 	 * direction.
 	 */
 	public void setThrowableHeading(double x, double y, double z, float velocity, float inaccuracy) {
+		if (net.minecraft.tcpvp.TCHerobot.noProjectileRandom(this.world)) {
+			inaccuracy = 0.0F; // Treasure Client: /herobot noProjectileRandom
+		}
 		float f = MathHelper.sqrt(x * x + y * y + z * z);
 		x = x / (double) f;
 		y = y / (double) f;

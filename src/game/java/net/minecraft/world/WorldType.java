@@ -18,6 +18,9 @@ public class WorldType {
 	public static final WorldType CUSTOMIZED = new WorldType(4, "customized");
 	public static final WorldType DEBUG_WORLD = new WorldType(5, "debug_all_block_states");
 
+	/** Treasure Client: the Practice world (hub, kits, arenas, practice bots). */
+	public static final WorldType PRACTICE = new WorldType(9, "practice").setNotificationData();
+
 	/** Default (1.1) world type. */
 	public static final WorldType DEFAULT_1_1 = (new WorldType(8, "default_1_1", 0)).setCanBeCreated(false);
 

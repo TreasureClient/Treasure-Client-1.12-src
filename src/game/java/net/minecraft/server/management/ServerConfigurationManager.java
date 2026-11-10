@@ -150,6 +150,9 @@ public abstract class ServerConfigurationManager {
 		this.playerLoggedIn(playerIn);
 		nethandlerplayserver.setPlayerLocation(playerIn.posX, playerIn.posY, playerIn.posZ, playerIn.rotationYaw,
 				playerIn.rotationPitch);
+		if (net.minecraft.tcpvp.TCPractice.isPractice(worldserver)) {
+			net.minecraft.tcpvp.TCPractice.welcome(playerIn); // Treasure Client
+		}
 		this.updateTimeAndWeatherForPlayer(playerIn, worldserver);
 		if (this.mcServer.getResourcePackUrl().length() > 0) {
 			playerIn.loadResourcePack(this.mcServer.getResourcePackUrl(), this.mcServer.getResourcePackHash());

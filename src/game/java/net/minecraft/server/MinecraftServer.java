@@ -408,6 +408,7 @@ public abstract class MinecraftServer implements ICommandSender {
 
 		EaglerIntegratedServerWorker.tick();
 		this.playerList.onTick();
+		net.minecraft.tcpvp.TCBots.tick(this); // Treasure Client: practice bot respawns
 		this.func_193030_aL().update();
 
 		for (int k = 0; k < this.tickables.size(); ++k) {

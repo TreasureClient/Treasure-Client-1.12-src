@@ -836,7 +836,13 @@ public abstract class RenderSectionManager {
             if (section.requestUpdate(pendingUpdate)) {
                 // Check importance using the section's new update type, as it may not be exactly what we requested
                 important = section.getPendingUpdate().isImportant();
-                if (important || (!this.getCurrentRenderListManager().isNeedsUpdate() && this.sectionsRequestingUpdate.size() < this.builder.getSchedulingBudget())) {
+                if (!important && this.shadowRenderListManager == null && !this.renderListManager.isSectionVisible(x, y, z)) {
+                    // Treasure Client: out of view (behind you or walled off) and not nearby. The update stays
+                    // pending and the next view search builds it once the camera turns or moves toward it, so a
+                    // chunk that changes again meanwhile is built once instead of every time, and a still
+                    // player's computer stays cooler.
+                    ++net.minecraft.client.TCLagMonitor.hiddenWaits;
+                } else if (important || (!this.getCurrentRenderListManager().isNeedsUpdate() && this.sectionsRequestingUpdate.size() < this.builder.getSchedulingBudget())) {
                     this.sectionsRequestingUpdate.add(section);
                 } else {
                     this.markGraphDirty();

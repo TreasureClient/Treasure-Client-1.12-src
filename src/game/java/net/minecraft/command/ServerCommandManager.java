@@ -77,6 +77,7 @@ public class ServerCommandManager extends CommandHandler implements ICommandList
 		this.registerCommand(new CommandLocate());
 		this.registerCommand(new CommandReload());
 		this.registerCommand(new CommandFunction());
+		net.minecraft.tcpvp.TCCommands.register(this); // Treasure Client: practice world and bots
 
 		if (serverIn.isDedicatedServer()) {
 			this.registerCommand(new CommandStop());

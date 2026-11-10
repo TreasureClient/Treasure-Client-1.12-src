@@ -518,6 +518,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			b = true;
 		} else if (packetIn.getType() == 3) {
 			entity = new EntityAreaEffectCloud(this.clientWorldController, d0, d1, d2);
+		} else if (packetIn.getType() == 120) {
+			// Treasure Client: singleplayer wind charge
+			entity = new net.minecraft.entity.projectile.EntityTCWindCharge(this.clientWorldController, d0, d1, d2);
 		}
 		
 		if(b) {
@@ -1198,10 +1201,12 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		// Treasure Client: the knockback (wind charges, TNT) must always apply, even
 		// if something in the explosion effects (sound, particles, blocks) fails.
 		Throwable effectsError = null;
-		try {
-			explosion.doExplosionB(true);
-		} catch (Throwable t) {
-			effectsError = t;
+		if (packetIn.getStrength() >= 0.0F) { // below 0: a singleplayer wind/mace push, no boom
+			try {
+				explosion.doExplosionB(true);
+			} catch (Throwable t) {
+				effectsError = t;
+			}
 		}
 		this.gameController.player.motionX += (double) packetIn.getMotionX();
 		this.gameController.player.motionY += (double) packetIn.getMotionY();

@@ -206,6 +206,10 @@ public class RenderManager {
 		this.entityRenderMap.put(EntityTippedArrow.class, new RenderTippedArrow(this));
 		this.entityRenderMap.put(EntitySpectralArrow.class, new RenderSpectralArrow(this));
 		this.entityRenderMap.put(EntitySnowball.class, new RenderSnowball(this, Items.SNOWBALL, itemRendererIn));
+		// Treasure Client: singleplayer wind charge, drawn with the wind charge item picture
+		net.minecraft.item.Item tcWind = net.minecraft.item.ViaItems.getByName("wind_charge");
+		this.entityRenderMap.put(net.minecraft.entity.projectile.EntityTCWindCharge.class,
+				new RenderSnowball(this, tcWind != null ? tcWind : Items.SNOWBALL, itemRendererIn));
 		this.entityRenderMap.put(EntityEnderPearl.class, new RenderSnowball(this, Items.ENDER_PEARL, itemRendererIn));
 		this.entityRenderMap.put(EntityEnderEye.class, new RenderSnowball(this, Items.ENDER_EYE, itemRendererIn));
 		this.entityRenderMap.put(EntityEgg.class, new RenderSnowball(this, Items.EGG, itemRendererIn));

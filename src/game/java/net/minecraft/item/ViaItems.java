@@ -426,7 +426,10 @@ public final class ViaItems {
 			it = new ItemHoe(Item.ToolMaterial.STONE);
 		} else if (name.equals("wind_charge")) {
 			// Thrown like a snowball: the client swings + sends the use packet, the server throws it.
-			it = new ItemSnowball();
+			// In singleplayer it's a real wind charge (EntityTCWindCharge).
+			it = new ItemTCWindCharge();
+		} else if (name.equals("mace")) {
+			it = new ItemTCMace(); // 1.21 stats; smash attack in singleplayer (TCMace)
 		} else if (name.equals("crossbow")) {
 			// Held "use" like a bow so the server's crossbow charging gets the right packets.
 			it = new ItemBow();

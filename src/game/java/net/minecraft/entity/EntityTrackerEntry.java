@@ -509,6 +509,8 @@ public class EntityTrackerEntry {
 					1 + (entity == null ? this.trackedEntity.getEntityId() : entity.getEntityId()));
 		} else if (this.trackedEntity instanceof EntitySnowball) {
 			return new SPacketSpawnObject(this.trackedEntity, 61);
+		} else if (this.trackedEntity instanceof net.minecraft.entity.projectile.EntityTCWindCharge) {
+			return new SPacketSpawnObject(this.trackedEntity, 120); // Treasure Client
 		} else if (this.trackedEntity instanceof EntityLlamaSpit) {
 			return new SPacketSpawnObject(this.trackedEntity, 68);
 		} else if (this.trackedEntity instanceof EntityPotion) {
