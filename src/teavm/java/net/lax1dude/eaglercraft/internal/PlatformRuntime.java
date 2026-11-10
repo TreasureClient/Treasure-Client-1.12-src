@@ -1120,6 +1120,17 @@ public class PlatformRuntime {
 		return steadyTimeMillis0(steadyTimeFunc);
 	}
 
+	/**
+	 * Treasure Client: how many full browser memory cleanups (major garbage collections)
+	 * have happened. A tiny object is held only weakly; the browser drops weakly held
+	 * objects in full cleanups, so each time it is gone, one happened since the last look.
+	 */
+	@JSBody(params = { }, script = "var g=self.__tcgc;if(!g){g=self.__tcgc={n:0,r:null};}"
+			+ "if(typeof WeakRef===\"undefined\")return -1;"
+			+ "if(g.r===null){g.r=new WeakRef({});}else if(g.r.deref()===undefined){g.n++;g.r=new WeakRef({});}"
+			+ "return g.n;")
+	public static native int tcGcCount();
+
 	public static long steadyTimeMillis() {
 		return (long)steadyTimeMillis0(steadyTimeFunc);
 	}

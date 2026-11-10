@@ -2108,6 +2108,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 	 * randomized displacement according to specified bounds
 	 */
 	public void handleParticles(SPacketParticles packetIn) {
+		if (tcParticlesUnseen(packetIn)) {
+			return;
+		}
 		if (packetIn.getParticleCount() == 0) {
 			double d0 = (double) (packetIn.getParticleSpeed() * packetIn.getXOffset());
 			double d2 = (double) (packetIn.getParticleSpeed() * packetIn.getYOffset());
@@ -2139,6 +2142,33 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Treasure Client: a particle burst the game would drop anyway (all of it farther than
+	 * 32 blocks, or particles set to Minimal), skipped before rolling random numbers for
+	 * each particle in it. Long-distance particles (and types that ignore range) are kept.
+	 */
+	private boolean tcParticlesUnseen(SPacketParticles p) {
+		net.minecraft.util.EnumParticleTypes t = p.getParticleType();
+		if (t == null || p.isLongDistance() || t.getShouldIgnoreRange()) {
+			return false;
+		}
+		if (this.gameController.gameSettings.particleSetting == 2) {
+			return true;
+		}
+		net.minecraft.entity.Entity v = this.gameController.getRenderViewEntity();
+		if (v == null) {
+			return false;
+		}
+		double dx = v.posX - p.getXCoordinate(), dy = v.posY - p.getYCoordinate(), dz = v.posZ - p.getZCoordinate();
+		// particles land around the center with a spread of the offset; 6 times it is never reached
+		double reach = 32.0D;
+		if (p.getParticleCount() != 0) {
+			reach += 6.0D * Math.max(Math.abs((double) p.getXOffset()),
+					Math.max(Math.abs((double) p.getYOffset()), Math.abs((double) p.getZOffset())));
+		}
+		return dx * dx + dy * dy + dz * dz > reach * reach;
 	}
 
 	/**

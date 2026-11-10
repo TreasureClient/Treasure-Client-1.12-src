@@ -355,6 +355,11 @@ public class EagRuntime {
 		// PlatformApplication.showDebugConsole();
 	}
 
+	/** Treasure Client: full browser memory cleanups so far (-1 if it can't be seen). */
+	public static int tcGcCount() {
+		return PlatformRuntime.tcGcCount();
+	}
+
 	public static long steadyTimeMillis() {
 		return PlatformRuntime.steadyTimeMillis();
 	}
