@@ -422,7 +422,8 @@ public class ChunkBuilder {
                 this.tcPausedJob = null;
                 localContext.tcJobDone(); // Treasure Client: keep the scratch buffers for the next build
             }
-            net.minecraft.client.TCLagMonitor.addBuild(tcT); // Treasure Client: .lag terrain parts
+            // Treasure Client: .lag terrain parts (a build that paused counts once, when it finishes)
+            net.minecraft.client.TCLagMonitor.addBuild(tcT, this.tcPausedJob == null);
         }
     }
 
