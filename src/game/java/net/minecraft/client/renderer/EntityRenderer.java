@@ -1017,6 +1017,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
 						this.tcRenderLayer(this.overlayFramebuffer, net.minecraft.client.gui.GuiIngame.TC_HOTBAR, l, i1,
 								partialTicks);
+						net.minecraft.client.TCLagMonitor.hRedraw += net.minecraft.client.TCLagMonitor.now() - tcHud;
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
 					if (tcMode != net.minecraft.client.gui.TCHudCache.DIRECT
@@ -1030,33 +1031,43 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						} finally {
 							net.minecraft.client.gui.GuiNewChat.tcPass = net.minecraft.client.gui.GuiNewChat.TC_PASS_ALL;
 						}
+						net.minecraft.client.TCLagMonitor.hRedraw += net.minecraft.client.TCLagMonitor.now() - tcHud;
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
 					GlStateManager.disableLighting();
 					GlStateManager.enableBlend();
+					long tcVg = net.minecraft.client.TCLagMonitor.now();
 					if (Minecraft.isFancyGraphicsEnabled()) {
 						this.mc.ingameGUI.renderVignette(this.mc.player.getBrightness(), scaledresolution);
 					}
 					GlStateManager.enableBlend();
 					GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
 					this.mc.ingameGUI.renderAttackIndicator(partialTicks, scaledresolution);
+					net.minecraft.client.TCLagMonitor.hVignette += net.minecraft.client.TCLagMonitor.now() - tcVg;
 					if (tcMode == net.minecraft.client.gui.TCHudCache.DIRECT) {
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
 						this.tcDrawHud(l, i1, partialTicks);
+						net.minecraft.client.TCLagMonitor.hLive += net.minecraft.client.TCLagMonitor.now() - tcHud;
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					} else {
 						// paste the cached HUD layers (they hold premultiplied colors)
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
 						// only the strip with the hotbar and offhand slot holds anything
 						this.tcPasteRect(this.overlayFramebuffer, l / 2 - 124, i1 - 26, l / 2 + 124, i1, l, i1);
+						long tcLv = net.minecraft.client.TCLagMonitor.now();
+						net.minecraft.client.TCLagMonitor.hPaste += tcLv - tcHud;
 						// hearts, food, XP, effects: cheap flat icons, drawn live so they never force
 						// the hotbar items (the slow part) to be drawn again
 						this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1, partialTicks);
 						if (tcSrvMode == net.minecraft.client.gui.TCHudCache.DIRECT) {
 							this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_SERVER, l, i1, partialTicks);
+							net.minecraft.client.TCLagMonitor.hLive += net.minecraft.client.TCLagMonitor.now() - tcLv;
 						} else {
+							long tcPs = net.minecraft.client.TCLagMonitor.now();
+							net.minecraft.client.TCLagMonitor.hLive += tcPs - tcLv;
 							this.tcPasteLayer(this.tcServerFramebuffer, l, i1);
 							this.mc.ingameGUI.tcDrawFadingChat(i1);
+							net.minecraft.client.TCLagMonitor.hPaste += net.minecraft.client.TCLagMonitor.now() - tcPs;
 						}
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}

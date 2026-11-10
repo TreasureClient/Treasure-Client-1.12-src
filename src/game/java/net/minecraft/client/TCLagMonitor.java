@@ -223,6 +223,21 @@ public class TCLagMonitor {
 
 	// parts of a HUD redraw this frame: hotbar, chat, scoreboard (ns); the rest of the HUD is "other"
 	public static long hHotbar, hChat, hBoard, hBoss, hEffects, hTitle, hTab, hTotem;
+	// HUD steps around the cache: drawing the cached pictures again, pasting them, the live
+	// layer (hearts, food, XP, effects), vignette + crosshair (ns this frame / whole session)
+	public static long hRedraw, hPaste, hLive, hVignette;
+	private static long hRedrawAll, hPasteAll, hLiveAll, hVignetteAll, hFramesAll;
+	// slowest single block entity drawn (chest, sign, banner, head...)
+	private static long beDrawSlowNs;
+	private static String beDrawSlowName;
+
+	/** One block entity drawn (TileEntityRendererDispatcher). */
+	public static void blockEntityDrawn(Object te, long ns) {
+		if (te != null && ns > beDrawSlowNs) {
+			beDrawSlowNs = ns;
+			beDrawSlowName = te.getClass().getSimpleName();
+		}
+	}
 
 	// why chunks get redrawn: light changes, single block changes, whole areas (chunk data, modern blocks)
 	public static int mkLight, mkBlock, mkRange;
@@ -238,8 +253,8 @@ public class TCLagMonitor {
 	private static final int[] mMkRange = new int[MINUTES];
 
 	/** Adds one chunk build job's time (Celeritas). */
-	public static void addBuild(long startNs) {
-		++buildJobs;
+	public static void addBuild(long startNs, boolean finished) {
+		if (finished) ++buildJobs;
 		long d = EagRuntime.nanoTime() - startNs;
 		tBuild += d;
 		if (d > tBuildMax) tBuildMax = d;
@@ -295,7 +310,8 @@ public class TCLagMonitor {
 	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
 	// biggest drawing part, its ms, biggest logic part, its ms
 	// r[27] = 1 when the browser ran a full memory cleanup during that frame
-	private static final int RW = 28;
+	// r[28..31] = HUD redraw / paste / live layer / vignette+crosshair ms
+	private static final int RW = 32;
 	private static final int[][] ring = new int[RING][RW];
 	// the worst spike of the session, same layout as a ring entry
 	private static final int[] worstRow = new int[RW];
@@ -621,6 +637,10 @@ public class TCLagMonitor {
 			r[23] = (int) (hTab / 1000000L);
 			r[26] = (int) (hTotem / 1000000L);
 			r[27] = gcFrame ? 1 : 0;
+			r[28] = (int) (hRedraw / 1000000L);
+			r[29] = (int) (hPaste / 1000000L);
+			r[30] = (int) (hLive / 1000000L);
+			r[31] = (int) (hVignette / 1000000L);
 			// second biggest logic part, so "other" isn't the only name shown
 			int l2 = lbig == 0 ? 1 : 0;
 			for (int k = 0; k < LPARTS; k++) if (k != lbig && lcur[k] > lcur[l2]) l2 = k;
@@ -895,7 +915,15 @@ public class TCLagMonitor {
 			eCnt[k] = 0;
 		}
 		buildJobs = sortJobs = mkLight = mkBlock = mkRange = 0;
+		if ((hRedraw | hPaste | hLive | hVignette) != 0L) { // a frame in a world with the HUD on
+			hRedrawAll += hRedraw;
+			hPasteAll += hPaste;
+			hLiveAll += hLive;
+			hVignetteAll += hVignette;
+			hFramesAll++;
+		}
 		hHotbar = hChat = hBoard = hBoss = hEffects = hTitle = hTab = hTotem = 0L;
+		hRedraw = hPaste = hLive = hVignette = 0L;
 	}
 
 	private static void say(Minecraft mc, String s) {
@@ -1339,6 +1367,15 @@ public class TCLagMonitor {
 			String gl = glLine();
 			if (gl != null) say(mc, gl);
 			say(mc, gpuLine());
+			if (hFramesAll > 0) {
+				say(mc, "§7  HUD per frame: redraw cached parts §f" + ms1(hRedrawAll / 1000L / hFramesAll) + "§7, paste §f"
+						+ ms1(hPasteAll / 1000L / hFramesAll) + "§7, live hearts/food/XP §f"
+						+ ms1(hLiveAll / 1000L / hFramesAll) + "§7, vignette+crosshair §f"
+						+ ms1(hVignetteAll / 1000L / hFramesAll) + "§7 ms");
+			}
+			if (beDrawSlowName != null) {
+				say(mc, "§7  slowest block entity drawn: §f" + beDrawSlowName + " " + ms1(beDrawSlowNs / 1000L) + "ms");
+			}
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
@@ -1389,6 +1426,8 @@ public class TCLagMonitor {
 			if (r[22] > 0) hud.append(" title ").append(r[22]);
 			if (r[23] > 0) hud.append(" tab ").append(r[23]);
 			if (r[26] > 0) hud.append(" totem ").append(r[26]);
+			hud.append(" · redraw ").append(r[28]).append(" paste ").append(r[29]).append(" live ").append(r[30])
+					.append(" vignette ").append(r[31]);
 			hud.append(')');
 		}
 		return "§8" + r[0] + ":" + (r[1] < 10 ? "0" : "") + r[1] + " §f" + r[2] + "ms §7" + r[3] + "/" + r[4]

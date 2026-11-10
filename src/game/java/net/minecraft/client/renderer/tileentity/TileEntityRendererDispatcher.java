@@ -138,9 +138,12 @@ public class TileEntityRendererDispatcher {
 			OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, (float) j, (float) k);
 			GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 			BlockPos blockpos = tileentityIn.getPos();
+			long tcT = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); // .lag: slowest block entity drawn
 			this.func_192854_a(tileentityIn, (double) blockpos.getX() - staticPlayerX,
 					(double) blockpos.getY() - staticPlayerY, (double) blockpos.getZ() - staticPlayerZ, partialTicks,
 					destroyStage, 1.0F);
+			net.minecraft.client.TCLagMonitor.blockEntityDrawn(tileentityIn,
+					net.lax1dude.eaglercraft.EagRuntime.nanoTime() - tcT);
 		}
 	}
 
