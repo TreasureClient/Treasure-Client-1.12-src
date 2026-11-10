@@ -28,6 +28,7 @@ public final class TCPngDecoder {
 	public static boolean enabled = true;
 
 	private static final int MAX_PIXELS = 256 * 256;
+	private static final int[] SRGB_CHRM = { 31270, 32900, 64000, 33000, 30000, 60000, 15000, 6000 };
 
 	/** Pixels as the browser path returns them (red in the low byte, alpha on top), or null. */
 	public static ImageData decode(byte[] d, String mime) {
@@ -84,9 +85,24 @@ public final class TCPngDecoder {
 				idatLen += len;
 				break;
 			case 0x67414D41: // gAMA
-			case 0x69434350: // iCCP
+				// the standard screen gamma (1/2.2) changes nothing; other values are color-corrected by the browser
+				if (len != 4 || Math.abs(i32(d, body) - 45455) > 1) {
+					return null;
+				}
+				break;
 			case 0x6348524D: // cHRM
-				return null; // the browser color-corrects these
+				// the standard sRGB white point and colors change nothing (many vanilla mob textures have these)
+				if (len != 32) {
+					return null;
+				}
+				for (int k = 0; k < 8; k++) {
+					if (Math.abs(i32(d, body + k * 4) - SRGB_CHRM[k]) > 2) {
+						return null;
+					}
+				}
+				break;
+			case 0x69434350: // iCCP
+				return null; // a color profile: the browser color-corrects these
 			}
 			if (ct == 0x49454E44) { // IEND
 				break;

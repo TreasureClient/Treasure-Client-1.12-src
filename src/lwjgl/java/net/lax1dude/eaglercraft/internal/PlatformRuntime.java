@@ -683,6 +683,11 @@ public class PlatformRuntime {
 		return windowHandle;
 	}
 
+	/** Treasure Client: browser memory cleanups (none to see on desktop). */
+	public static int tcGcCount() {
+		return -1;
+	}
+
 	public static long steadyTimeMillis() {
 		return System.nanoTime() / 1000000l;
 	}

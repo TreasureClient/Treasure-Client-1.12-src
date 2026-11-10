@@ -52,6 +52,7 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
     private VisGraph tcOccluder;
     private BlockPos tcPos;
     private int tcNextY = Integer.MIN_VALUE;
+    private int tcNextZ = Integer.MIN_VALUE; // row inside layer tcNextY to continue from
     private boolean tcGroupNext;
 
     @Override
@@ -77,6 +78,13 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
             buildContext.getWorldSlice().copyData(this.renderContext);
             buildContext.setupTranslation(minX, minY, minZ);
             this.tcNextY = minY;
+            this.tcNextZ = minZ;
+            // the world copy alone can use up the frame's build time: place blocks next frame
+            long d0 = org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcDeadlineNs;
+            if (d0 != 0L && System.nanoTime() > d0) {
+                org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
+                return null;
+            }
         }
 
         MinecraftBuiltRenderSectionData<TextureAtlasSprite, TileEntity> renderData = this.tcRenderData;
@@ -88,6 +96,8 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
         var dispatcher = Minecraft.getMinecraft().getBlockRendererDispatcher();
 
         int startY = this.tcNextY;
+        int startZ = this.tcNextZ == Integer.MIN_VALUE ? minZ : this.tcNextZ;
+        boolean first = true; // always place at least one row, so the build keeps moving
         long deadline = org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcDeadlineNs;
 
         try {
@@ -96,14 +106,16 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
                     return null;
                 }
 
-                // Treasure Client: out of build time for this frame: stop here and continue next frame
-                if (y != startY && deadline != 0L && System.nanoTime() > deadline) {
-                    this.tcNextY = y;
-                    org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
-                    return null;
-                }
-
-                for (int z = minZ; z < maxZ; z++) {
+                for (int z = y == startY ? startZ : minZ; z < maxZ; z++) {
+                    // Treasure Client: out of build time for this frame: stop at this row of 16
+                    // blocks and continue from it next frame
+                    if (!first && deadline != 0L && System.nanoTime() > deadline) {
+                        this.tcNextY = y;
+                        this.tcNextZ = z;
+                        org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
+                        return null;
+                    }
+                    first = false;
                     for (int x = minX; x < maxX; x++) {
                         blockPos.setPos(x, y, z);
 
@@ -149,6 +161,7 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
         // into a mesh at the start of the next frame instead (that last step is a few ms on its own)
         if (startY < maxY && deadline != 0L && System.nanoTime() > deadline) {
             this.tcNextY = maxY;
+            this.tcNextZ = minZ;
             org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
             return null;
         }
@@ -157,12 +170,14 @@ public class ChunkBuilderMeshingTask extends ChunkBuilderTask<ChunkBuildOutput> 
         if (!this.tcGroupNext) {
             if (!buildContext.tcConvert(buffers, deadline)) {
                 this.tcNextY = maxY;
+                this.tcNextZ = minZ;
                 org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
                 return null;
             }
             if (deadline != 0L && System.nanoTime() > deadline) {
                 this.tcGroupNext = true;
                 this.tcNextY = maxY;
+                this.tcNextZ = minZ;
                 org.embeddedt.embeddium.impl.render.chunk.compile.executor.ChunkBuilder.tcPaused = true;
                 return null;
             }

@@ -284,13 +284,18 @@ public class TCLagMonitor {
 	}
 	private static final long[] mMs = new long[MINUTES];
 	private static final long[] mBrowser = new long[MINUTES];
+	// full browser memory cleanups (garbage collections) per minute, and how many landed in a spike
+	private static final int[] mGc = new int[MINUTES];
+	private static final int[] mGcSpike = new int[MINUTES];
+	private static int gcLast = -2;
 	private static final long[] mLogic = new long[MINUTES];
 	private static final long[] mDraw = new long[MINUTES];
 	private static int heapNow = -1;
 
 	// last spikes: minute, second, total, logic, draw, browser, packets, chunk rebuilds, heap,
 	// biggest drawing part, its ms, biggest logic part, its ms
-	private static final int RW = 27;
+	// r[27] = 1 when the browser ran a full memory cleanup during that frame
+	private static final int RW = 28;
 	private static final int[][] ring = new int[RING][RW];
 	// the worst spike of the session, same layout as a ring entry
 	private static final int[] worstRow = new int[RW];
@@ -563,7 +568,12 @@ public class TCLagMonitor {
 		for (int k = 0; k < LPARTS; k++) mLPartAll[minute][k] += lcur[k];
 		int logic = (int) (logicNs / 1000000L), draw = (int) (drawNs / 1000000L);
 		int browser = (int) Math.max(0L, total - logic - draw);
+		int gcNow = net.lax1dude.eaglercraft.EagRuntime.tcGcCount();
+		boolean gcFrame = gcLast >= 0 && gcNow > gcLast;
+		gcLast = gcNow;
+		if (gcFrame) mGc[minute]++;
 		if (total >= SPIKE_MS) {
+			if (gcFrame) mGcSpike[minute]++;
 			mSpikes[minute]++;
 			if (total > mWorst[minute]) mWorst[minute] = (int) total;
 			mLogic[minute] += logic;
@@ -610,6 +620,7 @@ public class TCLagMonitor {
 			r[22] = (int) (hTitle / 1000000L);
 			r[23] = (int) (hTab / 1000000L);
 			r[26] = (int) (hTotem / 1000000L);
+			r[27] = gcFrame ? 1 : 0;
 			// second biggest logic part, so "other" isn't the only name shown
 			int l2 = lbig == 0 ? 1 : 0;
 			for (int k = 0; k < LPARTS; k++) if (k != lbig && lcur[k] > lcur[l2]) l2 = k;
@@ -1244,7 +1255,7 @@ public class TCLagMonitor {
 		int last = Math.min(curMinute, MINUTES - 1);
 		int from = Math.max(0, last - 4);
 		long frames = 0L, ms = 0L, l = 0, d = 0, b = 0;
-		int spikes = 0, worst = 0;
+		int spikes = 0, worst = 0, gcs = 0, gcSpikes = 0;
 		long[] spk = new long[PARTS], lspk = new long[LPARTS];
 		for (int m = from; m <= last; m++) {
 			frames += mFrames[m];
@@ -1254,11 +1265,16 @@ public class TCLagMonitor {
 			l += mLogic[m];
 			d += mDraw[m];
 			b += mBrowser[m];
+			gcs += mGc[m];
+			gcSpikes += mGcSpike[m];
 			for (int k = 0; k < PARTS; k++) spk[k] += mPartSpike[m][k];
 			for (int k = 0; k < LPARTS; k++) lspk[k] += mLPartSpike[m][k];
 		}
 		say(mc, "§6[Lag] §f" + (last + 1) + " min §7· last 5 min: §f" + (ms > 0 ? frames * 1000L / ms : 0L)
 				+ " fps, " + spikes + " spikes §7(over " + SPIKE_MS + " ms), worst §f" + worst + " ms");
+		if (gcLast >= 0) {
+			say(mc, "§7Browser memory cleanups: §f" + gcs + " §7(in §f" + gcSpikes + "§7 of the " + spikes + " spikes)");
+		}
 		long sum = l + d + b;
 		if (sum > 0) {
 			say(mc, "§7Spikes: §flogic " + (l * 100 / sum) + "% §7· §fdrawing " + (d * 100 / sum)
@@ -1381,7 +1397,8 @@ public class TCLagMonitor {
 				+ (r[25] > 0 ? ", " + LPART_NAMES[r[24]] + " " + r[25] : "")
 				+ (r[7] > 0 ? " · " + r[7] + " chunks" : "")
 				+ (r[13] + r[15] + r[16] > 0 ? " · build " + r[13] + " (max " + r[14] + ") upload " + r[15]
-						+ " vis " + r[16] : "");
+						+ " vis " + r[16] : "")
+				+ (r[27] != 0 ? " · §cmemory cleanup§7" : "");
 	}
 
 	/** A minute's CPU test time as a speed compared to the fastest minute (100 = no slowdown). */
