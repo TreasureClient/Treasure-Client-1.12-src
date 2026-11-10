@@ -3,7 +3,6 @@ package net.minecraft.tcpvp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import net.lax1dude.eaglercraft.EaglercraftUUID;
 import net.minecraft.enchantment.Enchantment;
@@ -25,6 +24,7 @@ import net.minecraft.potion.PotionType;
 import net.minecraft.potion.PotionUtils;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
@@ -40,19 +40,22 @@ import net.minecraft.world.storage.WorldInfo;
 /**
  * Treasure Client: the Practice world (a world type on the Create World screen).
  *
- * <p>A plain superflat with a ring of kit stands at spawn. Right-click a stand to pick
- * whether the bot blocks with a shield, then you and a bot with that kit are sent far
- * out to duel; the bot has endless totems. Kit items never run out while you play.
+ * <p>A plain superflat with a ring of kit stands at spawn. Right-click a stand and you
+ * and a bot with that kit go to that kit's duel area; the bot has endless totems and
+ * always holds one. Command block buttons there switch the map between a small square
+ * and the big flat, and (mace) raise the bot's shield or put it in the air. Kit items
+ * never run out while you play.
  * Practice bot idea and command design from HeroBot by HerobaneNair (CC BY-NC-SA 4.0);
  * this is a new implementation for 1.12, not their code.
  */
 public final class TCPractice {
 
-	public static final String[] KITS = { "mace", "cart", "sword", "netherite", "axe", "crystal" };
-	public static final String[] KIT_TITLES = { "Mace", "Cart", "Sword", "NethPot", "Axe", "Crystal" };
-
-	/** Set by the game client: opens the "duel this kit" screen (in the worker it stays null). */
-	public static Consumer<String> clientKitScreen;
+	public static final String[] KITS = { "mace", "htcart", "ltcart", "sword", "netherite", "axe", "crystal",
+			"custom" };
+	public static final String[] KIT_TITLES = { "Mace", "HT Cart", "LT Cart", "Sword", "NethPot", "Axe", "Crystal",
+			"Custom" };
+	/** Game rule that holds the custom kit (as item NBT text), saved with the world. */
+	public static final String CUSTOM_RULE = "tcCustomKit";
 
 	private TCPractice() {
 	}
@@ -84,10 +87,16 @@ public final class TCPractice {
 
 	/** A player (not a bot) joined a Practice world. */
 	public static void welcome(EntityPlayerMP p) {
+		WorldServer w = p.getServerWorld();
+		refreshStands(w);
+		DUELS.remove(p.getUniqueID()); // a duel from before doesn't carry over (its bot is gone)
+		bigMap(w);
 		p.addChatMessage(text("Treasure Practice", TextFormatting.GOLD, true));
 		p.addChatMessage(text("Right-click a kit stand to duel a bot with that kit.", TextFormatting.GRAY, false));
 		ITextComponent bots = text("", TextFormatting.GRAY, false);
 		bots.appendSibling(clickable("[Spawn a bot]", "/playerspawn", TextFormatting.LIGHT_PURPLE));
+		bots.appendSibling(new TextComponentString(" "));
+		bots.appendSibling(clickable("[Make custom kit]", "/customkit edit", TextFormatting.AQUA));
 		bots.appendSibling(new TextComponentString(" "));
 		bots.appendSibling(clickable("[Spawn]", "/spawn", TextFormatting.YELLOW));
 		bots.appendSibling(new TextComponentString(" "));
@@ -97,8 +106,8 @@ public final class TCPractice {
 
 	public static void help(net.minecraft.command.ICommandSender s) {
 		String[] lines = { "§6Treasure Practice commands",
-				"§b/duel <" + String.join("|", KITS) + "> [shield|noshield]§7 (or right-click a kit stand)",
-				"§b/kit <kit> [player]§7 · §b/spawn",
+				"§b/duel <kit>§7 (or right-click a kit stand) · §b/kit <kit> [player]§7 · §b/spawn",
+				"§b/customkit edit|save|clear§7 (save your inventory as the Custom kit)",
 				"§d/playerspawn [name] [at <x y z>] [facing <yaw pitch>]",
 				"§d/player <bot> kit <name>§7 · §dshield [on|off]§7 · §dattack|use|jump|swing [once|continuous|interval <ticks>]",
 				"§d/player <bot> move [forward|backward|left|right]§7 · §dsneak|unsneak|sprint|unsprint",
@@ -131,7 +140,7 @@ public final class TCPractice {
 
 	private static int[] standPos(int i) {
 		double a = Math.toRadians(-90.0D + i * (360.0D / KITS.length));
-		return new int[] { (int) Math.round(Math.cos(a) * 5.0D), (int) Math.round(Math.sin(a) * 5.0D) };
+		return new int[] { (int) Math.round(Math.cos(a) * 6.0D), (int) Math.round(Math.sin(a) * 6.0D) };
 	}
 
 	/** The yaw of something at x,z looking at spawn. */
@@ -139,13 +148,23 @@ public final class TCPractice {
 		return (float) Math.toDegrees(Math.atan2(x, -z));
 	}
 
-	/** Kit stands of the chunk at cx,cz (called when it is first decorated). */
+	/** Nothing is built when chunks are made; the map is plain flat. */
 	public static void populate(World world, int cx, int cz) {
+	}
+
+	/** Puts the kit stands at spawn back to the current set (old worlds get the new kits too). */
+	public static void refreshStands(WorldServer w) {
+		AxisAlignedBB box = new AxisAlignedBB(-12, TCArena.GROUND - 2, -12, 13, TCArena.GROUND + 6, 13);
+		List<EntityArmorStand> old = w.getEntitiesWithinAABB(EntityArmorStand.class, box);
+		for (int i = 0, n = old.size(); i < n; i++) {
+			EntityArmorStand st = old.get(i);
+			if (st.hasCustomName() && st.getCustomNameTag().startsWith("§6") && st.getCustomNameTag().endsWith(" Kit")) {
+				st.setDead();
+			}
+		}
 		for (int i = 0; i < KITS.length; i++) {
 			int[] q = standPos(i);
-			if (q[0] >> 4 == cx && q[1] >> 4 == cz) {
-				placeStand(world, q[0], q[1], i);
-			}
+			placeStand(w, q[0], q[1], i);
 		}
 	}
 
@@ -162,7 +181,7 @@ public final class TCPractice {
 		tag.setInteger("DisabledSlots", 4144959);
 		tag.setBoolean("PersistenceRequired", true);
 		stand.readFromNBT(tag);
-		ItemStack[] show = display(KITS[kit]);
+		ItemStack[] show = display(KITS[kit], world);
 		stand.setItemStackToSlot(EntityEquipmentSlot.HEAD, show[0]);
 		stand.setItemStackToSlot(EntityEquipmentSlot.CHEST, show[1]);
 		stand.setItemStackToSlot(EntityEquipmentSlot.LEGS, show[2]);
@@ -189,23 +208,32 @@ public final class TCPractice {
 				return KITS[i];
 			}
 		}
-		if (n.equals("§6Netherite Kit")) { // stands from the first test build
-			return "netherite";
-		}
 		return null;
 	}
 
-	/** Right-click on a kit stand: on the client opens the duel screen; the server does nothing. */
+	/** Right-click on a kit stand: the server starts that kit's duel. */
 	public static boolean onStandClicked(EntityArmorStand stand, EntityPlayer player) {
 		String kit = kitOfStand(stand);
 		if (kit == null) {
 			return false;
 		}
-		if (stand.world.isRemote && clientKitScreen != null) {
-			clientKitScreen.accept(kit);
+		if (!stand.world.isRemote && player instanceof EntityPlayerMP && !(player instanceof TCBot)) {
+			EntityPlayerMP p = (EntityPlayerMP) player;
+			Long last = LAST_CLICK.get(p.getUniqueID());
+			long now = p.world.getTotalWorldTime();
+			if (last == null || now - last.longValue() > 10L) {
+				LAST_CLICK.put(p.getUniqueID(), Long.valueOf(now));
+				if (kit.equals("custom") && customKit(p.world) == null) {
+					customEdit(p);
+				} else {
+					startDuel(p, kit);
+				}
+			}
 		}
 		return true;
 	}
+
+	private static final Map<EaglercraftUUID, Long> LAST_CLICK = new HashMap<>();
 
 	// ---------------------------------------------------------------- kits
 
@@ -250,8 +278,8 @@ public final class TCPractice {
 	}
 
 	/** What a kit stand shows: helmet, chest, legs, boots, main hand, off hand. */
-	private static ItemStack[] display(String kit) {
-		Kit k = build(kit);
+	private static ItemStack[] display(String kit, World w) {
+		Kit k = build(kit, w);
 		ItemStack main = k.hotbar[0];
 		if (kit.equals("mace")) {
 			main = k.hotbar[6]; // the mace
@@ -268,6 +296,8 @@ public final class TCPractice {
 		Kit() {
 			for (int i = 0; i < 9; i++) hotbar[i] = ItemStack.field_190927_a;
 			for (int i = 0; i < 27; i++) inv[i] = ItemStack.field_190927_a;
+			armor = new ItemStack[] { ItemStack.field_190927_a, ItemStack.field_190927_a, ItemStack.field_190927_a,
+					ItemStack.field_190927_a };
 		}
 	}
 
@@ -276,9 +306,21 @@ public final class TCPractice {
 	 * rows 0-26). 1.21-only enchantments (Breach, Density, Wind Burst) and items 1.12
 	 * can't use (respawn anchors) are left out.
 	 */
-	private static Kit build(String kit) {
+	private static Kit build(String kit, World w) {
 		Kit k = new Kit();
 		ItemStack[] h = k.hotbar, v = k.inv;
+		if (kit.equals("custom")) {
+			ItemStack[] slots = customKit(w);
+			if (slots == null) {
+				h[0] = st(Items.WRITABLE_BOOK, 1).setStackDisplayName("§bRight-click to make your kit");
+				return k;
+			}
+			for (int i = 0; i < 9; i++) h[i] = slots[i];
+			for (int i = 0; i < 27; i++) v[i] = slots[9 + i];
+			k.armor = new ItemStack[] { slots[39], slots[38], slots[37], slots[36] };
+			k.offhand = slots[40];
+			return k;
+		}
 		if (kit.equals("mace")) {
 			k.armor = netherite(P4U3);
 			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
@@ -301,7 +343,31 @@ public final class TCPractice {
 			for (int i = 23; i < 26; i++) v[i] = splash(PotionTypes.STRONG_SWIFTNESS);
 			v[26] = st(Items.TOTEM_OF_UNDYING, 1);
 			k.offhand = st(Items.TOTEM_OF_UNDYING, 1);
-		} else if (kit.equals("cart")) {
+		} else if (kit.equals("htcart")) {
+			// high tier: netherite, bow and crossbow, lots of carts and totems
+			k.armor = netherite(P4U3M);
+			k.armor[2] = ench(via("netherite_leggings", 1), Enchantments.BLAST_PROTECTION, 4, Enchantments.UNBREAKING, 3,
+					Enchantments.MENDING, 1);
+			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
+			h[0] = ench(via("netherite_sword", 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
+			h[1] = ench(st(Items.BOW, 1), Enchantments.POWER, 5, Enchantments.FLAME, 1, Enchantments.UNBREAKING, 3);
+			h[2] = block(Blocks.RAIL, 64);
+			h[3] = st(Items.TNT_MINECART, 64);
+			h[4] = ench(via("crossbow", 1), Enchantments.UNBREAKING, 3);
+			h[5] = st(Items.ENDER_PEARL, 16);
+			h[6] = st(Items.GOLDEN_APPLE, 64);
+			h[7] = ench(via("netherite_pickaxe", 1), Enchantments.EFFICIENCY, 5, Enchantments.UNBREAKING, 3);
+			h[8] = ench(st(Items.FLINT_AND_STEEL, 1), Enchantments.UNBREAKING, 3);
+			v[0] = st(Items.ARROW, 64);
+			v[1] = block(Blocks.RAIL, 64);
+			v[2] = st(Items.TNT_MINECART, 64);
+			v[3] = ench(via("netherite_axe", 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
+			v[4] = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
+			v[5] = st(Items.EXPERIENCE_BOTTLE, 64);
+			for (int i = 9; i < 18; i++) v[i] = st(Items.TOTEM_OF_UNDYING, 1);
+			k.offhand = st(Items.TOTEM_OF_UNDYING, 1);
+		} else if (kit.equals("ltcart")) {
+			// low tier: diamond, bow only, no totems
 			k.armor = diamond(P4U3);
 			k.armor[2] = ench(st(Items.DIAMOND_LEGGINGS, 1), Enchantments.BLAST_PROTECTION, 4, Enchantments.UNBREAKING, 3);
 			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
@@ -309,19 +375,15 @@ public final class TCPractice {
 			h[1] = ench(st(Items.DIAMOND_AXE, 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
 			h[2] = ench(st(Items.BOW, 1), Enchantments.POWER, 5, Enchantments.FLAME, 1, Enchantments.UNBREAKING, 3);
 			h[3] = block(Blocks.RAIL, 64);
-			h[4] = st(Items.TNT_MINECART, 1);
+			h[4] = st(Items.TNT_MINECART, 64);
 			h[5] = st(Items.ENDER_PEARL, 16);
 			h[6] = st(Items.GOLDEN_APPLE, 64);
 			h[7] = ench(st(Items.DIAMOND_PICKAXE, 1), Enchantments.EFFICIENCY, 5, Enchantments.UNBREAKING, 3);
 			h[8] = st(Items.COOKED_BEEF, 64);
 			v[0] = st(Items.ARROW, 64);
-			v[1] = block(Blocks.RAIL, 64);
-			v[2] = block(Blocks.LOG, 64);
-			v[3] = ench(st(Items.FLINT_AND_STEEL, 1), Enchantments.UNBREAKING, 3);
-			for (int i = 9; i < 18; i++) v[i] = st(Items.TNT_MINECART, 1);
-			for (int i = 18; i < 22; i++) v[i] = st(Items.TOTEM_OF_UNDYING, 1);
-			v[26] = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3);
-			k.offhand = st(Items.TOTEM_OF_UNDYING, 1);
+			v[1] = block(Blocks.LOG, 64);
+			v[2] = ench(st(Items.FLINT_AND_STEEL, 1), Enchantments.UNBREAKING, 3);
+			k.offhand = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3);
 		} else if (kit.equals("sword")) {
 			k.armor = diamond(P4U3);
 			k.armor[2] = ench(st(Items.DIAMOND_LEGGINGS, 1), Enchantments.PROTECTION, 3, Enchantments.UNBREAKING, 3);
@@ -383,17 +445,103 @@ public final class TCPractice {
 	}
 
 	public static boolean isKit(String name) {
+		return kitId(name) != null;
+	}
+
+	/** The kit id for a name ("cart" means the high tier cart kit), or null. */
+	public static String kitId(String name) {
+		if (name.equalsIgnoreCase("cart")) {
+			return "htcart";
+		}
 		for (String k : KITS) {
 			if (k.equalsIgnoreCase(name)) {
-				return true;
+				return k;
 			}
 		}
-		return false;
+		return null;
+	}
+
+	// ---------------------------------------------------------------- custom kit
+
+	/** The saved custom kit (41 slots: 0-35 inventory, 36-39 boots..helmet, 40 off hand), or null. */
+	public static ItemStack[] customKit(World w) {
+		if (w == null || !w.getGameRules().hasRule(CUSTOM_RULE)) {
+			return null;
+		}
+		String txt = w.getGameRules().getString(CUSTOM_RULE);
+		if (txt == null || txt.isEmpty()) {
+			return null;
+		}
+		try {
+			NBTTagCompound tag = net.minecraft.nbt.JsonToNBT.getTagFromJson(txt);
+			net.minecraft.nbt.NBTTagList list = tag.getTagList("Items", 10);
+			ItemStack[] out = new ItemStack[41];
+			for (int i = 0; i < out.length; i++) out[i] = ItemStack.field_190927_a;
+			for (int i = 0; i < list.tagCount(); i++) {
+				NBTTagCompound it = list.getCompoundTagAt(i);
+				int slot = it.getByte("Slot") & 255;
+				if (slot < out.length) {
+					out[slot] = new ItemStack(it);
+				}
+			}
+			return out;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/** Saves the player's whole inventory as the custom kit. */
+	public static void customSave(EntityPlayerMP p) {
+		net.minecraft.nbt.NBTTagList list = new net.minecraft.nbt.NBTTagList();
+		for (int i = 0; i < p.inventory.getSizeInventory() && i < 41; i++) {
+			ItemStack s = p.inventory.getStackInSlot(i);
+			if (!s.func_190926_b()) {
+				NBTTagCompound it = new NBTTagCompound();
+				it.setByte("Slot", (byte) i);
+				s.writeToNBT(it);
+				list.appendTag(it);
+			}
+		}
+		NBTTagCompound tag = new NBTTagCompound();
+		tag.setTag("Items", list);
+		p.world.getGameRules().setOrCreateGameRule(CUSTOM_RULE, tag.toString());
+		if (p.isCreative()) {
+			p.setGameType(net.minecraft.world.GameType.SURVIVAL);
+		}
+		refreshStands(p.getServerWorld());
+		p.addChatMessage(text("Saved your inventory as the Custom kit.", TextFormatting.GREEN, false));
+		ITextComponent o = text("", TextFormatting.GRAY, false);
+		o.appendSibling(clickable("[Duel with it]", "/duel custom", TextFormatting.GREEN));
+		o.appendSibling(new TextComponentString(" "));
+		o.appendSibling(clickable("[Edit again]", "/customkit edit", TextFormatting.AQUA));
+		p.addChatMessage(o);
+	}
+
+	/** Creative mode at spawn to put a kit together, with a Save button in chat. */
+	public static void customEdit(EntityPlayerMP p) {
+		endDuel(p);
+		toSpawn(p);
+		ItemStack[] saved = customKit(p.world);
+		p.inventory.clear();
+		if (saved != null) {
+			for (int i = 0; i < saved.length && i < p.inventory.getSizeInventory(); i++) {
+				p.inventory.setInventorySlotContents(i, saved[i].copy());
+			}
+		}
+		KIT_OF.remove(p.getUniqueID());
+		p.setGameType(net.minecraft.world.GameType.CREATIVE);
+		p.addChatMessage(text("Custom kit maker: put the items, armor and off hand you want in your inventory "
+				+ "(you're in creative to pick anything), then press Save.", TextFormatting.AQUA, false));
+		ITextComponent o = text("", TextFormatting.GRAY, false);
+		o.appendSibling(clickable("[Save as custom kit]", "/customkit save", TextFormatting.GREEN));
+		o.appendSibling(new TextComponentString(" "));
+		o.appendSibling(clickable("[Cancel]", "/customkit cancel", TextFormatting.RED));
+		p.addChatMessage(o);
 	}
 
 	/** Clears the player, heals them, gives the kit and keeps it topped up from now on. */
 	public static void giveKit(EntityPlayer p, String kit) {
-		Kit k = build(kit.toLowerCase());
+		Kit k = build(kit.toLowerCase(), p.world);
 		p.inventory.clear();
 		for (int i = 0; i < 9; i++) p.inventory.setInventorySlotContents(i, k.hotbar[i].copy());
 		for (int i = 0; i < 27; i++) p.inventory.setInventorySlotContents(9 + i, k.inv[i].copy());
@@ -561,67 +709,234 @@ public final class TCPractice {
 		teleport(p, 0.5D, TCArena.GROUND + 1, 0.5D, 180.0F);
 	}
 
-	/** Each player's current duel bot. */
-	private static final Map<EaglercraftUUID, TCBot> DUEL_BOT = new HashMap<>();
+	/** A running duel: its kit, where it is, its bot and switches. */
+	public static final class Duel {
+		public final String kit;
+		public final int x, z;
+		public TCBot bot;
+		public boolean shield, air, small;
+
+		Duel(String kit, int x, int z) {
+			this.kit = kit;
+			this.x = x;
+			this.z = z;
+		}
+	}
+
+	private static final Map<EaglercraftUUID, Duel> DUELS = new HashMap<>();
+
+	public static Duel duelOf(EntityPlayer p) {
+		return DUELS.get(p.getUniqueID());
+	}
+
+	/** Each kit has its own duel area out on the flat (the same one every time). */
+	private static int[] duelSpot(String kit) {
+		return new int[] { 512 + 192 * indexOf(kit), 512 };
+	}
+
+	private static final int SMALL_MAP = 40;
+
+	/** The whole world is open again (normal big flat). */
+	public static void bigMap(WorldServer w) {
+		w.getWorldBorder().setCenter(0.0D, 0.0D);
+		w.getWorldBorder().setTransition(6.0E7D);
+		w.getWorldBorder().setWarningDistance(5);
+	}
+
+	private static void applyMap(WorldServer w, Duel d) {
+		if (d.small) {
+			w.getWorldBorder().setCenter(d.x + 0.5D, d.z + 3.5D);
+			w.getWorldBorder().setTransition(SMALL_MAP);
+			w.getWorldBorder().setWarningDistance(1);
+		} else {
+			bigMap(w);
+		}
+	}
 
 	/**
-	 * Sends the player far out onto the flat, gives them and a new bot the kit, and puts
-	 * the bot 6 blocks in front facing them. The bot has endless totems and, if asked,
-	 * keeps a shield raised.
+	 * You and a bot with the kit go to the kit's duel area: you 6 blocks from the bot,
+	 * facing it. The bot never runs out of totems and always holds one. Mace starts on
+	 * the small square map, the rest on the big flat; command block buttons behind you
+	 * switch that (and, for mace, the bot's shield and floating).
 	 */
-	public static void startDuel(EntityPlayerMP p, String kit, boolean shield) {
+	public static void startDuel(EntityPlayerMP p, String kit) {
 		MinecraftServer server = p.getServer();
 		WorldServer w = p.getServerWorld();
-		TCBot old = DUEL_BOT.remove(p.getUniqueID());
-		if (old != null && server.getPlayerList().getPlayerList().contains(old)) {
-			TCBots.remove(old);
+		endDuel(p);
+		int[] spot = duelSpot(kit);
+		int x = spot[0], z = spot[1];
+		// make the ground there first, so it's there when you arrive
+		for (int cx = (x >> 4) - 2; cx <= (x >> 4) + 2; cx++) {
+			for (int cz = (z >> 4) - 2; cz <= (z >> 4) + 2; cz++) {
+				w.getChunkFromChunkCoords(cx, cz);
+			}
 		}
-		double ang = p.world.rand.nextDouble() * Math.PI * 2.0D;
-		double dist = 4000.0D + p.world.rand.nextInt(6000);
-		int x = (int) (Math.cos(ang) * dist), z = (int) (Math.sin(ang) * dist);
+		clearDrops(w, x, z);
+		Duel d = new Duel(kit, x, z);
+		d.small = kit.equals("mace");
+		buildButtons(w, d);
 		double y = TCArena.GROUND + 1;
 		giveKit(p, kit);
+		if (p.isCreative() || p.isSpectator()) {
+			p.setGameType(net.minecraft.world.GameType.SURVIVAL);
+		}
 		teleport(p, x + 0.5D, y, z + 0.5D, 0.0F);
 		String name = TCBots.freeName(server, "Bot");
 		TCBot bot = TCBot.spawn(server, w, name, x + 0.5D, y, z + 6.5D, 180.0F, 0.0F, false);
 		bot.infiniteTotems = true;
 		bot.kit = kit;
-		giveKit(bot, kit);
-		if (shield) {
-			bot.setHeldItem(EnumHand.OFF_HAND, ench(new ItemStack(Items.SHIELD), Enchantments.UNBREAKING, 3));
-			remember(bot);
-			bot.actions.shield = true;
-		}
 		bot.actions.lookAt = p;
-		bot.duelShield = shield;
-		DUEL_BOT.put(p.getUniqueID(), bot);
-		p.addChatMessage(text(KIT_TITLES[indexOf(kit)] + " duel vs " + name
-				+ (shield ? " (blocks with a shield)" : "") + ". Your items never run out.", TextFormatting.GOLD, false));
+		d.bot = bot;
+		loadout(bot, d);
+		applyMap(w, d);
+		DUELS.put(p.getUniqueID(), d);
+		p.addChatMessage(text(KIT_TITLES[indexOf(kit)] + " duel. Your items never run out; the bot never runs out of totems.",
+				TextFormatting.GOLD, false));
 		ITextComponent opts = text("", TextFormatting.GRAY, false);
-		opts.appendSibling(clickable("[Rematch]", "/duel " + kit + (shield ? " shield" : " noshield"),
-				TextFormatting.GREEN));
+		opts.appendSibling(clickable("[Rematch]", "/duel " + kit, TextFormatting.GREEN));
 		opts.appendSibling(new TextComponentString(" "));
-		opts.appendSibling(clickable("[Bot shield on/off]", "/player " + name + " shield", TextFormatting.AQUA));
+		opts.appendSibling(clickable("[Map: big/small]", "/practicebutton map", TextFormatting.AQUA));
+		if (kit.equals("mace")) {
+			opts.appendSibling(new TextComponentString(" "));
+			opts.appendSibling(clickable("[Bot shield]", "/practicebutton shield", TextFormatting.AQUA));
+			opts.appendSibling(new TextComponentString(" "));
+			opts.appendSibling(clickable("[Bot in air]", "/practicebutton air", TextFormatting.AQUA));
+		}
 		opts.appendSibling(new TextComponentString(" "));
 		opts.appendSibling(clickable("[Back to spawn]", "/spawn", TextFormatting.YELLOW));
 		p.addChatMessage(opts);
 	}
 
-	/** Leaving a duel (back to spawn): its bot goes away. */
+	/** The bot gets the kit and always holds a totem: off hand, or main hand when its shield is up. */
+	private static void loadout(TCBot bot, Duel d) {
+		giveKit(bot, d.kit);
+		ItemStack totem = new ItemStack(Items.TOTEM_OF_UNDYING);
+		if (d.shield) {
+			bot.inventory.currentItem = 0;
+			bot.setHeldItem(EnumHand.MAIN_HAND, totem);
+			bot.setHeldItem(EnumHand.OFF_HAND, ench(new ItemStack(Items.SHIELD), Enchantments.UNBREAKING, 3));
+		} else {
+			bot.setHeldItem(EnumHand.OFF_HAND, totem);
+			bot.resetActiveHand();
+		}
+		bot.actions.shield = d.shield;
+		bot.duelShield = d.shield;
+		remember(bot);
+	}
+
+	/** A command block button (or its chat twin) in the player's duel. */
+	public static void pressButton(EntityPlayerMP p, String what) {
+		Duel d = DUELS.get(p.getUniqueID());
+		if (d == null || d.bot == null) {
+			p.addChatMessage(text("Start a duel first (right-click a kit stand).", TextFormatting.RED, false));
+			return;
+		}
+		WorldServer w = p.getServerWorld();
+		TCBot bot = d.bot;
+		if (what.equals("map")) {
+			d.small = !d.small;
+			applyMap(w, d);
+			if (d.small) {
+				teleport(p, d.x + 0.5D, TCArena.GROUND + 1, d.z + 0.5D, 0.0F);
+				TCPractice.teleport(bot, d.x + 0.5D, bot.posY, d.z + 6.5D, 180.0F);
+			}
+			p.addChatMessage(text("Map: " + (d.small ? "small square" : "big flat"), TextFormatting.AQUA, false));
+		} else if (what.equals("shield")) {
+			d.shield = !d.shield;
+			loadout(bot, d);
+			p.addChatMessage(text("Bot shield: " + (d.shield ? "up (stays up even when stunned)" : "down"),
+					TextFormatting.AQUA, false));
+		} else if (what.equals("air")) {
+			d.air = !d.air;
+			bot.actions.setFloating(d.air, TCArena.GROUND + 1 + 8);
+			p.addChatMessage(text("Bot " + (d.air ? "in the air" : "back on the ground"), TextFormatting.AQUA, false));
+		}
+	}
+
+	/** Leaving a duel (back to spawn): its bot goes away and the map opens up. */
 	public static void endDuel(EntityPlayerMP p) {
-		TCBot old = DUEL_BOT.remove(p.getUniqueID());
-		if (old != null && p.getServer().getPlayerList().getPlayerList().contains(old)) {
-			TCBots.remove(old);
+		Duel d = DUELS.remove(p.getUniqueID());
+		if (d != null) {
+			if (d.bot != null && p.getServer().getPlayerList().getPlayerList().contains(d.bot)) {
+				TCBots.remove(d.bot);
+			}
+			bigMap(p.getServerWorld());
 		}
 	}
 
 	/** A duel bot respawned as a new entity. */
-	static void replaced(TCBot old, TCBot now) {
-		for (Map.Entry<EaglercraftUUID, TCBot> e : DUEL_BOT.entrySet()) {
-			if (e.getValue() == old) {
-				e.setValue(now);
-				return;
+	static boolean replaced(TCBot old, TCBot now) {
+		for (Duel d : DUELS.values()) {
+			if (d.bot == old) {
+				d.bot = now;
+				now.kit = d.kit;
+				loadout(now, d);
+				if (d.air) {
+					now.actions.setFloating(true, TCArena.GROUND + 1 + 8);
+				}
+				return true;
 			}
+		}
+		return false;
+	}
+
+	/** Items, arrows, carts, crystals and such left from the last fight there. */
+	private static void clearDrops(WorldServer w, int x, int z) {
+		AxisAlignedBB box = new AxisAlignedBB(x - 48, 0, z - 48, x + 49, 256, z + 49);
+		List<net.minecraft.entity.Entity> list = w.getEntitiesWithinAABB(net.minecraft.entity.Entity.class, box);
+		for (int i = 0, n = list.size(); i < n; i++) {
+			net.minecraft.entity.Entity e = list.get(i);
+			if (!(e instanceof EntityPlayer) && !(e instanceof EntityLivingBase)) {
+				e.setDead();
+			}
+		}
+	}
+
+	/**
+	 * Command blocks with buttons 4 blocks behind where you start (turn around to press):
+	 * Map for every kit; mace also gets Shield and Air. A sign on top names each one.
+	 */
+	private static void buildButtons(WorldServer w, Duel d) {
+		int y = TCArena.GROUND + 1, bz = d.z - 4;
+		// clear the row first (an older duel of another kit may have left a different set)
+		for (int bx = d.x - 3; bx <= d.x + 3; bx++) {
+			for (int dy = 0; dy < 2; dy++) {
+				w.setBlockToAir(new BlockPos(bx, y + dy, bz));
+				w.setBlockToAir(new BlockPos(bx, y + dy, bz + 1));
+			}
+		}
+		boolean mace = d.kit.equals("mace");
+		placeButton(w, d.x, y, bz, "map", "Map", "big / small");
+		if (mace) {
+			placeButton(w, d.x - 2, y, bz, "shield", "Bot Shield", "on / off");
+			placeButton(w, d.x + 2, y, bz, "air", "Bot in Air", "up / down");
+		}
+	}
+
+	private static void placeButton(WorldServer w, int x, int y, int z, String what, String l1, String l2) {
+		BlockPos cb = new BlockPos(x, y, z);
+		w.setBlockState(cb, Blocks.COMMAND_BLOCK.getDefaultState(), 2);
+		net.minecraft.tileentity.TileEntity te = w.getTileEntity(cb);
+		if (te instanceof net.minecraft.tileentity.TileEntityCommandBlock) {
+			net.minecraft.tileentity.CommandBlockBaseLogic logic = ((net.minecraft.tileentity.TileEntityCommandBlock) te)
+					.getCommandBlockLogic();
+			logic.setCommand("/practicebutton " + what);
+			logic.setTrackOutput(false);
+			te.markDirty();
+		}
+		w.setBlockState(cb.south(), Blocks.STONE_BUTTON.getDefaultState()
+				.withProperty(net.minecraft.block.BlockDirectional.FACING, net.minecraft.util.EnumFacing.SOUTH), 2);
+		BlockPos sp = cb.up();
+		w.setBlockState(sp, Blocks.STANDING_SIGN.getDefaultState()
+				.withProperty(net.minecraft.block.BlockStandingSign.ROTATION, Integer.valueOf(0)), 2);
+		net.minecraft.tileentity.TileEntity st = w.getTileEntity(sp);
+		if (st instanceof net.minecraft.tileentity.TileEntitySign) {
+			net.minecraft.tileentity.TileEntitySign sign = (net.minecraft.tileentity.TileEntitySign) st;
+			sign.signText[0] = new TextComponentString("");
+			sign.signText[1] = text(l1, TextFormatting.DARK_BLUE, true);
+			sign.signText[2] = new TextComponentString(l2);
+			sign.signText[3] = text("press the button", TextFormatting.DARK_GRAY, false);
+			sign.markDirty();
 		}
 	}
 

@@ -5,8 +5,6 @@ import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.WorldServer;
 
 /** Treasure Client: the practice bots of the running world (finding, removing, respawning). */
@@ -52,10 +50,6 @@ public final class TCBots {
 	/** Takes a bot out of the world, like a player leaving. */
 	public static void remove(TCBot bot) {
 		MinecraftServer server = bot.mcServer;
-		TextComponentTranslation msg = new TextComponentTranslation("multiplayer.player.left",
-				new Object[] { bot.getDisplayName() });
-		msg.getStyle().setColor(TextFormatting.YELLOW);
-		server.getPlayerList().sendChatMsg(msg);
 		bot.mountEntityAndWakeUp();
 		server.getPlayerList().playerLoggedOut(bot);
 		TCPractice.forgetKit(bot);
@@ -63,6 +57,7 @@ public final class TCBots {
 
 	/** Called at the end of every server tick. */
 	public static void tick(MinecraftServer server) {
+		net.minecraft.item.ItemMinecart.tcPracticeStack = TCPractice.isPractice(server.worldServers[0]);
 		TCPractice.refillAll(server);
 		if (respawns.isEmpty()) {
 			return;
@@ -86,8 +81,9 @@ public final class TCBots {
 			bot.kit = old.kit;
 			bot.infiniteTotems = old.infiniteTotems;
 			bot.duelShield = old.duelShield;
-			TCPractice.replaced(old, bot);
-			if (bot.kit != null) {
+			if (TCPractice.replaced(old, bot)) {
+				// a duel bot: its duel set it up again
+			} else if (bot.kit != null) {
 				TCPractice.giveKit(bot, bot.kit);
 				if (bot.duelShield) {
 					bot.setHeldItem(net.minecraft.util.EnumHand.OFF_HAND,

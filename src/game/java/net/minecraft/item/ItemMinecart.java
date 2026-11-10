@@ -79,6 +79,13 @@ public class ItemMinecart extends Item {
 	};
 	private final EntityMinecart.Type minecartType;
 
+	/** Treasure Client: TNT minecarts stack to 64 while playing a Practice world (set each tick). */
+	public static boolean tcPracticeStack;
+
+	public int getItemStackLimit() {
+		return tcPracticeStack && this.minecartType == EntityMinecart.Type.TNT ? 64 : super.getItemStackLimit();
+	}
+
 	public ItemMinecart(EntityMinecart.Type typeIn) {
 		this.maxStackSize = 1;
 		this.minecartType = typeIn;

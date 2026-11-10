@@ -89,12 +89,6 @@ public class GuiIngameMenu extends GuiScreen {
 					PauseMenuCustomizeState.icon_serverInfo_R_aspect));
 		}
 		
-		if (this.mc.world != null && net.minecraft.tcpvp.TCPractice.isPractice(this.mc.world)
-				&& PauseMenuCustomizeState.serverInfoMode == PauseMenuCustomizeState.DISCORD_MODE_NONE) {
-			// Treasure Client: Practice world
-			this.buttonList.add(new GuiButton(40, this.width / 2 - 100, this.height / 4 + 72 + -16, "Spawn Practice Bot"));
-		}
-
 		if (!hasSentAutoSave) {
 			hasSentAutoSave = true;
 			SingleplayerServerController.autoSave();
@@ -147,11 +141,6 @@ public class GuiIngameMenu extends GuiScreen {
 					this.mc.playerController != null && this.mc.playerController.getCurrentGameType() != null
 							? this.mc.playerController.getCurrentGameType().getName()
 							: "survival"));
-			break;
-		case 40:
-			this.mc.displayGuiScreen((GuiScreen) null);
-			this.mc.setIngameFocus();
-			this.mc.player.sendChatMessage("/playerspawn");
 			break;
 		case 8:
 			if (PauseMenuCustomizeState.discordButtonMode == PauseMenuCustomizeState.DISCORD_MODE_INVITE_URL

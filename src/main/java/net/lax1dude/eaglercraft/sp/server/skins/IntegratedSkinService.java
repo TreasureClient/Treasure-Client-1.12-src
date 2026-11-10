@@ -88,6 +88,9 @@ public class IntegratedSkinService {
 		GameMessagePacket toSend = null;
 		if(playerSkin != null) {
 			toSend = playerSkin.get(sender.connection.getEaglerMessageProtocol());
+		}else if(sender.mcServer.getPlayerList().getPlayerByUUID(searchUUID) instanceof net.minecraft.tcpvp.TCBot) {
+			// Treasure Client: practice bots always look like Steve
+			toSend = new SPacketOtherSkinPresetEAG(searchUUID.msb, searchUUID.lsb, 0);
 		}else {
 			toSend = IntegratedSkinPackets.makePresetResponse(searchUUID);
 		}

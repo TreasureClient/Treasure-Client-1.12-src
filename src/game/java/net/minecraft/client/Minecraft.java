@@ -1429,9 +1429,8 @@ public class Minecraft implements IThreadListener {
 	 */
 	public void runTick() throws IOException {
 		long tcM = TCLagMonitor.now(); // .lag "client mods"
-		if (net.minecraft.tcpvp.TCPractice.clientKitScreen == null) {
-			net.minecraft.tcpvp.TCPractice.clientKitScreen = k -> this.displayGuiScreen(new net.minecraft.client.gui.GuiTCKitDuel(k));
-		}
+		net.minecraft.item.ItemMinecart.tcPracticeStack = this.world != null && this.isSingleplayer()
+				&& net.minecraft.tcpvp.TCPractice.isPractice(this.world); // Treasure Client: TNT carts stack in Practice
 		net.minecraft.item.ItemArmor.tcClientSwap = this.isSingleplayer(); // Treasure Client: modern armor swap
 		net.minecraft.client.gui.TreasureMods.tick(this); // Treasure Client mods
 		net.minecraft.client.gui.TreasureHud.tick(this); // Treasure Client HUD data bridge
