@@ -142,7 +142,85 @@ public final class LightingEngine {
 		processLightUpdatesForTypeInner(lightType, queue);
 	}
 
+	// Treasure Client: each spot's light from before this update. A fix darkens a whole area and
+	// lights it again, and most spots end up exactly as bright as before; only the ones that really
+	// changed need their chunk redrawn (while standing still this was ~30 chunk redraws a second).
+	private long[] tcOrigKeys = new long[1024];
+	private byte[] tcOrigVals = new byte[1024];
+	private int[] tcOrigGen = new int[1024];
+	private int tcGen = 1, tcOrigCount;
+
+	private void tcOrigReset() {
+		if (++tcGen == 0) {
+			java.util.Arrays.fill(tcOrigGen, 0);
+			tcGen = 1;
+		}
+		tcOrigCount = 0;
+	}
+
+	private static int tcSlot(long k, int mask) {
+		k ^= k >>> 33;
+		k *= 0xff51afd7ed558ccdL;
+		k ^= k >>> 33;
+		return (int) k & mask;
+	}
+
+	/** Remembers a spot's light before it is first changed in this update. */
+	private void tcOrigPut(long key, byte light) {
+		key &= M_POS;
+		int mask = tcOrigKeys.length - 1;
+		int i = tcSlot(key, mask);
+		while (tcOrigGen[i] == tcGen) {
+			if (tcOrigKeys[i] == key) {
+				return; // already have its first value
+			}
+			i = (i + 1) & mask;
+		}
+		tcOrigKeys[i] = key;
+		tcOrigVals[i] = light;
+		tcOrigGen[i] = tcGen;
+		if (++tcOrigCount * 2 > tcOrigKeys.length) {
+			tcOrigGrow();
+		}
+	}
+
+	private void tcOrigGrow() {
+		long[] ok = tcOrigKeys;
+		byte[] ov = tcOrigVals;
+		int[] og = tcOrigGen;
+		int g = tcGen;
+		int n = ok.length * 2, mask = n - 1;
+		tcOrigKeys = new long[n];
+		tcOrigVals = new byte[n];
+		tcOrigGen = new int[n];
+		tcGen = 1;
+		for (int j = 0; j < ok.length; j++) {
+			if (og[j] == g) {
+				int i = tcSlot(ok[j], mask);
+				while (tcOrigGen[i] == 1) i = (i + 1) & mask;
+				tcOrigKeys[i] = ok[j];
+				tcOrigVals[i] = ov[j];
+				tcOrigGen[i] = 1;
+			}
+		}
+	}
+
+	/** The light a spot had before this update, or -1 if it wasn't changed. */
+	private int tcOrigGet(long key) {
+		key &= M_POS;
+		int mask = tcOrigKeys.length - 1;
+		int i = tcSlot(key, mask);
+		while (tcOrigGen[i] == tcGen) {
+			if (tcOrigKeys[i] == key) {
+				return tcOrigVals[i];
+			}
+			i = (i + 1) & mask;
+		}
+		return -1;
+	}
+
 	private void processLightUpdatesForTypeInner(final EnumSkyBlock lightType, final DeduplicatedLongQueue queue) {
+		tcOrigReset();
 		// Avoid nested calls
 		if (updating)
 			throw new IllegalStateException("Already processing updates!");
@@ -283,7 +361,9 @@ public final class LightingEngine {
 				// Only process this if nothing else has happened at this position since
 				// scheduling
 				if (oldLight == currentLight) {
-					world.notifyLightSet(currentPos);
+					// Treasure Client: only redraw when the light really ended up different
+					if (tcOrigGet(currentData) != currentLight)
+						world.notifyLightSet(currentPos);
 
 					if (currentLight > 1)
 						spreadLightFromCursor(currentLight, lightType);
@@ -410,6 +490,7 @@ public final class LightingEngine {
 			final EnumSkyBlock lightType) {
 		brighteningQueues[newLight].enqueue(longPos);
 
+		tcOrigPut(longPos, chunk.alfheim$getCachedLightFor(lightType, blockPos));
 		chunk.setLightFor(lightType, blockPos, newLight);
 	}
 
@@ -420,6 +501,7 @@ public final class LightingEngine {
 			final EnumSkyBlock lightType) {
 		darkeningQueues[oldLight].enqueue(longPos);
 
+		tcOrigPut(longPos, oldLight);
 		chunk.setLightFor(lightType, blockPos, 0);
 	}
 
