@@ -225,6 +225,8 @@ generator.customized=Customized
 generator.debug_all_block_states=Debug Mode
 
 generator.amplified.info=Notice: Just for fun, requires beefy computer
+generator.practice=Practice (PvP)
+generator.practice.info=Spawn hub, kits, arenas and practice bots (/practice)
 
 selectServer.title=Select Server
 selectServer.empty=empty

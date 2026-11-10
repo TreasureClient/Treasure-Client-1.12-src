@@ -241,6 +241,9 @@ public class TCLagMonitor {
 
 	// why chunks get redrawn: light changes, single block changes, whole areas (chunk data, modern blocks)
 	public static int mkLight, mkBlock, mkRange;
+	/** Block changes out of view that waited to be built until the chunk is seen. */
+	public static int hiddenWaits;
+	private static final int[] mHidden = new int[MINUTES];
 	private static int buildJobs;
 	/** Builds that only re-sorted see-through blocks (water, glass) for the camera. */
 	public static int sortJobs;
@@ -538,7 +541,8 @@ public class TCLagMonitor {
 			clearParts();
 			return;
 		}
-		if (tcMc.world == null || tcMc.player == null || skipFrame) {
+		if (tcMc.world == null || tcMc.player == null || skipFrame || TCCalmFps.lastCalm) {
+			// (Calm FPS frames are slow on purpose: not lag, and Frame Pacing / Steady FPS mustn't react)
 			skipFrame = false;
 			// menus and the login handshake (which waits for the server) aren't gameplay
 			clearParts();
@@ -558,6 +562,12 @@ public class TCLagMonitor {
 			heapNow = h == null ? -1 : (int) h[0];
 		}
 		int minute = (int) ((now - start) / 60000L);
+		if (now - lastCpuTest > 5000L) {
+			lastCpuTest = now;
+			int c = cpuTest();
+			TCHeat.sample(c); // Steady FPS "When Hot" follows this
+			if (minute < MINUTES && (mCpu[minute] == 0 || c < mCpu[minute])) mCpu[minute] = c;
+		}
 		if (minute >= MINUTES) {
 			clearParts();
 			return; // two hours is plenty of history
@@ -566,11 +576,6 @@ public class TCLagMonitor {
 			curMinute = minute;
 		}
 		mFrames[minute]++;
-		if (now - lastCpuTest > 5000L) {
-			lastCpuTest = now;
-			int c = cpuTest();
-			if (mCpu[minute] == 0 || c < mCpu[minute]) mCpu[minute] = c;
-		}
 		mMs[minute] += total;
 		mLogicAll[minute] += logicNs;
 		mDrawAll[minute] += drawNs;
@@ -579,6 +584,7 @@ public class TCLagMonitor {
 		mMkLight[minute] += mkLight;
 		mMkBlock[minute] += mkBlock;
 		mMkRange[minute] += mkRange;
+		mHidden[minute] += hiddenWaits;
 		mHeap[minute] = heapNow;
 		for (int k = 0; k < PARTS; k++) mPartAll[minute][k] += cur[k];
 		for (int k = 0; k < LPARTS; k++) mLPartAll[minute][k] += lcur[k];
@@ -914,7 +920,7 @@ public class TCLagMonitor {
 			eNs[k] = 0L;
 			eCnt[k] = 0;
 		}
-		buildJobs = sortJobs = mkLight = mkBlock = mkRange = 0;
+		buildJobs = sortJobs = mkLight = mkBlock = mkRange = hiddenWaits = 0;
 		if ((hRedraw | hPaste | hLive | hVignette) != 0L) { // a frame in a world with the HUD on
 			hRedrawAll += hRedraw;
 			hPasteAll += hPaste;
@@ -1347,7 +1353,7 @@ public class TCLagMonitor {
 		if (frames > 0) {
 			// every frame, not only spikes: shows why the game is slow when it is slow all the time
 			long la = 0L, da = 0L;
-			int bj = 0, sj = 0, ml = 0, mb = 0, mr = 0;
+			int bj = 0, sj = 0, ml = 0, mb = 0, mr = 0, mh = 0;
 			long[] all = new long[PARTS], lall = new long[LPARTS];
 			for (int m = from; m <= last; m++) {
 				la += mLogicAll[m];
@@ -1357,13 +1363,14 @@ public class TCLagMonitor {
 				ml += mMkLight[m];
 				mb += mMkBlock[m];
 				mr += mMkRange[m];
+				mh += mHidden[m];
 				for (int k = 0; k < PARTS; k++) all[k] += mPartAll[m][k];
 				for (int k = 0; k < LPARTS; k++) lall[k] += mLPartAll[m][k];
 			}
 			long frameUs = ms * 1000L / frames, lUs = la / 1000L / frames, dUs = da / 1000L / frames;
 			say(mc, "§7Every frame: §f" + ms1(frameUs) + "ms §7(logic §f" + ms1(lUs) + "§7, drawing §f" + ms1(dUs)
 					+ "§7, browser/GPU §f" + ms1(Math.max(0L, frameUs - lUs - dUs)) + "§7)");
-			say(mc, TCFramePacer.describe() + " §7· " + TCSteadyFps.describe());
+			say(mc, TCFramePacer.describe() + " §7· " + TCSteadyFps.describe() + " §7· " + TCCalmFps.describe());
 			{
 				// slow frames since the last .lag: shown at once (the GPU had caught up), or held for
 				// the next refresh because the GPU was still drawing the frame before (GPU is the limit)
@@ -1390,7 +1397,8 @@ public class TCLagMonitor {
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
 			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
-					+ (mb / mins) + ", areas " + (mr / mins) + "; water re-sorts " + (sj / mins) + ")");
+					+ (mb / mins) + ", areas " + (mr / mins) + "; water re-sorts " + (sj / mins) + "; out of view, waited "
+					+ (mh / mins) + ")");
 		}
 		int speed = cpuSpeed(last);
 		int first = -1;

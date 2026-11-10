@@ -783,6 +783,8 @@ public class WorldServer extends World implements IThreadListener {
 			this.worldInfo.setSpawn(BlockPos.ORIGIN.up(this.provider.getAverageGroundLevel()));
 		} else if (this.worldInfo.getTerrainType() == WorldType.DEBUG_WORLD) {
 			this.worldInfo.setSpawn(BlockPos.ORIGIN.up());
+		} else if (this.worldInfo.getTerrainType() == WorldType.PRACTICE) {
+			net.minecraft.tcpvp.TCPractice.setupNewWorld(this.worldInfo, this.getGameRules());
 		} else {
 			this.findingSpawnPoint = true;
 			BiomeProvider biomeprovider = this.provider.getBiomeProvider();

@@ -119,6 +119,8 @@ public abstract class EntityLivingBase extends Entity {
 	 * corpse in the world.
 	 */
 	public int deathTime;
+	/** Treasure Client: set when a shield gets stunned with /herobot shieldStunning on. */
+	public boolean tcClearIframes;
 	public float prevSwingProgress;
 	public float swingProgress;
 	protected int ticksSinceLastSwing;
@@ -931,6 +933,12 @@ public abstract class EntityLivingBase extends Entity {
 					this.hurtTime = this.maxHurtTime;
 				}
 
+				if (this.tcClearIframes) {
+					// Treasure Client (/herobot shieldStunning): the hit that stunned the shield gives
+					// no hit cooldown, so a follow-up hit (axe then mace) lands fully
+					this.tcClearIframes = false;
+					this.hurtResistantTime = 0;
+				}
 				this.attackedAtYaw = 0.0F;
 				Entity entity1 = source.getEntity();
 

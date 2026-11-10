@@ -385,6 +385,9 @@ public class EntityList {
 		func_191303_a(202, "bee", net.minecraft.entity.passive.EntityBee.class,
 				net.minecraft.entity.passive.EntityBee::new, "Bee");
 		func_191305_a("bee", 15582019, 4400155);
+		// Treasure Client — singleplayer wind charge (thrown, saved with the world)
+		func_191303_a(203, "wind_charge", net.minecraft.entity.projectile.EntityTCWindCharge.class,
+				net.minecraft.entity.projectile.EntityTCWindCharge::new, "WindCharge");
 		field_191309_d.add(field_191307_a);
 	}
 

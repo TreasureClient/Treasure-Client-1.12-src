@@ -13,11 +13,15 @@ package net.minecraft.client;
  * <p>Auto starts at 60 and steps down (45, 40, 30) when too many frames miss their slot.
  * After a calm stretch it tries the next rate up again; if that fails it waits twice as
  * long before the next try.
+ *
+ * <p>When Hot (the default) is off while the processor runs at full speed and works like
+ * Auto once heat slows it down (TCHeat), so a hot laptop gets an even 45 or 40 instead of
+ * a jumpy 40-60, and does less work while it cools.
  */
 public final class TCSteadyFps {
 
-	/** Video Settings "Steady FPS": 0 = off, -1 = auto, else the fixed rate. */
-	public static int mode = 0;
+	/** Video Settings "Steady FPS": 0 = off, -1 = auto, -2 = auto only when hot, else the fixed rate. */
+	public static int mode = -2;
 
 	private static final int[] RATES = { 60, 45, 40, 30 };
 	private static final long WINDOW_MS = 2000L;
@@ -41,7 +45,7 @@ public final class TCSteadyFps {
 		if (mode > 0) {
 			return mode;
 		}
-		if (mode < 0) {
+		if (mode == -1 || (mode == -2 && TCHeat.hot())) {
 			int r = RATES[autoIdx];
 			return r >= 60 ? 0 : r;
 		}
@@ -50,8 +54,10 @@ public final class TCSteadyFps {
 
 	/** Called every gameplay frame with its length in ms (TCLagMonitor). */
 	public static void frame(long now, long frameMs) {
-		if (mode >= 0) {
+		if (mode >= 0 || (mode == -2 && !TCHeat.hot())) {
 			autoIdx = 0;
+			calmWindows = 0;
+			trying = false;
 			winStart = -1L;
 			return;
 		}
@@ -106,6 +112,10 @@ public final class TCSteadyFps {
 		}
 		if (mode > 0) {
 			return "§7Steady FPS: §f" + mode;
+		}
+		if (mode == -2) {
+			return "§7Steady FPS: §fwhen hot (speed " + TCHeat.speed() + "%), now "
+					+ (TCHeat.hot() ? String.valueOf(RATES[autoIdx]) : "off");
 		}
 		return "§7Steady FPS: §fauto, now " + RATES[autoIdx];
 	}

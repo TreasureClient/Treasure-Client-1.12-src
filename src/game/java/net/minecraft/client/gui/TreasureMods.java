@@ -382,6 +382,8 @@ public class TreasureMods {
 	public static boolean hudCache() { return immediatelyFast() && hudCache; }
 	/** Dynamic FPS: frame rate while another window is focused. */
 	public static int backgroundFps() { return bgFps; }
+	/** Dynamic FPS: frame rate on menus, chat and while standing still (60 = full speed). */
+	public static int calmFps() { return vsInt("vsCalmFps", 30, 20, 60); }
 	/** FPS Reducer: on (Mods screen) and part of the Performance modpack. */
 	public static boolean fpsReducer() { return perfPack && vsOn("vsFpsReducer", true); }
 	/** FPS Reducer: frame rate while idle. */
@@ -429,7 +431,7 @@ public class TreasureMods {
 		bgFps = vsInt("vsBgFps", 10, 1, 60);
 		net.minecraft.client.TCFramePacer.enabled = vsOn("vsPacer", true);
 		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDrawOn = vsOn("vsMultiDraw", true);
-		net.minecraft.client.TCSteadyFps.mode = vsInt("vsSteady", 0, -1, 60);
+		net.minecraft.client.TCSteadyFps.mode = vsInt("vsSteady", -2, -2, 60);
 		workerIdleSec = vsInt("vsWorkerSec", 5, 5, 300);
 		crashRecoveries = vsInt("vsCrashMax", 3, 1, 10);
 	}

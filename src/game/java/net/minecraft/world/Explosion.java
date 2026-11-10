@@ -163,7 +163,9 @@ public class Explosion {
 			}
 		}
 
-		this.affectedBlockPositions.addAll(set);
+		if (!net.minecraft.tcpvp.TCHerobot.noBlockDamage(this.worldObj)) {
+			this.affectedBlockPositions.addAll(set); // Treasure Client: /herobot explosionNoBlockDamage
+		}
 		float f3 = this.explosionSize * 2.0F;
 		int k1 = MathHelper.floor(this.explosionX - (double) f3 - 1.0D);
 		int l1 = MathHelper.floor(this.explosionX + (double) f3 + 1.0D);

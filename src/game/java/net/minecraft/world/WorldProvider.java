@@ -82,7 +82,7 @@ public abstract class WorldProvider {
 			FlatGeneratorInfo flatgeneratorinfo = FlatGeneratorInfo
 					.createFlatGeneratorFromString(this.worldObj.getWorldInfo().getGeneratorOptions());
 			this.biomeProvider = new BiomeProviderSingle(Biome.getBiome(flatgeneratorinfo.getBiome(), Biomes.DEFAULT));
-		} else if (worldtype == WorldType.DEBUG_WORLD) {
+		} else if (worldtype == WorldType.DEBUG_WORLD || worldtype == WorldType.PRACTICE) {
 			this.biomeProvider = new BiomeProviderSingle(Biomes.PLAINS);
 		} else {
 			this.biomeProvider = new BiomeProvider(this.worldObj.getWorldInfo());
@@ -95,6 +95,8 @@ public abstract class WorldProvider {
 					this.worldObj.getWorldInfo().isMapFeaturesEnabled(), this.generatorSettings);
 		} else if (this.terrainType == WorldType.DEBUG_WORLD) {
 			return new ChunkGeneratorDebug(this.worldObj);
+		} else if (this.terrainType == WorldType.PRACTICE) {
+			return new net.minecraft.world.gen.ChunkGeneratorPractice(this.worldObj);
 		} else {
 			return this.terrainType == WorldType.CUSTOMIZED
 					? new ChunkGeneratorOverworld(this.worldObj, this.worldObj.getSeed(),

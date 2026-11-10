@@ -90,7 +90,8 @@ public class EntityTracker {
 			this.addEntityToTracker(entityIn, 64, 10, false);
 		} else if (entityIn instanceof EntityFireball) {
 			this.addEntityToTracker(entityIn, 64, 10, true);
-		} else if (entityIn instanceof EntitySnowball) {
+		} else if (entityIn instanceof EntitySnowball
+				|| entityIn instanceof net.minecraft.entity.projectile.EntityTCWindCharge) {
 			this.addEntityToTracker(entityIn, 64, 10, true);
 		} else if (entityIn instanceof EntityLlamaSpit) {
 			this.addEntityToTracker(entityIn, 64, 10, false);
