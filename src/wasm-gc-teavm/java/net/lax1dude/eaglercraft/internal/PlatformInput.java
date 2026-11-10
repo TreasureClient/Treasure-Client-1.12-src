@@ -581,6 +581,21 @@ public class PlatformInput {
 	@Import(module = "platformInput", name = "tcGpuFrameUs")
 	private static native int tcGpuFrameUs0();
 
+	/**
+	 * Treasure Client (.lag): frame pacing counts since the last call. 0 = slow frames shown
+	 * at once, 1 = slow frames that waited because the GPU was still busy, 2 = other waits.
+	 */
+	public static int tcPaceTake(int which) {
+		try {
+			return tcPaceTake0(which);
+		} catch (Throwable t) {
+			return -1;
+		}
+	}
+
+	@Import(module = "platformInput", name = "tcPaceTake")
+	private static native int tcPaceTake0(int which);
+
 	/** Treasure Client: the GPU time from here on belongs to this part of the frame (.lag). */
 	public static void tcGpuMark(int part) {
 		try {

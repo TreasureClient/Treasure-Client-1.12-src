@@ -809,8 +809,53 @@ async function initPlatformInput(inputImports) {
 	 * @param {number} vsync
 	 * @return {Promise}
 	 */
+	// Treasure Client: one GPU fence per frame, to know whether the graphics chip has finished
+	// drawing a frame. Two are kept: the frame just sent and the one before it.
+	var tcFencePrev = null, tcFenceCur = null, tcFenceBroken = false;
+	// .lag: slow frames shown at once / slow frames that waited because the GPU was still busy
+	const tcPace = { shown: 0, gpuBusy: 0, waited: 0 };
+
+	function tcFenceFrameEnd() {
+		const gl = webglContext;
+		if (!gl || webglGLESVer < 300 || tcFenceBroken) return;
+		try {
+			if (tcFencePrev !== null) gl.deleteSync(tcFencePrev);
+			tcFencePrev = tcFenceCur;
+			tcFenceCur = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+			gl.flush();
+		} catch (e) {
+			tcFenceBroken = true;
+			tcFencePrev = tcFenceCur = null;
+		}
+	}
+
+	/** true: the GPU finished the frame before this one, false: still busy, null: can't tell. */
+	function tcPrevFrameGpuDone() {
+		const gl = webglContext;
+		if (!gl || tcFenceBroken || tcFencePrev === null) return null;
+		try {
+			return gl.getSyncParameter(tcFencePrev, gl.SYNC_STATUS) === gl.SIGNALED;
+		} catch (e) {
+			tcFenceBroken = true;
+			return null;
+		}
+	}
+
+	/**
+	 * @param {number} which
+	 * @return {number}
+	 */
+	inputImports["tcPaceTake"] = function(which) {
+		var v;
+		if (which === 0) { v = tcPace.shown; tcPace.shown = 0; }
+		else if (which === 1) { v = tcPace.gpuBusy; tcPace.gpuBusy = 0; }
+		else { v = tcPace.waited; tcPace.waited = 0; }
+		return v;
+	};
+
 	function updatePlatformAndSleepImpl(fpsLimit, vsync) {
 		tcGpuFrameEnd();
+		tcFenceFrameEnd();
 		return updatePlatformAndSleepImpl0(fpsLimit, vsync).then(tcGpuFrameBegin);
 	}
 
@@ -859,9 +904,20 @@ async function initPlatformInput(inputImports) {
 				}
 				tcSteadyLast = 0;
 				var tcNow = performance.now();
-				if(!tcSkipped && tcFrameStartMs > 0 && (tcNow - tcFrameStartMs) > 16.0) {
-					tcSkipped = true;
-					return swapDelayImpl().then(tcMarkFrameStart);
+				if(tcFrameStartMs > 0 && (tcNow - tcFrameStartMs) > 16.0) {
+					// This frame missed its refresh. Waiting for the next one would make it a 33 ms
+					// frame (frames a little over 16.7 ms became 60 -> 40 fps). If the graphics chip
+					// already finished the frame before this one, at most this frame is queued, so the
+					// next one starts right away. If it is still busy, waiting is right: the GPU is
+					// the limit and frames would pile up. Without fences (WebGL 1): once in a row.
+					var tcGpuDone = tcPrevFrameGpuDone();
+					if(tcGpuDone === true || (tcGpuDone === null && !tcSkipped)) {
+						tcSkipped = true;
+						tcPace.shown++;
+						return swapDelayImpl().then(tcMarkFrameStart);
+					}
+					if(tcGpuDone === false) tcPace.gpuBusy++;
+					else tcPace.waited++;
 				}
 				tcSkipped = false;
 				return asyncRequestAnimationFrame().then(tcMarkFrameStart);

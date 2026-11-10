@@ -830,6 +830,11 @@ public class PlatformInput {
 
 
 	/** Treasure Client: GPU time per frame isn't measured in this build. */
+	/** Treasure Client (.lag): frame pacing counts aren't measured in this build. */
+	public static int tcPaceTake(int which) {
+		return -1;
+	}
+
 	public static int tcGpuFrameUs() {
 		return -1;
 	}
