@@ -50,10 +50,10 @@ import net.minecraft.world.storage.WorldInfo;
  */
 public final class TCPractice {
 
-	public static final String[] KITS = { "mace", "htcart", "ltcart", "sword", "netherite", "axe", "crystal",
-			"custom" };
-	public static final String[] KIT_TITLES = { "Mace", "HT Cart", "LT Cart", "Sword", "NethPot", "Axe", "Crystal",
-			"Custom" };
+	public static final String[] KITS = { "mace", "htcart", "ltcart", "sword", "axe", "netherite", "pot", "uhc",
+			"smp", "diasmp", "crystal", "custom" };
+	public static final String[] KIT_TITLES = { "Mace", "HT Cart", "LT Cart", "Sword", "Axe", "NethPot", "Diamond Pot",
+			"UHC", "SMP", "Diamond SMP", "Crystal", "Custom" };
 	/** Game rule that holds the custom kit (as item NBT text), saved with the world. */
 	public static final String CUSTOM_RULE = "tcCustomKit";
 
@@ -140,7 +140,7 @@ public final class TCPractice {
 
 	private static int[] standPos(int i) {
 		double a = Math.toRadians(-90.0D + i * (360.0D / KITS.length));
-		return new int[] { (int) Math.round(Math.cos(a) * 6.0D), (int) Math.round(Math.sin(a) * 6.0D) };
+		return new int[] { (int) Math.round(Math.cos(a) * 8.0D), (int) Math.round(Math.sin(a) * 8.0D) };
 	}
 
 	/** The yaw of something at x,z looking at spawn. */
@@ -257,6 +257,10 @@ public final class TCPractice {
 			s.addEnchantment((Enchantment) e[i], ((Integer) e[i + 1]).intValue());
 		}
 		return s;
+	}
+
+	private static ItemStack drink(PotionType type) {
+		return PotionUtils.addPotionToItemStack(new ItemStack(Items.POTIONITEM, 1), type);
 	}
 
 	private static ItemStack splash(PotionType type) {
@@ -411,6 +415,67 @@ public final class TCPractice {
 			h[3] = via("crossbow", 1);
 			h[8] = st(Items.ARROW, 6);
 			k.offhand = st(Items.SHIELD, 1);
+		} else if (kit.equals("pot")) {
+			// Diamond Pot: diamond gear, healing splashes, speed and fire resistance
+			k.armor = diamond(P4U3);
+			h[0] = ench(st(Items.DIAMOND_SWORD, 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3,
+					Enchantments.FIRE_ASPECT, 2);
+			for (int i = 1; i < 7; i++) h[i] = splash(PotionTypes.STRONG_HEALING);
+			h[7] = drink(PotionTypes.STRONG_SWIFTNESS);
+			h[8] = st(Items.COOKED_BEEF, 64);
+			for (int i = 0; i < 21; i++) v[i] = splash(PotionTypes.STRONG_HEALING);
+			for (int i = 21; i < 24; i++) v[i] = drink(PotionTypes.STRONG_SWIFTNESS);
+			for (int i = 24; i < 26; i++) v[i] = drink(PotionTypes.LONG_FIRE_RESISTANCE);
+		} else if (kit.equals("uhc")) {
+			// UHC: diamond gear, lava and water, webs, bow and crossbow, blocks to build
+			k.armor = diamond(new Object[0]);
+			ench(k.armor[0], Enchantments.PROTECTION, 3, Enchantments.UNBREAKING, 3);
+			ench(k.armor[1], Enchantments.PROTECTION, 2, Enchantments.UNBREAKING, 3);
+			ench(k.armor[2], Enchantments.PROTECTION, 3, Enchantments.UNBREAKING, 3);
+			ench(k.armor[3], Enchantments.PROTECTION, 3, Enchantments.UNBREAKING, 3);
+			h[0] = ench(st(Items.DIAMOND_SWORD, 1), Enchantments.SHARPNESS, 4, Enchantments.UNBREAKING, 3);
+			h[1] = ench(st(Items.DIAMOND_AXE, 1), Enchantments.SHARPNESS, 1, Enchantments.UNBREAKING, 3);
+			h[2] = st(Items.LAVA_BUCKET, 1);
+			h[3] = st(Items.WATER_BUCKET, 1);
+			h[4] = ench(st(Items.BOW, 1), Enchantments.POWER, 3, Enchantments.UNBREAKING, 3);
+			h[5] = st(Items.GOLDEN_APPLE, 13);
+			h[6] = block(Blocks.COBBLESTONE, 64);
+			h[7] = block(Blocks.WEB, 8);
+			h[8] = st(Items.FISHING_ROD, 1);
+			v[0] = st(Items.ARROW, 16);
+			v[1] = st(Items.LAVA_BUCKET, 1);
+			v[2] = st(Items.WATER_BUCKET, 1);
+			v[3] = ench(via("crossbow", 1), Enchantments.UNBREAKING, 3);
+			v[4] = ench(st(Items.DIAMOND_PICKAXE, 1), Enchantments.EFFICIENCY, 3, Enchantments.UNBREAKING, 3);
+			v[5] = block(Blocks.PLANKS, 64);
+			v[6] = st(Items.COOKED_BEEF, 64);
+			k.offhand = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3);
+		} else if (kit.equals("smp") || kit.equals("diasmp")) {
+			// SMP (netherite) / Diamond SMP: totems, pearls, gapples, potions, webs, shield
+			boolean neth = kit.equals("smp");
+			k.armor = neth ? netherite(P4U3M) : diamond(P4U3M);
+			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
+			h[0] = ench(neth ? via("netherite_sword", 1) : st(Items.DIAMOND_SWORD, 1), Enchantments.SHARPNESS, 5,
+					Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
+			h[1] = ench(neth ? via("netherite_axe", 1) : st(Items.DIAMOND_AXE, 1), Enchantments.SHARPNESS, 5,
+					Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
+			h[2] = st(Items.ENDER_PEARL, 16);
+			h[3] = st(Items.GOLDEN_APPLE, 64);
+			h[4] = st(Items.EXPERIENCE_BOTTLE, 64);
+			h[5] = splash(PotionTypes.STRONG_STRENGTH);
+			h[6] = splash(PotionTypes.STRONG_SWIFTNESS);
+			h[7] = block(Blocks.WEB, 64);
+			h[8] = st(Items.TOTEM_OF_UNDYING, 1);
+			for (int i = 0; i < 6; i++) v[i] = st(Items.TOTEM_OF_UNDYING, 1);
+			for (int i = 9; i < 13; i++) v[i] = splash(PotionTypes.STRONG_STRENGTH);
+			for (int i = 13; i < 17; i++) v[i] = splash(PotionTypes.STRONG_SWIFTNESS);
+			for (int i = 17; i < 19; i++) v[i] = drink(PotionTypes.LONG_FIRE_RESISTANCE);
+			v[19] = st(Items.WATER_BUCKET, 1);
+			v[20] = st(Items.ENDER_PEARL, 16);
+			v[21] = block(Blocks.OBSIDIAN, 64);
+			v[22] = st(Items.GOLDEN_CARROT, 64);
+			v[26] = st(Items.EXPERIENCE_BOTTLE, 64);
+			k.offhand = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
 		} else { // crystal
 			k.armor = netherite(P4U3M);
 			ench(k.armor[0], Enchantments.RESPIRATION, 3, Enchantments.AQUA_AFFINITY, 1);
