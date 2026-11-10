@@ -1458,6 +1458,8 @@ function initNoPlatformInput(inputImports) {
 	setUnsupportedFunc(inputImports, platfInputName, "tcGpuMark");
 	setUnsupportedFunc(inputImports, platfInputName, "tcGpuTakePart");
 	setUnsupportedFunc(inputImports, platfInputName, "tcGpuTakeFrames");
+	// every import the game file needs must exist here too, or the singleplayer worker can't load it
+	setUnsupportedFunc(inputImports, platfInputName, "tcPaceTake");
 	setUnsupportedFunc(inputImports, platfInputName, "isVSyncSupported");
 	setUnsupportedFunc(inputImports, platfInputName, "mouseSetGrabbed");
 	setUnsupportedFunc(inputImports, platfInputName, "isMouseGrabSupported");
