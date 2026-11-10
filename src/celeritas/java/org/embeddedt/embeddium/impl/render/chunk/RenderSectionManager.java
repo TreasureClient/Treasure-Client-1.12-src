@@ -842,6 +842,9 @@ public abstract class RenderSectionManager {
                     // chunk that changes again meanwhile is built once instead of every time, and a still
                     // player's computer stays cooler.
                     ++net.minecraft.client.TCLagMonitor.hiddenWaits;
+                    // the view search must still run, or a new chunk next to a still camera (just
+                    // spawned or teleported) would never be checked and never drawn
+                    this.markGraphDirty();
                 } else if (important || (!this.getCurrentRenderListManager().isNeedsUpdate() && this.sectionsRequestingUpdate.size() < this.builder.getSchedulingBudget())) {
                     this.sectionsRequestingUpdate.add(section);
                 } else {

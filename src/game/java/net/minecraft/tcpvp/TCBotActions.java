@@ -19,7 +19,7 @@ import net.minecraft.util.math.Vec3d;
  *
  * <p>Clicks (attack, use, jump, swing, drop, dropStack, swapHands) run once,
  * every tick (continuous) or every N ticks (interval N). Movement, sneak, sprint,
- * looking and the shield stay on until changed.
+ * looking, the shield and floating stay on until changed.
  */
 public final class TCBotActions {
 
@@ -35,6 +35,8 @@ public final class TCBotActions {
 	public boolean sneak, sprint, shield;
 	/** Keep looking at this entity (look me), or null. */
 	public Entity lookAt;
+	/** Floating in the air at this height (mace practice), or NaN. */
+	private double floatY = Double.NaN;
 
 	TCBotActions(TCBot bot) {
 		this.bot = bot;
@@ -80,6 +82,24 @@ public final class TCBotActions {
 		}
 	}
 
+	/** Puts the bot in the air (it stays there, hits push it but it slows down fast) or back down. */
+	public void setFloating(boolean on, double y) {
+		TCBot b = this.bot;
+		if (on) {
+			this.floatY = y;
+			b.setNoGravity(true);
+			b.motionX = b.motionY = b.motionZ = 0.0D;
+			TCPractice.teleport(b, b.posX, y, b.posZ, b.rotationYaw);
+		} else {
+			this.floatY = Double.NaN;
+			b.setNoGravity(false);
+		}
+	}
+
+	public boolean isFloating() {
+		return !Double.isNaN(this.floatY);
+	}
+
 	void onDeath() {
 		this.bot.setJumping(false);
 	}
@@ -95,6 +115,9 @@ public final class TCBotActions {
 		o.sprint = this.sprint;
 		o.shield = this.shield;
 		o.lookAt = this.lookAt != null && !this.lookAt.isDead ? this.lookAt : null;
+		if (this.isFloating()) {
+			o.setFloating(true, this.floatY);
+		}
 	}
 
 	// ---------------------------------------------------------------- per tick
@@ -109,6 +132,13 @@ public final class TCBotActions {
 			}
 		}
 
+		if (this.isFloating()) {
+			// knocked around but settles quickly; drifts back to its height
+			b.motionX *= 0.8D;
+			b.motionZ *= 0.8D;
+			b.motionY = b.motionY * 0.8D + (this.floatY - b.posY) * 0.05D;
+			b.fallDistance = 0.0F;
+		}
 		b.setSneaking(this.sneak);
 		b.setSprinting(this.sprint && this.forward > 0.0F && !this.sneak && b.getFoodStats().getFoodLevel() > 6);
 		float slow = this.sneak ? 0.3F : 1.0F;
@@ -155,9 +185,7 @@ public final class TCBotActions {
 	/** Keeps a shield raised (after an axe stuns it, raises it again when it can). */
 	private void holdShield() {
 		TCBot b = this.bot;
-		if (b.getCooldownTracker().hasCooldown(Items.SHIELD)) {
-			return;
-		}
+		// raised again right after an axe stuns it (the stun only knocks it down for a moment)
 		if (b.isHandActive()) {
 			if (isShield(b.getActiveItemStack())) {
 				return;

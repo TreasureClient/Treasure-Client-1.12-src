@@ -35,6 +35,8 @@ public final class TCCommands {
 	public static void register(CommandHandler h) {
 		h.registerCommand(new Kit());
 		h.registerCommand(new Duel());
+		h.registerCommand(new CustomKit());
+		h.registerCommand(new PracticeButton());
 		h.registerCommand(new Spawn());
 		h.registerCommand(new Practice());
 		h.registerCommand(new PlayerSpawn());
@@ -68,15 +70,19 @@ public final class TCCommands {
 		}
 
 		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-			if (args.length < 1 || !TCPractice.isKit(args[0])) {
+			String kit = args.length < 1 ? null : TCPractice.kitId(args[0]);
+			if (kit == null) {
 				throw new WrongUsageException(getCommandUsage(sender));
 			}
 			EntityPlayerMP p = args.length > 1 ? getPlayer(server, sender, args[1]) : getCommandSenderAsPlayer(sender);
-			TCPractice.giveKit(p, args[0]);
-			if (p instanceof TCBot) {
-				((TCBot) p).kit = args[0].toLowerCase();
+			if (kit.equals("custom") && TCPractice.customKit(p.world) == null) {
+				throw new CommandException("No custom kit yet: /customkit edit");
 			}
-			say(sender, "§aGave the " + args[0].toLowerCase() + " kit to " + p.getName());
+			TCPractice.giveKit(p, kit);
+			if (p instanceof TCBot) {
+				((TCBot) p).kit = kit;
+			}
+			say(sender, "§aGave the " + kit + " kit to " + p.getName());
 		}
 
 		public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
@@ -95,11 +101,12 @@ public final class TCCommands {
 		}
 
 		public String getCommandUsage(ICommandSender s) {
-			return "/duel <" + String.join("|", TCPractice.KITS) + "> [shield|noshield]";
+			return "/duel <" + String.join("|", TCPractice.KITS) + ">";
 		}
 
 		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-			if (args.length < 1 || !TCPractice.isKit(args[0])) {
+			String kit = args.length < 1 ? null : TCPractice.kitId(args[0]);
+			if (kit == null) {
 				throw new WrongUsageException(getCommandUsage(sender));
 			}
 			EntityPlayerMP p = getCommandSenderAsPlayer(sender);
@@ -109,17 +116,102 @@ public final class TCCommands {
 			if (!TCPractice.isPractice(p.world)) {
 				throw new CommandException("Duels are only in Practice worlds");
 			}
-			boolean shield = args.length > 1 && (args[1].equalsIgnoreCase("shield") || args[1].equalsIgnoreCase("on")
-					|| args[1].equalsIgnoreCase("true"));
-			TCPractice.startDuel(p, args[0].toLowerCase(), shield);
+			if (kit.equals("custom") && TCPractice.customKit(p.world) == null) {
+				TCPractice.customEdit(p);
+				return;
+			}
+			TCPractice.startDuel(p, kit);
 		}
 
 		public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
 				@Nullable BlockPos pos) {
-			if (args.length == 1) {
-				return getListOfStringsMatchingLastWord(args, TCPractice.KITS);
+			return args.length == 1 ? getListOfStringsMatchingLastWord(args, TCPractice.KITS)
+					: Collections.<String>emptyList();
+		}
+	}
+
+	static final class CustomKit extends Base {
+		public String getCommandName() {
+			return "customkit";
+		}
+
+		public String getCommandUsage(ICommandSender s) {
+			return "/customkit <edit|save|cancel|clear>";
+		}
+
+		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+			EntityPlayerMP p = getCommandSenderAsPlayer(sender);
+			String a = args.length > 0 ? args[0].toLowerCase() : "edit";
+			if (a.equals("edit")) {
+				TCPractice.customEdit(p);
+			} else if (a.equals("save")) {
+				TCPractice.customSave(p);
+			} else if (a.equals("cancel")) {
+				p.inventory.clear();
+				p.setGameType(net.minecraft.world.GameType.SURVIVAL);
+				say(sender, "§7Custom kit not changed.");
+			} else if (a.equals("clear")) {
+				p.world.getGameRules().setOrCreateGameRule(TCPractice.CUSTOM_RULE, "");
+				TCPractice.refreshStands(p.getServerWorld());
+				say(sender, "§7Custom kit cleared.");
+			} else {
+				throw new WrongUsageException(getCommandUsage(sender));
 			}
-			return args.length == 2 ? getListOfStringsMatchingLastWord(args, "shield", "noshield")
+		}
+
+		public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
+				@Nullable BlockPos pos) {
+			return args.length == 1 ? getListOfStringsMatchingLastWord(args, "edit", "save", "cancel", "clear")
+					: Collections.<String>emptyList();
+		}
+	}
+
+	/** What the duel area's command block buttons run (also clickable in chat). */
+	static final class PracticeButton extends Base {
+		public String getCommandName() {
+			return "practicebutton";
+		}
+
+		public String getCommandUsage(ICommandSender s) {
+			return "/practicebutton <map|shield|air>";
+		}
+
+		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+			if (args.length < 1) {
+				throw new WrongUsageException(getCommandUsage(sender));
+			}
+			String what = args[0].toLowerCase();
+			if (!what.equals("map") && !what.equals("shield") && !what.equals("air")) {
+				throw new WrongUsageException(getCommandUsage(sender));
+			}
+			EntityPlayerMP p = null;
+			Entity e = sender.getCommandSenderEntity();
+			if (e instanceof EntityPlayerMP && !(e instanceof TCBot)) {
+				p = (EntityPlayerMP) e;
+			} else {
+				// a command block: the nearest real player pressed it
+				BlockPos at = sender.getPosition();
+				double best = Double.MAX_VALUE;
+				for (EntityPlayerMP q : server.getPlayerList().getPlayerList()) {
+					if (q instanceof TCBot || q.world != sender.getEntityWorld()) {
+						continue;
+					}
+					double d = q.getDistanceSq(at);
+					if (d < best) {
+						best = d;
+						p = q;
+					}
+				}
+			}
+			if (p == null) {
+				throw new CommandException("No player to press it for");
+			}
+			TCPractice.pressButton(p, what);
+		}
+
+		public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
+				@Nullable BlockPos pos) {
+			return args.length == 1 ? getListOfStringsMatchingLastWord(args, "map", "shield", "air")
 					: Collections.<String>emptyList();
 		}
 	}
@@ -305,8 +397,8 @@ public final class TCCommands {
 				if (args.length < 3 || !TCPractice.isKit(args[2])) {
 					throw new WrongUsageException("/player <bot> kit <" + String.join("|", TCPractice.KITS) + ">");
 				}
-				TCPractice.giveKit(bot, args[2]);
-				bot.kit = args[2].toLowerCase();
+				bot.kit = TCPractice.kitId(args[2]);
+				TCPractice.giveKit(bot, bot.kit);
 				return;
 			case "move":
 				a.forward = a.strafe = 0.0F;

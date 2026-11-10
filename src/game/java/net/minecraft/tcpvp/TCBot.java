@@ -12,8 +12,6 @@ import net.minecraft.network.play.server.SPacketCustomPayload;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.PlayerInteractionManager;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.GameType;
 import net.minecraft.world.WorldServer;
 
@@ -72,17 +70,23 @@ public class TCBot extends EntityPlayerMP {
 				// skins and capes are asked for by the real player, the bot doesn't need this
 			}
 		}
-		if (announce) {
-			TextComponentTranslation msg = new TextComponentTranslation("multiplayer.player.joined",
-					new Object[] { bot.getDisplayName() });
-			msg.getStyle().setColor(TextFormatting.YELLOW);
-			server.getPlayerList().sendChatMsg(msg);
-		}
+		hideName(world, name);
 		server.getPlayerList().playerLoggedIn(bot);
 		bot.setLocationAndAngles(x, y, z, yaw, pitch);
 		bot.rotationYawHead = yaw;
 		server.getPlayerList().serverUpdateMovingPlayer(bot);
 		return bot;
+	}
+
+	/** Bots are on a team whose name tags are never shown, so they have no name over their head. */
+	private static void hideName(WorldServer world, String name) {
+		net.minecraft.scoreboard.Scoreboard sb = world.getScoreboard();
+		net.minecraft.scoreboard.ScorePlayerTeam team = sb.getTeam("tcbots");
+		if (team == null) {
+			team = sb.createTeam("tcbots");
+		}
+		team.setNameTagVisibility(net.minecraft.scoreboard.Team.EnumVisible.NEVER);
+		sb.addPlayerToTeam(name, "tcbots");
 	}
 
 	private static int hostProtocol(MinecraftServer server) {
