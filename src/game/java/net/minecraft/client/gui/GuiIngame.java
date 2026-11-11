@@ -1230,6 +1230,11 @@ public class GuiIngame extends Gui {
 
 		this.prevVignetteBrightness = (float) ((double) this.prevVignetteBrightness
 				+ (double) (lightLevel - this.prevVignetteBrightness) * 0.01D);
+		if (f <= 0.0F && this.prevVignetteBrightness < 0.003F) {
+			// Treasure Client: in bright light the vignette darkens by less than one color step
+			// anywhere, so the whole-screen blend would change nothing; skip it
+			return;
+		}
 		GlStateManager.disableDepth();
 		GlStateManager.depthMask(false);
 		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_ZERO, RealOpenGLEnums.GL_ONE_MINUS_SRC_COLOR,

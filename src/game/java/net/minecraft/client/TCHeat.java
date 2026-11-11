@@ -58,6 +58,18 @@ public final class TCHeat {
 		return (int) ((long) best * 100L / m);
 	}
 
+	/** Video Settings "Lighter When Hot" (on by default). */
+	public static boolean liteEnabled = true;
+
+	/**
+	 * True while hot and Lighter When Hot is on: work that can wait does less (fewer particles,
+	 * faraway mobs updated every other tick, less chunk building per frame). The frame rate
+	 * itself is never capped.
+	 */
+	public static boolean lite() {
+		return hot && liteEnabled;
+	}
+
 	/** True while the processor runs well below its best. */
 	public static boolean hot() {
 		return hot;

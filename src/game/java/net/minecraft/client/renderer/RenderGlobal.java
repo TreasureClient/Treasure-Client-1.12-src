@@ -2403,6 +2403,13 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			final int x = (int) (longPos << 64 - BlockPos.X_SHIFT - BlockPos.NUM_X_BITS >> 64 - BlockPos.NUM_X_BITS);
 			final int y = (int) (longPos << 64 - BlockPos.Y_SHIFT - BlockPos.NUM_Y_BITS >> 64 - BlockPos.NUM_Y_BITS);
 			final int z = (int) (longPos << 64 - BlockPos.NUM_Z_BITS >> 64 - BlockPos.NUM_Z_BITS);
+			if (tcOnlyAirAround(x, y, z)) {
+				// Treasure Client: light changed in open air with nothing next to it. No block face
+				// uses that light (faces only read the light of the blocks touching them), so the
+				// chunk would be redrawn to look exactly the same.
+				++net.minecraft.client.TCLagMonitor.mkLightSkipped;
+				continue;
+			}
 			markBlocksForUpdate(x - 1, y - 1, z - 1, x + 1, y + 1, z + 1, false);
 			++net.minecraft.client.TCLagMonitor.mkLight;
 		} while (!alfheim$lightUpdatesQueue.isEmpty());
@@ -2410,6 +2417,29 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 		alfheim$lightUpdatesQueue.newDeduplicationSet();
 	}
 	
+	/** Treasure Client: true if the block and all 26 around it are air (stops at the first that isn't). */
+	private boolean tcOnlyAirAround(int x, int y, int z) {
+		WorldClient w = this.theWorld;
+		if (w == null || y < 1 || y > 254) {
+			return false;
+		}
+		for (int dx = -1; dx <= 1; ++dx) {
+			for (int dz = -1; dz <= 1; ++dz) {
+				int bx = x + dx, bz = z + dz;
+				net.minecraft.world.chunk.Chunk c = w.getChunkFromChunkCoords(bx >> 4, bz >> 4);
+				if (c == null || c.isEmpty()) {
+					return false;
+				}
+				for (int dy = -1; dy <= 1; ++dy) {
+					if (c.getBlockState(bx, y + dy, bz).getMaterial() != net.minecraft.block.material.Material.AIR) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
 	public double getCloudCounter(float partialTicks) {
 		return (double) cloudTickCounter + partialTicks;
 	}

@@ -132,12 +132,17 @@ public final class TCFramePacer {
 
 	/** Game work this frame should stay under (chunk building fills up to this). */
 	public static long workTargetNs() {
-		return WORK_TARGET_NS[level];
+		return WORK_TARGET_NS[effLevel()];
+	}
+
+	/** While hot (Lighter When Hot), at least level 2: less chunk building and packets per frame. */
+	private static int effLevel() {
+		return TCHeat.lite() ? Math.max(level, 2) : level;
 	}
 
 	/** Packet time per frame, scaled down while the pacer is shedding work. */
 	public static long packetBudgetNs(long normalNs) {
-		long v = normalNs * PKT_PERCENT[level] / 100L;
+		long v = normalNs * PKT_PERCENT[effLevel()] / 100L;
 		return Math.max(2000000L, v);
 	}
 

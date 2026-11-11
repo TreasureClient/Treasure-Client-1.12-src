@@ -511,12 +511,9 @@ public final class TCViaGuess {
 						}
 					}
 				}
-				for (int i = 0; i < 256; i++) {
-					boolean wv = false;
-					if (i < palSize) {
-						IBlockState ps = data.tcPaletteState(i);
-						wv = ps != null && isCandidate(ps, dim, baseY, groups);
-					}
+				for (int i = 0; i < palSize; i++) {
+					IBlockState ps = data.tcPaletteState(i);
+					boolean wv = ps != null && isCandidate(ps, dim, baseY, groups);
 					want[i] = wv;
 					any |= wv;
 				}
@@ -1325,7 +1322,8 @@ public final class TCViaGuess {
 	private static int[] wallIds;
 	private static final int[] wallVotes = new int[WALL_MATS.length];
 	private static int[] wallRun;
-	private static boolean[] wallSeen;
+	private static int[] wallSeen, wallIdx; // wallSeen: == wallGen when seen this chunk
+	private static int wallGen;
 
 	private static boolean wallInit() {
 		if (wallStates == null) {
@@ -1468,14 +1466,9 @@ public final class TCViaGuess {
 				want = wantBuf = new boolean[256];
 			}
 			boolean any = false;
-			for (int i = 0; i < 256; i++) {
-				boolean wv = false;
-				if (palSize <= 0) {
-					wv = false;
-				} else if (i < palSize) {
-					IBlockState ps = data.tcPaletteState(i);
-					wv = ps != null && Block.getIdFromBlock(ps.getBlock()) == COBBLE_WALL;
-				}
+			for (int i = 0; i < palSize; i++) {
+				IBlockState ps = data.tcPaletteState(i);
+				boolean wv = ps != null && Block.getIdFromBlock(ps.getBlock()) == COBBLE_WALL;
 				want[i] = wv;
 				any |= wv;
 			}
@@ -1487,8 +1480,13 @@ public final class TCViaGuess {
 					return;
 				}
 				if (wallSeen == null) {
-					wallSeen = new boolean[65536];
+					wallSeen = new int[65536];
 					wallRun = new int[64];
+					wallIdx = new int[4096];
+				}
+				if (++wallGen == Integer.MAX_VALUE) { // marks from older chunks no longer count
+					java.util.Arrays.fill(wallSeen, 0);
+					wallGen = 1;
 				}
 				inited = true;
 			}
@@ -1497,18 +1495,15 @@ public final class TCViaGuess {
 			}
 			int baseY = si << 4;
 			int n = data.tcFind(want, idxBuf);
-			int[] found = new int[n];
+			int[] found = wallIdx;
 			System.arraycopy(idxBuf, 0, found, 0, n);
 			for (int k = 0; k < n; k++) {
 				int i = found[k];
 				int key = ((baseY + (i >> 8)) << 8) | (i & 255);
-				if (!wallSeen[key]) {
+				if (wallSeen[key] != wallGen) {
 					wallRunAt(c, key);
 				}
 			}
-		}
-		if (inited) {
-			java.util.Arrays.fill(wallSeen, false);
 		}
 	}
 
@@ -1521,7 +1516,7 @@ public final class TCViaGuess {
 		int look = meta(first);
 		int len = 0, head = 0;
 		wallRun[len++] = start;
-		wallSeen[start] = true;
+		wallSeen[start] = wallGen;
 		java.util.Arrays.fill(wallVotes, 0);
 		boolean cobble = false;
 		while (head < len) {
@@ -1540,12 +1535,12 @@ public final class TCViaGuess {
 					continue;
 				}
 				int nk = (ny << 8) | (nz << 4) | nx;
-				if (wallSeen[nk]) {
+				if (wallSeen[nk] == wallGen) {
 					continue;
 				}
 				IBlockState ns = c.getBlockState(nx, ny, nz);
 				if (Block.getIdFromBlock(ns.getBlock()) == COBBLE_WALL && meta(ns) == look) {
-					wallSeen[nk] = true;
+					wallSeen[nk] = wallGen;
 					if (len == wallRun.length) {
 						int[] g = new int[len * 2];
 						System.arraycopy(wallRun, 0, g, 0, len);
