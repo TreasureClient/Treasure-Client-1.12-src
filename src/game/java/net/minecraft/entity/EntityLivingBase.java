@@ -1342,8 +1342,15 @@ public abstract class EntityLivingBase extends Entity {
 	protected float applyArmorCalculations(DamageSource source, float damage) {
 		if (!source.isUnblockable()) {
 			this.damageArmor(damage);
+			int tcBreach = this.world.isRemote ? 0 : net.minecraft.tcpvp.TCMace.breach(source); // Treasure Client: mace Breach
+			if (tcBreach > 0) {
+				damage = net.minecraft.tcpvp.TCMace.afterArmor(damage, (float) this.getTotalArmorValue(),
+						(float) this.getEntityAttribute(SharedMonsterAttributes.ARMOR_TOUGHNESS).getAttributeValue(),
+						tcBreach);
+			} else {
 			damage = CombatRules.getDamageAfterAbsorb(damage, (float) this.getTotalArmorValue(),
 					(float) this.getEntityAttribute(SharedMonsterAttributes.ARMOR_TOUGHNESS).getAttributeValue());
+			}
 		}
 
 		return damage;

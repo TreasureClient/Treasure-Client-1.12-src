@@ -678,6 +678,7 @@ async function initPlatformInput(inputImports) {
 	// catch up (it used to stop for the whole session, the "GPU not measurable" in .lag).
 	const TC_GPU_PARTS = 10;
 	const TC_GPU_MAX_PENDING = 80;
+	const TC_GPU_SAMPLE = 6;
 	const tcGpu = { tried: false, ext: null, free: [], pending: [], active: null, activePart: 0, inFrame: false,
 		frame: 0, curFrame: -1, curSum: 0, curOk: true, lastUs: -1, partUs: new Float64Array(TC_GPU_PARTS), partFrames: 0 };
 
@@ -752,9 +753,12 @@ async function initPlatformInput(inputImports) {
 		if (!gl || !ext) return;
 		try {
 			tcGpu.frame++;
-			tcGpu.inFrame = true;
 			tcGpu.active = null;
-			tcGpuBeginPart(gl, ext, 0);
+			// Only 1 frame in TC_GPU_SAMPLE is measured: on Intel graphics each timer query makes the
+			// GPU finish everything before it, and ~10 of them every frame cost real frame time.
+			// .lag shows averages, so sampled frames give the same numbers.
+			tcGpu.inFrame = (tcGpu.frame % TC_GPU_SAMPLE) === 0;
+			if (tcGpu.inFrame) tcGpuBeginPart(gl, ext, 0);
 		} catch (e) {
 			tcGpu.ext = null;
 			tcGpu.lastUs = -1;

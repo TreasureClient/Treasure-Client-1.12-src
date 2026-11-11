@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.lax1dude.eaglercraft.EaglercraftUUID;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityArmorStand;
@@ -88,11 +89,12 @@ public final class TCPractice {
 	/** A player (not a bot) joined a Practice world. */
 	public static void welcome(EntityPlayerMP p) {
 		WorldServer w = p.getServerWorld();
-		refreshStands(w);
+		track(w);
 		DUELS.remove(p.getUniqueID()); // a duel from before doesn't carry over (its bot is gone)
-		bigMap(w);
+		goSpawn(p);
 		p.addChatMessage(text("Treasure Practice", TextFormatting.GOLD, true));
-		p.addChatMessage(text("Right-click a kit stand to duel a bot with that kit.", TextFormatting.GRAY, false));
+		p.addChatMessage(text("Right-click a kit stand to duel a bot with that kit. /spawn brings you back and fixes "
+				+ "anything placed or broken.", TextFormatting.GRAY, false));
 		ITextComponent bots = text("", TextFormatting.GRAY, false);
 		bots.appendSibling(clickable("[Spawn a bot]", "/playerspawn", TextFormatting.LIGHT_PURPLE));
 		bots.appendSibling(new TextComponentString(" "));
@@ -106,8 +108,8 @@ public final class TCPractice {
 
 	public static void help(net.minecraft.command.ICommandSender s) {
 		String[] lines = { "§6Treasure Practice commands",
-				"§b/duel <kit>§7 (or right-click a kit stand) · §b/kit <kit> [player]§7 · §b/spawn",
-				"§b/customkit edit|save|clear§7 (save your inventory as the Custom kit)",
+				"§7Pick a kit by right-clicking its stand at spawn · §b/spawn§7 (back to spawn, clears your kit, fixes the map)",
+				"§b/customkit edit|save|cancel|clear§7 (save your inventory as the Custom kit)",
 				"§d/playerspawn [name] [at <x y z>] [facing <yaw pitch>]",
 				"§d/player <bot> kit <name>§7 · §dshield [on|off]§7 · §dattack|use|jump|swing [once|continuous|interval <ticks>]",
 				"§d/player <bot> move [forward|backward|left|right]§7 · §dsneak|unsneak|sprint|unsprint",
@@ -136,6 +138,186 @@ public final class TCPractice {
 		return t;
 	}
 
+	// ---------------------------------------------------------------- spawn and fixing the map
+
+	/** The server world whose block changes are being noted (the open Practice world). */
+	public static World trackWorld;
+	private static boolean building;
+	/** Chunks where something was placed or broken since the last fix (chunk x << 32 | chunk z). */
+	private static final java.util.HashSet<Long> CHANGED = new java.util.HashSet<>();
+	private static final String CHANGED_RULE = "tcChangedChunks";
+
+	private static void track(WorldServer w) {
+		if (trackWorld == w) {
+			return;
+		}
+		trackWorld = w;
+		CHANGED.clear();
+		if (w.getGameRules().hasRule(CHANGED_RULE)) {
+			String[] parts = w.getGameRules().getString(CHANGED_RULE).split(";");
+			for (String part : parts) {
+				int c = part.indexOf(',');
+				if (c > 0) {
+					try {
+						CHANGED.add(Long.valueOf(key(Integer.parseInt(part.substring(0, c)),
+								Integer.parseInt(part.substring(c + 1)))));
+					} catch (NumberFormatException e) {
+					}
+				}
+			}
+		}
+	}
+
+	private static long key(int cx, int cz) {
+		return ((long) cx << 32) | (cz & 0xFFFFFFFFL);
+	}
+
+	/** World.setBlockState hook: a block in the Practice world changed. */
+	public static void changed(BlockPos pos) {
+		if (building) {
+			return;
+		}
+		if (CHANGED.add(Long.valueOf(key(pos.getX() >> 4, pos.getZ() >> 4)))) {
+			saveChanged();
+		}
+	}
+
+	private static void saveChanged() {
+		if (trackWorld == null) {
+			return;
+		}
+		StringBuilder sb = new StringBuilder();
+		for (Long k : CHANGED) {
+			long v = k.longValue();
+			if (sb.length() > 0) {
+				sb.append(';');
+			}
+			sb.append((int) (v >> 32)).append(',').append((int) v);
+		}
+		trackWorld.getGameRules().setOrCreateGameRule(CHANGED_RULE, sb.toString());
+	}
+
+	private static void loadSpawn(WorldServer w) {
+		for (int cx = -1; cx <= 0; cx++) {
+			for (int cz = -1; cz <= 0; cz++) {
+				w.getChunkFromChunkCoords(cx, cz);
+			}
+		}
+	}
+
+	private static final int SPAWN_R2 = 132; // platform radius 11.5
+	private static final int EDGE_R2 = 156; // edge ring radius 12.5
+
+	/** What the Practice map should have at a block: the spawn platform, else plain flat. */
+	private static IBlockState layout(int x, int y, int z) {
+		if (y == TCArena.GROUND) {
+			int r2 = x * x + z * z;
+			if (r2 <= EDGE_R2) {
+				if (x == 0 && z == 0) {
+					return Blocks.SEA_LANTERN.getDefaultState();
+				}
+				if (r2 <= 6) {
+					return Blocks.QUARTZ_BLOCK.getDefaultState();
+				}
+				for (int i = 0; i < KITS.length; i++) {
+					int[] q = standPos(i);
+					if (q[0] == x && q[1] == z) {
+						return Blocks.GOLD_BLOCK.getDefaultState();
+					}
+				}
+				return r2 <= SPAWN_R2 ? Blocks.STONEBRICK.getDefaultState() : Blocks.QUARTZ_BLOCK.getDefaultState();
+			}
+		}
+		IBlockState s = TCArena.blockAt(y);
+		return s == null ? Blocks.AIR.getDefaultState() : s;
+	}
+
+	/**
+	 * Puts back everything placed or broken: every changed chunk and the spawn area go
+	 * back to the map's own blocks, and loose items, carts, crystals and such go away.
+	 */
+	public static void restore(WorldServer w) {
+		track(w);
+		java.util.ArrayList<Long> todo = new java.util.ArrayList<>(CHANGED);
+		for (int cx = -1; cx <= 0; cx++) {
+			for (int cz = -1; cz <= 0; cz++) {
+				Long k = Long.valueOf(key(cx, cz));
+				if (!CHANGED.contains(k)) {
+					todo.add(k);
+				}
+			}
+		}
+		building = true;
+		w.tcBeginLightBatch();
+		try {
+			for (int i = 0, n = todo.size(); i < n; i++) {
+				long v = todo.get(i).longValue();
+				restoreChunk(w, (int) (v >> 32), (int) v);
+			}
+		} finally {
+			w.tcEndLightBatch();
+			building = false;
+		}
+		CHANGED.clear();
+		saveChanged();
+	}
+
+	private static void restoreChunk(WorldServer w, int cx, int cz) {
+		net.minecraft.world.chunk.Chunk c = w.getChunkFromChunkCoords(cx, cz);
+		int top = Math.min(255, Math.max(c.getTopFilledSegment() + 15, TCArena.GROUND + 16));
+		for (int y = 0; y <= top; y++) {
+			for (int x = 0; x < 16; x++) {
+				for (int z = 0; z < 16; z++) {
+					int wx = (cx << 4) + x, wz = (cz << 4) + z;
+					IBlockState want = layout(wx, y, wz);
+					BlockPos pos = new BlockPos(wx, y, wz);
+					if (c.getBlockState(pos) != want) {
+						w.setBlockState(pos, want, 2);
+					}
+				}
+			}
+		}
+		clearLoose(w, new AxisAlignedBB(cx << 4, 0, cz << 4, (cx << 4) + 16, 256, (cz << 4) + 16));
+	}
+
+	/**
+	 * Back to spawn: leaves the duel, fixes the map, clears your kit, and puts you in
+	 * adventure mode at spawn.
+	 */
+	public static void goSpawn(EntityPlayerMP p) {
+		WorldServer w = p.getServerWorld();
+		endDuel(p);
+		restore(w);
+		refreshStands(w);
+		clearKit(p);
+		toSpawn(p);
+		heal(p);
+		p.setGameType(net.minecraft.world.GameType.ADVENTURE);
+	}
+
+	private static void clearKit(EntityPlayer p) {
+		KIT_OF.remove(p.getUniqueID());
+		p.inventory.clear();
+		p.inventory.setItemStack(ItemStack.field_190927_a);
+		if (p instanceof EntityPlayerMP) {
+			((EntityPlayerMP) p).inventoryContainer.detectAndSendChanges();
+		}
+	}
+
+	/** A player respawned after dying: back into their duel with the kit, or to spawn. */
+	public static void respawned(EntityPlayerMP p) {
+		Duel d = DUELS.get(p.getUniqueID());
+		if (d != null) {
+			giveKit(p, d.kit);
+			p.setGameType(net.minecraft.world.GameType.SURVIVAL);
+			teleport(p, d.x + 0.5D, TCArena.GROUND + 1, d.z + 0.5D, 0.0F);
+		} else {
+			clearKit(p);
+			toSpawn(p);
+			p.setGameType(net.minecraft.world.GameType.ADVENTURE);
+		}
+	}
+
 	// ---------------------------------------------------------------- kit stands at spawn
 
 	private static int[] standPos(int i) {
@@ -154,6 +336,7 @@ public final class TCPractice {
 
 	/** Puts the kit stands at spawn back to the current set (old worlds get the new kits too). */
 	public static void refreshStands(WorldServer w) {
+		loadSpawn(w);
 		AxisAlignedBB box = new AxisAlignedBB(-12, TCArena.GROUND - 2, -12, 13, TCArena.GROUND + 6, 13);
 		List<EntityArmorStand> old = w.getEntitiesWithinAABB(EntityArmorStand.class, box);
 		for (int i = 0, n = old.size(); i < n; i++) {
@@ -307,8 +490,8 @@ public final class TCPractice {
 
 	/**
 	 * The kits, laid out like the usual tier-test kits (slots: hotbar 0-8, inventory
-	 * rows 0-26). 1.21-only enchantments (Breach, Density, Wind Burst) and items 1.12
-	 * can't use (respawn anchors) are left out.
+	 * rows 0-26). The maces' 1.21 enchantments (Wind Burst + Density, Breach) are done by
+	 * {@link TCMace}; items 1.12 can't use (respawn anchors) are left out.
 	 */
 	private static Kit build(String kit, World w) {
 		Kit k = new Kit();
@@ -334,8 +517,9 @@ public final class TCPractice {
 			h[3] = st(Items.GOLDEN_APPLE, 64);
 			h[4] = via("wind_charge", 64);
 			h[5] = st(Items.ELYTRA, 1);
-			h[6] = ench(via("mace", 1), Enchantments.UNBREAKING, 3);
-			h[7] = ench(via("mace", 1), Enchantments.UNBREAKING, 3);
+			h[6] = TCMace.addEnch(TCMace.addEnch(ench(via("mace", 1), Enchantments.UNBREAKING, 3), TCMace.WIND_BURST, 1),
+					TCMace.DENSITY, 5);
+			h[7] = TCMace.addEnch(ench(via("mace", 1), Enchantments.UNBREAKING, 3), TCMace.BREACH, 4);
 			h[8] = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
 			v[0] = via("wind_charge", 64);
 			for (int i = 1; i < 8; i++) v[i] = splash(PotionTypes.STRONG_STRENGTH);
@@ -570,22 +754,17 @@ public final class TCPractice {
 		NBTTagCompound tag = new NBTTagCompound();
 		tag.setTag("Items", list);
 		p.world.getGameRules().setOrCreateGameRule(CUSTOM_RULE, tag.toString());
-		if (p.isCreative()) {
-			p.setGameType(net.minecraft.world.GameType.SURVIVAL);
-		}
-		refreshStands(p.getServerWorld());
-		p.addChatMessage(text("Saved your inventory as the Custom kit.", TextFormatting.GREEN, false));
+		goSpawn(p);
+		p.addChatMessage(text("Saved your inventory as the Custom kit. Right-click the Custom Kit stand to use it.",
+				TextFormatting.GREEN, false));
 		ITextComponent o = text("", TextFormatting.GRAY, false);
-		o.appendSibling(clickable("[Duel with it]", "/duel custom", TextFormatting.GREEN));
-		o.appendSibling(new TextComponentString(" "));
 		o.appendSibling(clickable("[Edit again]", "/customkit edit", TextFormatting.AQUA));
 		p.addChatMessage(o);
 	}
 
 	/** Creative mode at spawn to put a kit together, with a Save button in chat. */
 	public static void customEdit(EntityPlayerMP p) {
-		endDuel(p);
-		toSpawn(p);
+		goSpawn(p);
 		ItemStack[] saved = customKit(p.world);
 		p.inventory.clear();
 		if (saved != null) {
@@ -607,6 +786,7 @@ public final class TCPractice {
 	/** Clears the player, heals them, gives the kit and keeps it topped up from now on. */
 	public static void giveKit(EntityPlayer p, String kit) {
 		Kit k = build(kit.toLowerCase(), p.world);
+		fullStacks(k);
 		p.inventory.clear();
 		for (int i = 0; i < 9; i++) p.inventory.setInventorySlotContents(i, k.hotbar[i].copy());
 		for (int i = 0; i < 27; i++) p.inventory.setInventorySlotContents(9 + i, k.inv[i].copy());
@@ -623,6 +803,18 @@ public final class TCPractice {
 			mp.inventoryContainer.detectAndSendChanges();
 			if (mp.connection != null) {
 				mp.connection.sendPacket(new net.minecraft.network.play.server.SPacketHeldItemChange(0));
+			}
+		}
+	}
+
+	/** Every kit item that stacks is a full stack (and stays one: see refill). */
+	private static void fullStacks(Kit k) {
+		ItemStack[][] all = { k.hotbar, k.inv, k.armor, { k.offhand } };
+		for (ItemStack[] a : all) {
+			for (ItemStack s : a) {
+				if (!s.func_190926_b() && s.getMaxStackSize() > 1) {
+					s.func_190920_e(s.getMaxStackSize());
+				}
 			}
 		}
 	}
@@ -828,6 +1020,7 @@ public final class TCPractice {
 		MinecraftServer server = p.getServer();
 		WorldServer w = p.getServerWorld();
 		endDuel(p);
+		restore(w);
 		int[] spot = duelSpot(kit);
 		int x = spot[0], z = spot[1];
 		// make the ground there first, so it's there when you arrive
@@ -836,15 +1029,13 @@ public final class TCPractice {
 				w.getChunkFromChunkCoords(cx, cz);
 			}
 		}
-		clearDrops(w, x, z);
+		clearLoose(w, new AxisAlignedBB(x - 48, 0, z - 48, x + 49, 256, z + 49));
 		Duel d = new Duel(kit, x, z);
 		d.small = kit.equals("mace");
 		buildButtons(w, d);
 		double y = TCArena.GROUND + 1;
 		giveKit(p, kit);
-		if (p.isCreative() || p.isSpectator()) {
-			p.setGameType(net.minecraft.world.GameType.SURVIVAL);
-		}
+		p.setGameType(net.minecraft.world.GameType.SURVIVAL);
 		teleport(p, x + 0.5D, y, z + 0.5D, 0.0F);
 		String name = TCBots.freeName(server, "Bot");
 		TCBot bot = TCBot.spawn(server, w, name, x + 0.5D, y, z + 6.5D, 180.0F, 0.0F, false);
@@ -858,7 +1049,7 @@ public final class TCPractice {
 		p.addChatMessage(text(KIT_TITLES[indexOf(kit)] + " duel. Your items never run out; the bot never runs out of totems.",
 				TextFormatting.GOLD, false));
 		ITextComponent opts = text("", TextFormatting.GRAY, false);
-		opts.appendSibling(clickable("[Rematch]", "/duel " + kit, TextFormatting.GREEN));
+		opts.appendSibling(clickable("[Rematch]", "/practicebutton rematch", TextFormatting.GREEN));
 		opts.appendSibling(new TextComponentString(" "));
 		opts.appendSibling(clickable("[Map: big/small]", "/practicebutton map", TextFormatting.AQUA));
 		if (kit.equals("mace")) {
@@ -891,6 +1082,10 @@ public final class TCPractice {
 
 	/** A command block button (or its chat twin) in the player's duel. */
 	public static void pressButton(EntityPlayerMP p, String what) {
+		if (what.equals("spawn")) {
+			goSpawn(p);
+			return;
+		}
 		Duel d = DUELS.get(p.getUniqueID());
 		if (d == null || d.bot == null) {
 			p.addChatMessage(text("Start a duel first (right-click a kit stand).", TextFormatting.RED, false));
@@ -898,7 +1093,9 @@ public final class TCPractice {
 		}
 		WorldServer w = p.getServerWorld();
 		TCBot bot = d.bot;
-		if (what.equals("map")) {
+		if (what.equals("rematch")) {
+			startDuel(p, d.kit);
+		} else if (what.equals("map")) {
 			d.small = !d.small;
 			applyMap(w, d);
 			if (d.small) {
@@ -946,8 +1143,7 @@ public final class TCPractice {
 	}
 
 	/** Items, arrows, carts, crystals and such left from the last fight there. */
-	private static void clearDrops(WorldServer w, int x, int z) {
-		AxisAlignedBB box = new AxisAlignedBB(x - 48, 0, z - 48, x + 49, 256, z + 49);
+	private static void clearLoose(WorldServer w, AxisAlignedBB box) {
 		List<net.minecraft.entity.Entity> list = w.getEntitiesWithinAABB(net.minecraft.entity.Entity.class, box);
 		for (int i = 0, n = list.size(); i < n; i++) {
 			net.minecraft.entity.Entity e = list.get(i);
@@ -959,12 +1155,21 @@ public final class TCPractice {
 
 	/**
 	 * Command blocks with buttons 4 blocks behind where you start (turn around to press):
-	 * Map for every kit; mace also gets Shield and Air. A sign on top names each one.
+	 * Map and Spawn for every kit; mace also gets Shield and Air. A sign on top names each one.
 	 */
 	private static void buildButtons(WorldServer w, Duel d) {
+		building = true; // part of the map, not something a player placed
+		try {
+			buildButtons0(w, d);
+		} finally {
+			building = false;
+		}
+	}
+
+	private static void buildButtons0(WorldServer w, Duel d) {
 		int y = TCArena.GROUND + 1, bz = d.z - 4;
 		// clear the row first (an older duel of another kit may have left a different set)
-		for (int bx = d.x - 3; bx <= d.x + 3; bx++) {
+		for (int bx = d.x - 5; bx <= d.x + 5; bx++) {
 			for (int dy = 0; dy < 2; dy++) {
 				w.setBlockToAir(new BlockPos(bx, y + dy, bz));
 				w.setBlockToAir(new BlockPos(bx, y + dy, bz + 1));
@@ -976,6 +1181,7 @@ public final class TCPractice {
 			placeButton(w, d.x - 2, y, bz, "shield", "Bot Shield", "on / off");
 			placeButton(w, d.x + 2, y, bz, "air", "Bot in Air", "up / down");
 		}
+		placeButton(w, mace ? d.x + 4 : d.x + 2, y, bz, "spawn", "Spawn", "go back");
 	}
 
 	private static void placeButton(WorldServer w, int x, int y, int z, String what, String l1, String l2) {

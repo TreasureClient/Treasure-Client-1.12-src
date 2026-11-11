@@ -495,6 +495,10 @@ public abstract class ServerConfigurationManager {
 		this.uuidToPlayerMap.put(entityplayermp.getUniqueID(), entityplayermp);
 		entityplayermp.addSelfToInternalCraftingInventory();
 		entityplayermp.setHealth(entityplayermp.getHealth());
+		if (net.minecraft.tcpvp.TCPractice.isPractice(worldserver)
+				&& !(entityplayermp instanceof net.minecraft.tcpvp.TCBot)) {
+			net.minecraft.tcpvp.TCPractice.respawned(entityplayermp); // Treasure Client
+		}
 		return entityplayermp;
 	}
 

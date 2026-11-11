@@ -1025,9 +1025,13 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						long tcHud = net.minecraft.client.TCLagMonitor.now();
 						// the cached picture holds only fully visible chat lines; fading ones are drawn live
 						net.minecraft.client.gui.GuiNewChat.tcPass = net.minecraft.client.gui.GuiNewChat.TC_PASS_OPAQUE;
+						net.minecraft.client.gui.GuiIngame.tcSrvBegin();
 						try {
 							this.tcRenderLayer(this.tcServerFramebuffer, net.minecraft.client.gui.GuiIngame.TC_SERVER, l,
 									i1, partialTicks);
+						} catch (RuntimeException e) {
+							net.minecraft.client.gui.GuiIngame.tcSrvFull = true;
+							throw e;
 						} finally {
 							net.minecraft.client.gui.GuiNewChat.tcPass = net.minecraft.client.gui.GuiNewChat.TC_PASS_ALL;
 						}
@@ -1065,7 +1069,15 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						} else {
 							long tcPs = net.minecraft.client.TCLagMonitor.now();
 							net.minecraft.client.TCLagMonitor.hLive += tcPs - tcLv;
-							this.tcPasteLayer(this.tcServerFramebuffer, l, i1);
+							if (net.minecraft.client.gui.GuiIngame.tcSrvFull) {
+								this.tcPasteLayer(this.tcServerFramebuffer, l, i1);
+							} else {
+								// only the parts that hold something (chat, scoreboard...), not a whole-screen blend
+								int[] r = net.minecraft.client.gui.GuiIngame.tcSrvRects;
+								for (int q = 0, n = net.minecraft.client.gui.GuiIngame.tcSrvN; q < n; q++) {
+									this.tcPasteRect(this.tcServerFramebuffer, r[q * 4], r[q * 4 + 1], r[q * 4 + 2], r[q * 4 + 3], l, i1);
+								}
+							}
 							this.mc.ingameGUI.tcDrawFadingChat(i1);
 							net.minecraft.client.TCLagMonitor.hPaste += net.minecraft.client.TCLagMonitor.now() - tcPs;
 						}

@@ -528,12 +528,12 @@ public class GuiVideoSettings extends GuiScreen {
 		g.add(new VsBool("vsPacer", true, "dynfps", "Frame Pacing",
 				"When frames start missing the screen refresh, the work that can wait (loading chunks, packets) gets less time per frame until they don't, so a weak or slowed-down computer holds a steady frame rate. Strong computers never need it.",
 				"High"));
-		g.add(new VsCycle("vsSteady", "-2", new String[] { "-2", "0", "-1", "45", "40", "30" },
-				new String[] { "When Hot", "Off", "Auto", "45", "40", "30" }, "dynfps", "Steady FPS",
+		g.add(new VsCycle("vsSteady2", "0", new String[] { "0", "-2", "-1", "45", "40", "30" },
+				new String[] { "Off", "When Hot", "Auto", "45", "40", "30" }, "dynfps", "Steady FPS",
 				"Holds a frame rate your screen can show evenly, so motion stays smooth instead of jumping between 44 and 60 fps. Auto picks the highest rate your computer keeps up with. When Hot does that only once heat has slowed your computer down, and stays at full speed while it's cool. Works with VSync on. It also makes a fanless laptop heat up slower.",
 				"Medium"));
 		g.add(new VsSlider("vsCalmFps", 30, 20, 60, 5, " FPS", "dynfps", "Calm FPS",
-				"The frame rate on menus, with chat open, and after 5 seconds of standing still without touching anything, so your device cools down between fights. Inventories and moving stay at full speed. 60 turns it off.",
+				"The frame rate on menus (pause menu, title screen, server list), so your device cools down there. Playing, chat and inventories stay at full speed. 60 turns it off.",
 				"Low"));
 		g.add(new VsSlider("vsBgFps", 10, 1, 60, 1, " FPS", "dynfps", "Background FPS",
 				"The frame rate while another window is focused. Lower keeps your device cooler.", "Varies"));

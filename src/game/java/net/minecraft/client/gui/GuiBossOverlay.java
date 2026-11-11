@@ -12,6 +12,11 @@ import net.minecraft.world.BossInfo;
 public class GuiBossOverlay extends Gui {
 	private static final ResourceLocation GUI_BARS_TEXTURES = new ResourceLocation("textures/gui/bars.png");
 	private final Minecraft client;
+	/** Treasure Client: how many boss bars are shown. */
+	public int tcCount() {
+		return this.mapBossInfos.size();
+	}
+
 	private final Map<EaglercraftUUID, BossInfoClient> mapBossInfos = Maps
 			.<EaglercraftUUID, BossInfoClient>newLinkedHashMap();
 

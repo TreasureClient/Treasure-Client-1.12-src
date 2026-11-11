@@ -3,6 +3,7 @@ package net.minecraft.client;
 import net.lax1dude.eaglercraft.EagRuntime;
 import net.lax1dude.eaglercraft.Mouse;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.TreasureMods;
 import net.minecraft.client.gui.inventory.GuiContainer;
@@ -11,10 +12,9 @@ import net.minecraft.client.gui.inventory.GuiContainer;
  * Treasure Client (Dynamic FPS): a lower frame rate where full speed isn't needed, so a
  * fanless laptop cools down between fights instead of heating up drawing menus.
  *
- * <p>Calm: the title screen and server list, menus over the world (pause menu, chat,
- * death screen) and standing still without touching anything for 5 seconds. Inventories
- * and chests stay at full speed (quick refills in a fight), and anything that moves the
- * player or the camera, or any key or mouse press, ends standing still at once.
+ * <p>Calm: the title screen and server list, and menus over the world (pause menu, death
+ * screen). Playing, chat, inventories and chests always run at full speed: capping those
+ * made the game look half as fast as other clients.
  */
 public final class TCCalmFps {
 
@@ -50,7 +50,7 @@ public final class TCCalmFps {
 		int r = TreasureMods.calmFps();
 		String s = r >= 60 || !TreasureMods.dynamicFps() ? "§7Calm FPS: §foff"
 				: "§7Calm FPS: §f" + r + " §7for §f" + (worldFrames > 0 ? calmFrames * 100 / worldFrames : 0)
-						+ "% §7of frames (menus, chat, standing still)";
+						+ "% §7of frames (menus only)";
 		worldFrames = calmFrames = 0;
 		return s;
 	}
@@ -67,30 +67,11 @@ public final class TCCalmFps {
 			stillSince = -1L;
 			return s != null ? r : 0;
 		}
-		if (s != null) {
-			stillSince = -1L;
-			return s instanceof GuiContainer ? 0 : r;
-		}
-		EntityPlayerSP p = mc.player;
-		if (p == null) {
-			stillSince = -1L;
+		stillSince = -1L;
+		// only real menus over the world; chat, inventories and playing (moving or not) run at full speed
+		if (s == null || s instanceof GuiContainer || s instanceof GuiChat) {
 			return 0;
 		}
-		long now = EagRuntime.steadyTimeMillis();
-		boolean same = p.posX == lx && p.posY == ly && p.posZ == lz && p.rotationYaw == lyaw
-				&& p.rotationPitch == lpitch && Mouse.tcLastInputMs == lInput
-				// a held button (bow, eating, blocking, mining) is one press but still playing
-				&& !p.isHandActive() && !p.isSwingInProgress;
-		lx = p.posX;
-		ly = p.posY;
-		lz = p.posZ;
-		lyaw = p.rotationYaw;
-		lpitch = p.rotationPitch;
-		lInput = Mouse.tcLastInputMs;
-		if (!same || stillSince < 0L) {
-			stillSince = now;
-			return 0;
-		}
-		return now - stillSince >= STILL_MS ? r : 0;
+		return r;
 	}
 }

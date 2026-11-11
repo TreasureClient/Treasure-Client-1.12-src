@@ -1168,7 +1168,8 @@ public abstract class EntityPlayer extends EntityLivingBase {
 					float tcFell = this.fallDistance;
 					boolean tcSmash = !this.world.isRemote && net.minecraft.tcpvp.TCMace.canSmash(this);
 					if (tcSmash) {
-						f += net.minecraft.tcpvp.TCMace.bonus(tcFell);
+						f += net.minecraft.tcpvp.TCMace.bonus(tcFell)
+								+ net.minecraft.tcpvp.TCMace.density(this.getHeldItemMainhand(), tcFell);
 					}
 					boolean flag3 = false;
 					double d0 = (double) (this.distanceWalkedModified - this.prevDistanceWalkedModified);

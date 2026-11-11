@@ -431,7 +431,7 @@ public class TreasureMods {
 		bgFps = vsInt("vsBgFps", 10, 1, 60);
 		net.minecraft.client.TCFramePacer.enabled = vsOn("vsPacer", true);
 		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDrawOn = vsOn("vsMultiDraw", true);
-		net.minecraft.client.TCSteadyFps.mode = vsInt("vsSteady", -2, -2, 60);
+		net.minecraft.client.TCSteadyFps.mode = vsInt("vsSteady2", 0, -2, 60);
 		workerIdleSec = vsInt("vsWorkerSec", 5, 5, 300);
 		crashRecoveries = vsInt("vsCrashMax", 3, 1, 10);
 	}
