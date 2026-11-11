@@ -2282,8 +2282,38 @@ public abstract class EntityLivingBase extends Entity {
 		this.field_191988_bg *= 0.98F;
 		this.randomYawVelocity *= 0.9F;
 		this.updateElytra();
-		this.func_191986_a(this.moveStrafing, this.moveForward, this.field_191988_bg);
+		if (this.tcSkipClientTravel()) {
+			// Treasure Client: a mob on your side only follows where the server says it is. The
+			// full movement step added gravity and then searched the blocks around it to land it
+			// back on the ground, every tick, for every mob (villager halls, mob farms). Only its
+			// walking animation needs updating; a mob that was just knocked back still moves the
+			// full way until it settles, so knockback looks the same.
+			this.motionY = 0.0D;
+			this.tcLimbSwing();
+		} else {
+			this.func_191986_a(this.moveStrafing, this.moveForward, this.field_191988_bg);
+		}
 		this.collideWithNearbyEntities();
+	}
+
+	/** Treasure Client: true for a mob shown on your side that isn't moving on its own right now. */
+	private boolean tcSkipClientTravel() {
+		return this.world.isRemote && !(this instanceof EntityPlayer) && !this.canPassengerSteer()
+				&& !this.isBeingRidden() && this.motionX == 0.0D && this.motionZ == 0.0D && this.motionY <= 0.003D;
+	}
+
+	/** The walking animation from how far the mob moved this tick (the end of the movement step). */
+	private void tcLimbSwing() {
+		this.prevLimbSwingAmount = this.limbSwingAmount;
+		double d5 = this.posX - this.prevPosX;
+		double d7 = this.posZ - this.prevPosZ;
+		double d9 = this instanceof net.minecraft.entity.passive.EntityFlying ? this.posY - this.prevPosY : 0.0D;
+		float f10 = MathHelper.sqrt(d5 * d5 + d9 * d9 + d7 * d7) * 4.0F;
+		if (f10 > 1.0F) {
+			f10 = 1.0F;
+		}
+		this.limbSwingAmount += (f10 - this.limbSwingAmount) * 0.4F;
+		this.limbSwing += this.limbSwingAmount;
 	}
 
 	/**

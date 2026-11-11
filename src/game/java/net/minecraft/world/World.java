@@ -1430,6 +1430,7 @@ public abstract class World implements IBlockAccess {
 	 * Updates (and cleans up) entities and tile entities
 	 */
 	public void updateEntities() {
+		++this.tcFarTick; // Treasure Client: which half of faraway mobs update this tick
 		for (int i = 0; i < this.weatherEffects.size(); ++i) {
 			Entity entity = this.weatherEffects.get(i);
 
@@ -1649,6 +1650,26 @@ public abstract class World implements IBlockAccess {
 	 * Updates the entity in the world if the chunk the entity is in is currently
 	 * loaded or its forced to update.
 	 */
+	private int tcFarTick;
+
+	/**
+	 * Treasure Client (Lighter When Hot, client only): mobs, items and XP orbs more than 48
+	 * blocks from the camera update every other tick. Players, projectiles, vehicles and
+	 * anything riding or ridden always update.
+	 */
+	private boolean tcSkipFarTick(Entity e) {
+		if (e instanceof EntityPlayer || e.isRiding() || e.isBeingRidden()
+				|| !(e instanceof net.minecraft.entity.EntityLiving || e instanceof net.minecraft.entity.item.EntityItem
+						|| e instanceof net.minecraft.entity.item.EntityXPOrb)) {
+			return false;
+		}
+		Entity view = net.minecraft.client.Minecraft.getMinecraft().getRenderViewEntity();
+		if (view == null || e.getDistanceSqToEntity(view) < 48.0D * 48.0D) {
+			return false;
+		}
+		return ((e.getEntityId() + this.tcFarTick) & 1) != 0;
+	}
+
 	public void updateEntityWithOptionalForce(Entity entityIn, boolean forceUpdate) {
 		if (!(entityIn instanceof EntityPlayer)) {
 			int j2 = MathHelper.floor(entityIn.posX);
@@ -1658,6 +1679,16 @@ public abstract class World implements IBlockAccess {
 			if (forceUpdate && !this.isAreaLoaded(j2 - 32, 0, k2 - 32, j2 + 32, 0, k2 + 32, true)) {
 				return;
 			}
+		}
+
+		if (this.isRemote && forceUpdate && net.minecraft.client.TCHeat.lite() && this.tcSkipFarTick(entityIn)) {
+			// held still for this tick (not replaying its last step), moves on the next
+			entityIn.lastTickPosX = entityIn.prevPosX = entityIn.posX;
+			entityIn.lastTickPosY = entityIn.prevPosY = entityIn.posY;
+			entityIn.lastTickPosZ = entityIn.prevPosZ = entityIn.posZ;
+			entityIn.prevRotationYaw = entityIn.rotationYaw;
+			entityIn.prevRotationPitch = entityIn.rotationPitch;
+			return;
 		}
 
 		entityIn.lastTickPosX = entityIn.posX;

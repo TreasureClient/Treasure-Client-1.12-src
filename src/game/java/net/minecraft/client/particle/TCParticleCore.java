@@ -29,7 +29,9 @@ public final class TCParticleCore {
 	public static double cullMargin = 2.0D;
 
 	public static int maxPerLayer() {
-		return enabled ? maxParticles : 8192;
+		int m = enabled ? maxParticles : 8192;
+		// Treasure Client: while heat has slowed the computer down, fewer particles at once
+		return net.minecraft.client.TCHeat.lite() ? Math.min(m, 512) : m;
 	}
 
 	private static final java.util.ArrayList<net.minecraft.util.math.AxisAlignedBB> BOXES = new java.util.ArrayList<net.minecraft.util.math.AxisAlignedBB>();

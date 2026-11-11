@@ -240,7 +240,7 @@ public class TCLagMonitor {
 	}
 
 	// why chunks get redrawn: light changes, single block changes, whole areas (chunk data, modern blocks)
-	public static int mkLight, mkBlock, mkRange;
+	public static int mkLight, mkBlock, mkRange, mkLightSkipped;
 	/** Block changes out of view that waited to be built until the chunk is seen. */
 	public static int hiddenWaits;
 	private static final int[] mHidden = new int[MINUTES];
@@ -252,6 +252,7 @@ public class TCLagMonitor {
 	private static final long[] mDrawAll = new long[MINUTES];
 	private static final int[] mBuilds = new int[MINUTES];
 	private static final int[] mMkLight = new int[MINUTES];
+	private static final int[] mMkLightSkip = new int[MINUTES];
 	private static final int[] mMkBlock = new int[MINUTES];
 	private static final int[] mMkRange = new int[MINUTES];
 
@@ -582,6 +583,7 @@ public class TCLagMonitor {
 		mBuilds[minute] += buildJobs;
 		mSorts[minute] += sortJobs;
 		mMkLight[minute] += mkLight;
+		mMkLightSkip[minute] += mkLightSkipped;
 		mMkBlock[minute] += mkBlock;
 		mMkRange[minute] += mkRange;
 		mHidden[minute] += hiddenWaits;
@@ -920,7 +922,7 @@ public class TCLagMonitor {
 			eNs[k] = 0L;
 			eCnt[k] = 0;
 		}
-		buildJobs = sortJobs = mkLight = mkBlock = mkRange = hiddenWaits = 0;
+		buildJobs = sortJobs = mkLight = mkBlock = mkRange = hiddenWaits = mkLightSkipped = 0;
 		if ((hRedraw | hPaste | hLive | hVignette) != 0L) { // a frame in a world with the HUD on
 			hRedrawAll += hRedraw;
 			hPasteAll += hPaste;
@@ -1353,7 +1355,7 @@ public class TCLagMonitor {
 		if (frames > 0) {
 			// every frame, not only spikes: shows why the game is slow when it is slow all the time
 			long la = 0L, da = 0L;
-			int bj = 0, sj = 0, ml = 0, mb = 0, mr = 0, mh = 0;
+			int bj = 0, sj = 0, ml = 0, mb = 0, mr = 0, mh = 0, mls = 0;
 			long[] all = new long[PARTS], lall = new long[LPARTS];
 			for (int m = from; m <= last; m++) {
 				la += mLogicAll[m];
@@ -1361,6 +1363,7 @@ public class TCLagMonitor {
 				bj += mBuilds[m];
 				sj += mSorts[m];
 				ml += mMkLight[m];
+				mls += mMkLightSkip[m];
 				mb += mMkBlock[m];
 				mr += mMkRange[m];
 				mh += mHidden[m];
@@ -1396,7 +1399,7 @@ public class TCLagMonitor {
 			}
 			say(mc, "§7  drawing: " + bigParts(all, PART_NAMES) + " §7· logic: " + bigParts(lall, LPART_NAMES));
 			long mins = Math.max(1L, ms / 60000L);
-			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + ", blocks "
+			say(mc, "§7  chunk redraws: §f" + (bj / mins) + "/min §7(asked by light " + (ml / mins) + " + " + (mls / mins) + " skipped (open air), blocks "
 					+ (mb / mins) + ", areas " + (mr / mins) + "; water re-sorts " + (sj / mins) + "; out of view, waited "
 					+ (mh / mins) + ")");
 		}

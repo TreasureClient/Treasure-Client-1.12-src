@@ -77,16 +77,23 @@ public class BlockStateContainer implements IBlockStatePaletteResizer {
 	 * used, then checks each kind of block once, instead of looking up all 4096
 	 * blocks one by one. Same result, much less work when chunks arrive.
 	 */
+	private static int[] tcCounts = new int[256]; // reused: one thread per world
+
 	public void tcCountBlocks(int[] out) {
 		int nonAir = 0;
 		int ticking = 0;
 		if (this.palette != REGISTRY_BASED_PALETTE) {
-			int[] counts = new int[1 << this.bits];
+			int size = 1 << this.bits;
+			int[] counts = tcCounts;
+			if (counts.length < size) {
+				counts = tcCounts = new int[size];
+			}
+			java.util.Arrays.fill(counts, 0, size, 0);
 			BitArray st = this.storage;
 			for (int i = 0; i < 4096; ++i) {
 				++counts[st.getAt(i)];
 			}
-			for (int id = 0; id < counts.length; ++id) {
+			for (int id = 0; id < size; ++id) {
 				int c = counts[id];
 				if (c == 0) {
 					continue;

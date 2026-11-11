@@ -532,6 +532,9 @@ public class GuiVideoSettings extends GuiScreen {
 				new String[] { "Off", "When Hot", "Auto", "45", "40", "30" }, "dynfps", "Steady FPS",
 				"Holds a frame rate your screen can show evenly, so motion stays smooth instead of jumping between 44 and 60 fps. Auto picks the highest rate your computer keeps up with. When Hot does that only once heat has slowed your computer down, and stays at full speed while it's cool. Works with VSync on. It also makes a fanless laptop heat up slower.",
 				"Medium"));
+		g.add(new VsBool("vsHotLite", true, "dynfps", "Lighter When Hot",
+				"Once heat has slowed your computer down, work that can wait does less: fewer particles at once, mobs and items far away (48+ blocks) update every other tick, and chunks load a little slower. Your frame rate is never capped and nothing near you changes.",
+				"High"));
 		g.add(new VsSlider("vsCalmFps", 30, 20, 60, 5, " FPS", "dynfps", "Calm FPS",
 				"The frame rate on menus (pause menu, title screen, server list), so your device cools down there. Playing, chat and inventories stay at full speed. 60 turns it off.",
 				"Low"));
