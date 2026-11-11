@@ -54,6 +54,59 @@ public final class TCMace {
 		return 22.0F + (h - 8.0F);
 	}
 
+	// 1.21 mace enchantments, kept in the item's "TCEnch" tag and shown as lore
+	public static final String DENSITY = "density", BREACH = "breach", WIND_BURST = "wind_burst";
+
+	public static ItemStack addEnch(ItemStack s, String id, int lvl) {
+		if (s.func_190926_b()) {
+			return s;
+		}
+		net.minecraft.nbt.NBTTagCompound tag = s.hasTagCompound() ? s.getTagCompound()
+				: new net.minecraft.nbt.NBTTagCompound();
+		net.minecraft.nbt.NBTTagCompound e = tag.getCompoundTag("TCEnch");
+		e.setInteger(id, lvl);
+		tag.setTag("TCEnch", e);
+		net.minecraft.nbt.NBTTagCompound disp = tag.getCompoundTag("display");
+		net.minecraft.nbt.NBTTagList lore = disp.getTagList("Lore", 8);
+		String name = id.equals(DENSITY) ? "Density" : id.equals(BREACH) ? "Breach" : "Wind Burst";
+		String[] roman = { "I", "II", "III", "IV", "V" };
+		lore.appendTag(new net.minecraft.nbt.NBTTagString("\u00a77" + name + " " + roman[Math.max(0, Math.min(4, lvl - 1))]));
+		disp.setTag("Lore", lore);
+		tag.setTag("display", disp);
+		s.setTagCompound(tag);
+		return s;
+	}
+
+	public static int level(ItemStack s, String id) {
+		if (!isMace(s) || !s.hasTagCompound()) {
+			return 0;
+		}
+		return s.getTagCompound().getCompoundTag("TCEnch").getInteger(id);
+	}
+
+	/** Density: 0.5 more damage per block fallen per level. */
+	public static float density(ItemStack s, float fell) {
+		return 0.5F * level(s, DENSITY) * fell;
+	}
+
+	/** Breach level of a melee hit's mace (0 if none). */
+	public static int breach(net.minecraft.util.DamageSource src) {
+		String t = src.getDamageType();
+		if (!"player".equals(t) && !"mob".equals(t)) {
+			return 0;
+		}
+		Entity e = src.getEntity();
+		return e instanceof EntityLivingBase ? level(((EntityLivingBase) e).getHeldItemMainhand(), BREACH) : 0;
+	}
+
+	/** Damage after armor when the hit has Breach: armor works 15% less per level (1.21). */
+	public static float afterArmor(float damage, float armor, float toughness, int breach) {
+		float f = 2.0F + toughness / 4.0F;
+		float f1 = net.minecraft.util.math.MathHelper.clamp(armor - damage / f, armor * 0.2F, 20.0F);
+		float h = net.minecraft.util.math.MathHelper.clamp(f1 / 25.0F * (1.0F - 0.15F * breach), 0.0F, 1.0F);
+		return damage * (1.0F - h);
+	}
+
 	/** After a smash landed: knockback around the target, sound, dust, and stop the attacker's fall. */
 	public static void afterSmash(EntityPlayer attacker, Entity target, float fell) {
 		World world = attacker.world;
@@ -120,6 +173,19 @@ public final class TCMace {
 		} else {
 			attacker.motionY = 0.01D;
 			attacker.velocityChanged = true;
+		}
+
+		// Wind Burst: launched back up after the smash, like 1.21 (1.2 / 1.75 / 2.2)
+		int wb = level(attacker.getHeldItemMainhand(), WIND_BURST);
+		if (wb > 0) {
+			attacker.tcImpulseY = attacker.posY;
+			TCWind.push(attacker, 0.0D, 1.2D + 0.55D * (wb - 1), 0.0D);
+			world.playSound((EntityPlayer) null, attacker.posX, attacker.posY, attacker.posZ,
+					SoundEvents.ENTITY_ENDERDRAGON_FLAP, SoundCategory.PLAYERS, 0.9F, 1.6F);
+			if (world instanceof WorldServer) {
+				((WorldServer) world).spawnParticle(EnumParticleTypes.EXPLOSION_NORMAL, attacker.posX, attacker.posY,
+						attacker.posZ, 12, 0.5D, 0.2D, 0.5D, 0.04D);
+			}
 		}
 	}
 }

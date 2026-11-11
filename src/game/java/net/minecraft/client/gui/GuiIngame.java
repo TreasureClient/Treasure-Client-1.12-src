@@ -162,6 +162,33 @@ public class GuiIngame extends Gui {
 	/** Treasure Client (HUD cache): which part of the HUD renderGameOverlay draws. */
 	public static final int TC_ALL = 0, TC_OWN = 1, TC_SERVER = 2, TC_HOTBAR = 3;
 	public static int tcLayer = TC_ALL;
+	/**
+	 * Treasure Client: where the cached server layer has anything (GUI units, x0 y0 x1 y1 each),
+	 * so only those parts are pasted instead of a whole-screen blend every frame.
+	 */
+	public static final int[] tcSrvRects = new int[4 * 8];
+	public static int tcSrvN;
+	public static boolean tcSrvFull = true;
+
+	public static void tcSrvBegin() {
+		tcSrvN = 0;
+		tcSrvFull = false;
+	}
+
+	static void tcSrvAdd(int x0, int y0, int x1, int y1) {
+		if (tcLayer != TC_SERVER || tcSrvFull) {
+			return;
+		}
+		if (tcSrvN >= 8) {
+			tcSrvFull = true;
+			return;
+		}
+		int k = tcSrvN++ * 4;
+		tcSrvRects[k] = x0;
+		tcSrvRects[k + 1] = y0;
+		tcSrvRects[k + 2] = x1;
+		tcSrvRects[k + 3] = y1;
+	}
 
 	/**
 	 * Treasure Client: true while the server's part of the HUD (titles, subtitles, tab list,
@@ -309,6 +336,11 @@ public class GuiIngame extends Gui {
 		if (tcSrv) {
 			long tcBb = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 			this.overlayBoss.renderBossHealth();
+			int tcBn = this.overlayBoss.tcCount();
+			if (tcBn > 0) {
+				tcSrvAdd(0, 0, scaledresolution.getScaledWidth(),
+						Math.min(scaledresolution.getScaledHeight(), 12 + 19 * tcBn + 16));
+			}
 			net.minecraft.client.TCLagMonitor.hBoss += net.minecraft.client.TCLagMonitor.now() - tcBb;
 		}
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
@@ -394,6 +426,9 @@ public class GuiIngame extends Gui {
 
 		if (tcSrv) {
 		this.overlaySubtitle.renderSubtitles(scaledresolution);
+		if (this.mc.gameSettings.showSubtitles) {
+			tcSrvAdd(i / 2, j / 2, i, j);
+		}
 
 		long tcTi = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 		if (this.titlesTimer > 0) {
@@ -412,6 +447,7 @@ public class GuiIngame extends Gui {
 			i2 = MathHelper.clamp(i2, 0, 255);
 
 			if (i2 > 8) {
+				tcSrvAdd(0, j / 2 - 52, i, j / 2 + 36);
 				GlStateManager.pushMatrix();
 				GlStateManager.translate((float) (i / 2), (float) (j / 2), 0.0F);
 				GlStateManager.enableBlend();
@@ -463,6 +499,14 @@ public class GuiIngame extends Gui {
 		GlStateManager.translate(0.0F, (float) (j - 48), 0.0F);
 		long tcC = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 		this.persistantChatGUI.drawChat(this.updateCounter);
+		{
+			float tcCs = this.persistantChatGUI.getChatScale();
+			int tcCw = (int) Math.ceil(this.persistantChatGUI.getChatWidth() * tcCs) + 24;
+			int tcCh = (int) Math.ceil(Math.max(
+					GuiNewChat.calculateChatboxHeight(this.mc.gameSettings.chatHeightFocused),
+					GuiNewChat.calculateChatboxHeight(this.mc.gameSettings.chatHeightUnfocused)) * tcCs) + 20;
+			tcSrvAdd(0, j - 48 - tcCh, tcCw, j - 48 + 20);
+		}
 		net.minecraft.client.TCLagMonitor.hChat += net.minecraft.client.TCLagMonitor.now() - tcC;
 		GlStateManager.popMatrix();
 		scoreobjective1 = scoreboard.getObjectiveInDisplaySlot(0);
@@ -474,6 +518,9 @@ public class GuiIngame extends Gui {
 			long tcTab = net.minecraft.client.TCLagMonitor.now(); // .lag HUD parts
 			this.overlayPlayerList.updatePlayerList(true);
 			this.overlayPlayerList.renderPlayerlist(i, scoreboard, scoreobjective1);
+			if (tcLayer == TC_SERVER) {
+				tcSrvFull = true; // the tab list can fill the screen
+			}
 			net.minecraft.client.TCLagMonitor.hTab += net.minecraft.client.TCLagMonitor.now() - tcTab;
 		}
 
@@ -840,6 +887,7 @@ public class GuiIngame extends Gui {
 		int top = j1 - n * fh;
 		tcRect(wr, l1 - 2, top, l, j1, 1342177280); // every score line
 		tcRect(wr, l1 - 2, top - fh - 1, l, top - 1, 1610612736); // title
+		tcSrvAdd(l1 - 6, top - fh - 4, scaledRes.getScaledWidth(), j1 + 3);
 		tcRect(wr, l1 - 2, top - 1, l, top, 1342177280); // line under the title
 		tessellator.draw();
 		GlStateManager.enableTexture2D();

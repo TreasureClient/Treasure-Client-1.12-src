@@ -377,6 +377,9 @@ public abstract class World implements IBlockAccess {
 			if (iblockstate == null) {
 				return false;
 			} else {
+				if (this == net.minecraft.tcpvp.TCPractice.trackWorld) {
+					net.minecraft.tcpvp.TCPractice.changed(pos); // Treasure Client: /spawn puts it back
+				}
 				if (newState.getLightOpacity() != iblockstate.getLightOpacity()
 						|| newState.getLightValue() != iblockstate.getLightValue()) {
 					if (this.tcLightBatchDepth > 0) {
