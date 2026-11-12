@@ -1428,7 +1428,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	}
 
 	/** Treasure Client: Sky Behind Blocks setting (Video Settings). */
-	public static boolean tcSkyLateOn = true;
+	public static boolean tcSkyLateOn = false;
 
 	/** The sky, drawn with its own far plane (moved out of renderWorldPass so it can come after the blocks). */
 	private void tcDrawSky(RenderGlobal renderglobal, float partialTicks, int pass) {
