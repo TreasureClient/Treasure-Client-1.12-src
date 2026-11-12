@@ -68,8 +68,10 @@ public class RenderPlayer extends RenderLivingBase<AbstractClientPlayer> {
 				d0 = y - 0.125D;
 			}
 
+			long tcT = net.lax1dude.eaglercraft.EagRuntime.nanoTime(); // Treasure Client (.lag): whole player draw
 			this.setModelVisibilities(entity);
 			super.doRender(entity, x, d0, z, entityYaw, partialTicks);
+			net.minecraft.client.TCLagMonitor.playerPart(6, tcT);
 		}
 	}
 

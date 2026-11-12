@@ -360,7 +360,7 @@ public class TCLagMonitor {
 	private static final String[] E_NAMES = { "players", "armor stands", "mobs", "other" };
 
 	// players drawn, part by part (body, armor, armor shine, held item, cape/elytra, other layers)
-	private static final long[] pNs = new long[6];
+	private static final long[] pNs = new long[7]; // [6] = the whole player draw (RenderPlayer.doRender)
 	public static long pRenders;
 	private static final String[] P_NAMES = { "body", "armor", "armor shine", "held item", "cape/elytra",
 			"other layers" };
@@ -376,14 +376,18 @@ public class TCLagMonitor {
 		}
 		StringBuilder sb = new StringBuilder("§7  each player drawn (");
 		sb.append(pRenders).append(" times): ");
-		for (int i = 0; i < pNs.length; i++) {
+		long named = 0L;
+		for (int i = 0; i < 6; i++) {
 			if (i == 2) continue;
+			named += pNs[i];
 			if (i > 0) sb.append(", ");
 			sb.append(P_NAMES[i]).append(" §f").append(ms2(pNs[i] / pRenders)).append("§7");
 			if (i == 1) {
 				sb.append(" (shine §f").append(ms2(pNs[2] / pRenders)).append("§7)");
 			}
 		}
+		// everything else in a player's draw: setup, rotations, light, layer checks...
+		sb.append(", rest §f").append(ms2(Math.max(0L, pNs[6] - named) / pRenders)).append("§7");
 		for (int i = 0; i < pNs.length; i++) pNs[i] = 0L;
 		pRenders = 0L;
 		return sb.append(" ms").toString();
