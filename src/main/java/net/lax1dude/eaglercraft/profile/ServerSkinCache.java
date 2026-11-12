@@ -201,6 +201,19 @@ public class ServerSkinCache {
 				}
 			}
 		}else {
+			// Treasure Client: same as getSkin(url, model), without hashing the URL every call
+			if(props.skin.length() > 0x7F00) {
+				return getSkin(props.skin, SkinModel.getModelFromId(props.model));
+			}
+			EaglercraftUUID id = props.tcSkinId;
+			if(id == null) {
+				props.tcSkinId = id = SkinPackets.createEaglerURLSkinUUID(props.skin);
+			}
+			SkinCacheEntry etr = skinsCache.get(id);
+			if(etr != null) {
+				etr.lastCacheHit = EagRuntime.steadyTimeMillis();
+				return etr;
+			}
 			return getSkin(props.skin, SkinModel.getModelFromId(props.model));
 		}
 	}

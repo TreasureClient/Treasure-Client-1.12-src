@@ -30,6 +30,9 @@ public class TexturesProperty {
 	public final String cape;
 	public final boolean eaglerPlayer;
 
+	/** Treasure Client: the skin URL's cache id, worked out once (it was an MD5 per lookup, several per player per frame). */
+	public net.lax1dude.eaglercraft.EaglercraftUUID tcSkinId;
+
 	public static final TexturesProperty defaultNull = new TexturesProperty(null, "default", null, false);
 
 	private TexturesProperty(String skin, String model, String cape, boolean eaglerPlayer) {

@@ -77,6 +77,24 @@ public final class TCMace {
 		return s;
 	}
 
+	/** Adds gray lore lines (enchantments 1.12 doesn't have, shown like the real ones). */
+	public static ItemStack addLore(ItemStack s, String... lines) {
+		if (s.func_190926_b()) {
+			return s;
+		}
+		net.minecraft.nbt.NBTTagCompound tag = s.hasTagCompound() ? s.getTagCompound()
+				: new net.minecraft.nbt.NBTTagCompound();
+		net.minecraft.nbt.NBTTagCompound disp = tag.getCompoundTag("display");
+		net.minecraft.nbt.NBTTagList lore = disp.getTagList("Lore", 8);
+		for (String l : lines) {
+			lore.appendTag(new net.minecraft.nbt.NBTTagString("\u00a77" + l));
+		}
+		disp.setTag("Lore", lore);
+		tag.setTag("display", disp);
+		s.setTagCompound(tag);
+		return s;
+	}
+
 	public static int level(ItemStack s, String id) {
 		if (!isMace(s) || !s.hasTagCompound()) {
 			return 0;

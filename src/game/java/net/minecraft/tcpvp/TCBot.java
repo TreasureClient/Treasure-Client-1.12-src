@@ -120,6 +120,18 @@ public class TCBot extends EntityPlayerMP {
 		}
 	}
 
+	/** No knockback setting: hits don't push the bot. */
+	public boolean tcNoKnockback() {
+		return TCHerobot.botNoKnockback(this.world);
+	}
+
+	@Override
+	public void knockBack(net.minecraft.entity.Entity attacker, float strength, double xRatio, double zRatio) {
+		if (!tcNoKnockback()) {
+			super.knockBack(attacker, strength, xRatio, zRatio);
+		}
+	}
+
 	public void onDeath(DamageSource cause) {
 		super.onDeath(cause);
 		this.actions.onDeath();

@@ -11,6 +11,7 @@ import net.minecraft.world.World;
  *       next hit (like a mace smash) lands right away.</li>
  *   <li>noProjectileRandom: arrows, pearls, snowballs and wind charges fly perfectly straight.</li>
  *   <li>explosionNoBlockDamage: explosions (crystals, TNT, carts) break no blocks.</li>
+ *   <li>botNoKnockback: bots aren't pushed by hits, smashes, wind charges or explosions.</li>
  * </ul>
  */
 public final class TCHerobot {
@@ -19,14 +20,17 @@ public final class TCHerobot {
 	public static final String SHIELD_STUNNING = "shieldStunning";
 	public static final String NO_PROJECTILE_RANDOM = "noProjectileRandom";
 	public static final String NO_BLOCK_DAMAGE = "explosionNoBlockDamage";
+	public static final String BOT_NO_KNOCKBACK = "botNoKnockback";
 
-	public static final String[] SETTINGS = { LEAVE_ON_DEATH, SHIELD_STUNNING, NO_PROJECTILE_RANDOM, NO_BLOCK_DAMAGE };
+	public static final String[] SETTINGS = { LEAVE_ON_DEATH, SHIELD_STUNNING, NO_PROJECTILE_RANDOM, NO_BLOCK_DAMAGE,
+			BOT_NO_KNOCKBACK };
 	public static final String[] INFO = { "bots leave when they die instead of respawning",
 			"an axe-stunned shield leaves no hit cooldown, so the next hit lands at once",
 			"arrows, pearls and wind charges fly perfectly straight",
-			"explosions break no blocks" };
+			"explosions break no blocks",
+			"bots take no knockback (hits, mace smashes, wind charges, explosions)" };
 	/** Defaults in a Practice world (elsewhere everything is off). */
-	private static final boolean[] PRACTICE_DEFAULT = { false, true, false, false };
+	private static final boolean[] PRACTICE_DEFAULT = { false, true, false, false, false };
 
 	private TCHerobot() {
 	}
@@ -68,6 +72,10 @@ public final class TCHerobot {
 
 	public static boolean noProjectileRandom(World w) {
 		return get(w, NO_PROJECTILE_RANDOM);
+	}
+
+	public static boolean botNoKnockback(World w) {
+		return get(w, BOT_NO_KNOCKBACK);
 	}
 
 	public static boolean noBlockDamage(World w) {

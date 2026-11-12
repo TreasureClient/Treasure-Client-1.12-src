@@ -1337,7 +1337,10 @@ public abstract class EntityPlayer extends EntityLivingBase {
 		}
 
 		if (this.rand.nextFloat() < f) {
-			this.getCooldownTracker().setCooldown(Items.SHIELD, 100);
+			// Treasure Client: a Practice bot's shield comes back sooner after a stun
+			this.getCooldownTracker().setCooldown(Items.SHIELD,
+					this instanceof net.minecraft.tcpvp.TCBot && net.minecraft.tcpvp.TCPractice.isPractice(this.world)
+							? net.minecraft.tcpvp.TCPractice.BOT_SHIELD_STUN_TICKS : 100);
 			this.resetActiveHand();
 			this.world.setEntityState(this, (byte) 30);
 			if (net.minecraft.tcpvp.TCHerobot.shieldStunning(this.world)) {

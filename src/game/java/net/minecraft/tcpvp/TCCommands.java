@@ -100,7 +100,7 @@ public final class TCCommands {
 		}
 
 		public String getCommandUsage(ICommandSender s) {
-			return "/practicebutton <map|shield|air|spawn|rematch>";
+			return "/practicebutton <map|shield|air|knockback|spawn|rematch>";
 		}
 
 		public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
@@ -109,6 +109,7 @@ public final class TCCommands {
 			}
 			String what = args[0].toLowerCase();
 			if (!what.equals("map") && !what.equals("shield") && !what.equals("air") && !what.equals("spawn")
+					&& !what.equals("knockback")
 					&& !what.equals("rematch")) {
 				throw new WrongUsageException(getCommandUsage(sender));
 			}
@@ -139,7 +140,7 @@ public final class TCCommands {
 
 		public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
 				@Nullable BlockPos pos) {
-			return args.length == 1 ? getListOfStringsMatchingLastWord(args, "map", "shield", "air", "spawn", "rematch")
+			return args.length == 1 ? getListOfStringsMatchingLastWord(args, "map", "shield", "air", "knockback", "spawn", "rematch")
 					: Collections.<String>emptyList();
 		}
 	}

@@ -154,6 +154,7 @@ public class FontRenderer implements IResourceManagerReloadListener {
 	}
 
 	public void onResourceManagerReload(IResourceManager resourceManager) {
+		++net.lax1dude.eaglercraft.opengl.TCNameTagBatch.fontGen; // saved name tag layouts are redone
 		this.readFontTexture();
 		this.readGlyphSizes();
 		this.tcPreloadSymbolPages();

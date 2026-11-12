@@ -15,6 +15,9 @@ import net.minecraft.util.text.TextComponentString;
  */
 public class TCLagMonitor {
 
+	/** Times the terrain watchdog (EntityRenderer.tcTerrainWatch) reloaded the chunk renderer. */
+	public static int terrainFixes;
+
 	private static final int SPIKE_MS = 60;
 	private static final int MINUTES = 120;
 	private static final int RING = 8;
@@ -1342,6 +1345,9 @@ public class TCLagMonitor {
 				say(mc, "§7Textures loaded mid-game: §f" + texLoads + " §7taking §f" + (texLoadNs / 1000000L)
 						+ "ms§7, slowest §f" + tn + " " + (texSlowNs / 1000000L) + "ms");
 			}
+		}
+		if (terrainFixes > 0) {
+			say(mc, "§7Terrain went missing and was reloaded: §f" + terrainFixes + "§7 times");
 		}
 		say(mc, "§7Shader compiles on demand: §f" + net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompiles
 				+ " §7taking §f" + (net.lax1dude.eaglercraft.opengl.FixedFunctionPipeline.tcCompileNs / 1000000L)

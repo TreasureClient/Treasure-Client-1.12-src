@@ -203,9 +203,11 @@ public class Explosion {
 							d11 = EnchantmentProtection.getBlastDamageReduction((EntityLivingBase) entity, d10);
 						}
 
-						entity.motionX += d5 * d11;
-						entity.motionY += d7 * d11;
-						entity.motionZ += d9 * d11;
+						if (!(entity instanceof net.minecraft.tcpvp.TCBot && ((net.minecraft.tcpvp.TCBot) entity).tcNoKnockback())) {
+							entity.motionX += d5 * d11;
+							entity.motionY += d7 * d11;
+							entity.motionZ += d9 * d11;
+						}
 
 						if (entity instanceof EntityPlayer) {
 							EntityPlayer entityplayer = (EntityPlayer) entity;
