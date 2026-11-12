@@ -66,6 +66,7 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 	 * Renders the desired {@code T} type Entity.
 	 */
 	public void doRender(T entity, double x, double y, double z, float entityYaw, float partialTicks) {
+		this.tcCmEntity = null; // Treasure Client: color multiplier is worked out again for this draw
 		GlStateManager.pushMatrix();
 		GlStateManager.disableCull();
 		this.mainModel.swingProgress = this.getSwingProgress(entity, partialTicks);
@@ -247,9 +248,24 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 		return this.setBrightness(entityLivingBaseIn, partialTicks, true);
 	}
 
+	// Treasure Client: setBrightness runs for the body and again for every layer (9 times for a
+	// player), and each time read the light level from the world. Within one draw the answer is the
+	// same, so it is worked out once per draw.
+	private net.minecraft.entity.Entity tcCmEntity;
+	private float tcCmPartial;
+	private int tcCmValue;
+
 	protected boolean setBrightness(T entitylivingbaseIn, float partialTicks, boolean combineTextures) {
-		float f = entitylivingbaseIn.getBrightness();
-		int i = this.getColorMultiplier(entitylivingbaseIn, f, partialTicks);
+		int i;
+		if (this.tcCmEntity == entitylivingbaseIn && this.tcCmPartial == partialTicks) {
+			i = this.tcCmValue;
+		} else {
+			float f = entitylivingbaseIn.getBrightness();
+			i = this.getColorMultiplier(entitylivingbaseIn, f, partialTicks);
+			this.tcCmEntity = entitylivingbaseIn;
+			this.tcCmPartial = partialTicks;
+			this.tcCmValue = i;
+		}
 		boolean flag = (i >> 24 & 255) > 0;
 		boolean flag1 = entitylivingbaseIn.hurtTime > 0 || entitylivingbaseIn.deathTime > 0;
 
@@ -304,7 +320,12 @@ public abstract class RenderLivingBase<T extends EntityLivingBase> extends Rende
 
 			GlStateManager.rotate(f * this.getDeathMaxRotation(entityLiving), 0.0F, 0.0F, 1.0F);
 		} else {
-			String s = TextFormatting.getTextWithoutFormattingCodes(entityLiving.getName());
+			// Treasure Client: the color-code strip (a regex, slow in the browser) ran for every mob and
+			// player every frame; names without color codes are compared as they are
+			String s = entityLiving.getName();
+			if (s != null && s.indexOf('\u00a7') >= 0) {
+				s = TextFormatting.getTextWithoutFormattingCodes(s);
+			}
 
 			if (s != null && ("Dinnerbone".equals(s) || "Grumm".equals(s)) && (!(entityLiving instanceof EntityPlayer)
 					|| ((EntityPlayer) entityLiving).isWearing(EnumPlayerModelParts.CAPE))) {
