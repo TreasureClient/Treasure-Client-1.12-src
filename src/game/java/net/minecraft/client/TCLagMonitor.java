@@ -363,7 +363,9 @@ public class TCLagMonitor {
 	private static final String[] E_NAMES = { "players", "armor stands", "mobs", "other" };
 
 	// players drawn, part by part (body, armor, armor shine, held item, cape/elytra, other layers)
-	private static final long[] pNs = new long[7]; // [6] = the whole player draw (RenderPlayer.doRender)
+	// [6] = the whole player draw (RenderPlayer.doRender), [7] = everything for one player
+	// (RenderManager: also shadow, light and setup), [8] = the player's name tag
+	private static final long[] pNs = new long[9];
 	public static long pRenders;
 	private static final String[] P_NAMES = { "body", "armor", "armor shine", "held item", "cape/elytra",
 			"other layers" };
@@ -389,8 +391,11 @@ public class TCLagMonitor {
 				sb.append(" (shine §f").append(ms2(pNs[2] / pRenders)).append("§7)");
 			}
 		}
+		sb.append(", name tag §f").append(ms2(pNs[8] / pRenders)).append("§7");
 		// everything else in a player's draw: setup, rotations, light, layer checks...
-		sb.append(", rest §f").append(ms2(Math.max(0L, pNs[6] - named) / pRenders)).append("§7");
+		sb.append(", rest §f").append(ms2(Math.max(0L, pNs[6] - named - pNs[8]) / pRenders)).append("§7");
+		// outside the draw: shadow, light level, finding the renderer
+		sb.append(", shadow+setup §f").append(ms2(Math.max(0L, pNs[7] - pNs[6]) / pRenders)).append("§7");
 		for (int i = 0; i < pNs.length; i++) pNs[i] = 0L;
 		pRenders = 0L;
 		return sb.append(" ms").toString();
@@ -406,8 +411,12 @@ public class TCLagMonitor {
 		int k = e instanceof net.minecraft.entity.player.EntityPlayer ? 0
 				: e instanceof net.minecraft.entity.item.EntityArmorStand ? 1
 						: e instanceof net.minecraft.entity.EntityLivingBase ? 2 : 3;
-		eNs[k] += EagRuntime.nanoTime() - startNs;
+		long d = EagRuntime.nanoTime() - startNs;
+		eNs[k] += d;
 		eCnt[k]++;
+		if (k == 0) {
+			pNs[7] += d;
+		}
 	}
 	/** [0] standing still, [1] moving or turning; times in microseconds. Reset after each .lag. */
 	private static final long[][] mv = new long[2][MV_N];

@@ -165,6 +165,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	private GameOverlayFramebuffer overlayFramebuffer;
 	/** Treasure Client: the server's part of the HUD (scoreboard, chat, boss bars), cached on its own. */
 	private GameOverlayFramebuffer tcServerFramebuffer;
+	/** Treasure Client: cached image of your own live HUD layer (hearts, food, XP, effects, item counts). */
+	private GameOverlayFramebuffer tcOwnFramebuffer;
 	public float currentProjMatrixFOV = 0.0f;
 	public boolean fogStandard = false;
 
@@ -177,6 +179,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		this.lightmapColors = this.lightmapTexture.getTextureData();
 		this.overlayFramebuffer = new GameOverlayFramebuffer();
 		this.tcServerFramebuffer = new GameOverlayFramebuffer();
+		this.tcOwnFramebuffer = new GameOverlayFramebuffer();
 		
 		for (int i = 0; i < 32; ++i) {
 			for (int j = 0; j < 32; ++j) {
@@ -1038,6 +1041,17 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						net.minecraft.client.TCLagMonitor.hRedraw += net.minecraft.client.TCLagMonitor.now() - tcHud;
 						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
 					}
+					// your own live layer: drawn into its image only when it changed
+					int tcOwnMode = tcMode == net.minecraft.client.gui.TCHudCache.DIRECT
+							? net.minecraft.client.gui.TCHudCache.DIRECT
+							: net.minecraft.client.gui.TCHudCache.decideOwn(this.mc.ingameGUI, partialTicks, l, i1);
+					if (tcOwnMode == net.minecraft.client.gui.TCHudCache.REDRAW) {
+						long tcHud = net.minecraft.client.TCLagMonitor.now();
+						this.tcRenderLayer(this.tcOwnFramebuffer, net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1,
+								partialTicks);
+						net.minecraft.client.TCLagMonitor.hLive += net.minecraft.client.TCLagMonitor.now() - tcHud;
+						net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.HUD, tcHud);
+					}
 					GlStateManager.disableLighting();
 					GlStateManager.enableBlend();
 					long tcVg = net.minecraft.client.TCLagMonitor.now();
@@ -1062,7 +1076,16 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 						net.minecraft.client.TCLagMonitor.hPaste += tcLv - tcHud;
 						// hearts, food, XP, effects: cheap flat icons, drawn live so they never force
 						// the hotbar items (the slow part) to be drawn again
-						this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1, partialTicks);
+						if (tcOwnMode == net.minecraft.client.gui.TCHudCache.DIRECT) {
+							this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_OWN, l, i1, partialTicks);
+						} else {
+							// only the band at the bottom (hearts up to the item name) and the effect icons
+							net.minecraft.client.gui.GuiIngame g = this.mc.ingameGUI;
+							this.tcPasteRect(this.tcOwnFramebuffer, 0, g.tcOwnTop, l, i1, l, i1);
+							if (g.tcOwnEffects > 0) {
+								this.tcPasteRect(this.tcOwnFramebuffer, l - 25 * g.tcOwnEffects - 2, 0, l, 54, l, i1);
+							}
+						}
 						if (tcSrvMode == net.minecraft.client.gui.TCHudCache.DIRECT) {
 							this.tcDrawHudLayer(net.minecraft.client.gui.GuiIngame.TC_SERVER, l, i1, partialTicks);
 							net.minecraft.client.TCLagMonitor.hLive += net.minecraft.client.TCLagMonitor.now() - tcLv;

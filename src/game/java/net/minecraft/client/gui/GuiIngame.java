@@ -279,6 +279,119 @@ public class GuiIngame extends Gui {
 		return h == Long.MIN_VALUE ? 0L : h;
 	}
 
+	/** Treasure Client: how many effect icons the live layer draws (top right), set by tcOwnSignature. */
+	public int tcOwnEffects;
+	/** Treasure Client: top of the live layer's bottom band (GUI units), set by tcOwnSignature. */
+	public int tcOwnTop;
+
+	/**
+	 * Treasure Client: a number that changes whenever anything in your own live HUD layer would be drawn
+	 * differently (hearts, food, armor, air, XP, the held item's name, effect icons, item counts,
+	 * durability bars, cooldown sweeps and the hotbar attack icon), or Long.MIN_VALUE when it has to be
+	 * drawn live. Everything that moves on its own (low-health shake, regeneration wave, damage blink,
+	 * hunger shake, effect blink, the item name fading) only moves once per game tick, so the tick counter
+	 * is part of the number while one of those is showing.
+	 */
+	public long tcOwnSignature(float partialTicks, int scaledWidth, int scaledHeight) {
+		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
+		GameSettings gs = this.mc.gameSettings;
+		if (p == null || this.mc.world == null || this.mc.getRenderViewEntity() != p || this.mc.isDemo()) {
+			return Long.MIN_VALUE;
+		}
+		long h = 0x6A09E667F3BCC909L;
+		int hp = MathHelper.ceil(p.getHealth());
+		float maxHp = (float) p.getEntityAttribute(net.minecraft.entity.SharedMonsterAttributes.MAX_HEALTH)
+				.getAttributeValue();
+		int absorb = MathHelper.ceil(p.getAbsorptionAmount());
+		FoodStats fs = p.getFoodStats();
+		h = tcMix(h, scaledWidth);
+		h = tcMix(h, scaledHeight);
+		h = tcMix(h, hp);
+		h = tcMix(h, Float.floatToIntBits(maxHp));
+		h = tcMix(h, absorb);
+		h = tcMix(h, p.getTotalArmorValue());
+		h = tcMix(h, fs.getFoodLevel());
+		h = tcMix(h, Float.floatToIntBits(fs.getSaturationLevel()));
+		h = tcMix(h, TreasureMods.saturationDisplay() ? 1 : 0);
+		h = tcMix(h, p.isInsideOfMaterial(Material.WATER) ? p.getAir() : -1);
+		h = tcMix(h, this.mc.world.getWorldInfo().isHardcoreModeEnabled() ? 1 : 0);
+		h = tcMix(h, (p.isPotionActive(MobEffects.POISON) ? 1 : 0) | (p.isPotionActive(MobEffects.WITHER) ? 2 : 0)
+				| (p.isPotionActive(MobEffects.HUNGER) ? 4 : 0) | (p.isPotionActive(MobEffects.REGENERATION) ? 8 : 0));
+		h = tcMix(h, Float.floatToIntBits(p.experience));
+		h = tcMix(h, p.experienceLevel);
+		h = tcMix(h, p.xpBarCap() > 0 ? 1 : 0);
+		h = tcMix(h, (this.mc.playerController.shouldDrawHUD() ? 1 : 0)
+				| (this.mc.playerController.gameIsSurvivalOrAdventure() ? 2 : 0) | (gs.heldItemTooltips ? 4 : 0));
+		h = tcMix(h, gs.attackIndicator);
+		h = tcMix(h, p.getPrimaryHand().ordinal());
+		Entity ride = p.getRidingEntity();
+		if (ride instanceof EntityLivingBase) {
+			h = tcMix(h, MathHelper.ceil(((EntityLivingBase) ride).getHealth()));
+			h = tcMix(h, Float.floatToIntBits(((EntityLivingBase) ride).getMaxHealth()));
+		} else {
+			h = tcMix(h, -7);
+		}
+		// things that move once per game tick while they show
+		boolean perTick = this.healthUpdateCounter > (long) this.updateCounter || hp <= 4
+				|| p.isPotionActive(MobEffects.REGENERATION) || fs.getSaturationLevel() <= 0.0F
+				// renderPlayerStats resets the "health lost" highlight one second after the last change
+				|| (Minecraft.getSystemTime() - this.lastSystemTime > 1000L
+						&& (this.lastPlayerHealth != hp || this.playerHealth != hp));
+		// the held item's name (fades out over its last 10 ticks)
+		if (gs.heldItemTooltips && this.remainingHighlightTicks > 0 && !this.highlightingItemStack.func_190926_b()) {
+			h = tcMix(h, Math.min(this.remainingHighlightTicks, 10));
+			h = tcMix(h, this.highlightingItemStack.getDisplayName().hashCode());
+			h = tcMix(h, this.highlightingItemStack.hasDisplayName() ? 1 : 0);
+		} else {
+			h = tcMix(h, -3);
+		}
+		// effect icons, in the order they are drawn (it depends on how long each has left)
+		long eh = 0L;
+		int shown = 0;
+		java.util.Collection<PotionEffect> effs = p.getActivePotionEffects();
+		for (PotionEffect e : effs.size() > 1 ? Ordering.natural().reverse().sortedCopy(effs) : effs) {
+			Potion pot = e.getPotion();
+			if (pot.hasStatusIcon() && e.doesShowParticles()) {
+				++shown;
+				int v = Potion.getIdFromPotion(pot) * 2 + (e.getIsAmbient() ? 1 : 0);
+				if (!e.getIsAmbient() && e.getDuration() <= 200) {
+					v = v * 1000 + e.getDuration(); // blinking: changes every tick
+				}
+				eh = tcMix(eh, v);
+			}
+		}
+		this.tcOwnEffects = shown;
+		h = tcMix(h, (int) (eh ^ eh >>> 32));
+		h = tcMix(h, shown);
+		// item counts, durability bars and cooldown sweeps (the sweep only has 16 heights)
+		float rpt = this.mc.getRenderPartialTicks();
+		for (int k = 0; k <= 9; ++k) {
+			ItemStack s = k < 9 ? p.inventory.mainInventory.get(k) : p.getHeldItemOffhand();
+			if (s.func_190926_b()) {
+				h = tcMix(h, -1);
+				continue;
+			}
+			h = tcMix(h, Item.getIdFromItem(s.getItem()));
+			h = tcMix(h, s.func_190916_E());
+			h = tcMix(h, s.isItemDamaged() ? s.getItemDamage() * 4099 + s.getMaxDamage() : -2);
+			float cd = p.getCooldownTracker().getCooldown(s.getItem(), rpt);
+			h = tcMix(h, cd > 0.0F ? MathHelper.floor(16.0F * (1.0F - cd)) * 64 + MathHelper.ceil(16.0F * cd) : -1);
+		}
+		if (gs.attackIndicator == 2) {
+			float f1 = p.getCooledAttackStrength(0.0F);
+			h = tcMix(h, f1 < 1.0F ? (int) (f1 * 19.0F) : -1);
+		}
+		if (perTick) {
+			h = tcMix(h, this.updateCounter);
+		}
+		// top of the bottom band: the highest heart or armor row, the item name, the mount's hearts
+		int rows = MathHelper.ceil((maxHp + (float) absorb) / 2.0F / 10.0F);
+		int rowH = Math.max(10 - (rows - 2), 3);
+		int armorRow = scaledHeight - 39 - (rows - 1) * rowH - 10;
+		this.tcOwnTop = Math.min(scaledHeight - 64, armorRow - 4);
+		return h == Long.MIN_VALUE ? 0L : h;
+	}
+
 	private static long tcMix(long h, int v) {
 		return (h ^ v) * 1099511628211L;
 	}

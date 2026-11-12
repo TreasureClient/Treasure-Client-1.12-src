@@ -522,6 +522,9 @@ public abstract class Render<T extends Entity> {
 			EntityRenderer.drawNameplate(this.getFontRendererFromRenderManager(), str, (float) x, (float) y + f2,
 					(float) z, i, f, f1, flag1, flag);
 			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.NAME_TAGS, tcT);
+			if (entityIn instanceof net.minecraft.entity.player.EntityPlayer) {
+				net.minecraft.client.TCLagMonitor.playerPart(8, tcT);
+			}
 		}
 	}
 

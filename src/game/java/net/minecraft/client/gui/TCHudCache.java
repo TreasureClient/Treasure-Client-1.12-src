@@ -58,6 +58,33 @@ public final class TCHudCache {
 	public static void invalidate() {
 		valid = false;
 		validS = false;
+		validO = false;
+	}
+
+	// your own live layer (hearts, food, XP, effects, item counts...)
+	private static long drawnSignatureO;
+	private static long drawnAtO;
+	private static boolean validO;
+
+	/**
+	 * How to draw your own live layer this frame (after {@link #decide} said it isn't DIRECT). It used
+	 * to be drawn from scratch every frame (about 1 ms on slow laptops); now it is drawn into its own
+	 * image only when something on it changes, at most once per game tick while something animates.
+	 */
+	public static int decideOwn(GuiIngame gui, float partialTicks, int scaledWidth, int scaledHeight) {
+		long sig = gui.tcOwnSignature(partialTicks, scaledWidth, scaledHeight);
+		if (sig == Long.MIN_VALUE) {
+			validO = false;
+			return DIRECT;
+		}
+		long now = EagRuntime.steadyTimeMillis();
+		if (!validO || sig != drawnSignatureO || now - drawnAtO >= OWN_MAX_AGE_MS) {
+			drawnSignatureO = sig;
+			drawnAtO = now;
+			validO = true;
+			return REDRAW;
+		}
+		return REUSE;
 	}
 
 	/** Reuse the cached HUD image. */
@@ -73,6 +100,7 @@ public final class TCHudCache {
 		if (sig == Long.MIN_VALUE) {
 			valid = false;
 			validS = false;
+			validO = false;
 			return DIRECT;
 		}
 		long now = EagRuntime.steadyTimeMillis();
