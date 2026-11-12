@@ -199,6 +199,11 @@ public class PlatformOpenGL {
 	public static final void _wglDepthMask(boolean mask) {
 		ctx.depthMask(mask);
 	}
+
+	// Treasure Client: the sky is drawn behind the terrain at the far end of the depth range
+	public static final void _wglDepthRange(float near, float far) {
+		ctx.depthRange(near, far);
+	}
 	
 	public static final void _wglCullFace(int glEnum) {
 		ctx.cullFace(glEnum);

@@ -1170,8 +1170,8 @@ public class TCLagMonitor {
 		net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcUpBytes = 0;
 	}
 
-	private static final String[] GPU_NAMES = { "other", "sky+clouds", "terrain", "entities", "particles",
-			"rain/border", "water/glass", "hand", "HUD/menus" };
+	private static final String[] GPU_NAMES = { "other", "sky", "terrain", "entities", "particles",
+			"rain/border", "water/glass", "hand", "HUD/menus", "screen copy", "clouds" };
 
 	/** "GPU per frame: 7.4ms (terrain 3.1, entities 1.2, ...)" from the per-part timer queries. */
 	private static String gpuLine() {

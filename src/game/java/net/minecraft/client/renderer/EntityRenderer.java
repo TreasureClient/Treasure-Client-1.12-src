@@ -1250,24 +1250,17 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 
 		long tcT = net.minecraft.client.TCLagMonitor.now(); // Treasure Client: lag monitor timing
 		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(1); // .lag GPU parts: sky (and low clouds)
-		if (this.mc.gameSettings.renderDistanceChunks >= 4) {
-			this.setupFog(-1, partialTicks);
-			GlStateManager.matrixMode(5889);
-			GlStateManager.loadIdentity();
-			float vigg = this.getFOVModifier(partialTicks, true);
-			GlStateManager.gluPerspective(vigg, (float) this.mc.displayWidth / (float) this.mc.displayHeight, 0.05F, this.farPlaneDistance * 2.0F);
-			GlStateManager.matrixMode(5888);
-			renderglobal.renderSky(partialTicks, pass);
-			GlStateManager.matrixMode(5889);
-			GlStateManager.loadIdentity();
-			GlStateManager.gluPerspective(vigg, (float) this.mc.displayWidth / (float) this.mc.displayHeight, 0.05F, this.farPlaneDistance * MathHelper.SQRT_2);
-			GlStateManager.matrixMode(5888);
+		// Treasure Client: Sky Behind Blocks, the sky (and the low clouds over it) are drawn after the blocks
+		boolean tcLate = tcSkyLateOn && this.mc.gameSettings.renderDistanceChunks >= 4
+				&& this.mc.world.provider.isSurfaceWorld() && this.mc.world.provider.getDimensionType().getId() != 1;
+		if (this.mc.gameSettings.renderDistanceChunks >= 4 && !tcLate) {
+			this.tcDrawSky(renderglobal, partialTicks, pass);
 		}
 
 		this.setupFog(0, partialTicks);
 		GlStateManager.shadeModel(7425);
 
-		if (entity.posY + (double) entity.getEyeHeight() < 128.0D) {
+		if (entity.posY + (double) entity.getEyeHeight() < 128.0D && !tcLate) {
 			this.renderCloudsCheck(renderglobal, partialTicks, pass, d0, d1, d2);
 		}
 		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SKY, tcT);
@@ -1298,6 +1291,44 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.shadeModel(7424);
 		GlStateManager.alphaFunc(RealOpenGLEnums.GL_GREATER, 0.1F);
 		net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.TERRAIN, tcT);
+
+		if (tcLate) {
+			tcT = net.minecraft.client.TCLagMonitor.now();
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(1);
+			GlStateManager.matrixMode(5888);
+			GlStateManager.popMatrix(); // back to the plain camera view the sky is drawn from
+			GlStateManager.pushMatrix();
+			// every sky pixel lands at the far end of the depth range: it only shows where no block was drawn
+			GlStateManager.enableDepth();
+			GlStateManager.depthFunc(515);
+			net.lax1dude.eaglercraft.internal.PlatformOpenGL._wglDepthRange(1.0F, 1.0F);
+			RenderGlobal.tcSkyLate = true;
+			try {
+				this.tcDrawSky(renderglobal, partialTicks, pass);
+			} finally {
+				RenderGlobal.tcSkyLate = false;
+				net.lax1dude.eaglercraft.internal.PlatformOpenGL._wglDepthRange(0.0F, 1.0F);
+			}
+			this.setupFog(0, partialTicks);
+			GlStateManager.shadeModel(7425);
+			if (entity.posY + (double) entity.getEyeHeight() < 128.0D) {
+				this.renderCloudsCheck(renderglobal, partialTicks, pass, d0, d1, d2);
+			}
+			// leave things the way the blocks left them for the entities
+			GlStateManager.shadeModel(7424);
+			GlStateManager.enableDepth();
+			GlStateManager.depthMask(true);
+			GlStateManager.enableTexture2D();
+			GlStateManager.enableCull();
+			GlStateManager.disableBlend();
+			GlStateManager.enableAlpha();
+			GlStateManager.alphaFunc(RealOpenGLEnums.GL_GREATER, 0.1F);
+			GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+			this.setupFog(0, partialTicks);
+			this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+			net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(0);
+			net.minecraft.client.TCLagMonitor.add(net.minecraft.client.TCLagMonitor.SKY, tcT);
+		}
 
 		if (!this.debugView) {
 			GlStateManager.matrixMode(5888);
@@ -1393,8 +1424,27 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		}
 	}
 
+	/** Treasure Client: Sky Behind Blocks setting (Video Settings). */
+	public static boolean tcSkyLateOn = true;
+
+	/** The sky, drawn with its own far plane (moved out of renderWorldPass so it can come after the blocks). */
+	private void tcDrawSky(RenderGlobal renderglobal, float partialTicks, int pass) {
+		this.setupFog(-1, partialTicks);
+		GlStateManager.matrixMode(5889);
+		GlStateManager.loadIdentity();
+		float vigg = this.getFOVModifier(partialTicks, true);
+		GlStateManager.gluPerspective(vigg, (float) this.mc.displayWidth / (float) this.mc.displayHeight, 0.05F, this.farPlaneDistance * 2.0F);
+		GlStateManager.matrixMode(5888);
+		renderglobal.renderSky(partialTicks, pass);
+		GlStateManager.matrixMode(5889);
+		GlStateManager.loadIdentity();
+		GlStateManager.gluPerspective(vigg, (float) this.mc.displayWidth / (float) this.mc.displayHeight, 0.05F, this.farPlaneDistance * MathHelper.SQRT_2);
+		GlStateManager.matrixMode(5888);
+	}
+
 	private void renderCloudsCheck(RenderGlobal renderGlobalIn, float partialTicks, int pass, double p_180437_4_,
 			double p_180437_6_, double p_180437_8_) {
+		net.lax1dude.eaglercraft.internal.PlatformInput.tcGpuMark(10); // .lag GPU parts: clouds
 		if (this.mc.gameSettings.shouldRenderClouds() != 0) {
 			GlStateManager.matrixMode(5889);
 			GlStateManager.loadIdentity();

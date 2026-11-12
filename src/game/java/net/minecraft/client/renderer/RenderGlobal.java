@@ -1200,6 +1200,13 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 		GlStateManager.enableAlpha();
 	}
 
+	/**
+	 * Treasure Client: the sky is being drawn after the terrain, at the far end of the
+	 * depth range, so the depth test keeps it only where no block was drawn. Most of the
+	 * sky hidden behind blocks then costs the graphics chip nothing. Same picture.
+	 */
+	public static boolean tcSkyLate;
+
 	public void renderSky(float partialTicks, int pass) {
 		if (!TCExtra.sky) return; // Treasure Client (Celeritas Extra)
 		if (this.mc.world.provider.getDimensionType().getId() == 1) {
@@ -1224,7 +1231,9 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 			Tessellator tessellator = Tessellator.getInstance();
 			WorldRenderer bufferbuilder = tessellator.getBuffer();
 			GlStateManager.depthMask(false);
-			GlStateManager.disableDepth();
+			if (!tcSkyLate) {
+				GlStateManager.disableDepth();
+			}
 			GlStateManager.enableFog();
 			GlStateManager.color(f, f1, f2);
 
