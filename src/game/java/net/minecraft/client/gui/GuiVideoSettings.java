@@ -468,9 +468,6 @@ public class GuiVideoSettings extends GuiScreen {
 				"Skips the sides of chunks that face away from you.", "Medium"));
 		g.add(new VsBool("vsChunkEnt", true, "celeritas", "Hide Entities in Hidden Chunks",
 				"Skips mobs and players inside chunks you can't see.", "Medium"));
-		g.add(new VsBool("vsSkyLate", true, "celeritas", "Sky Behind Blocks",
-				"Draws the sky after the blocks, so the parts of the sky hidden behind them cost the graphics chip nothing (it used to paint the whole sky, then cover it). Looks the same. Turn it off only if the sky draws over blocks.",
-				"Medium"));
 		g.add(new VsBool("vsMultiDraw", true, "celeritas", "Terrain Multi-Draw",
 				"Sends the visible chunks to the graphics chip in a few big batches instead of one by one. Turn it off only if terrain flickers or goes missing.",
 				"High"));
