@@ -44,6 +44,11 @@ public class EntityTCWindCharge extends EntityThrowable {
 		}
 	}
 
+	/** Hits you even when a pearl puts you right on top of it (pearl catching). */
+	protected boolean tcHitsFromInside() {
+		return !this.world.isRemote;
+	}
+
 	protected void onImpact(RayTraceResult result) {
 		if (this.world.isRemote || this.isDead) {
 			return;

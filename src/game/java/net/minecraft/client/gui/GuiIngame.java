@@ -573,6 +573,7 @@ public class GuiIngame extends Gui {
 						RealOpenGLEnums.GL_ONE_MINUS_SRC_COLOR, RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
 				GlStateManager.enableAlpha();
 				this.drawTexturedModalRect(l / 2 - 7, i1 / 2 - 7, 0, 0, 16, 16);
+				int tcAddonDrop = TCCrosshairAddons.draw(this.mc, l / 2 - 7, i1 / 2 - 7); // Treasure Client: Crosshair Addons
 
 				if (this.mc.gameSettings.attackIndicator == 1) {
 					float f = this.mc.player.getCooledAttackStrength(0.0F);
@@ -584,7 +585,7 @@ public class GuiIngame extends Gui {
 						flag = flag & ((EntityLivingBase) this.mc.pointedEntity).isEntityAlive();
 					}
 
-					int i = i1 / 2 - 7 + 16;
+					int i = i1 / 2 - 7 + 16 + tcAddonDrop;
 					int j = l / 2 - 8;
 
 					if (flag) {

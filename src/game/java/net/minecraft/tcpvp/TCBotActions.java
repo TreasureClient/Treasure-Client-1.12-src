@@ -185,7 +185,7 @@ public final class TCBotActions {
 	/** Keeps a shield raised (after an axe stuns it, raises it again when it can). */
 	private void holdShield() {
 		TCBot b = this.bot;
-		// raised again right after an axe stuns it (the stun only knocks it down for a moment)
+		// raised again once an axe stun's cooldown is over
 		if (b.isHandActive()) {
 			if (isShield(b.getActiveItemStack())) {
 				return;
@@ -193,6 +193,10 @@ public final class TCBotActions {
 			if (this.every[1] != 0) {
 				return; // busy using something else on purpose
 			}
+		}
+		// an axe hit puts the shield on a 5 second cooldown (1.9+); wait it out like a player
+		if (b.getCooldownTracker().hasCooldown(net.minecraft.init.Items.SHIELD)) {
+			return;
 		}
 		if (isShield(b.getHeldItemOffhand())) {
 			b.setActiveHand(EnumHand.OFF_HAND);

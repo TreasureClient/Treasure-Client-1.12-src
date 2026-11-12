@@ -2568,6 +2568,16 @@ public abstract class EntityLivingBase extends Entity {
 		if (this.isHandActive()) {
 			ItemStack itemstack = this.getHeldItem(this.getActiveHand());
 
+			// Treasure Client: another player's "using an item" flag can arrive before we
+			// know what's in their hand (they come into view with a shield already up, or
+			// the item packet comes late). 1.12 then never showed the shield raised. Pick
+			// the item up as soon as it's there.
+			if (this.world.isRemote && this.activeItemStack.func_190926_b() && !itemstack.func_190926_b()
+					&& itemstack.getItemUseAction() != EnumAction.NONE && this.tcPicksUpUse()) {
+				this.activeItemStack = itemstack;
+				this.activeItemStackUseCount = itemstack.getMaxItemUseDuration();
+			}
+
 			// Treasure Client: modern servers often re-send the held item's slot (a new
 			// but equal stack) while you draw a bow or eat. 1.12 compared the exact
 			// object and cancelled the use. Like modern Minecraft, keep going as long
@@ -2592,6 +2602,11 @@ public abstract class EntityLivingBase extends Entity {
 				this.resetActiveHand();
 			}
 		}
+	}
+
+	/** Treasure Client: whether this entity's item use comes from the server's flag (not you). */
+	protected boolean tcPicksUpUse() {
+		return true;
 	}
 
 	public void setActiveHand(EnumHand hand) {

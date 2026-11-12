@@ -683,6 +683,10 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 		}
 	}
 
+	protected boolean tcPicksUpUse() {
+		return false; // your own item use is started by your clicks
+	}
+
 	public boolean isHandActive() {
 		return this.handActive;
 	}

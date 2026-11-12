@@ -182,6 +182,13 @@ public abstract class EntityThrowable extends Entity implements IProjectile {
 		}
 
 		Entity entity = null;
+		double tcMeetT = -1.0D;
+		// a projectile can only be met before the block this one hits
+		double tcMaxT = 1.0D;
+		if (raytraceresult != null) {
+			double mm = this.motionX * this.motionX + this.motionY * this.motionY + this.motionZ * this.motionZ;
+			tcMaxT = mm < 1.0E-9D ? 0.0D : Math.sqrt(vec3d.squareDistanceTo(vec3d1) / mm);
+		}
 		List<Entity> list = this.world.getEntitiesWithinAABBExcludingEntity(this,
 				this.getEntityBoundingBox().addCoord(this.motionX, this.motionY, this.motionZ).expandXyz(1.0D));
 		double d0 = 0.0D;
@@ -190,7 +197,21 @@ public abstract class EntityThrowable extends Entity implements IProjectile {
 		for (int i = 0; i < list.size(); ++i) {
 			Entity entity1 = list.get(i);
 
-			if (entity1.canBeCollidedWith()) {
+			if (!entity1.canBeCollidedWith()) {
+				// Treasure Client: pearl catching (1.21), a pearl can hit a wind charge in the air
+				if (this.tcCanHitProjectile(entity1)) {
+					double t = this.tcMeetTime(entity1);
+					if (t >= 0.0D && t <= tcMaxT) {
+						double d1 = Math.max(1.0E-7D, t * t * (this.motionX * this.motionX
+								+ this.motionY * this.motionY + this.motionZ * this.motionZ));
+						if (d1 < d0 || d0 == 0.0D) {
+							entity = entity1;
+							d0 = d1;
+							tcMeetT = t;
+						}
+					}
+				}
+			} else {
 				if (entity1 == this.ignoreEntity) {
 					flag = true;
 				} else if (this.thrower != null && this.ticksExisted < 2 && this.ignoreEntity == null) {
@@ -207,6 +228,14 @@ public abstract class EntityThrowable extends Entity implements IProjectile {
 						if (d1 < d0 || d0 == 0.0D) {
 							entity = entity1;
 							d0 = d1;
+							tcMeetT = -1.0D;
+						}
+					} else if (this.tcHitsFromInside() && axisalignedbb.isVecInside(vec3d)) {
+						// Treasure Client: starts inside them (someone moved onto it): still a hit
+						if (d0 == 0.0D || d0 > 1.0E-7D) {
+							entity = entity1;
+							d0 = 1.0E-7D;
+							tcMeetT = -1.0D;
 						}
 					}
 				}
@@ -223,6 +252,11 @@ public abstract class EntityThrowable extends Entity implements IProjectile {
 
 		if (entity != null) {
 			raytraceresult = new RayTraceResult(entity);
+			if (tcMeetT >= 0.0D) {
+				// met a projectile mid-tick: land where they met
+				this.setPosition(this.posX + this.motionX * tcMeetT, this.posY + this.motionY * tcMeetT,
+						this.posZ + this.motionZ * tcMeetT);
+			}
 		}
 
 		if (raytraceresult != null) {
@@ -237,6 +271,7 @@ public abstract class EntityThrowable extends Entity implements IProjectile {
 		this.posX += this.motionX;
 		this.posY += this.motionY;
 		this.posZ += this.motionZ;
+		this.tcMovedAt = this.world.getTotalWorldTime();
 		float f = MathHelper.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
 		this.rotationYaw = (float) (MathHelper.atan2(this.motionX, this.motionZ) * (180D / Math.PI));
 
@@ -291,6 +326,44 @@ public abstract class EntityThrowable extends Entity implements IProjectile {
 	protected float getGravityVelocity() {
 		return 0.03F;
 	}
+
+	/** Treasure Client: projectiles (which 1.12 can't hit) this one may hit. Server side only. */
+	protected boolean tcCanHitProjectile(Entity e) {
+		return false;
+	}
+
+	/** Treasure Client: whether it also hits an entity it starts the tick inside of. */
+	protected boolean tcHitsFromInside() {
+		return false;
+	}
+
+	/**
+	 * Treasure Client: when during this tick (0..1) this and another projectile come
+	 * close enough to touch, or -1. Uses both of their moves this tick, so it doesn't
+	 * matter which of them the world updated first.
+	 */
+	protected double tcMeetTime(Entity o) {
+		double ox0, oy0, oz0, ox1, oy1, oz1;
+		if (o instanceof EntityThrowable && ((EntityThrowable) o).tcMovedAt == this.world.getTotalWorldTime()) {
+			ox0 = o.prevPosX; oy0 = o.prevPosY; oz0 = o.prevPosZ; // it already moved this tick
+			ox1 = o.posX; oy1 = o.posY; oz1 = o.posZ;
+		} else {
+			ox0 = o.posX; oy0 = o.posY; oz0 = o.posZ;
+			ox1 = o.posX + o.motionX; oy1 = o.posY + o.motionY; oz1 = o.posZ + o.motionZ;
+		}
+		double rx = ox0 - this.posX, ry = oy0 - this.posY, rz = oz0 - this.posZ;
+		double vx = (ox1 - ox0) - this.motionX, vy = (oy1 - oy0) - this.motionY, vz = (oz1 - oz0) - this.motionZ;
+		double vv = vx * vx + vy * vy + vz * vz;
+		double t = vv < 1.0E-9D ? 0.0D : -(rx * vx + ry * vy + rz * vz) / vv;
+		t = t < 0.0D ? 0.0D : t > 1.0D ? 1.0D : t;
+		double dx = rx + vx * t, dy = ry + vy * t, dz = rz + vz * t;
+		// touching: half of each one's size plus the 0.3 margin projectiles get
+		double reach = this.width * 0.5D + o.width * 0.5D + 0.3D;
+		return dx * dx + dy * dy + dz * dz <= reach * reach ? t : -1.0D;
+	}
+
+	/** Treasure Client: world time of this projectile's last move (see tcMeetTime). */
+	public long tcMovedAt = Long.MIN_VALUE;
 
 	/**
 	 * Called when this EntityThrowable hits a block or entity.

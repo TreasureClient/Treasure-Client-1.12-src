@@ -38,6 +38,26 @@ public class EntityFireworkRocket extends Entity {
 	private int lifetime;
 	private EntityLivingBase field_191513_e;
 
+	/** Treasure Client: who this rocket is boosting (elytra), or null. */
+	public EntityLivingBase tcBoosted() {
+		return this.field_191513_e;
+	}
+
+	/** Treasure Client: ticks this rocket has flown. */
+	public int tcAge() {
+		return this.fireworkAge;
+	}
+
+	/** Treasure Client: the rocket's "Flight" value from its item (0 if none). */
+	public int tcFlight() {
+		ItemStack st = this.dataManager.get(FIREWORK_ITEM);
+		if (st == null || st.func_190926_b() || !st.hasTagCompound()) {
+			return 0;
+		}
+		net.minecraft.nbt.NBTTagCompound fw = st.getSubCompound("Fireworks");
+		return fw == null ? 0 : Math.max(0, (int) fw.getByte("Flight"));
+	}
+
 	public EntityFireworkRocket(World worldIn) {
 		super(worldIn);
 		this.setSize(0.25F, 0.25F);

@@ -493,6 +493,9 @@ public class TreasureMods {
 			autoGG = false; agGlhf = false; agMessage = "gg"; agDelay = 1000;
 			fullbright = false; clearWater = true; satDisplay = false; clearLiquids = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
+			TCCrosshairAddons.on = false; TCCrosshairAddons.target = true; TCCrosshairAddons.mobs = false;
+			TCCrosshairAddons.elytra = true; TCCrosshairAddons.rocket = true; TCCrosshairAddons.hit = true;
+			TCCrosshairAddons.hitMelee = false; TCCrosshairAddons.shieldBreak = false; TCCrosshairAddons.shieldUp = false;
 			tierTagger = false; ttMode = "highest";
 			passwordHider = false;
 			lowFire = false; lowFireH = 0.40f;
@@ -521,6 +524,15 @@ public class TreasureMods {
 					else if (k.equals("pauseUnfocused")) pauseUnfocused = v.equals("1");
 				else if (k.equals("noParticles")) noParticles = v.equals("1");
 				else if (k.equals("noHurtCam")) noHurtCam = v.equals("1");
+				else if (k.equals("chAddons")) TCCrosshairAddons.on = v.equals("1");
+				else if (k.equals("chTarget")) TCCrosshairAddons.target = v.equals("1");
+				else if (k.equals("chMobs")) TCCrosshairAddons.mobs = v.equals("1");
+				else if (k.equals("chElytra")) TCCrosshairAddons.elytra = v.equals("1");
+				else if (k.equals("chRocket")) TCCrosshairAddons.rocket = v.equals("1");
+				else if (k.equals("chHit")) TCCrosshairAddons.hit = v.equals("1");
+				else if (k.equals("chHitMelee")) TCCrosshairAddons.hitMelee = v.equals("1");
+				else if (k.equals("chShieldBreak")) TCCrosshairAddons.shieldBreak = v.equals("1");
+				else if (k.equals("chShieldUp")) TCCrosshairAddons.shieldUp = v.equals("1");
 				else if (k.equals("tntTimer")) tntTimer = v.equals("1");
 				else if (k.equals("via")) via = v.equals("1");
 				else if (k.equals("celeritas")) celeritas = v.equals("1");

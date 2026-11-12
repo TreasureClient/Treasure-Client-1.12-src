@@ -1139,6 +1139,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 					this.gameController.entityRenderer.func_190565_a(new ItemStack(Items.TOTEM_OF_UNDYING));
 				}
 			} else {
+				if (packetIn.getOpCode() == 30) {
+					net.minecraft.client.gui.TCCrosshairAddons.onShieldDisabled(entity); // Crosshair Addons
+				}
 				entity.handleStatusUpdate(packetIn.getOpCode());
 			}
 		}
@@ -1493,6 +1496,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 						new Object[] { GameSettings.getKeyDisplayString(gamesettings.keyBindInventory.getKeyCode()) }));
 			}
 		} else if (i == 6) {
+			net.minecraft.client.gui.TCCrosshairAddons.onArrowHit(); // Treasure Client: Crosshair Addons
 			this.clientWorldController.playSound(entityplayer, entityplayer.posX,
 					entityplayer.posY + (double) entityplayer.getEyeHeight(), entityplayer.posZ,
 					SoundEvents.ENTITY_ARROW_HIT_PLAYER, SoundCategory.PLAYERS, 0.18F, 0.45F);
