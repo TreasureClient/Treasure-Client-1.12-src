@@ -206,6 +206,7 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 	}
 
 	public void onResourceManagerReload(IResourceManager resourceManager) {
+		++net.lax1dude.eaglercraft.minecraft.EaglerCloudRenderer.tcGen; // clouds re-read their texture
 		this.updateDestroyBlockIcons();
 	}
 

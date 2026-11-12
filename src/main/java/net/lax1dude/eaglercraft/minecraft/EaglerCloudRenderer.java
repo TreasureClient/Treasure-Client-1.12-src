@@ -46,6 +46,129 @@ public class EaglerCloudRenderer {
 
 	private int renderListFancyAll = -1;
 
+	// Treasure Client: exact clouds. The vanilla mesh is whole 8x8 sheets plus 8 full strips per
+	// side per tile, and the empty parts are thrown away pixel by pixel (twice: depth, then color),
+	// so the graphics chip shaded nearly the whole cloud layer many times over. Outside the layer,
+	// only the faces of real cloud blocks are built (from the cloud texture), merged into runs.
+	// Same picture: those are exactly the pixels that survived before.
+	/** Bumped on resource reload (the cloud texture may change). */
+	public static int tcGen;
+	private int tcSeenGen = -1;
+	private boolean[] tcMap; // 256x256, true = cloud
+	private int tcExactList = -1;
+	private int tcKeyX = Integer.MIN_VALUE, tcKeyZ, tcKeyState, tcKeyGen;
+	private static final int TC_R = 24; // cells each side, the same 7x7 tiles of 8 as vanilla
+
+	private boolean[] tcCloudMap() {
+		if (this.tcSeenGen != tcGen) {
+			this.tcSeenGen = tcGen;
+			this.tcMap = null;
+			try (java.io.InputStream in = this.mc.getResourceManager().getResource(locationCloudsPNG).getInputStream()) {
+				net.lax1dude.eaglercraft.opengl.ImageData img = net.minecraft.client.renderer.texture.TextureUtil
+						.readBufferedImage(in);
+				if (img != null && img.width == 256 && img.height == 256) {
+					boolean[] m = new boolean[256 * 256];
+					for (int i = 0; i < m.length; ++i) {
+						m[i] = (img.pixels[i] >>> 24) > 25; // the alpha test (greater than 0.1)
+					}
+					this.tcMap = m;
+				}
+			} catch (Throwable t) {
+				this.tcMap = null; // other sizes or errors: the vanilla mesh
+			}
+		}
+		return this.tcMap;
+	}
+
+	private boolean tcCloud(boolean[] m, int bx, int bz, int x, int z) {
+		if (x < -TC_R || x >= TC_R + 8 || z < -TC_R || z >= TC_R + 8) {
+			return false;
+		}
+		return m[((bx + x) & 255) + ((bz + z) & 255) * 256];
+	}
+
+	private void tcBuildExact(boolean[] m, int bx, int bz, int state) {
+		if (this.tcExactList == -1) {
+			this.tcExactList = EaglercraftGPU.glGenLists();
+		}
+		Tessellator tessellator = Tessellator.getInstance();
+		WorldRenderer w = tessellator.getWorldRenderer();
+		w.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+		final float t = 0.00390625F, e = 9.765625E-4F, top = 4.0F - e;
+		final int lo = -TC_R, hi = TC_R + 8;
+		boolean bottom = state != RENDER_STATE_FANCY_BELOW, upper = state != RENDER_STATE_FANCY_ABOVE;
+		for (int z = lo; z < hi; ++z) {
+			// top and bottom, runs along x
+			for (int x = lo; x < hi;) {
+				if (!tcCloud(m, bx, bz, x, z)) { ++x; continue; }
+				int x1 = x + 1;
+				while (x1 < hi && tcCloud(m, bx, bz, x1, z)) ++x1;
+				if (bottom) {
+					w.pos(x, 0.0f, z + 1).tex(x * t, (z + 1) * t).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+					w.pos(x, 0.0f, z).tex(x * t, z * t).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+					w.pos(x1, 0.0f, z).tex(x1 * t, z * t).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+					w.pos(x1, 0.0f, z + 1).tex(x1 * t, (z + 1) * t).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+				}
+				if (upper) {
+					w.pos(x, top, z + 1).tex(x * t, (z + 1) * t).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+					w.pos(x1, top, z + 1).tex(x1 * t, (z + 1) * t).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+					w.pos(x1, top, z).tex(x1 * t, z * t).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+					w.pos(x, top, z).tex(x * t, z * t).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+				}
+				x = x1;
+			}
+			// north (-z) and south (+z) sides, runs along x
+			for (int side = 0; side < 2; ++side) {
+				int dz = side == 0 ? -1 : 1;
+				float zz = side == 0 ? z : z + 1.0f - e;
+				float v = (z + 0.5f) * t;
+				for (int x = lo; x < hi;) {
+					if (!tcCloud(m, bx, bz, x, z) || tcCloud(m, bx, bz, x, z + dz)) { ++x; continue; }
+					int x1 = x + 1;
+					while (x1 < hi && tcCloud(m, bx, bz, x1, z) && !tcCloud(m, bx, bz, x1, z + dz)) ++x1;
+					if (side == 0) {
+						w.pos(x, 4.0f, zz).tex(x * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+						w.pos(x1, 4.0f, zz).tex(x1 * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+						w.pos(x1, 0.0f, zz).tex(x1 * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+						w.pos(x, 0.0f, zz).tex(x * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+					} else {
+						w.pos(x, 4.0f, zz).tex(x * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+						w.pos(x, 0.0f, zz).tex(x * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+						w.pos(x1, 0.0f, zz).tex(x1 * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+						w.pos(x1, 4.0f, zz).tex(x1 * t, v).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+					}
+					x = x1;
+				}
+			}
+		}
+		// west (-x) and east (+x) sides, runs along z
+		for (int x = lo; x < hi; ++x) {
+			for (int side = 0; side < 2; ++side) {
+				int dx = side == 0 ? -1 : 1;
+				float xx = side == 0 ? x : x + 1.0f - e;
+				float u = (x + 0.5f) * t;
+				for (int z = lo; z < hi;) {
+					if (!tcCloud(m, bx, bz, x, z) || tcCloud(m, bx, bz, x + dx, z)) { ++z; continue; }
+					int z1 = z + 1;
+					while (z1 < hi && tcCloud(m, bx, bz, x, z1) && !tcCloud(m, bx, bz, x + dx, z1)) ++z1;
+					if (side == 0) {
+						w.pos(xx, 0.0f, z1).tex(u, z1 * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+						w.pos(xx, 4.0f, z1).tex(u, z1 * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+						w.pos(xx, 4.0f, z).tex(u, z * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+						w.pos(xx, 0.0f, z).tex(u, z * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+					} else {
+						w.pos(xx, 0.0f, z1).tex(u, z1 * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+						w.pos(xx, 0.0f, z).tex(u, z * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+						w.pos(xx, 4.0f, z).tex(u, z * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+						w.pos(xx, 4.0f, z1).tex(u, z1 * t).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+					}
+					z = z1;
+				}
+			}
+		}
+		tessellator.uploadDisplayList(this.tcExactList);
+	}
+
 
 
 	public EaglerCloudRenderer(Minecraft mc) {
@@ -121,6 +244,19 @@ public class EaglerCloudRenderer {
 			GlStateManager.scale(12.0F, 1.0F, 12.0F);
 
 			GlStateManager.translate(-f19, f3, -f20);
+			int tcList = renderListFancyAll;
+			boolean[] tcM = newState != RENDER_STATE_FANCY_INSIDE ? tcCloudMap() : null;
+			if (tcM != null) {
+				int bx = MathHelper.floor(d1) & 255, bz = MathHelper.floor(d2) & 255;
+				if (bx != tcKeyX || bz != tcKeyZ || newState != tcKeyState || tcGen != tcKeyGen) {
+					tcBuildExact(tcM, bx, bz, newState);
+					tcKeyX = bx;
+					tcKeyZ = bz;
+					tcKeyState = newState;
+					tcKeyGen = tcGen;
+				}
+				tcList = tcExactList;
+			}
 			GlStateManager.matrixMode(GL_TEXTURE);
 			GlStateManager.pushMatrix();
 			GlStateManager.translate(f17, f18, 0.0f);
@@ -142,7 +278,7 @@ public class EaglerCloudRenderer {
 					}
 					GlStateManager.color(_f1, _f2, _f3, 0.8f);
 				}
-				GlStateManager.callList(renderListFancyAll);
+				GlStateManager.callList(tcList);
 			}
 
 			GlStateManager.matrixMode(GL_TEXTURE);
