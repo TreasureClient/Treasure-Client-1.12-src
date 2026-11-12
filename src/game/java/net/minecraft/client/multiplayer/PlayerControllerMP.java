@@ -495,6 +495,7 @@ public class PlayerControllerMP {
 	public void attackEntity(EntityPlayer playerIn, Entity targetEntity) {
 		net.minecraft.client.renderer.TCTreasureAnimations.onHit(); // Treasure Animations: hit punch (visual)
 		net.minecraft.client.particle.TCTreasureParticles.hit(targetEntity); // Treasure Animations: hit sparkles (visual)
+		net.minecraft.client.gui.TCCrosshairAddons.onAttack(targetEntity); // Crosshair Addons
 		this.syncCurrentPlayItem();
 		this.connection.sendPacket(new CPacketUseEntity(targetEntity));
 

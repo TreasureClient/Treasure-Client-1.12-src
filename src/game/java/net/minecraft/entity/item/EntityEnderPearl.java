@@ -38,6 +38,22 @@ public class EntityEnderPearl extends EntityThrowable {
 	}
 
 	/**
+	 * Treasure Client: pearl catching (1.21). A pearl can hit a wind charge in the air: you
+	 * land on it and it bursts on you. Not in the pearl's first 5 ticks, so throwing both
+	 * at once doesn't catch it at your own face (the same rule the InstantPearlCatch mod
+	 * uses, Unlicense).
+	 */
+	protected boolean tcCanHitProjectile(net.minecraft.entity.Entity e) {
+		return !this.world.isRemote && this.ticksExisted >= 5
+				&& e instanceof net.minecraft.entity.projectile.EntityTCWindCharge && !e.isDead;
+	}
+
+	/** You can catch your own pearl even when you move onto it, not only when it flies into you. */
+	protected boolean tcHitsFromInside() {
+		return !this.world.isRemote;
+	}
+
+	/**
 	 * Called when this EntityThrowable hits a block or entity.
 	 */
 	protected void onImpact(RayTraceResult result) {

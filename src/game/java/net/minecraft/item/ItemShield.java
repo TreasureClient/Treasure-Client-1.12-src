@@ -23,8 +23,17 @@ public class ItemShield extends Item {
 		this.setMaxDamage(336);
 		this.addPropertyOverride(new ResourceLocation("blocking"), new IItemPropertyGetter() {
 			public float apply(ItemStack stack, @Nullable World worldIn, @Nullable EntityLivingBase entityIn) {
-				return entityIn != null && entityIn.isHandActive() && entityIn.getActiveItemStack() == stack ? 1.0F
-						: 0.0F;
+				if (entityIn == null || !entityIn.isHandActive()) {
+					return 0.0F;
+				}
+				ItemStack active = entityIn.getActiveItemStack();
+				if (active == stack) {
+					return 1.0F;
+				}
+				// Treasure Client: servers often re-send the held shield as a new copy; until the
+				// next tick catches up, the shield in the using hand still counts as raised
+				return !active.func_190926_b() && active.getItem() == stack.getItem()
+						&& entityIn.getHeldItem(entityIn.getActiveHand()) == stack ? 1.0F : 0.0F;
 			}
 		});
 		BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(this, ItemArmor.DISPENSER_BEHAVIOR);
