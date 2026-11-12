@@ -556,6 +556,7 @@ public class PlatformInput {
 	public static void update(int fpsLimit) {
 		if(windowWidth > 0 && windowHeight > 0) {
 			updateCanvasSize(windowWidth, windowHeight);
+			tcGpuMark(9); // Treasure Client (.lag GPU parts): copying the finished frame to the screen
 			WebGLBackBuffer.flipBuffer(windowWidth, windowHeight);
 		}
 		

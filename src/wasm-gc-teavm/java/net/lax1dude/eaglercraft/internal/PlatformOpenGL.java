@@ -111,6 +111,10 @@ public class PlatformOpenGL {
 	@Import(module = "platformOpenGL", name = "glDepthMask")
 	public static native void _wglDepthMask(boolean mask);
 
+	// Treasure Client: the sky is drawn behind the terrain at the far end of the depth range
+	@Import(module = "platformOpenGL", name = "glDepthRange")
+	public static native void _wglDepthRange(float near, float far);
+
 	@Import(module = "platformOpenGL", name = "glCullFace")
 	public static native void _wglCullFace(int glEnum);
 

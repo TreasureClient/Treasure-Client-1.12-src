@@ -90,6 +90,7 @@ function setCurrentGLContext(ctx, glesVersIn, allowExts, glImports) {
 	glImports["glClear"] = ctx.clear.bind(ctx);
 	glImports["glDepthFunc"] = ctx.depthFunc.bind(ctx);
 	glImports["glDepthMask"] = ctx.depthMask.bind(ctx);
+	glImports["glDepthRange"] = ctx.depthRange.bind(ctx);
 	glImports["glCullFace"] = ctx.cullFace.bind(ctx);
 	glImports["glViewport"] = ctx.viewport.bind(ctx);
 	glImports["glBlendFunc"] = ctx.blendFunc.bind(ctx);
@@ -300,6 +301,7 @@ function setNoGLContext(glImports) {
 	setUnsupportedFunc(glImports, platfOpenGLName, "glClear");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glDepthFunc");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glDepthMask");
+	setUnsupportedFunc(glImports, platfOpenGLName, "glDepthRange");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glCullFace");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glViewport");
 	setUnsupportedFunc(glImports, platfOpenGLName, "glBlendFunc");

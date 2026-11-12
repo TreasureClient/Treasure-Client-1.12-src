@@ -676,7 +676,7 @@ async function initPlatformInput(inputImports) {
 	// Each part is one EXT_disjoint_timer_query; the game marks where a new part starts (tcGpuMark).
 	// Results come back a few frames late; if too many are waiting, measuring pauses until they
 	// catch up (it used to stop for the whole session, the "GPU not measurable" in .lag).
-	const TC_GPU_PARTS = 10;
+	const TC_GPU_PARTS = 11;
 	const TC_GPU_MAX_PENDING = 80;
 	const TC_GPU_SAMPLE = 6;
 	const tcGpu = { tried: false, ext: null, free: [], pending: [], active: null, activePart: 0, inFrame: false,
