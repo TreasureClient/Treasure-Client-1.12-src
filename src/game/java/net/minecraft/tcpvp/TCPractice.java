@@ -51,10 +51,14 @@ import net.minecraft.world.storage.WorldInfo;
  */
 public final class TCPractice {
 
-	public static final String[] KITS = { "mace", "htcart", "ltcart", "sword", "axe", "netherite", "pot", "uhc",
-			"smp", "diasmp", "crystal", "custom" };
-	public static final String[] KIT_TITLES = { "Mace", "HT Cart", "LT Cart", "Sword", "Axe", "NethPot", "Diamond Pot",
-			"UHC", "SMP", "Diamond SMP", "Crystal", "Custom" };
+	public static final String[] KITS = { "mace", "spearmace", "htcart", "ltcart", "sword", "axe", "netherite", "pot",
+			"uhc", "smp", "diasmp", "crystal", "custom" };
+	public static final String[] KIT_TITLES = { "Mace", "Spear Mace", "HT Cart", "LT Cart", "Sword", "Axe", "NethPot",
+			"Diamond Pot", "UHC", "SMP", "Diamond SMP", "Crystal", "Custom" };
+	/** How high (blocks above the ground) the "Bot in Air" bot floats. */
+	public static final int AIR_HEIGHT = 4;
+	/** How long a Practice bot's shield stays down after an axe stun (vanilla: 100 ticks). */
+	public static final int BOT_SHIELD_STUN_TICKS = 40;
 	/** Game rule that holds the custom kit (as item NBT text), saved with the world. */
 	public static final String CUSTOM_RULE = "tcCustomKit";
 
@@ -470,6 +474,8 @@ public final class TCPractice {
 		ItemStack main = k.hotbar[0];
 		if (kit.equals("mace")) {
 			main = k.hotbar[6]; // the mace
+		} else if (kit.equals("spearmace")) {
+			main = k.hotbar[2]; // the spear
 		}
 		return new ItemStack[] { k.armor[0], k.armor[1], k.armor[2], k.armor[3], main, k.offhand };
 	}
@@ -531,46 +537,55 @@ public final class TCPractice {
 			for (int i = 23; i < 26; i++) v[i] = splash(PotionTypes.STRONG_SWIFTNESS);
 			v[26] = st(Items.TOTEM_OF_UNDYING, 1);
 			k.offhand = st(Items.TOTEM_OF_UNDYING, 1);
-		} else if (kit.equals("htcart")) {
-			// high tier: netherite, bow and crossbow, lots of carts and totems
+		} else if (kit.equals("spearmace")) {
+			// Spear Mace (Minecraft Wiki "Included items (spear mace)"): the mace kit plus a spear
 			k.armor = netherite(P4U3M);
-			k.armor[2] = ench(via("netherite_leggings", 1), Enchantments.BLAST_PROTECTION, 4, Enchantments.UNBREAKING, 3,
-					Enchantments.MENDING, 1);
 			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
-			h[0] = ench(via("netherite_sword", 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
-			h[1] = ench(st(Items.BOW, 1), Enchantments.POWER, 5, Enchantments.FLAME, 1, Enchantments.UNBREAKING, 3);
-			h[2] = block(Blocks.RAIL, 64);
-			h[3] = st(Items.TNT_MINECART, 64);
-			h[4] = ench(via("crossbow", 1), Enchantments.UNBREAKING, 3);
-			h[5] = st(Items.ENDER_PEARL, 16);
-			h[6] = st(Items.GOLDEN_APPLE, 64);
-			h[7] = ench(via("netherite_pickaxe", 1), Enchantments.EFFICIENCY, 5, Enchantments.UNBREAKING, 3);
-			h[8] = ench(st(Items.FLINT_AND_STEEL, 1), Enchantments.UNBREAKING, 3);
+			h[0] = ench(via("netherite_sword", 1), Enchantments.SHARPNESS, 5, Enchantments.SWEEPING_EDGE, 3,
+					Enchantments.UNBREAKING, 3, Enchantments.KNOCKBACK, 1);
+			h[1] = ench(via("netherite_axe", 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
+			h[2] = TCMace.addLore(ench(via("netherite_spear", 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3),
+					"Lunge III");
+			h[3] = TCMace.addEnch(TCMace.addEnch(ench(via("mace", 1), Enchantments.UNBREAKING, 3), TCMace.WIND_BURST, 1),
+					TCMace.DENSITY, 5);
+			h[4] = TCMace.addEnch(ench(via("mace", 1), Enchantments.UNBREAKING, 3), TCMace.BREACH, 4);
+			h[5] = via("wind_charge", 64);
+			h[6] = st(Items.ENDER_PEARL, 16);
+			h[7] = st(Items.GOLDEN_APPLE, 64);
+			h[8] = st(Items.TOTEM_OF_UNDYING, 1);
+			v[0] = via("wind_charge", 64);
+			v[1] = st(Items.ENDER_PEARL, 16);
+			v[2] = st(Items.EXPERIENCE_BOTTLE, 64);
+			v[3] = st(Items.GOLDEN_APPLE, 64);
+			for (int i = 9; i < 18; i++) v[i] = st(Items.TOTEM_OF_UNDYING, 1);
+			k.offhand = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
+		} else if (kit.equals("htcart") || kit.equals("ltcart")) {
+			// Cart (Minecraft Wiki "Cart PvP" lists, bow and crossbow versions together).
+			// LT Cart is the wiki's diamond kit; HT Cart is the netherite variant the wiki mentions.
+			boolean ht = kit.equals("htcart");
+			k.armor = ht ? netherite(P4U3) : diamond(P4U3);
+			k.armor[2] = ench(ht ? via("netherite_leggings", 1) : st(Items.DIAMOND_LEGGINGS, 1),
+					Enchantments.BLAST_PROTECTION, 4, Enchantments.UNBREAKING, 3);
+			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
+			h[0] = ench(ht ? via("netherite_sword", 1) : st(Items.DIAMOND_SWORD, 1), Enchantments.SHARPNESS, 5,
+					Enchantments.UNBREAKING, 3);
+			h[1] = ench(ht ? via("netherite_axe", 1) : st(Items.DIAMOND_AXE, 1), Enchantments.SHARPNESS, 5,
+					Enchantments.UNBREAKING, 3);
+			h[2] = ench(st(Items.BOW, 1), Enchantments.POWER, 5, Enchantments.UNBREAKING, 3, Enchantments.FLAME, 1);
+			h[3] = block(Blocks.RAIL, 64);
+			h[4] = st(Items.TNT_MINECART, 64);
+			h[5] = TCMace.addLore(ench(via("crossbow", 1), Enchantments.UNBREAKING, 3), "Piercing IV", "Quick Charge III");
+			h[6] = ench(st(Items.FLINT_AND_STEEL, 1), Enchantments.UNBREAKING, 3);
+			h[7] = st(Items.ENDER_PEARL, 16);
+			h[8] = st(Items.GOLDEN_APPLE, 64);
 			v[0] = st(Items.ARROW, 64);
 			v[1] = block(Blocks.RAIL, 64);
 			v[2] = st(Items.TNT_MINECART, 64);
-			v[3] = ench(via("netherite_axe", 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
-			v[4] = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3, Enchantments.MENDING, 1);
-			v[5] = st(Items.EXPERIENCE_BOTTLE, 64);
+			v[3] = ench(ht ? via("netherite_pickaxe", 1) : st(Items.DIAMOND_PICKAXE, 1), Enchantments.EFFICIENCY, 5,
+					Enchantments.UNBREAKING, 3);
+			v[4] = block(Blocks.LOG, 64);
+			v[5] = st(Items.COOKED_BEEF, 64);
 			for (int i = 9; i < 18; i++) v[i] = st(Items.TOTEM_OF_UNDYING, 1);
-			k.offhand = st(Items.TOTEM_OF_UNDYING, 1);
-		} else if (kit.equals("ltcart")) {
-			// low tier: diamond, bow only, no totems
-			k.armor = diamond(P4U3);
-			k.armor[2] = ench(st(Items.DIAMOND_LEGGINGS, 1), Enchantments.BLAST_PROTECTION, 4, Enchantments.UNBREAKING, 3);
-			ench(k.armor[3], Enchantments.FEATHER_FALLING, 4);
-			h[0] = ench(st(Items.DIAMOND_SWORD, 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
-			h[1] = ench(st(Items.DIAMOND_AXE, 1), Enchantments.SHARPNESS, 5, Enchantments.UNBREAKING, 3);
-			h[2] = ench(st(Items.BOW, 1), Enchantments.POWER, 5, Enchantments.FLAME, 1, Enchantments.UNBREAKING, 3);
-			h[3] = block(Blocks.RAIL, 64);
-			h[4] = st(Items.TNT_MINECART, 64);
-			h[5] = st(Items.ENDER_PEARL, 16);
-			h[6] = st(Items.GOLDEN_APPLE, 64);
-			h[7] = ench(st(Items.DIAMOND_PICKAXE, 1), Enchantments.EFFICIENCY, 5, Enchantments.UNBREAKING, 3);
-			h[8] = st(Items.COOKED_BEEF, 64);
-			v[0] = st(Items.ARROW, 64);
-			v[1] = block(Blocks.LOG, 64);
-			v[2] = ench(st(Items.FLINT_AND_STEEL, 1), Enchantments.UNBREAKING, 3);
 			k.offhand = ench(st(Items.SHIELD, 1), Enchantments.UNBREAKING, 3);
 		} else if (kit.equals("sword")) {
 			k.armor = diamond(P4U3);
@@ -691,6 +706,11 @@ public final class TCPractice {
 			k.offhand = st(Items.TOTEM_OF_UNDYING, 1);
 		}
 		return k;
+	}
+
+	/** Mace and Spear Mace duels: small map first, Bot Shield and Bot in Air buttons. */
+	private static boolean isMaceKit(String kit) {
+		return kit.equals("mace") || kit.equals("spearmace");
 	}
 
 	public static boolean isKit(String name) {
@@ -1031,7 +1051,7 @@ public final class TCPractice {
 		}
 		clearLoose(w, new AxisAlignedBB(x - 48, 0, z - 48, x + 49, 256, z + 49));
 		Duel d = new Duel(kit, x, z);
-		d.small = kit.equals("mace");
+		d.small = isMaceKit(kit);
 		buildButtons(w, d);
 		double y = TCArena.GROUND + 1;
 		giveKit(p, kit);
@@ -1052,7 +1072,9 @@ public final class TCPractice {
 		opts.appendSibling(clickable("[Rematch]", "/practicebutton rematch", TextFormatting.GREEN));
 		opts.appendSibling(new TextComponentString(" "));
 		opts.appendSibling(clickable("[Map: big/small]", "/practicebutton map", TextFormatting.AQUA));
-		if (kit.equals("mace")) {
+		opts.appendSibling(new TextComponentString(" "));
+		opts.appendSibling(clickable("[Bot knockback]", "/practicebutton knockback", TextFormatting.AQUA));
+		if (isMaceKit(kit)) {
 			opts.appendSibling(new TextComponentString(" "));
 			opts.appendSibling(clickable("[Bot shield]", "/practicebutton shield", TextFormatting.AQUA));
 			opts.appendSibling(new TextComponentString(" "));
@@ -1108,9 +1130,13 @@ public final class TCPractice {
 			loadout(bot, d);
 			p.addChatMessage(text("Bot shield: " + (d.shield ? "up (stays up even when stunned)" : "down"),
 					TextFormatting.AQUA, false));
+		} else if (what.equals("knockback")) {
+			boolean off = !TCHerobot.botNoKnockback(w);
+			TCHerobot.set(w, TCHerobot.BOT_NO_KNOCKBACK, off);
+			p.addChatMessage(text("Bot knockback: " + (off ? "off (the bot stays put)" : "on"), TextFormatting.AQUA, false));
 		} else if (what.equals("air")) {
 			d.air = !d.air;
-			bot.actions.setFloating(d.air, TCArena.GROUND + 1 + 8);
+			bot.actions.setFloating(d.air, TCArena.GROUND + 1 + AIR_HEIGHT);
 			p.addChatMessage(text("Bot " + (d.air ? "in the air" : "back on the ground"), TextFormatting.AQUA, false));
 		}
 	}
@@ -1134,7 +1160,7 @@ public final class TCPractice {
 				now.kit = d.kit;
 				loadout(now, d);
 				if (d.air) {
-					now.actions.setFloating(true, TCArena.GROUND + 1 + 8);
+					now.actions.setFloating(true, TCArena.GROUND + 1 + AIR_HEIGHT);
 				}
 				return true;
 			}
@@ -1175,8 +1201,9 @@ public final class TCPractice {
 				w.setBlockToAir(new BlockPos(bx, y + dy, bz + 1));
 			}
 		}
-		boolean mace = d.kit.equals("mace");
+		boolean mace = isMaceKit(d.kit);
 		placeButton(w, d.x, y, bz, "map", "Map", "big / small");
+		placeButton(w, mace ? d.x - 4 : d.x - 2, y, bz, "knockback", "Bot Knockback", "on / off");
 		if (mace) {
 			placeButton(w, d.x - 2, y, bz, "shield", "Bot Shield", "on / off");
 			placeButton(w, d.x + 2, y, bz, "air", "Bot in Air", "up / down");

@@ -41,6 +41,59 @@ public final class TCNameTagBatch {
 		int shift;
 		int halfWidth;
 		boolean sneak;
+		Layout lay;
+	}
+
+	// Treasure Client: each tag text's letters, laid out once and reused. Laying a tag out
+	// went through the font letter by letter three times per frame (width, see-through text,
+	// solid text), about 60 us per tag on a slow laptop; tag texts almost never change.
+	/** Bumped when fonts reload (letter sizes may change). */
+	public static int fontGen;
+
+	private static final class Layout {
+		FontRenderer font;
+		boolean unicode;
+		int gen;
+		int halfWidth;
+		boolean scrambled; // has obfuscated (random) letters: never reused
+		Op[][] ops = new Op[2][]; // [0] solid white text, [1] faint see-through text
+	}
+
+	private static final class Op {
+		ResourceLocation tex; // null for a plain box (underline, strikethrough)
+		boolean box;
+		float a, b, c, d, e, f, u0, v0, u1, v1;
+		int argb;
+	}
+
+	private static final java.util.HashMap<String, Layout> LAYOUTS = new java.util.HashMap<>();
+	private static java.util.ArrayList<Op> recording;
+
+	private static Layout layout(FontRenderer font, String str) {
+		Layout l = LAYOUTS.get(str);
+		if (l == null || l.font != font || l.unicode != font.getUnicodeFlag() || l.gen != fontGen) {
+			if (l == null) {
+				if (LAYOUTS.size() >= 512) {
+					LAYOUTS.clear();
+				}
+				l = new Layout();
+				LAYOUTS.put(str, l);
+			}
+			l.font = font;
+			l.unicode = font.getUnicodeFlag();
+			l.gen = fontGen;
+			l.halfWidth = font.getStringWidth(str) / 2;
+			l.scrambled = false;
+			for (int i = 0; i + 1 < str.length(); ++i) {
+				if (str.charAt(i) == '\u00a7' && (str.charAt(i + 1) == 'k' || str.charAt(i + 1) == 'K')) {
+					l.scrambled = true;
+					break;
+				}
+			}
+			l.ops[0] = null;
+			l.ops[1] = null;
+		}
+		return l;
 	}
 
 	private static Tag[] tags = new Tag[32];
@@ -96,7 +149,9 @@ public final class TCNameTagBatch {
 		t.font = font;
 		t.str = str;
 		t.shift = verticalShift;
-		t.halfWidth = font.getStringWidth(str) / 2;
+		Layout lay = layout(font, str);
+		t.lay = lay;
+		t.halfWidth = lay.halfWidth;
 		t.sneak = isSneaking;
 		return true;
 	}
@@ -119,6 +174,7 @@ public final class TCNameTagBatch {
 			for (int i = 0; i < tagCount; ++i) {
 				tags[i].str = null;
 				tags[i].font = null;
+				tags[i].lay = null;
 			}
 			tagCount = 0;
 		}
@@ -204,7 +260,34 @@ public final class TCNameTagBatch {
 				}
 				cur = t;
 				int color = seeThrough || t.sneak ? 553648127 : -1;
-				t.font.drawString(t.str, -t.halfWidth, t.shift, color);
+				Layout lay = t.lay;
+				if (lay == null || lay.scrambled) {
+					t.font.drawString(t.str, -t.halfWidth, t.shift, color);
+					continue;
+				}
+				int v = color == -1 ? 0 : 1;
+				Op[] ops = lay.ops[v];
+				if (ops == null) {
+					// lay the letters out once around (0, 0)
+					java.util.ArrayList<Op> rec = new java.util.ArrayList<>();
+					recording = rec;
+					try {
+						t.font.drawString(t.str, 0, 0, color);
+					} finally {
+						recording = null;
+					}
+					lay.ops[v] = ops = rec.toArray(new Op[rec.size()]);
+				}
+				float ox = -t.halfWidth, oy = t.shift;
+				for (int k = 0; k < ops.length; ++k) {
+					Op o = ops[k];
+					if (o.box) {
+						rect(o.a + ox, o.b + oy, o.c + ox, o.d + oy, o.argb);
+					} else {
+						glyph(o.tex, o.a + ox, o.b + ox, o.c + ox, o.d + ox, o.e + oy, o.f + oy, o.u0, o.v0, o.u1,
+								o.v1, o.argb);
+					}
+				}
 			}
 		} finally {
 			capturing = false;
@@ -263,6 +346,23 @@ public final class TCNameTagBatch {
 	/** A letter from the font renderer, in the tag's own coordinates. */
 	public static void glyph(ResourceLocation tex, float xTopL, float xBotL, float xTopR, float xBotR, float yTop,
 			float yBot, float u0, float v0, float u1, float v1, int argb) {
+		if (recording != null) {
+			Op o = new Op();
+			o.tex = tex;
+			o.a = xTopL;
+			o.b = xBotL;
+			o.c = xTopR;
+			o.d = xBotR;
+			o.e = yTop;
+			o.f = yBot;
+			o.u0 = u0;
+			o.v0 = v0;
+			o.u1 = u1;
+			o.v1 = v1;
+			o.argb = argb;
+			recording.add(o);
+			return;
+		}
 		Bucket b = bucket(tex);
 		WorldRenderer w = b.buf;
 		Matrix4f m = cur.m;
@@ -276,6 +376,17 @@ public final class TCNameTagBatch {
 
 	/** A plain box from the font renderer (underline or strikethrough). */
 	public static void rect(float left, float top, float right, float bottom, int argb) {
+		if (recording != null) {
+			Op o = new Op();
+			o.box = true;
+			o.a = left;
+			o.b = top;
+			o.c = right;
+			o.d = bottom;
+			o.argb = argb;
+			recording.add(o);
+			return;
+		}
 		Bucket b = bucket(null);
 		WorldRenderer w = b.buf;
 		Matrix4f m = cur.m;

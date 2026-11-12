@@ -100,6 +100,9 @@ public final class TCWind {
 	 * speed, like TNT) instead of a velocity packet that would replace it.
 	 */
 	public static void push(Entity e, double x, double y, double z) {
+		if (e instanceof TCBot && ((TCBot) e).tcNoKnockback()) {
+			return;
+		}
 		if (e instanceof EntityPlayerMP && !(e instanceof TCBot)) {
 			EntityPlayerMP p = (EntityPlayerMP) e;
 			if (p.connection != null) {

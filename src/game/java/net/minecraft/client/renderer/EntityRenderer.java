@@ -1272,6 +1272,9 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		RenderHelper.disableStandardItemLighting();
 		renderglobal.setupTerrain(entity, (double) partialTicks, icamera, this.frameCount++,
 				this.mc.player.isSpectator());
+		if (pass != 1) {
+			this.tcTerrainWatch();
+		}
 
 		if (pass == 0 || pass == 2) {
 			this.mc.renderGlobal.updateChunks(finishTimeNano);
@@ -1440,6 +1443,37 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 		GlStateManager.loadIdentity();
 		GlStateManager.gluPerspective(vigg, (float) this.mc.displayWidth / (float) this.mc.displayHeight, 0.05F, this.farPlaneDistance * MathHelper.SQRT_2);
 		GlStateManager.matrixMode(5888);
+	}
+
+	// Treasure Client: terrain watchdog. Sometimes after joining a server or teleporting no
+	// terrain was drawn at all (only sky) while the world was loaded. If you stand on a visible
+	// block and nothing has been drawn for 3 seconds, the chunk renderer is reloaded (like F3+A).
+	private long tcNoTerrainSince, tcLastTerrainFix;
+
+	private void tcTerrainWatch() {
+		long now = Minecraft.getSystemTime();
+		boolean missing = false;
+		if (org.taumc.celeritas.impl.TreasureCeleritas.isActive() && this.mc.player != null
+				&& this.mc.player.onGround && !this.mc.player.isSpectator() && !this.mc.player.isRiding()) {
+			net.minecraft.util.math.BlockPos below = new net.minecraft.util.math.BlockPos(this.mc.player.posX,
+					this.mc.player.posY - 0.2D, this.mc.player.posZ);
+			if (this.mc.world.isBlockLoaded(below) && this.mc.world.getBlockState(below)
+					.getRenderType() != net.minecraft.util.EnumBlockRenderType.INVISIBLE) {
+				missing = org.taumc.celeritas.impl.TreasureCeleritas.getRenderedChunks() == 0;
+			}
+		}
+		if (!missing) {
+			this.tcNoTerrainSince = 0L;
+			return;
+		}
+		if (this.tcNoTerrainSince == 0L) {
+			this.tcNoTerrainSince = now;
+		} else if (now - this.tcNoTerrainSince > 3000L && now - this.tcLastTerrainFix > 10000L) {
+			this.tcLastTerrainFix = now;
+			this.tcNoTerrainSince = 0L;
+			++net.minecraft.client.TCLagMonitor.terrainFixes;
+			this.mc.renderGlobal.loadRenderers();
+		}
 	}
 
 	private void renderCloudsCheck(RenderGlobal renderGlobalIn, float partialTicks, int pass, double p_180437_4_,

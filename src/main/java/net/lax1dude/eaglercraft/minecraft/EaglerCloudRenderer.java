@@ -2,13 +2,10 @@ package net.lax1dude.eaglercraft.minecraft;
 
 import static net.lax1dude.eaglercraft.opengl.RealOpenGLEnums.*;
 
-import java.util.BitSet;
 
 import net.lax1dude.eaglercraft.opengl.EaglercraftGPU;
 import net.lax1dude.eaglercraft.opengl.GlStateManager;
 import net.lax1dude.eaglercraft.opengl.WorldRenderer;
-import net.lax1dude.eaglercraft.opengl.ext.deferred.BetterFrustum;
-import net.lax1dude.eaglercraft.vector.Matrix4f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
@@ -47,13 +44,9 @@ public class EaglerCloudRenderer {
 
 	private int currentRenderState = -1;
 
-	private int[] renderListFancy = new int[] { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+	private int renderListFancyAll = -1;
 
-	// 1.8 seems to use a different projection matrix for clouds
-	private final Matrix4f fancyCloudProjView = new Matrix4f();
-	private final BetterFrustum frustum = new BetterFrustum();
 
-	private final BitSet visibleCloudParts = new BitSet();
 
 	public EaglerCloudRenderer(Minecraft mc) {
 		this.mc = mc;
@@ -127,10 +120,11 @@ public class EaglerCloudRenderer {
 			GlStateManager.pushMatrix();
 			GlStateManager.scale(12.0F, 1.0F, 12.0F);
 
-			Matrix4f.mul(GlStateManager.getProjectionReference(), GlStateManager.getModelViewReference(), fancyCloudProjView);
-			frustum.set(fancyCloudProjView);
-
-			visibleCloudParts.clear();
+			GlStateManager.translate(-f19, f3, -f20);
+			GlStateManager.matrixMode(GL_TEXTURE);
+			GlStateManager.pushMatrix();
+			GlStateManager.translate(f17, f18, 0.0f);
+			GlStateManager.matrixMode(GL_MODELVIEW);
 
 			for (int k = 0; k < 2; ++k) {
 				if (k == 0) {
@@ -146,61 +140,14 @@ public class EaglerCloudRenderer {
 					case 2:
 						GlStateManager.colorMask(true, true, true, true);
 					}
+					GlStateManager.color(_f1, _f2, _f3, 0.8f);
 				}
-
-				int j1;
-				for (int l = -3; l <= 3; ++l) {
-					for (int i1 = -3; i1 <= 3; ++i1) {
-						float f22 = (float) (l * 8);
-						float f23 = (float) (i1 * 8);
-						float f24 = f22 - f19;
-						float f25 = f23 - f20;
-
-						j1 = (l + 3) * 7 + i1 + 3;
-						if(k == 0) {
-							if(frustum.testAab(f24, f3, f25, (f24 + 8.0f), f3 + 4.0f, (f25 + 8.0f))) {
-								visibleCloudParts.set(j1);
-							}else {
-								continue;
-							}
-						}else {
-							if(!visibleCloudParts.get(j1)) {
-								continue;
-							}
-						}
-
-						GlStateManager.pushMatrix();
-						GlStateManager.translate(f24, f3, f25);
-						if(k != 0) {
-							GlStateManager.color(_f1, _f2, _f3, 0.8f);
-						}
-						GlStateManager.matrixMode(GL_TEXTURE);
-						GlStateManager.pushMatrix();
-						GlStateManager.translate(f22 * 0.00390625F + f17, f23 * 0.00390625F + f18, 0.0f);
-
-						int xx = 0;
-						int yy = 0;
-						if (l <= -1) {
-							xx = -1;
-						}else if (l >= 1) {
-							xx = 1;
-						}
-
-						if (i1 <= -1) {
-							yy = -1;
-						}else if (i1 >= 1) {
-							yy = 1;
-						}
-						
-						GlStateManager.callList(renderListFancy[(yy + 1) * 3 + xx + 1]);
-						
-						GlStateManager.popMatrix();
-						GlStateManager.matrixMode(GL_MODELVIEW);
-						GlStateManager.popMatrix();
-					}
-				}
+				GlStateManager.callList(renderListFancyAll);
 			}
 
+			GlStateManager.matrixMode(GL_TEXTURE);
+			GlStateManager.popMatrix();
+			GlStateManager.matrixMode(GL_MODELVIEW);
 			GlStateManager.popMatrix();
 		}else {
 			GlStateManager.disableCull();
@@ -238,23 +185,30 @@ public class EaglerCloudRenderer {
 				EaglercraftGPU.glDeleteLists(renderList);
 				renderList = -1;
 			}
-			for(int i = 0; i < renderListFancy.length; ++i) {
-				if(renderListFancy[i] == -1) {
-					renderListFancy[i] = EaglercraftGPU.glGenLists();
-				}
-				worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
-				generateFancyClouds(worldrenderer, i, newState != RENDER_STATE_FANCY_BELOW, newState != RENDER_STATE_FANCY_ABOVE);
-				tessellator.uploadDisplayList(renderListFancy[i]);
+			// Treasure Client: all 7x7 cloud pieces in one mesh (each piece's shape only depends on
+			// where it sits next to the camera, so the whole grid never changes); it was up to 98
+			// separate draws per frame, each with its own matrix and uniform upload
+			if(renderListFancyAll == -1) {
+				renderListFancyAll = EaglercraftGPU.glGenLists();
 			}
+			worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+			for (int l = -3; l <= 3; ++l) {
+				for (int i1 = -3; i1 <= 3; ++i1) {
+					int xx = l <= -1 ? -1 : (l >= 1 ? 1 : 0);
+					int yy = i1 <= -1 ? -1 : (i1 >= 1 ? 1 : 0);
+					generateFancyClouds(worldrenderer, (yy + 1) * 3 + xx + 1, newState != RENDER_STATE_FANCY_BELOW,
+							newState != RENDER_STATE_FANCY_ABOVE, l * 8.0f, i1 * 8.0f, l * 8.0f * 0.00390625F,
+							i1 * 8.0f * 0.00390625F);
+				}
+			}
+			tessellator.uploadDisplayList(renderListFancyAll);
 		}else {
 			if(renderList == -1) {
 				renderList = EaglercraftGPU.glGenLists();
 			}
-			for(int i = 0; i < renderListFancy.length; ++i) {
-				if(renderListFancy[i] != -1) {
-					EaglercraftGPU.glDeleteLists(renderListFancy[i]);
-					renderListFancy[i] = -1;
-				}
+			if(renderListFancyAll != -1) {
+				EaglercraftGPU.glDeleteLists(renderListFancyAll);
+				renderListFancyAll = -1;
 			}
 			worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
 			final double d = 4.8828125E-4;
@@ -266,57 +220,58 @@ public class EaglerCloudRenderer {
 		}
 	}
 
-	private static void generateFancyClouds(WorldRenderer worldrenderer, int mesh, boolean renderAbove, boolean renderBelow) {
+	private static void generateFancyClouds(WorldRenderer worldrenderer, int mesh, boolean renderAbove, boolean renderBelow,
+			float ox, float oz, float ou, float ov) {
 		int xx = (mesh % 3) - 1;
 		int yy = (mesh / 3) - 1;
 		boolean center = xx == 0 && yy == 0 && renderAbove && renderBelow;
 		
 		if (renderAbove) {
-			worldrenderer.pos(0.0f, 0.0f, 8.0f).tex(0.0f, 8.0f * 0.00390625F).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
-			worldrenderer.pos(0.0f, 0.0f, 0.0f).tex(0.0f, 0.0f).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (0.0f), 0.0f, oz + (8.0f)).tex(ou + (0.0f), ov + (8.0f * 0.00390625F)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (0.0f), 0.0f, oz + (0.0f)).tex(ou + (0.0f), ov + (0.0f)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
 			
-			worldrenderer.pos(8.0f, 0.0f, 0.0f).tex(8.0f * 0.00390625f, 0.0f).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
-			worldrenderer.pos(8.0f, 0.0f, 8.0f).tex(8.0f * 0.00390625f, 8.0f * 0.00390625f).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (8.0f), 0.0f, oz + (0.0f)).tex(ou + (8.0f * 0.00390625f), ov + (0.0f)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (8.0f), 0.0f, oz + (8.0f)).tex(ou + (8.0f * 0.00390625f), ov + (8.0f * 0.00390625f)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
 			if(center) {
-				worldrenderer.pos(0.0f, 0.0f, 8.0f).tex(0.0f, 8.0f * 0.00390625F).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
-				worldrenderer.pos(8.0f, 0.0f, 8.0f).tex(8.0f * 0.00390625f, 8.0f * 0.00390625f).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
-				worldrenderer.pos(8.0f, 0.0f, 0.0f).tex(8.0f * 0.00390625f, 0.0f).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
-				worldrenderer.pos(0.0f, 0.0f, 0.0f).tex(0.0f, 0.0f).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (0.0f), 0.0f, oz + (8.0f)).tex(ou + (0.0f), ov + (8.0f * 0.00390625F)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (8.0f), 0.0f, oz + (8.0f)).tex(ou + (8.0f * 0.00390625f), ov + (8.0f * 0.00390625f)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (8.0f), 0.0f, oz + (0.0f)).tex(ou + (8.0f * 0.00390625f), ov + (0.0f)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (0.0f), 0.0f, oz + (0.0f)).tex(ou + (0.0f), ov + (0.0f)).color(0.7f, 0.7f, 0.7f, 1.0f).endVertex();
 			}
 		}
 
 		if (renderBelow) {
-			worldrenderer.pos(0.0f, 4.0f - 9.765625E-4f, 8.0f).tex(0.0f, 8.0f * 0.00390625f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
-			worldrenderer.pos(8.0f, 4.0f - 9.765625E-4f, 8.0f).tex(8.0f * 0.00390625F, 8.0f * 0.00390625f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
-			worldrenderer.pos(8.0f, 4.0f - 9.765625E-4f, 0.0f).tex(8.0f * 0.00390625f, 0.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
-			worldrenderer.pos(0.0f, 4.0f - 9.765625E-4f, 0.0f).tex(0.0f, 0.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (0.0f), 4.0f - 9.765625E-4f, oz + (8.0f)).tex(ou + (0.0f), ov + (8.0f * 0.00390625f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (8.0f), 4.0f - 9.765625E-4f, oz + (8.0f)).tex(ou + (8.0f * 0.00390625F), ov + (8.0f * 0.00390625f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (8.0f), 4.0f - 9.765625E-4f, oz + (0.0f)).tex(ou + (8.0f * 0.00390625f), ov + (0.0f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (0.0f), 4.0f - 9.765625E-4f, oz + (0.0f)).tex(ou + (0.0f), ov + (0.0f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
 			if(center) {
-				worldrenderer.pos(0.0f, 4.0f - 9.765625E-4f, 8.0f).tex(0.0f, 8.0f * 0.00390625f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
-				worldrenderer.pos(0.0f, 4.0f - 9.765625E-4f, 0.0f).tex(0.0f, 0.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
-				worldrenderer.pos(8.0f, 4.0f - 9.765625E-4f, 0.0f).tex(8.0f * 0.00390625f, 0.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
-				worldrenderer.pos(8.0f, 4.0f - 9.765625E-4f, 8.0f).tex(8.0f * 0.00390625F, 8.0f * 0.00390625f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (0.0f), 4.0f - 9.765625E-4f, oz + (8.0f)).tex(ou + (0.0f), ov + (8.0f * 0.00390625f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (0.0f), 4.0f - 9.765625E-4f, oz + (0.0f)).tex(ou + (0.0f), ov + (0.0f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (8.0f), 4.0f - 9.765625E-4f, oz + (0.0f)).tex(ou + (8.0f * 0.00390625f), ov + (0.0f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (8.0f), 4.0f - 9.765625E-4f, oz + (8.0f)).tex(ou + (8.0f * 0.00390625F), ov + (8.0f * 0.00390625f)).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
 			}
 		}
 
 		if (xx != -1) {
 			for (int j1 = 0; j1 < 8; ++j1) {
-				worldrenderer.pos(j1, 0.0f, 8.0f).tex((j1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f)
+				worldrenderer.pos(ox + (j1), 0.0f, oz + (8.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f))
 						.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-				worldrenderer.pos(j1, 4.0f, 8.0f).tex((j1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f)
+				worldrenderer.pos(ox + (j1), 4.0f, oz + (8.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f))
 						.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-				worldrenderer.pos(j1, 4.0f, 0.0f).tex((j1 + 0.5f) * 0.00390625f, 0.0f).color(0.9f, 0.9f, 0.9f, 1.0f)
+				worldrenderer.pos(ox + (j1), 4.0f, oz + (0.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (0.0f)).color(0.9f, 0.9f, 0.9f, 1.0f)
 						.endVertex();
-				worldrenderer.pos(j1, 0.0f, 0.0f).tex((j1 + 0.5f) * 0.00390625f, 0.0f).color(0.9f, 0.9f, 0.9f, 1.0f)
+				worldrenderer.pos(ox + (j1), 0.0f, oz + (0.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (0.0f)).color(0.9f, 0.9f, 0.9f, 1.0f)
 						.endVertex();
 				
 				if(center) {
-					worldrenderer.pos(j1, 0.0f, 8.0f).tex((j1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f)
+					worldrenderer.pos(ox + (j1), 0.0f, oz + (8.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f))
 							.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-					worldrenderer.pos(j1, 0.0f, 0.0f).tex((j1 + 0.5f) * 0.00390625f, 0.0f).color(0.9f, 0.9f, 0.9f, 1.0f)
+					worldrenderer.pos(ox + (j1), 0.0f, oz + (0.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (0.0f)).color(0.9f, 0.9f, 0.9f, 1.0f)
 							.endVertex();
-					worldrenderer.pos(j1, 4.0f, 0.0f).tex((j1 + 0.5f) * 0.00390625f, 0.0f).color(0.9f, 0.9f, 0.9f, 1.0f)
+					worldrenderer.pos(ox + (j1), 4.0f, oz + (0.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (0.0f)).color(0.9f, 0.9f, 0.9f, 1.0f)
 							.endVertex();
-					worldrenderer.pos(j1, 4.0f, 8.0f).tex((j1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f)
+					worldrenderer.pos(ox + (j1), 4.0f, oz + (8.0f)).tex(ou + ((j1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f))
 							.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
 				}
 			}
@@ -324,22 +279,22 @@ public class EaglerCloudRenderer {
 
 		if (xx != 1) {
 			for (int k1 = 0; k1 < 8; ++k1) {
-				worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 0.0f, 8.0f)
-						.tex((k1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-				worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 0.0f, 0.0f).tex((k1 + 0.5f) * 0.00390625f, 0.0f)
+				worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 0.0f, oz + (8.0f))
+						.tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f)).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 0.0f, oz + (0.0f)).tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (0.0f))
 						.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-				worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 4.0f, 0.0f).tex((k1 + 0.5f) * 0.00390625f, 0.0f)
+				worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 4.0f, oz + (0.0f)).tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (0.0f))
 				.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-		worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 4.0f, 8.0f)
-				.tex((k1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+		worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 4.0f, oz + (8.0f))
+				.tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f)).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
 		if(center) {
-			worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 0.0f, 8.0f)
-					.tex((k1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-			worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 4.0f, 8.0f)
-					.tex((k1 + 0.5f) * 0.00390625f, 8.0f * 0.00390625f).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-			worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 4.0f, 0.0f).tex((k1 + 0.5f) * 0.00390625f, 0.0f)
+			worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 0.0f, oz + (8.0f))
+					.tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f)).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 4.0f, oz + (8.0f))
+					.tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (8.0f * 0.00390625f)).color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 4.0f, oz + (0.0f)).tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (0.0f))
 					.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
-			worldrenderer.pos(k1 + 1.0f - 9.765625E-4f, 0.0f, 0.0f).tex((k1 + 0.5f) * 0.00390625f, 0.0f)
+			worldrenderer.pos(ox + (k1 + 1.0f - 9.765625E-4f), 0.0f, oz + (0.0f)).tex(ou + ((k1 + 0.5f) * 0.00390625f), ov + (0.0f))
 					.color(0.9f, 0.9f, 0.9f, 1.0f).endVertex();
 		}
 			}
@@ -347,22 +302,22 @@ public class EaglerCloudRenderer {
 
 		if (yy != -1) {
 			for (int l1 = 0; l1 < 8; ++l1) {
-				worldrenderer.pos(0.0f, 4.0f, l1).tex(0.0f, (l1 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f)
+				worldrenderer.pos(ox + (0.0f), 4.0f, oz + (l1)).tex(ou + (0.0f), ov + ((l1 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f)
 						.endVertex();
-				worldrenderer.pos(8.0f, 4.0f, l1).tex(8.0f * 0.00390625f, (l1 + 0.5f) * 0.00390625f)
+				worldrenderer.pos(ox + (8.0f), 4.0f, oz + (l1)).tex(ou + (8.0f * 0.00390625f), ov + ((l1 + 0.5f) * 0.00390625f))
 						.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-				worldrenderer.pos(8.0f, 0.0f, l1).tex(8.0f * 0.00390625f, (l1 + 0.5f) * 0.00390625f)
+				worldrenderer.pos(ox + (8.0f), 0.0f, oz + (l1)).tex(ou + (8.0f * 0.00390625f), ov + ((l1 + 0.5f) * 0.00390625f))
 						.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-				worldrenderer.pos(0.0f, 0.0f, l1).tex(0.0f, (l1 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f)
+				worldrenderer.pos(ox + (0.0f), 0.0f, oz + (l1)).tex(ou + (0.0f), ov + ((l1 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f)
 						.endVertex();
 				if(center) {
-					worldrenderer.pos(0.0f, 4.0f, l1).tex(0.0f, (l1 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f)
+					worldrenderer.pos(ox + (0.0f), 4.0f, oz + (l1)).tex(ou + (0.0f), ov + ((l1 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f)
 							.endVertex();
-					worldrenderer.pos(0.0f, 0.0f, l1).tex(0.0f, (l1 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f)
+					worldrenderer.pos(ox + (0.0f), 0.0f, oz + (l1)).tex(ou + (0.0f), ov + ((l1 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f)
 							.endVertex();
-					worldrenderer.pos(8.0f, 0.0f, l1).tex(8.0f * 0.00390625f, (l1 + 0.5f) * 0.00390625f)
+					worldrenderer.pos(ox + (8.0f), 0.0f, oz + (l1)).tex(ou + (8.0f * 0.00390625f), ov + ((l1 + 0.5f) * 0.00390625f))
 							.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-					worldrenderer.pos(8.0f, 4.0f, l1).tex(8.0f * 0.00390625f, (l1 + 0.5f) * 0.00390625f)
+					worldrenderer.pos(ox + (8.0f), 4.0f, oz + (l1)).tex(ou + (8.0f * 0.00390625f), ov + ((l1 + 0.5f) * 0.00390625f))
 							.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
 				}
 			}
@@ -370,22 +325,22 @@ public class EaglerCloudRenderer {
 
 		if (yy != 1) {
 			for (int i2 = 0; i2 < 8; ++i2) {
-				worldrenderer.pos(0.0f, 4.0f, i2 + 1.0f - 9.765625E-4f).tex(0.0f, (i2 + 0.5f) * 0.00390625f)
+				worldrenderer.pos(ox + (0.0f), 4.0f, oz + (i2 + 1.0f - 9.765625E-4f)).tex(ou + (0.0f), ov + ((i2 + 0.5f) * 0.00390625f))
 						.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-				worldrenderer.pos(0.0f, 0.0f, i2 + 1.0f - 9.765625E-4f).tex(0.0f, (i2 + 0.5f) * 0.00390625f)
+				worldrenderer.pos(ox + (0.0f), 0.0f, oz + (i2 + 1.0f - 9.765625E-4f)).tex(ou + (0.0f), ov + ((i2 + 0.5f) * 0.00390625f))
 						.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-				worldrenderer.pos(8.0f, 0.0f, i2 + 1.0f - 9.765625E-4f)
-				.tex(8.0f * 0.00390625f, (i2 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-		worldrenderer.pos(8.0f, 4.0f, i2 + 1.0f - 9.765625E-4f)
-				.tex(8.0f * 0.00390625f, (i2 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+				worldrenderer.pos(ox + (8.0f), 0.0f, oz + (i2 + 1.0f - 9.765625E-4f))
+				.tex(ou + (8.0f * 0.00390625f), ov + ((i2 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+		worldrenderer.pos(ox + (8.0f), 4.0f, oz + (i2 + 1.0f - 9.765625E-4f))
+				.tex(ou + (8.0f * 0.00390625f), ov + ((i2 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
 		if(center) {
-			worldrenderer.pos(0.0f, 4.0f, i2 + 1.0f - 9.765625E-4f).tex(0.0f, (i2 + 0.5f) * 0.00390625f)
+			worldrenderer.pos(ox + (0.0f), 4.0f, oz + (i2 + 1.0f - 9.765625E-4f)).tex(ou + (0.0f), ov + ((i2 + 0.5f) * 0.00390625f))
 					.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-			worldrenderer.pos(8.0f, 4.0f, i2 + 1.0f - 9.765625E-4f)
-					.tex(8.0f * 0.00390625f, (i2 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-			worldrenderer.pos(8.0f, 0.0f, i2 + 1.0f - 9.765625E-4f)
-					.tex(8.0f * 0.00390625f, (i2 + 0.5f) * 0.00390625f).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
-			worldrenderer.pos(0.0f, 0.0f, i2 + 1.0f - 9.765625E-4f).tex(0.0f, (i2 + 0.5f) * 0.00390625f)
+			worldrenderer.pos(ox + (8.0f), 4.0f, oz + (i2 + 1.0f - 9.765625E-4f))
+					.tex(ou + (8.0f * 0.00390625f), ov + ((i2 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (8.0f), 0.0f, oz + (i2 + 1.0f - 9.765625E-4f))
+					.tex(ou + (8.0f * 0.00390625f), ov + ((i2 + 0.5f) * 0.00390625f)).color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
+			worldrenderer.pos(ox + (0.0f), 0.0f, oz + (i2 + 1.0f - 9.765625E-4f)).tex(ou + (0.0f), ov + ((i2 + 0.5f) * 0.00390625f))
 					.color(0.8f, 0.8f, 0.8f, 1.0f).endVertex();
 		}
 			}
