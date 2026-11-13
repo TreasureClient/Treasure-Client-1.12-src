@@ -389,6 +389,10 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 				}
 				return;
 			}
+			if (tcCmd.equalsIgnoreCase(".mesher")) {
+				net.minecraft.client.TCMesherProbe.start(this.mc);
+				return;
+			}
 			if (tcCmd.equalsIgnoreCase(".perf")) {
 				net.minecraft.client.TCPerfStats.print(this.mc);
 				return;

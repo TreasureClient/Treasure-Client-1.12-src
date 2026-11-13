@@ -27,6 +27,11 @@ public class MainClass {
 				workerMain();
 				return;
 			}
+			if("_mesher_process_".equalsIgnoreCase(args[0])) {
+				// Treasure Client: mesher worker test (.mesher)
+				net.lax1dude.eaglercraft.sp.server.internal.wasm_gc_teavm.TCMesherMain._main();
+				return;
+			}
 		}else if(args.length == 0) {
 			clientMain();
 			return;
