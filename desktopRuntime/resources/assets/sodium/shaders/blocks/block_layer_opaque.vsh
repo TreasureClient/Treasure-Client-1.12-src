@@ -21,9 +21,10 @@ out vec2 v_TexCoord;
 out float v_ChunkAgeMs;
 #endif
 
-out float v_MaterialMipBias;
+// Treasure Client: the same for every corner of a quad, so not blended across each pixel
+flat out float v_MaterialMipBias;
 #ifdef USE_FRAGMENT_DISCARD
-out float v_MaterialAlphaCutoff;
+flat out float v_MaterialAlphaCutoff;
 #endif
 
 #if defined(USE_FOG_POSTMODERN)
@@ -64,7 +65,8 @@ void main() {
 #endif
 
     // Transform the vertex position into model-view-projection space
-    gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * vec4(position, 1.0);
+    // Treasure Client: two matrix-times-position steps instead of a matrix-times-matrix per vertex
+    gl_Position = u_ProjectionMatrix * (u_ModelViewMatrix * vec4(position, 1.0));
 
     // Add the light color to the vertex color, and pass the texture coordinates to the fragment shader
     v_RdhFactor = _vert_rdh_factor * 2.0;
