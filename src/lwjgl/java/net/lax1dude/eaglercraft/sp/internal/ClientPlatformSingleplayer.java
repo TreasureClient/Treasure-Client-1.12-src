@@ -60,6 +60,21 @@ public class ClientPlatformSingleplayer {
 		}
 	}
 
+	// Treasure Client: mesher worker test (.mesher), only in the WASM build
+	public static boolean tcMesherStart() {
+		return false;
+	}
+
+	public static void tcMesherSend(byte[] data) {
+	}
+
+	public static byte[] tcMesherPoll() {
+		return null;
+	}
+
+	public static void tcMesherKill() {
+	}
+
 	public static boolean canKillWorker() {
 		return false;
 	}

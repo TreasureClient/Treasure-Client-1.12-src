@@ -39,7 +39,7 @@ function initializeClientPlatfSP(spImports) {
 			"ctx.getClassesTEADBGURL = function() { return o.classesTEADBG; };" +
 			"ctx.getEPKFiles = function() { return null; };" +
 			"ctx.getRootElement = function() { return null; };" +
-			"ctx.getMainArgs = function() { return [\"_worker_process_\"]; };" +
+			"ctx.getMainArgs = function() { return o.mainArgs || [\"_worker_process_\"]; };" +
 			"ctx.getImageURL = function(idx) { return null; };" +
 			"ctx.runMain = function(mainFunc) { mainFunc(); };" +
 			"importScripts(eagRuntimeJSURL);" +
@@ -129,6 +129,103 @@ function initializeClientPlatfSP(spImports) {
 
 	spImports["startIntegratedServer"] = new WebAssembly.Suspending(startIntegratedServerImpl);
 
+	// Treasure Client: mesher worker test (.mesher), a second worker separate from the singleplayer server
+	/** @type {Worker|null} */
+	var tcMesherObj = null;
+	const tcMesherQueue = new EaglerLinkedQueue();
+
+	/**
+	 * @return {Promise<boolean>}
+	 */
+	async function tcMesherStartImpl() {
+		if(tcMesherObj) {
+			return true;
+		}
+		if(!workerURL) {
+			workerURL = URL.createObjectURL(new Blob([ workerBootstrapSource ], { "type": "text/javascript;charset=utf8" }));
+		}
+		try {
+			tcMesherObj = new Worker(workerURL);
+		}catch(ex) {
+			eagStackTrace(ERROR, "Failed to create mesher worker", ex);
+			return false;
+		}
+		tcMesherObj.addEventListener("error", /** @type {function(Event)} */ (function(/** ErrorEvent */ evt) {
+			eagStackTrace(ERROR, "Mesher worker error", /** @type {Error} */ (evt.error));
+		}));
+		tcMesherObj.addEventListener("message", /** @type {function(Event)} */ (function(/** MessageEvent */ evt) {
+			const channel = evt.data["ch"];
+			if(channel === "~!LOGGER") {
+				addLogMessageImpl(evt.data["txt"], evt.data["err"]);
+				return;
+			}
+			const buf = evt.data["dat"];
+			if(!channel || !buf) {
+				return;
+			}
+			tcMesherQueue.push({
+				"ch": channel,
+				"data": new Uint8Array(buf),
+				"_next": null
+			});
+		}));
+		const teadbgCopy = new Int8Array(classesTEADBG.length);
+		teadbgCopy.set(classesTEADBG, 0);
+		var runtimeJS;
+		try {
+			runtimeJS = await fetch(/** @type {string} */ (eagRuntimeJSURL), { "cache": "force-cache" })
+					.then((resp) => resp.arrayBuffer());
+		}catch(ex) {
+			eagStackTrace(ERROR, "Failed to fetch eagruntime.js contents", ex);
+			try {
+				tcMesherObj.terminate();
+			}catch(exx) {
+			}
+			tcMesherObj = null;
+			return false;
+		}
+		tcMesherObj.postMessage({
+			"eaglercraftXOpts": eaglercraftXOpts,
+			"eagruntimeJS": runtimeJS,
+			"classesWASM": classesWASMModule,
+			"classesDeobfWASM": classesDeobfWASMModule,
+			"classesTEADBG": teadbgCopy.buffer,
+			"mainArgs": [ "_mesher_process_" ]
+		});
+		return true;
+	}
+
+	spImports["tcMesherStart"] = new WebAssembly.Suspending(tcMesherStartImpl);
+
+	/**
+	 * @param {string} channel
+	 * @param {Uint8Array} arr
+	 */
+	spImports["tcMesherSend"] = function(channel, arr) {
+		if(tcMesherObj) {
+			const copied = new Uint8Array(arr.length);
+			copied.set(arr, 0);
+			tcMesherObj.postMessage({
+				"ch": channel,
+				"dat": copied.buffer
+			}, [copied.buffer]);
+		}
+	};
+
+	spImports["tcMesherAvailable"] = tcMesherQueue.getLength.bind(tcMesherQueue);
+
+	spImports["tcMesherNext"] = tcMesherQueue.shift.bind(tcMesherQueue);
+
+	spImports["tcMesherKill"] = function() {
+		if(tcMesherObj) {
+			tcMesherObj.terminate();
+			tcMesherObj = null;
+		}
+		while(tcMesherQueue.getLength() > 0) {
+			tcMesherQueue.shift();
+		}
+	};
+
 	/**
 	 * @param {string} channel
 	 * @param {Uint8Array} arr
@@ -217,4 +314,9 @@ function initializeNoClientPlatfSP(spImports) {
 	setUnsupportedFunc(spImports, clientPlatfSPName, "killWorker");
 	setUnsupportedFunc(spImports, clientPlatfSPName, "showCrashReportOverlay");
 	setUnsupportedFunc(spImports, clientPlatfSPName, "hideCrashReportOverlay");
+	setUnsupportedFunc(spImports, clientPlatfSPName, "tcMesherStart");
+	setUnsupportedFunc(spImports, clientPlatfSPName, "tcMesherSend");
+	setUnsupportedFunc(spImports, clientPlatfSPName, "tcMesherAvailable");
+	setUnsupportedFunc(spImports, clientPlatfSPName, "tcMesherNext");
+	setUnsupportedFunc(spImports, clientPlatfSPName, "tcMesherKill");
 }

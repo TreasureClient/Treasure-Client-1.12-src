@@ -110,6 +110,48 @@ public class ClientPlatformSingleplayer {
 	@Import(module = "clientPlatformSingleplayer", name = "getNextPacket")
 	private static native JS_IPCPacketData getNextPacket();
 
+	// Treasure Client: mesher worker test (.mesher). A second worker on the other CPU core, separate
+	// from the singleplayer server, used to measure what moving chunk building there would cost.
+
+	/** Starts the mesher worker; false if it couldn't be created. */
+	public static boolean tcMesherStart() {
+		return tcMesherStart0();
+	}
+
+	@Import(module = "clientPlatformSingleplayer", name = "tcMesherStart")
+	private static native boolean tcMesherStart0();
+
+	/** Sends bytes to the mesher worker. */
+	public static void tcMesherSend(byte[] data) {
+		MemoryStack.push();
+		try {
+			tcMesherSend0(BetterJSStringConverter.stringToJS("tcmesh"),
+					WASMGCDirectArrayConverter.byteArrayToStackU8Array(data));
+		} finally {
+			MemoryStack.pop();
+		}
+	}
+
+	@Import(module = "clientPlatformSingleplayer", name = "tcMesherSend")
+	private static native void tcMesherSend0(JSString channel, Uint8Array arr);
+
+	/** The next message from the mesher worker, or null. */
+	public static byte[] tcMesherPoll() {
+		if (tcMesherAvailable0() == 0) {
+			return null;
+		}
+		return tcMesherNext0().internalize().contents;
+	}
+
+	@Import(module = "clientPlatformSingleplayer", name = "tcMesherAvailable")
+	private static native int tcMesherAvailable0();
+
+	@Import(module = "clientPlatformSingleplayer", name = "tcMesherNext")
+	private static native JS_IPCPacketData tcMesherNext0();
+
+	@Import(module = "clientPlatformSingleplayer", name = "tcMesherKill")
+	public static native void tcMesherKill();
+
 	public static boolean canKillWorker() {
 		return !isSingleThreadMode;
 	}

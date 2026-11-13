@@ -1013,6 +1013,7 @@ public class Minecraft implements IThreadListener {
 		long tcDrawNs = EagRuntime.nanoTime() - l - i1; // Treasure Client: lag monitor
 		this.updateDisplay();
 		TCLagMonitor.frame(i1, tcDrawNs, 0L);
+		TCMesherProbe.frame(this); // Treasure Client: .mesher test (idle unless typed)
 		this.checkGLError("Post render");
 		++this.fpsCounter;
 
