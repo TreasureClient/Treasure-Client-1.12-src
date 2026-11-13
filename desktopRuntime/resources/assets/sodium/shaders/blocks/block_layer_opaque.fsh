@@ -15,9 +15,9 @@ in vec2 v_TexCoord;
 in float v_ChunkAgeMs;
 #endif
 
-in float v_MaterialMipBias;
+flat in float v_MaterialMipBias;
 #ifdef USE_FRAGMENT_DISCARD
-in float v_MaterialAlphaCutoff;
+flat in float v_MaterialAlphaCutoff;
 #endif
 
 #if defined(USE_FOG_POSTMODERN)
