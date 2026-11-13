@@ -433,8 +433,9 @@ public class TreasureMods {
 		net.lax1dude.eaglercraft.opengl.EaglercraftGPU.tcMultiDrawOn = vsOn("vsMultiDraw", true);
 		net.minecraft.client.TCSteadyFps.mode = vsInt("vsSteady2", 0, -2, 60);
 		net.minecraft.client.TCHeat.liteEnabled = vsOn("vsHotLite", true);
-		// Sky Behind Blocks is off for good: on some computers the sky's lower half drew over the blocks
-		net.minecraft.client.renderer.EntityRenderer.tcSkyLateOn = false;
+		// Sky Behind Blocks: on. (Its old glitch, the sky drawing over blocks, came from putting the sky at
+		// the near end of the depth range; this engine stores depth reversed, so the far end is 0.)
+		net.minecraft.client.renderer.EntityRenderer.tcSkyLateOn = true;
 		workerIdleSec = vsInt("vsWorkerSec", 5, 5, 300);
 		crashRecoveries = vsInt("vsCrashMax", 3, 1, 10);
 	}

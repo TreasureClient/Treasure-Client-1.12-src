@@ -1324,10 +1324,12 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 			GlStateManager.matrixMode(5888);
 			GlStateManager.popMatrix(); // back to the plain camera view the sky is drawn from
 			GlStateManager.pushMatrix();
-			// every sky pixel lands at the far end of the depth range: it only shows where no block was drawn
+			// every sky pixel lands at the far end of the depth range: it only shows where no block was drawn.
+			// Eaglercraft stores depth reversed (its projection puts near at 1 and far at 0, the buffer is
+			// cleared to 0 and "less or equal" becomes "greater or equal"), so the far end is 0, not 1.
 			GlStateManager.enableDepth();
 			GlStateManager.depthFunc(515);
-			net.lax1dude.eaglercraft.internal.PlatformOpenGL._wglDepthRange(1.0F, 1.0F);
+			net.lax1dude.eaglercraft.internal.PlatformOpenGL._wglDepthRange(0.0F, 0.0F);
 			RenderGlobal.tcSkyLate = true;
 			try {
 				this.tcDrawSky(renderglobal, partialTicks, pass);
@@ -1451,7 +1453,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
 	}
 
 	/** Treasure Client: Sky Behind Blocks setting (Video Settings). */
-	public static boolean tcSkyLateOn = false;
+	public static boolean tcSkyLateOn = true;
 
 	/** The sky, drawn with its own far plane (moved out of renderWorldPass so it can come after the blocks). */
 	private void tcDrawSky(RenderGlobal renderglobal, float partialTicks, int pass) {
