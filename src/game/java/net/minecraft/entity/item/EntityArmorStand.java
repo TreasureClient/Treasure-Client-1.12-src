@@ -337,6 +337,11 @@ public class EntityArmorStand extends EntityLivingBase {
 	}
 
 	protected void collideWithNearbyEntities() {
+		// Treasure Client: this only pushes minecarts, and on your side of a server a minecart ignores
+		// pushes (the server moves it), so the search for nearby minecarts every tick changed nothing
+		if (this.world.isRemote) {
+			return;
+		}
 		List<Entity> list = this.world.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox(),
 				IS_RIDEABLE_MINECART);
 
