@@ -54,6 +54,22 @@ public class RenderArmorStand extends RenderLivingBase<EntityArmorStand> {
 		}
 	}
 
+	private static final net.minecraft.inventory.EntityEquipmentSlot[] TC_SLOTS = net.minecraft.inventory.EntityEquipmentSlot
+			.values();
+
+	/** True when the stand is hidden from you and holds and wears nothing, so only its name can show. */
+	private static boolean tcOnlyName(EntityArmorStand e) {
+		if (!e.isInvisibleToPlayer(net.minecraft.client.Minecraft.getMinecraft().player)) {
+			return false;
+		}
+		for (int i = 0; i < TC_SLOTS.length; ++i) {
+			if (!e.getItemStackFromSlot(TC_SLOTS[i]).func_190926_b()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	protected boolean canRenderName(EntityArmorStand entity) {
 		return entity.getAlwaysRenderNameTag();
 	}
@@ -62,6 +78,13 @@ public class RenderArmorStand extends RenderLivingBase<EntityArmorStand> {
 	 * Renders the desired {@code T} type Entity.
 	 */
 	public void doRender(EntityArmorStand entity, double x, double y, double z, float entityYaw, float partialTicks) {
+		// Treasure Client: servers use invisible, empty armor stands as floating text (holograms), often
+		// dozens per lobby. Nothing of them shows but the name, yet each went through the whole model
+		// setup (pose, light, every armor and item layer). Draw just the name, at the same place.
+		if (!this.renderOutlines && tcOnlyName(entity)) {
+			this.renderName(entity, x, y, z);
+			return;
+		}
 		if (entity.hasMarker()) {
 			this.renderMarker = true;
 		}
