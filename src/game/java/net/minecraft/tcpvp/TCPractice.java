@@ -909,6 +909,7 @@ public final class TCPractice {
 			}
 		}
 		ItemStack cursor = inv.getItemStack();
+		long changed = 0L; // inventory slots topped up this tick (all 41 fit)
 		for (int i = 0; i < size; i++) {
 			ItemStack want = kit[i];
 			if (want.func_190926_b()) {
@@ -950,10 +951,12 @@ public final class TCPractice {
 					add.func_190920_e(c);
 					inv.setInventorySlotContents(j, add);
 					missing -= c;
+					changed |= 1L << j;
 				} else if (same(s, want) && s.func_190916_E() < s.getMaxStackSize()) {
 					int c = Math.min(missing, s.getMaxStackSize() - s.func_190916_E());
 					s.func_190917_f(c);
 					missing -= c;
+					changed |= 1L << j;
 				}
 			}
 			for (int j = 0; j < 36 && missing > 0; j++) {
@@ -963,6 +966,18 @@ public final class TCPractice {
 					add.func_190920_e(c);
 					inv.setInventorySlotContents(j, add);
 					missing -= c;
+					changed |= 1L << j;
+				}
+			}
+		}
+		// Your own game already took the used item off its count (a thrown wind charge, a pearl).
+		// The top-up happens in the same tick, so the server's slot looks unchanged and nothing
+		// would be sent: your hotbar kept counting down to empty. Send the topped-up slots.
+		if (changed != 0L && !(p instanceof TCBot) && p.connection != null) {
+			for (int j = 0; j < 64 && j < inv.getSizeInventory(); j++) {
+				if ((changed & (1L << j)) != 0L) {
+					p.connection.sendPacket(new net.minecraft.network.play.server.SPacketSetSlot(-2, j,
+							inv.getStackInSlot(j).copy()));
 				}
 			}
 		}
