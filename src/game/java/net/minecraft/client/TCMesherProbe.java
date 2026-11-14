@@ -34,7 +34,7 @@ public final class TCMesherProbe {
 			say(mc, "§7test already running");
 			return;
 		}
-		say(mc, "§7starting a worker on the second CPU core (takes a few seconds)...");
+		say(mc, "§7starting a worker on the second CPU core; the game pauses for a moment, then results show here within about 20 s");
 		// the same fixed work the worker times on its core, timed here on the game's core
 		long w0 = EagRuntime.steadyTimeMillis();
 		long x = workload();
