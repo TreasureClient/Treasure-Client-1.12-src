@@ -226,7 +226,7 @@ public class GuiIngame extends Gui {
 		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
 		GameSettings gs = this.mc.gameSettings;
 		if (p == null || this.mc.world == null
-				|| (this.mc.currentScreen != null && !(this.mc.currentScreen instanceof GuiChat)) || gs.showDebugInfo
+				|| gs.showDebugInfo
 				|| (gs.thirdPersonView == 0 && p.inventory.armorItemInSlot(3).getItem() == Item.getItemFromBlock(Blocks.PUMPKIN))
 				|| this.recordPlayingUpFor > 0 || p.timeInPortal > 0.0F
 				|| p.prevTimeInPortal > 0.0F || p.getSleepTimer() > 0 || p.isRidingHorse()
@@ -952,8 +952,31 @@ public class GuiIngame extends Gui {
 		this.getFontRenderer().drawStringWithShadow(s, (float) (scaledRes.getScaledWidth() - i - 10), 5.0F, 16777215);
 	}
 
-	private void renderScoreboard(ScoreObjective objective, ScaledResolution scaledRes) {
-		Scoreboard scoreboard = objective.getScoreboard();
+	// Treasure Client: the sidebar's lines (sorted, filtered, formatted and measured), rebuilt only
+	// when the scoreboard changed (Scoreboard.tcVersion). Servers often animate the title several
+	// times a second; each redraw used to sort every score and build and measure every line again.
+	private Scoreboard tcSbBoard;
+	private ScoreObjective tcSbObj;
+	private int tcSbVer;
+	private FontRenderer tcSbFont;
+	private boolean tcSbUni;
+	private long tcSbAt;
+	private int tcSbN, tcSbLinesW;
+	private final String[] tcSbNames = new String[15], tcSbPts = new String[15];
+	private final int[] tcSbPtsW = new int[15];
+
+	private void tcSidebarLines(Scoreboard scoreboard, ScoreObjective objective, FontRenderer fr) {
+		long now = Minecraft.getSystemTime();
+		if (scoreboard == this.tcSbBoard && objective == this.tcSbObj && scoreboard.tcVersion == this.tcSbVer
+				&& fr == this.tcSbFont && fr.getUnicodeFlag() == this.tcSbUni && now - this.tcSbAt < 2000L) {
+			return;
+		}
+		this.tcSbBoard = scoreboard;
+		this.tcSbObj = objective;
+		this.tcSbVer = scoreboard.tcVersion;
+		this.tcSbFont = fr;
+		this.tcSbUni = fr.getUnicodeFlag();
+		this.tcSbAt = now;
 		Collection<Score> collection = scoreboard.getSortedScores(objective);
 		List<Score> list = Lists.newArrayList(Iterables.filter(collection, new Predicate<Score>() {
 			public boolean apply(@Nullable Score p_apply_1_) {
@@ -967,22 +990,40 @@ public class GuiIngame extends Gui {
 			collection = list;
 		}
 
-		int i = this.getFontRenderer().getStringWidth(objective.getDisplayName());
-
+		int w = 0, k = 0;
 		for (Score score : collection) {
+			if (k >= 15) {
+				break;
+			}
 			ScorePlayerTeam scoreplayerteam = scoreboard.getPlayersTeam(score.getPlayerName());
-			String s = ScorePlayerTeam.formatPlayerName(scoreplayerteam, score.getPlayerName()) + ": "
-					+ TextFormatting.RED + score.getScorePoints();
-			i = Math.max(i, this.getFontRenderer().getStringWidth(s));
+			String name = ScorePlayerTeam.formatPlayerName(scoreplayerteam, score.getPlayerName());
+			int pts = score.getScorePoints();
+			w = Math.max(w, fr.getStringWidth(name + ": " + TextFormatting.RED + pts));
+			String s2 = TextFormatting.RED + "" + pts;
+			this.tcSbNames[k] = name;
+			this.tcSbPts[k] = s2;
+			this.tcSbPtsW[k] = fr.getStringWidth(s2);
+			++k;
 		}
+		this.tcSbN = k;
+		this.tcSbLinesW = w;
+	}
 
-		int i1 = collection.size() * this.getFontRenderer().FONT_HEIGHT;
+	private void renderScoreboard(ScoreObjective objective, ScaledResolution scaledRes) {
+		Scoreboard scoreboard = objective.getScoreboard();
+		this.tcSidebarLines(scoreboard, objective, this.getFontRenderer());
+
+		String tcTitle = objective.getDisplayName();
+		int tcTitleW = this.getFontRenderer().getStringWidth(tcTitle);
+		int i = Math.max(tcTitleW, this.tcSbLinesW);
+
+		int i1 = this.tcSbN * this.getFontRenderer().FONT_HEIGHT;
 		int j1 = scaledRes.getScaledHeight() / 2 + i1 / 3;
 		int k1 = 3;
 		int l1 = scaledRes.getScaledWidth() - i - 3;
 		int fh = this.getFontRenderer().FONT_HEIGHT;
 		int l = scaledRes.getScaledWidth() - 3 + 2;
-		int n = collection.size();
+		int n = this.tcSbN;
 		if (n == 0) {
 			return;
 		}
@@ -1007,20 +1048,13 @@ public class GuiIngame extends Gui {
 		GlStateManager.enableTexture2D();
 		GlStateManager.disableBlend();
 
-		int j = 0;
-		for (Score score1 : collection) {
-			++j;
-			ScorePlayerTeam scoreplayerteam1 = scoreboard.getPlayersTeam(score1.getPlayerName());
-			String s1 = ScorePlayerTeam.formatPlayerName(scoreplayerteam1, score1.getPlayerName());
-			String s2 = TextFormatting.RED + "" + score1.getScorePoints();
+		for (int j = 1; j <= n; ++j) {
 			int k = j1 - j * fh;
-			this.getFontRenderer().drawString(s1, l1, k, 553648127);
-			this.getFontRenderer().drawString(s2, l - this.getFontRenderer().getStringWidth(s2), k, 553648127);
+			this.getFontRenderer().drawString(this.tcSbNames[j - 1], l1, k, 553648127);
+			this.getFontRenderer().drawString(this.tcSbPts[j - 1], l - this.tcSbPtsW[j - 1], k, 553648127);
 
 			if (j == n) {
-				String s3 = objective.getDisplayName();
-				this.getFontRenderer().drawString(s3, l1 + i / 2 - this.getFontRenderer().getStringWidth(s3) / 2,
-						k - fh, 553648127);
+				this.getFontRenderer().drawString(tcTitle, l1 + i / 2 - tcTitleW / 2, k - fh, 553648127);
 			}
 		}
 	}

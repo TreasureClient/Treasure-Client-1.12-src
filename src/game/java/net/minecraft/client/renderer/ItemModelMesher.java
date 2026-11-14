@@ -14,6 +14,12 @@ import net.minecraft.item.ItemStack;
 public class ItemModelMesher {
 	private final Map<Integer, ModelResourceLocation> simpleShapes = Maps.<Integer, ModelResourceLocation>newHashMap();
 	private final Map<Integer, IBakedModel> simpleShapesCache = Maps.<Integer, IBakedModel>newHashMap();
+	/**
+	 * Treasure Client: the same models keyed by a plain int. Every item drawn (hotbar, menus, held
+	 * items) looked its model up through a boxed-Integer HashMap; on a slow device that was
+	 * 1-2% of all CPU time with a chest menu open.
+	 */
+	private final com.carrotsearch.hppc.IntObjectHashMap<IBakedModel> tcFast = new com.carrotsearch.hppc.IntObjectHashMap<IBakedModel>(4096);
 	private final Map<Item, ItemMeshDefinition> shapers = Maps.<Item, ItemMeshDefinition>newHashMap();
 	private final ModelManager modelManager;
 
@@ -54,7 +60,7 @@ public class ItemModelMesher {
 
 	@Nullable
 	protected IBakedModel getItemModel(Item item, int meta) {
-		return this.simpleShapesCache.get(Integer.valueOf(this.getIndex(item, meta)));
+		return this.tcFast.get(this.getIndex(item, meta));
 	}
 
 	private int getIndex(Item item, int meta) {
@@ -63,7 +69,9 @@ public class ItemModelMesher {
 
 	public void register(Item item, int meta, ModelResourceLocation location) {
 		this.simpleShapes.put(Integer.valueOf(this.getIndex(item, meta)), location);
-		this.simpleShapesCache.put(Integer.valueOf(this.getIndex(item, meta)), this.modelManager.getModel(location));
+		IBakedModel m = this.modelManager.getModel(location);
+		this.simpleShapesCache.put(Integer.valueOf(this.getIndex(item, meta)), m);
+		this.tcFast.put(this.getIndex(item, meta), m);
 	}
 
 	public void register(Item item, ItemMeshDefinition definition) {
@@ -76,9 +84,12 @@ public class ItemModelMesher {
 
 	public void rebuildCache() {
 		this.simpleShapesCache.clear();
+		this.tcFast.clear();
 
 		for (Entry<Integer, ModelResourceLocation> entry : this.simpleShapes.entrySet()) {
-			this.simpleShapesCache.put(entry.getKey(), this.modelManager.getModel(entry.getValue()));
+			IBakedModel m = this.modelManager.getModel(entry.getValue());
+			this.simpleShapesCache.put(entry.getKey(), m);
+			this.tcFast.put(entry.getKey().intValue(), m);
 		}
 	}
 }
