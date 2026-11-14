@@ -155,6 +155,7 @@ public class TextureManager implements ITickable, IResourceManagerReloadListener
 	}
 
 	public void onResourceManagerReload(IResourceManager resourceManager) {
+		LayeredColorMaskTexture.tcClearCache(); // Treasure Client: decoded banner pictures
 		Config.dbg("*** Reloading textures ***");
         Config.log("Resource packs: " + Config.getResourcePackNames());
 		

@@ -46,6 +46,9 @@ public abstract class DefaultChunkRenderer extends ShaderChunkRenderer {
         if (buffer == null) {
             buffer = new SharedQuadIndexBuffer(commandList, type);
             this.sharedIndexBuffers.put(type, buffer);
+            // Treasure Client: start big enough for busy areas (1.5 MB), so it's built while the world
+            // loads instead of being rebuilt larger mid-game (a 15 ms freeze on a slow laptop)
+            buffer.ensureCapacity(commandList, 65536 * type.getIndexBufferElementsPerPrimitive());
         }
         return buffer;
     }
