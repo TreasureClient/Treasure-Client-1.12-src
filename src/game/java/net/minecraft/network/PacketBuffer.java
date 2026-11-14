@@ -270,6 +270,7 @@ public class PacketBuffer extends ByteBuf {
 	 * + Reads an ItemStack from this buffer
 	 */
 	public ItemStack readItemStackFromBuffer() throws IOException {
+		int start = this.readerIndex();
 		int i = this.readShort();
 
 		if (i < 0) {
@@ -277,6 +278,29 @@ public class PacketBuffer extends ByteBuf {
 		} else {
 			int j = this.readByte();
 			int k = this.readShort();
+			// Treasure Client: an item with lots of hidden data that came before in exactly the same
+			// bytes is copied from last time instead of decoded again (see TCItemDecodeCache)
+			ByteBuf b = this.buf;
+			int nbt = this.readerIndex();
+			if (b.hasArray() && this.isReadable() && this.getByte(nbt) != 0) {
+				byte[] arr = b.array();
+				int off = b.arrayOffset();
+				int end = TCItemDecodeCache.nbtEnd(arr, off + nbt, off + this.writerIndex());
+				if (end >= 0 && end - (off + nbt) >= TCItemDecodeCache.MIN_NBT_BYTES) {
+					int h = TCItemDecodeCache.hash(arr, off + start, end);
+					ItemStack hit = TCItemDecodeCache.get(arr, off + start, end, h);
+					if (hit != null) {
+						this.readerIndex(end - off);
+						return hit.copy();
+					}
+					ItemStack itemstack = new ItemStack(Item.getItemById(i), j, k);
+					itemstack.setTagCompound(this.readNBTTagCompoundFromBuffer());
+					if (this.readerIndex() == end - off) {
+						TCItemDecodeCache.put(arr, off + start, end, h, itemstack.copy());
+					}
+					return itemstack;
+				}
+			}
 			ItemStack itemstack = new ItemStack(Item.getItemById(i), j, k);
 			itemstack.setTagCompound(this.readNBTTagCompoundFromBuffer());
 			return itemstack;

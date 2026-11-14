@@ -1076,7 +1076,7 @@ public class TCLagMonitor {
 	private static final String[] GROW_NAMES = { "entities", "block ents", "ticking blocks", "chunks",
 			"score names", "teams", "tab players", "skins", "textures", "terrain sections", "terrain buffers",
 			"particles", "GL buffers", "GL textures", "GL vertex arrays", "framebuffers", "renderbuffers",
-			"GL queries" };
+			"GL queries", "item pictures" };
 	private static Object growConn;
 	private static long growConnMs;
 	private static int[] growStart;
@@ -1116,6 +1116,13 @@ public class TCLagMonitor {
 		try { v[10] = org.taumc.celeritas.lwjgl.webgl.WebGLService.tcLiveBuffers; } catch (Throwable t) { }
 		try { v[11] = Integer.parseInt(mc.effectRenderer.getStatistics().trim()); } catch (Throwable t) { }
 		for (int k = 0; k < 6; k++) v[12 + k] = net.lax1dude.eaglercraft.internal.PlatformOpenGL.tcGL[k];
+		// the item picture cache keeps up to MAX_ENTRIES on the GPU (a buffer and a vertex array each)
+		// and frees its oldest when full, so it's listed on its own and left out of the GL counts:
+		// those then only climb when something leaks
+		int pics = net.minecraft.client.renderer.TCItemModelCache.count();
+		v[18] = pics;
+		if (v[12] >= pics) v[12] -= pics;
+		if (v[14] >= pics) v[14] -= pics;
 		return v;
 	}
 
@@ -1140,7 +1147,8 @@ public class TCLagMonitor {
 		for (int i = 0; i < now.length; i++) {
 			int a = growStart[i], b = now[i];
 			if (a < 0 || b < 0) continue;
-			boolean grew = b - a >= 50 && b > a + a / 2;
+			boolean grew = b - a >= 50 && b > a + a / 2
+					&& !(i == 18 && b <= net.minecraft.client.renderer.TCItemModelCache.MAX_ENTRIES); // capped cache
 			if (!all && !grew) continue;
 			if (g.length() > 0) g.append(", ");
 			g.append(grew ? "§c" : "§f").append(GROW_NAMES[i]).append(' ').append(a).append("→").append(b).append("§7");
