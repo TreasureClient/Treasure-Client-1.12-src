@@ -2397,7 +2397,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       function hsHide(toGame) {
         if (!hsOpen) return;
         hsOpen = false; root.classList.remove('hud-screen'); hs.classList.add('tc-hidden');
-        if (drag) { drag.el.classList.remove('tc-hud-drag-active'); drag = null; }
+        if (drag) { drag.el.classList.remove('tc-hud-drag-active'); drag = null; window.removeEventListener('mousemove', move, true); }
         editing = false; root.classList.remove('hud-editing'); applyHud();
         if (toGame) {
           try { localStorage.setItem('_eaglercraft_1.12.tcpause', btoa(String.fromCharCode(2))); } catch (e) {}
@@ -2437,6 +2437,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var r = t.getBoundingClientRect();
         drag = { el: t, dx: e.clientX - r.left, dy: e.clientY - r.top };
         t.classList.add('tc-hud-drag-active');
+        window.addEventListener('mousemove', move, true); // only listen to mouse moves while dragging
       }
       function move(e) {
         if (!drag) return;
@@ -2453,9 +2454,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         state.hudPositions[id] = { left: Math.round(r.left), top: Math.round(r.top) };
         save();
         drag.el.classList.remove('tc-hud-drag-active'); drag = null;
+        window.removeEventListener('mousemove', move, true);
       }
       window.addEventListener('mousedown', down, true);
-      window.addEventListener('mousemove', move, true);
       window.addEventListener('mouseup', up, true);
     })();
 

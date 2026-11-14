@@ -341,19 +341,36 @@ async function initPlatformInput(inputImports) {
 	}));
 
 	var tcLastMouseX = 0, tcLastMouseY = 0;
+	/** @type {Object} */
+	var tcQueuedMove = null;
 	canvasElement.addEventListener("mousemove", /** @type {function(Event)} */ (currentEventListeners.mousemove = function(/** MouseEvent */ evt) {
 		evt.preventDefault();
 		evt.stopPropagation();
 		// Treasure Client: while aiming (pointer locked) the cursor position isn't used, and reading
 		// offsetX/offsetY can make the browser lay out the page again on every mouse move
 		const locked = (document.pointerLockElement === canvasElement);
+		const mx = evt.movementX, my = evt.movementY;
+		// Treasure Client (Ixeris-style): while aiming, a move that arrives before the game read the last one
+		// is added onto it instead of queued as its own event, so fast mouse movement never piles up work for
+		// the game. Big jumps stay separate so the pointer-lock jump filter still sees them.
+		if(locked && tcQueuedMove !== null && mainEventQueue.lastElement === tcQueuedMove
+				&& mx > -200 && mx < 200 && my > -200 && my < 200) {
+			const o = tcQueuedMove["eventObj"];
+			const nx = o["movementX"] + mx, ny = o["movementY"] + my;
+			if(nx > -200 && nx < 200 && ny > -200 && ny < 200) {
+				o["movementX"] = nx;
+				o["movementY"] = ny;
+				return;
+			}
+		}
 		pushEvent(EVENT_TYPE_INPUT, EVENT_INPUT_MOUSE, {
 			"eventType": EVENT_MOUSE_MOVE,
 			"posX": locked ? tcLastMouseX : (tcLastMouseX = evt.offsetX),
 			"posY": locked ? tcLastMouseY : (tcLastMouseY = evt.offsetY),
-			"movementX": evt.movementX,
-			"movementY": evt.movementY
+			"movementX": mx,
+			"movementY": my
 		});
+		tcQueuedMove = locked ? mainEventQueue.lastElement : null;
 	}));
 
 	canvasElement.addEventListener("mouseenter", currentEventListeners.mouseenter = function(/** Event */ evt) {
