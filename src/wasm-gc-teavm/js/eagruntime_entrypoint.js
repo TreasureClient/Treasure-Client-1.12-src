@@ -30,7 +30,7 @@ async function entryPoint() {
 		faviconURL = self.__eaglercraftXLoaderContext.getImageURL(3);
 		const args = self.__eaglercraftXLoaderContext.getMainArgs();
 		delete self.__eaglercraftXLoaderContext;
-		const isWorker = args[0] === "_worker_process_";
+		const isWorker = args[0] === "_worker_process_" || args[0] === "_mesher_process_"; // Treasure Client: .mesher worker too
 
 		if(!isWorker) {
 			if(!await initializeContext()) {

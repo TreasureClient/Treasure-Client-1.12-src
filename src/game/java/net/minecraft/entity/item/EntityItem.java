@@ -113,7 +113,14 @@ public class EntityItem extends Entity {
 						(this.getEntityBoundingBox().minY + this.getEntityBoundingBox().maxY) / 2.0D, this.posZ);
 			}
 
-			this.moveEntity(MoverType.SELF, this.motionX, this.motionY, this.motionZ);
+			// Treasure Client: on a server, an item lying still on the ground only runs its block
+			// collision every 4th tick (what newer Minecraft does); the server keeps its real position
+			boolean tcMove = !this.world.isRemote || !this.onGround
+					|| this.motionX * this.motionX + this.motionZ * this.motionZ > 1.0E-5D
+					|| (this.ticksExisted + this.getEntityId()) % 4 == 0;
+			if (tcMove) {
+				this.moveEntity(MoverType.SELF, this.motionX, this.motionY, this.motionZ);
+			}
 			boolean flag = (int) this.prevPosX != (int) this.posX || (int) this.prevPosY != (int) this.posY
 					|| (int) this.prevPosZ != (int) this.posZ;
 
@@ -132,19 +139,21 @@ public class EntityItem extends Entity {
 
 			float f = 0.98F;
 
-			if (this.onGround) {
+			if (tcMove && this.onGround) {
 				f = this.world
 						.getBlockState(new BlockPos(MathHelper.floor(this.posX),
 								MathHelper.floor(this.getEntityBoundingBox().minY) - 1, MathHelper.floor(this.posZ)))
 						.getBlock().slipperiness * 0.98F;
 			}
 
-			this.motionX *= (double) f;
-			this.motionY *= 0.9800000190734863D;
-			this.motionZ *= (double) f;
+			if (tcMove) {
+				this.motionX *= (double) f;
+				this.motionY *= 0.9800000190734863D;
+				this.motionZ *= (double) f;
 
-			if (this.onGround) {
-				this.motionY *= -0.5D;
+				if (this.onGround) {
+					this.motionY *= -0.5D;
+				}
 			}
 
 			if (this.age != -32768) {
