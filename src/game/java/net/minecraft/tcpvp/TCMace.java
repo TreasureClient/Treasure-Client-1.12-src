@@ -201,8 +201,10 @@ public final class TCMace {
 			world.playSound((EntityPlayer) null, attacker.posX, attacker.posY, attacker.posZ,
 					SoundEvents.ENTITY_ENDERDRAGON_FLAP, SoundCategory.PLAYERS, 0.9F, 1.6F);
 			if (world instanceof WorldServer) {
-				((WorldServer) world).spawnParticle(EnumParticleTypes.EXPLOSION_NORMAL, attacker.posX, attacker.posY,
-						attacker.posZ, 12, 0.5D, 0.2D, 0.5D, 0.04D);
+				// at the feet, spread sideways only: puffs around the eyes covered the whole view in
+				// first person as big flat squares
+				((WorldServer) world).spawnParticle(EnumParticleTypes.EXPLOSION_NORMAL, attacker.posX, attacker.posY - 0.2D,
+						attacker.posZ, 12, 0.6D, 0.0D, 0.6D, 0.02D);
 			}
 		}
 	}
