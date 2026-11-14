@@ -117,7 +117,17 @@ public class TCLagMonitor {
 			texSlowNs = ns;
 			texSlow = name;
 		}
+		// the first few names, so they can be added to the title-screen preload
+		if (texNames.length() < 160 && name != null) {
+			int sl = name.lastIndexOf('/');
+			String shortName = sl >= 0 ? name.substring(sl + 1) : name;
+			if (texNames.indexOf(shortName) < 0) {
+				texNames.append(texNames.length() == 0 ? "" : ", ").append(shortName);
+			}
+		}
 	}
+
+	private static final StringBuilder texNames = new StringBuilder();
 
 	// plugin message time per channel, so a slow CustomPayload can be traced to its sender
 	private static final java.util.HashMap<String, long[]> chanTimes = new java.util.HashMap<String, long[]>();
@@ -1361,6 +1371,9 @@ public class TCLagMonitor {
 				if (tl >= 0) tn = tn.substring(tl + 1);
 				say(mc, "§7Textures loaded mid-game: §f" + texLoads + " §7taking §f" + (texLoadNs / 1000000L)
 						+ "ms§7, slowest §f" + tn + " " + (texSlowNs / 1000000L) + "ms");
+				if (texNames.length() > 0) {
+					say(mc, "§7  first ones: §f" + texNames);
+				}
 			}
 		}
 		if (terrainFixes > 0) {
