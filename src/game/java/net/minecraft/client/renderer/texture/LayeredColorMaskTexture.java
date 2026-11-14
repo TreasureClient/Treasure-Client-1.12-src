@@ -29,12 +29,44 @@ public class LayeredColorMaskTexture extends AbstractTexture {
 		this.listDyeColors = p_i46101_3_;
 	}
 
+	/**
+	 * Treasure Client: banner and shield pictures, decoded once. Every new banner or shield design
+	 * (team-colored shields, banners in hotbars and on walls) decoded its base picture and each
+	 * pattern picture from scratch: a 39 ms freeze the first time one showed up in a game on a slow
+	 * laptop. Cleared when resource packs change. At most a few dozen 64x64 pictures.
+	 */
+	private static final java.util.HashMap<String, ImageData> TC_DECODED = new java.util.HashMap<String, ImageData>();
+
+	public static void tcClearCache() {
+		TC_DECODED.clear();
+	}
+
+	/** The decoded picture (shared, never changed by callers). */
+	private static ImageData tcRead(IResourceManager resourceManager, ResourceLocation rl) throws IOException {
+		String key = rl.toString();
+		ImageData img = TC_DECODED.get(key);
+		if (img == null) {
+			img = TextureUtil.readBufferedImage(resourceManager.getResource(rl).getInputStream());
+			if (TC_DECODED.size() < 256) {
+				TC_DECODED.put(key, img);
+			}
+		}
+		return img;
+	}
+
+	/** Treasure Client: decodes the common banner/shield pictures ahead of time (title screen). */
+	public static void tcWarm(IResourceManager resourceManager, String path) {
+		try {
+			tcRead(resourceManager, new ResourceLocation(path));
+		} catch (Throwable t) {
+		}
+	}
+
 	public void loadTexture(IResourceManager resourceManager) throws IOException {
 		this.deleteGlTexture();
 		ImageData bufferedimage;
 		try {
-			ImageData bufferedimage1 = TextureUtil
-					.readBufferedImage(resourceManager.getResource(this.textureLocation).getInputStream());
+			ImageData bufferedimage1 = tcRead(resourceManager, this.textureLocation);
 			bufferedimage = new ImageData(bufferedimage1.width, bufferedimage1.height, false);
 			bufferedimage.drawLayer(bufferedimage1, 0, 0, bufferedimage1.width, bufferedimage1.height, 0, 0,
 					bufferedimage1.width, bufferedimage1.height);
@@ -45,8 +77,9 @@ public class LayeredColorMaskTexture extends AbstractTexture {
 				int k = ((EnumDyeColor) this.listDyeColors.get(j)).func_193350_e();
 
 				if (s != null) {
-					InputStream inputStream = resourceManager.getResource(new ResourceLocation(s)).getInputStream();
-					ImageData bufferedimage2 = TextureUtil.readBufferedImage(inputStream);
+					// a copy: the pixels below are recolored in place
+					ImageData tcSrc = tcRead(resourceManager, new ResourceLocation(s));
+					ImageData bufferedimage2 = new ImageData(tcSrc.width, tcSrc.height, tcSrc.pixels.clone(), tcSrc.alpha);
 
 					if (bufferedimage2.width == bufferedimage.width
 							&& bufferedimage2.height == bufferedimage.height /* && bufferedimage2.alpha = false !?!? */) {

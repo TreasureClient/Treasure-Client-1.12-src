@@ -49,7 +49,17 @@ public final class TCTexturePreload {
 	private static int next;
 
 	/** Called every game tick; only does anything on menus outside a world, until all are loaded. */
+	// banner and shield designs are built from these (decoded ahead of time, see LayeredColorMaskTexture)
+	private static final String[] LAYERED = { "textures/entity/shield_base.png", "textures/entity/shield/base.png",
+			"textures/entity/banner_base.png", "textures/entity/banner/base.png" };
+	private static int nextLayered;
+
 	public static void tick(Minecraft mc) {
+		if (next >= NAMES.length && nextLayered < LAYERED.length && mc.world == null && mc.currentScreen != null
+				&& mc.getResourceManager() != null) {
+			LayeredColorMaskTexture.tcWarm(mc.getResourceManager(), LAYERED[nextLayered++]);
+			return;
+		}
 		if (next >= NAMES.length || mc.world != null || mc.currentScreen == null) {
 			return;
 		}
