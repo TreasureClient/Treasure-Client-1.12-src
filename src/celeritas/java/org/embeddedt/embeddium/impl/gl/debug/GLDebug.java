@@ -155,6 +155,11 @@ public final class GLDebug {
 		debugState.nameObject(id, object, name);
 	}
 
+	/** Treasure Client: whether debug groups do anything (lets callers skip building labels). */
+	public static boolean groupsActive() {
+		return !(debugState instanceof UnsupportedDebugState);
+	}
+
 	public static void pushGroup(int id, String name) {
 		debugState.pushGroup(id, name);
 	}

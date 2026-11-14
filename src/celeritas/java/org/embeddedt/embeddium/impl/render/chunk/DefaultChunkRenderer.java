@@ -69,7 +69,11 @@ public abstract class DefaultChunkRenderer extends ShaderChunkRenderer {
         if (this.activeProgram != null) {
             boolean useBlockFaceCulling = this.useBlockFaceCulling();
 
-            GLDebug.pushGroup(770, renderPass.name() + " terrain pass");
+            // Treasure Client: the label is text built every pass; only build it when debugging is on
+            boolean tcDebug = GLDebug.groupsActive();
+            if (tcDebug) {
+                GLDebug.pushGroup(770, renderPass.name() + " terrain pass");
+            }
 
             ChunkShaderInterface shader = this.activeProgram.getInterface();
             shader.setProjectionMatrix(matrices.projection());
@@ -119,7 +123,9 @@ public abstract class DefaultChunkRenderer extends ShaderChunkRenderer {
             this.currentVertexFormat = null;
             this.currentRenderPass = null;
 
-            GLDebug.popGroup();
+            if (tcDebug) {
+                GLDebug.popGroup();
+            }
         }
 
         this.end(renderPass);

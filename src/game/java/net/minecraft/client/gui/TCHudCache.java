@@ -14,7 +14,8 @@ import net.lax1dude.eaglercraft.EagRuntime;
  * <li>the server changed the chat, scoreboard, boss bars, titles or tab list
  * ({@link #markDirty()} is called when those arrive);</li>
  * <li>something on it animates every frame (F3, titles, the hotbar pop when picking
- * items up, a menu is open...), then it is drawn every frame like before;</li>
+ * items up...), then it is drawn every frame like before. Menus keep the cache: the HUD under
+ * them is drawn the same way;</li>
  * <li>and 5 times a second regardless, as a safety net.</li>
  * </ul>
  * Server changes are grouped: at most one redraw for them every 100 ms.

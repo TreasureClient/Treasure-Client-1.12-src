@@ -83,6 +83,13 @@ public class Scoreboard {
 	/**
 	 * Get a player's score or create it if it does not exist
 	 */
+	/**
+	 * Treasure Client: goes up whenever anything the sidebar lines show changes (scores, who has
+	 * one, teams and their prefixes, which objective is shown), so the sidebar only sorts and
+	 * measures its lines again when they changed. The title isn't counted (it is read every draw).
+	 */
+	public int tcVersion;
+
 	public Score getOrCreateScore(String username, ScoreObjective objective) {
 		if (username.length() > 40) {
 			throw new IllegalArgumentException("The player name '" + username + "' is too long!");
@@ -99,6 +106,7 @@ public class Scoreboard {
 			if (score == null) {
 				score = new Score(this, objective, username);
 				map.put(objective, score);
+				++this.tcVersion;
 			}
 
 			return score;
@@ -132,6 +140,7 @@ public class Scoreboard {
 	 * Remove the given ScoreObjective for the given Entity name.
 	 */
 	public void removeObjectiveFromEntity(String name, ScoreObjective objective) {
+		++this.tcVersion;
 		if (objective == null) {
 			Map<ScoreObjective, Score> map = (Map) this.entitiesScoreObjectives.remove(name);
 
@@ -179,6 +188,7 @@ public class Scoreboard {
 	}
 
 	public void removeObjective(ScoreObjective objective) {
+		++this.tcVersion;
 		this.scoreObjectives.remove(objective.getName());
 
 		for (int i = 0; i < 19; ++i) {
@@ -212,6 +222,7 @@ public class Scoreboard {
 	 * 0 is tab menu, 1 is sidebar, 2 is below name
 	 */
 	public void setObjectiveInDisplaySlot(int objectiveSlot, ScoreObjective objective) {
+		++this.tcVersion;
 		this.objectiveDisplaySlots[objectiveSlot] = objective;
 	}
 
@@ -242,6 +253,7 @@ public class Scoreboard {
 			} else {
 				scoreplayerteam = new ScorePlayerTeam(this, name);
 				this.teams.put(name, scoreplayerteam);
+				++this.tcVersion;
 				this.broadcastTeamCreated(scoreplayerteam);
 				return scoreplayerteam;
 			}
@@ -253,6 +265,7 @@ public class Scoreboard {
 	 * broadcasts the deletion to all players
 	 */
 	public void removeTeam(ScorePlayerTeam playerTeam) {
+		++this.tcVersion;
 		this.teams.remove(playerTeam.getRegisteredName());
 
 		for (String s : playerTeam.getMembershipCollection()) {
@@ -279,6 +292,7 @@ public class Scoreboard {
 
 			this.teamMemberships.put(player, scoreplayerteam);
 			scoreplayerteam.getMembershipCollection().add(player);
+			++this.tcVersion;
 			return true;
 		}
 	}
@@ -306,6 +320,7 @@ public class Scoreboard {
 		} else {
 			this.teamMemberships.remove(username);
 			playerTeam.getMembershipCollection().remove(username);
+			++this.tcVersion;
 		}
 	}
 
@@ -344,6 +359,7 @@ public class Scoreboard {
 	}
 
 	public void onScoreUpdated(Score scoreIn) {
+		++this.tcVersion;
 	}
 
 	public void broadcastScoreUpdate(String scoreName) {
@@ -363,6 +379,7 @@ public class Scoreboard {
 	 * This packet will notify the players that this team is updated
 	 */
 	public void broadcastTeamInfoUpdate(ScorePlayerTeam playerTeam) {
+		++this.tcVersion;
 	}
 
 	public void broadcastTeamRemove(ScorePlayerTeam playerTeam) {

@@ -888,6 +888,8 @@ public class TreasureMods {
 	 * lives in the tcmods string as zoomLevel=NN (percent of FOV when zoomed).
 	 * Called every frame by EntityRenderer.getFOVModifier, so it's throttled.
 	 */
+	private static byte[] zoomParsedFrom;
+
 	public static float zoomFactor() {
 		try {
 			long now = EagRuntime.steadyTimeMillis();
@@ -895,8 +897,14 @@ public class TreasureMods {
 				zoomRead = now;
 				byte[] z = EagRuntime.getStorage("tczoom");
 				zoomActive = (z != null && z.length > 0 && z[0] == 1);
-				byte[] data = EagRuntime.getStorage("tcmods");
-				if (data != null && data.length > 0) {
+				// Treasure Client: the settings text is already read (and kept while unchanged) by
+				// reload(); parse the zoom settings only when that text changes
+				byte[] data = lastModsData;
+				if (data == null) {
+					data = EagRuntime.getStorage("tcmods");
+				}
+				if (data != zoomParsedFrom && data != null && data.length > 0) {
+					zoomParsedFrom = data;
 					String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
 					String[] parts = s.split(",");
 					for (int i = 0; i < parts.length; i++) {

@@ -313,7 +313,10 @@ public abstract class EntityLivingBase extends Entity {
 		super.onEntityUpdate();
 		boolean flag = this instanceof EntityPlayer;
 
-		if (this.isEntityAlive()) {
+		// Treasure Client: suffocation and world-border damage are the server's job; on your side
+		// the damage call does nothing, but every mob, player and hologram still checked 8 block
+		// corners each tick to decide whether to make it
+		if (this.isEntityAlive() && !this.world.isRemote) {
 			if (this.isEntityInsideOpaqueBlock()) {
 				this.attackEntityFrom(DamageSource.inWall, 1.0F);
 			} else if (flag && !this.world.getWorldBorder().contains(this.getEntityBoundingBox())) {
