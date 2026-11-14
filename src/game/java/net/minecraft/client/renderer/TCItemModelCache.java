@@ -29,7 +29,12 @@ public final class TCItemModelCache {
 	private TCItemModelCache() {
 	}
 
-	private static final int MAX_ENTRIES = 768;
+	public static final int MAX_ENTRIES = 768;
+
+	/** Stored item models (each holds one GPU buffer and one vertex array); for the lag monitor. */
+	public static int count() {
+		return entries;
+	}
 
 	private static final class Entry {
 		final int color;
