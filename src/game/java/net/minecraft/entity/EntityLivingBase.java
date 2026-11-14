@@ -916,8 +916,14 @@ public abstract class EntityLivingBase extends Entity {
 
 				this.limbSwingAmount = 1.5F;
 				boolean flag1 = true;
+				// Treasure Client (/herobot shieldStunning): this blocked hit stunned the shield. Taken
+				// here, before the hit-cooldown check: when the axe hit came during the cooldown of an
+				// earlier hit, that check returned early, the reset never happened and the mace hit
+				// right after did only part of its damage with no knockback.
+				boolean tcStun = this.tcClearIframes;
+				this.tcClearIframes = false;
 
-				if ((float) this.hurtResistantTime > (float) this.maxHurtResistantTime / 2.0F) {
+				if (!tcStun && (float) this.hurtResistantTime > (float) this.maxHurtResistantTime / 2.0F) {
 					if (amount <= this.lastDamage) {
 						return false;
 					}
@@ -933,11 +939,11 @@ public abstract class EntityLivingBase extends Entity {
 					this.hurtTime = this.maxHurtTime;
 				}
 
-				if (this.tcClearIframes) {
-					// Treasure Client (/herobot shieldStunning): the hit that stunned the shield gives
-					// no hit cooldown, so a follow-up hit (axe then mace) lands fully
-					this.tcClearIframes = false;
+				if (tcStun) {
+					// the hit that stunned the shield gives no hit cooldown, so a follow-up hit
+					// (axe then mace) lands fully
 					this.hurtResistantTime = 0;
+					this.lastDamage = 0.0F;
 				}
 				this.attackedAtYaw = 0.0F;
 				Entity entity1 = source.getEntity();
