@@ -44,7 +44,12 @@ public final class TCTexturePreload {
 			"models/armor/gold_layer_1.png", "models/armor/gold_layer_2.png", "models/armor/leather_layer_1.png",
 			"models/armor/leather_layer_2.png", "models/armor/leather_layer_1_overlay.png",
 			"models/armor/leather_layer_2_overlay.png", "models/armor/netherite_layer_1.png",
-			"models/armor/netherite_layer_2.png" };
+			"models/armor/netherite_layer_2.png",
+			// cracks drawn over chests, signs and other block entities while you break them
+			"blocks/destroy_stage_0.png", "blocks/destroy_stage_1.png", "blocks/destroy_stage_2.png",
+			"blocks/destroy_stage_3.png", "blocks/destroy_stage_4.png", "blocks/destroy_stage_5.png",
+			"blocks/destroy_stage_6.png", "blocks/destroy_stage_7.png", "blocks/destroy_stage_8.png",
+			"blocks/destroy_stage_9.png" };
 
 	private static int next;
 
