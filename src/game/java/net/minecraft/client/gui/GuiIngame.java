@@ -222,6 +222,8 @@ public class GuiIngame extends Gui {
 		GlStateManager.popMatrix();
 	}
 
+	private int tcPopFrame;
+
 	public long tcHudSignature() {
 		net.minecraft.client.entity.EntityPlayerSP p = this.mc.player;
 		GameSettings gs = this.mc.gameSettings;
@@ -235,6 +237,7 @@ public class GuiIngame extends Gui {
 			return Long.MIN_VALUE;
 		}
 		boolean perTick = false, perTwoTicks = false;
+		boolean tcPop = false;
 		long h = 1469598103934665603L;
 		h = tcMix(h, this.mc.displayWidth);
 		h = tcMix(h, this.mc.displayHeight);
@@ -251,7 +254,11 @@ public class GuiIngame extends Gui {
 				continue;
 			}
 			if (s.func_190921_D() > 0) {
-				return Long.MIN_VALUE; // item pick-up pop, animated every frame
+				// item pick-up pop, animated every frame: only the hotbar layer is redrawn each frame
+				// (below); the scoreboard, chat and the live layer stay cached. It used to draw the
+				// whole HUD from scratch every frame, which in Bed Wars (resources picked up all the
+				// time) was most frames.
+				tcPop = true;
 			}
 			h = tcMix(h, Item.getIdFromItem(s.getItem()));
 			// the count, the durability bar and the cooldown sweep are drawn live (renderHotbar, TC_OWN);
@@ -271,6 +278,9 @@ public class GuiIngame extends Gui {
 		}
 		// Treasure Client: health, food, XP, effects, the item name and the attack icon are drawn
 		// live every frame now (cheap flat icons); only the hotbar items are cached
+		if (tcPop) {
+			h = tcMix(h, ++this.tcPopFrame); // different every frame: redraw the hotbar layer
+		}
 		if (perTick) {
 			h = tcMix(h, this.updateCounter);
 		} else if (perTwoTicks) {

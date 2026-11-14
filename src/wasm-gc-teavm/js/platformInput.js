@@ -262,6 +262,52 @@ async function initPlatformInput(inputImports) {
 
 	reportWindowSize();
 
+	// Treasure Client: the size check above runs every frame. It reads the page layout
+	// (offsetLeft, clientWidth), which makes Chrome lay the page out again in the middle of the
+	// game's frame whenever the overlay changed some text, and it read the resolution setting
+	// from storage. Now it only runs when the page, the zoom or the resolution setting changed
+	// (and once a second as a safety net).
+	var tcSizeDirty = true;
+	var tcSizeCheckAt = -1e9;
+	var tcSizeDpr = -1.0;
+	var tcResCache = -1.0;
+	var tcResReadAt = -1e9;
+	function tcMarkSizeDirty() {
+		tcSizeDirty = true;
+	}
+	window.addEventListener("resize", tcMarkSizeDirty);
+	window.addEventListener("scroll", tcMarkSizeDirty, true);
+	document.addEventListener("fullscreenchange", tcMarkSizeDirty);
+	if(window.visualViewport) {
+		window.visualViewport.addEventListener("resize", tcMarkSizeDirty);
+		window.visualViewport.addEventListener("scroll", tcMarkSizeDirty);
+	}
+	try {
+		if(typeof ResizeObserver === "function") {
+			new ResizeObserver(tcMarkSizeDirty).observe(parentElement);
+		}
+	}catch(e) {
+	}
+	function tcReportWindowSizeIfChanged() {
+		const now = performance.now();
+		if(now - tcResReadAt >= 250.0) {
+			tcResReadAt = now;
+			const r = tcResScale();
+			if(r !== tcResCache) {
+				tcResCache = r;
+				tcSizeDirty = true;
+			}
+		}
+		const dpr = window.devicePixelRatio;
+		if(!tcSizeDirty && dpr === tcSizeDpr && now - tcSizeCheckAt < 1000.0) {
+			return;
+		}
+		tcSizeDirty = false;
+		tcSizeDpr = dpr;
+		tcSizeCheckAt = now;
+		reportWindowSize();
+	}
+
 	parentElement.addEventListener("contextmenu", currentEventListeners.contextmenu = function(/** Event */ evt) {
 		if(evt.target === integratedServerCrashPanel) return;
 		evt.preventDefault();
@@ -891,7 +937,7 @@ async function initPlatformInput(inputImports) {
 	}
 
 	function updatePlatformAndSleepImpl0(fpsLimit, vsync) {
-		reportWindowSize();
+		tcReportWindowSizeIfChanged();
 		if((typeof document.visibilityState !== "string") || (document.visibilityState === "visible")) {
 			if(vsyncSupport && vsync) {
 				manualSyncTimer = 0;
