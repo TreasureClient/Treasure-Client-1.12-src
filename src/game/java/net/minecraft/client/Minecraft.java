@@ -421,6 +421,7 @@ public class Minecraft implements IThreadListener {
 				if (!this.hasCrashed || this.crashReporter == null) {
 					try {
 						this.runGameLoop();
+						TCBoot.done();
 					} catch (MinecraftError e) {
 						throw e;
 					} catch (Throwable t) {
@@ -459,6 +460,7 @@ public class Minecraft implements IThreadListener {
 	 * Starts the game: initializes the canvas, the title, the settings, etcetera.
 	 */
 	private void startGame() throws IOException {
+		TCBoot.stage("start");
 		Bootstrap.register();
 		this.dataFixer = DataFixesManager.createFixer();
 		this.gameSettings = new GameSettings(this);
@@ -478,6 +480,7 @@ public class Minecraft implements IThreadListener {
 		this.mcResourceManager = new SimpleReloadableResourceManager(this.metadataSerializer_);
 		this.mcLanguageManager = new LanguageManager(this.metadataSerializer_, this.gameSettings.language);
 		this.mcResourceManager.registerReloadListener(this.mcLanguageManager);
+		TCBoot.stage("res");
 		this.refreshResources();
 		Bootstrap.register2();
 		this.renderEngine = new TextureManager(this.mcResourceManager);
@@ -516,13 +519,16 @@ public class Minecraft implements IThreadListener {
 		GlStateManager.loadIdentity();
 		GlStateManager.matrixMode(5888);
 		this.checkGLError("Startup");
+		TCBoot.stage("tex");
 		this.textureMapBlocks = new TextureMap("textures");
 		this.textureMapBlocks.setMipmapLevels(this.gameSettings.mipmapLevels);
 		this.renderEngine.loadTickableTexture(TextureMap.LOCATION_BLOCKS_TEXTURE, this.textureMapBlocks);
 		this.renderEngine.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 		this.textureMapBlocks.setBlurMipmapDirect(false, this.gameSettings.mipmapLevels > 0);
 		this.modelManager = new ModelManager(this.textureMapBlocks);
+		TCBoot.stage("models");
 		this.mcResourceManager.registerReloadListener(this.modelManager);
+		TCBoot.stage("render");
 		this.blockColors = BlockColors.init();
 		this.itemColors = ItemColors.init(this.blockColors);
 		this.renderItem = new RenderItem(this.renderEngine, this.modelManager, this.itemColors);
@@ -536,12 +542,14 @@ public class Minecraft implements IThreadListener {
 		this.mcResourceManager.registerReloadListener(this.blockRenderDispatcher);
 		this.renderGlobal = new RenderGlobal(this);
 		this.mcResourceManager.registerReloadListener(this.renderGlobal);
+		TCBoot.stage("search");
 		this.func_193986_ar();
 		this.mcResourceManager.registerReloadListener(this.field_193995_ae);
 		GlStateManager.viewport(0, 0, this.displayWidth, this.displayHeight);
 		this.effectRenderer = new ParticleManager(this.world, this.renderEngine);
 		SkinPreviewRenderer.initialize();
 		this.checkGLError("Post startup");
+		TCBoot.stage("title");
 		this.ingameGUI = new GuiIngame(this);
 		
 		this.eagskullCommand = new SkullCommand(this);

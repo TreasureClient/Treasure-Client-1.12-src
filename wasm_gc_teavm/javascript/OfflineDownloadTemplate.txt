@@ -27,6 +27,243 @@ This is the WASM-GC version of Eaglercraft 1.12 and may not be compatible with o
 <html style="width:100%;height:100%;background-color:black;">
 <head>
 <meta charset="UTF-8" />
+<!-- TC-BOOT START: Treasure Client loading screen (same block in all three templates; edit tc-build/tools/tc-boot-snippet.html and re-insert) -->
+<script type="text/javascript">
+/* Treasure Client loading screen.
+   Shown from the first moment the page parses until the game draws its first
+   frame. It lives on <html> (not <body>), so the engine clearing <body> at boot
+   can't remove it. It never takes clicks (pointer-events:none): a click on it
+   still reaches the game's own "press any key" listener. Steps come from the
+   page (loader / engine / canvas) and from Java (TCBoot.java writes
+   localStorage["_eaglercraft_1.12.tcboot"]). Animations only use transform and
+   opacity, so they keep moving even while the game blocks the main thread.
+   If the game crashes or the browser is unsupported, it gets out of the way. */
+(function () {
+  "use strict";
+  try {
+    var KEY = "_eaglercraft_1.12.tcboot", TKEY = "treasureClient.bootTimes";
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    var ORDER = ["page","load","loader","engine","canvas","start","res","tex","models","render","search","title","done"];
+    var PCT = { page:3, load:8, loader:12, engine:30, canvas:36, start:40, res:46, tex:60, models:70, render:82, search:89, title:95, done:100 };
+    var LABEL = { page:"Loading Treasure Client", load:"Unpacking the game", loader:"Unpacking the game", engine:"Starting the engine",
+      canvas:"Starting the engine", start:"Setting things up", res:"Loading resources", tex:"Stitching block textures",
+      models:"Baking block models", render:"Preparing renderers", search:"Sorting items", title:"Opening the title screen", done:"Ready!" };
+    var DEF = { page:1500, load:1500, loader:6000, engine:1500, canvas:1500, start:2000, res:3000, tex:4000, models:5000, render:3000, search:2000, title:1500 };
+    var times = {}, measured = {};
+    try { times = JSON.parse(localStorage.getItem(TKEY) || "{}") || {}; } catch (e) { times = {}; }
+    var menuKey = "Right Shift", zoomKey = "C";
+    try { var st = JSON.parse(localStorage.getItem("treasureClient.settings") || "{}"); if (st.menuKeyLabel) menuKey = st.menuKeyLabel; if (st.zoomKeyLabel) zoomKey = st.zoomKeyLabel; } catch (e) {}
+    var TIPS = [
+      "Press " + menuKey + " to open the mod menu.",
+      "The Zoom mod lets you hold " + zoomKey + " to zoom in.",
+      "Type .lag in chat to see what is slowing your game down.",
+      "You can drag your HUD anywhere from the mod menu.",
+      "Every mod has its own settings in the mod menu.",
+      "Treasure Client runs right in your browser. No install needed."
+    ];
+
+    var css = ""
++ "#tc-boot{position:fixed;inset:0;z-index:2147483600;pointer-events:none;overflow:hidden;color:#f6ecd2;font-family:'Outfit',system-ui,sans-serif;"
++ "background:radial-gradient(ellipse at 50% 42%,#2a1c08 0%,#140d04 48%,#060402 100%);transition:opacity .6s ease;user-select:none;-webkit-user-select:none}"
++ "#tc-boot.tcb-out{opacity:0}"
++ "#tc-boot.tcb-hide{visibility:hidden}"
++ "#tc-boot .tcb-rays{position:absolute;left:50%;top:40%;width:120vmax;height:120vmax;margin:-60vmax 0 0 -60vmax;border-radius:50%;"
++ "background:repeating-conic-gradient(from 0deg,rgba(255,206,100,.075) 0deg 7deg,rgba(255,206,100,0) 7deg 20deg);"
++ "-webkit-mask:radial-gradient(circle,#000 0,rgba(0,0,0,.6) 22%,transparent 58%);mask:radial-gradient(circle,#000 0,rgba(0,0,0,.6) 22%,transparent 58%);"
++ "animation:tcbSpin 70s linear infinite;will-change:transform}"
++ "#tc-boot .tcb-dust i{position:absolute;bottom:-10px;border-radius:50%;background:#ffd76b;box-shadow:0 0 6px rgba(255,200,80,.8);opacity:0;animation:tcbDust linear infinite;will-change:transform,opacity}"
++ "#tc-boot .tcb-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-54%);display:flex;flex-direction:column;align-items:center;transition:transform .7s cubic-bezier(.2,.8,.2,1)}"
++ "#tc-boot.tcb-out .tcb-center{transform:translate(-50%,-54%) scale(1.06)}"
++ "#tc-boot .tcb-chestwrap{position:relative;width:128px;height:128px;animation:tcbBob 2.6s ease-in-out infinite alternate;will-change:transform}"
++ "#tc-boot .tcb-glow{position:absolute;left:50%;top:58%;width:260px;height:200px;margin:-100px 0 0 -130px;border-radius:50%;"
++ "background:radial-gradient(ellipse,rgba(255,196,70,.42) 0%,rgba(255,170,40,.14) 40%,rgba(255,170,40,0) 70%);animation:tcbPulse 2.6s ease-in-out infinite alternate;will-change:transform,opacity}"
++ "#tc-boot .tcb-chest{position:absolute;inset:0;will-change:transform}"
++ "#tc-boot .tcb-chest svg{position:absolute;inset:0;width:100%;height:100%;shape-rendering:crispEdges;overflow:visible}"
++ "#tc-boot .tcb-lid{transform-origin:12% 44%;transition:transform .45s cubic-bezier(.3,1.6,.5,1);will-change:transform}"
++ "#tc-boot .tcb-beam{position:absolute;left:50%;bottom:52%;width:150px;height:240px;margin-left:-75px;transform-origin:50% 100%;transform:scaleY(0);opacity:0;"
++ "background:linear-gradient(to top,rgba(255,236,160,.95),rgba(255,214,107,.35) 45%,rgba(255,214,107,0));clip-path:polygon(32% 100%,68% 100%,100% 0,0 0);"
++ "transition:transform .5s cubic-bezier(.2,.9,.3,1),opacity .3s ease;will-change:transform,opacity}"
++ "#tc-boot .tcb-coins{position:absolute;left:50%;top:46%;width:0;height:0}"
++ "#tc-boot .tcb-coins i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;opacity:0;"
++ "background:radial-gradient(circle at 35% 35%,#fff6cf 0 18%,#ffd24a 30%,#c98a12 75%);box-shadow:0 0 0 2px #7a4a08 inset,0 0 8px rgba(255,200,60,.7)}"
++ "#tc-boot.tcb-open .tcb-coins i{animation:tcbCoin .95s cubic-bezier(.2,.7,.4,1) forwards}"
++ "#tc-boot.tcb-open .tcb-lid{transform:translate(-4%,-30%) rotate(-16deg)}"
++ "#tc-boot.tcb-open .tcb-beam{transform:scaleY(1);opacity:1}"
++ "#tc-boot.tcb-open .tcb-chestwrap{animation:tcbPop .45s cubic-bezier(.3,1.5,.5,1)}"
++ "#tc-boot .tcb-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,rgba(255,240,190,.55),rgba(255,210,110,0) 55%);opacity:0;will-change:opacity}"
++ "#tc-boot.tcb-open .tcb-flash{animation:tcbFlash .9s ease-out forwards}"
++ "#tc-boot.tcb-wait .tcb-chest{animation:tcbWiggle 1.6s ease-in-out infinite}"
++ "#tc-boot .tcb-title{margin-top:26px;font:700 34px 'Cinzel',Georgia,serif;letter-spacing:.2em;padding-left:.2em;white-space:nowrap;"
++ "background:linear-gradient(180deg,#fff3c4 0%,#ffd76b 45%,#c48a24 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#ffd76b;"
++ "filter:drop-shadow(0 2px 10px rgba(255,190,60,.25))}"
++ "#tc-boot .tcb-title span{display:block;margin-top:2px;font-size:13px;letter-spacing:.62em;padding-left:.62em;text-align:center;font-family:'Outfit',system-ui,sans-serif;font-weight:600}"
++ "#tc-boot .tcb-bar{position:relative;margin-top:30px;width:320px;max-width:78vw;height:12px;border-radius:999px;overflow:hidden;"
++ "background:rgba(255,214,120,.08);border:1px solid rgba(255,214,120,.26);box-shadow:0 0 18px rgba(0,0,0,.5) inset}"
++ "#tc-boot .tcb-fill{position:absolute;inset:0;transform-origin:0 50%;transform:scaleX(0);border-radius:999px;overflow:hidden;"
++ "background:linear-gradient(90deg,#a8701c,#ffd76b 70%,#fff3c4);box-shadow:0 0 14px rgba(255,205,90,.6);will-change:transform}"
++ "#tc-boot .tcb-shine{position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0));"
++ "animation:tcbShine 1.7s ease-in-out infinite;will-change:transform}"
++ "#tc-boot .tcb-row{display:flex;justify-content:space-between;width:320px;max-width:78vw;margin-top:10px;font:500 13px 'JetBrains Mono',ui-monospace,monospace;color:#c9b183;letter-spacing:.03em}"
++ "#tc-boot .tcb-pct{color:#ffd76b;font-weight:600}"
++ "#tc-boot .tcb-prompt{margin-top:22px;font:600 16px 'Outfit',system-ui,sans-serif;color:#fff3c4;letter-spacing:.04em;opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s}"
++ "#tc-boot.tcb-wait .tcb-prompt{opacity:1;transform:none;animation:tcbBlink 1.6s ease-in-out infinite}"
++ "#tc-boot .tcb-tip{margin-top:18px;min-height:18px;max-width:80vw;text-align:center;font:400 13px 'Outfit',system-ui,sans-serif;color:#a8936a;transition:opacity .4s ease}"
++ "#tc-boot.tcb-wait .tcb-tip{opacity:0}"
++ "#tc-boot .tcb-tip.tcb-fade{opacity:0}"
++ "#tc-boot .tcb-foot{position:absolute;right:14px;bottom:10px;font:400 11px 'JetBrains Mono',ui-monospace,monospace;color:rgba(201,177,131,.45)}"
++ "@keyframes tcbSpin{to{transform:rotate(360deg)}}"
++ "@keyframes tcbBob{from{transform:translateY(0)}to{transform:translateY(-8px)}}"
++ "@keyframes tcbPulse{from{transform:scale(.92);opacity:.7}to{transform:scale(1.08);opacity:1}}"
++ "@keyframes tcbShine{from{transform:translateX(-100%)}to{transform:translateX(260%)}}"
++ "@keyframes tcbDust{0%{transform:translate3d(0,0,0);opacity:0}12%{opacity:var(--o)}85%{opacity:var(--o)}100%{transform:translate3d(var(--x),-105vh,0);opacity:0}}"
++ "@keyframes tcbWiggle{0%,55%,100%{transform:rotate(0)}62%{transform:rotate(-5deg)}70%{transform:rotate(5deg)}78%{transform:rotate(-3deg)}86%{transform:rotate(2deg)}}"
++ "@keyframes tcbBlink{0%,100%{opacity:1}50%{opacity:.55}}"
++ "@keyframes tcbPop{0%{transform:translateY(0) scale(1)}40%{transform:translateY(-6px) scale(1.12,.9)}100%{transform:translateY(-4px) scale(1)}}"
++ "@keyframes tcbFlash{0%{opacity:0}25%{opacity:1}100%{opacity:0}}"
++ "@keyframes tcbCoin{0%{transform:translate(0,0) scale(.3) rotate(0);opacity:1}55%{transform:translate(var(--dx),var(--dy)) scale(1) rotate(var(--r));opacity:1}"
++ "100%{transform:translate(calc(var(--dx) * 1.25),calc(var(--dy) + 90px)) scale(.8) rotate(calc(var(--r) * 2));opacity:0}}"
++ "@media (prefers-reduced-motion:reduce){#tc-boot .tcb-rays,#tc-boot .tcb-dust,#tc-boot .tcb-chestwrap,#tc-boot .tcb-glow,#tc-boot .tcb-shine{animation:none}}"
++ "@media (max-height:420px){#tc-boot .tcb-chestwrap{width:88px;height:88px}#tc-boot .tcb-title{margin-top:14px;font-size:26px}#tc-boot .tcb-bar{margin-top:18px}}";
+
+    /* Pixel chest, 16x16 grid. Lid and base are separate layers so the lid can open. */
+    var O = "#4a2a07", M = "#f2b632", H = "#ffe27a", S = "#b87a16", L = "#fff3c4";
+    function r(x, y, w, h, c) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>'; }
+    var base = '<svg class="tcb-base" viewBox="0 0 16 16" aria-hidden="true">'
+      + r(1,7,14,8,O) + r(2,8,12,6,M) + r(2,8,12,1,S) + r(2,13,12,1,S) + r(4,8,1,6,S) + r(11,8,1,6,S) + r(3,9,1,3,H) + r(12,9,1,3,H)
+      + r(6,7,4,4,O) + r(7,8,2,2,L) + r(7,9,1,1,O) + '</svg>';
+    var lid = '<svg class="tcb-lid" viewBox="0 0 16 16" aria-hidden="true">'
+      + r(1,2,14,6,O) + r(2,3,12,4,M) + r(2,3,12,1,H) + r(2,6,12,1,S) + r(4,3,1,4,S) + r(11,3,1,4,S) + r(6,6,4,2,O) + r(7,6,2,1,L) + '</svg>';
+
+    var el = document.createElement("div");
+    el.id = "tc-boot";
+    el.setAttribute("aria-live", "polite");
+    el.innerHTML = '<div class="tcb-rays"></div><div class="tcb-dust"></div><div class="tcb-flash"></div>'
+      + '<div class="tcb-center"><div class="tcb-chestwrap"><div class="tcb-glow"></div><div class="tcb-beam"></div>'
+      + '<div class="tcb-chest">' + base + lid + '</div><div class="tcb-coins"></div></div>'
+      + '<div class="tcb-title">TREASURE<span>CLIENT</span></div>'
+      + '<div class="tcb-bar"><div class="tcb-fill"><div class="tcb-shine"></div></div></div>'
+      + '<div class="tcb-row"><span class="tcb-step"></span><span class="tcb-pct">0%</span></div>'
+      + '<div class="tcb-prompt">Click anywhere to open the chest</div><div class="tcb-tip"></div></div>'
+      + '<div class="tcb-foot">Build ${date}</div>';
+    var styleEl = document.createElement("style");
+    styleEl.textContent = css;
+    (document.head || document.documentElement).appendChild(styleEl);
+    document.documentElement.appendChild(el);
+
+    function q(s) { return el.querySelector(s); }
+    var fill = q(".tcb-fill"), step = q(".tcb-step"), pct = q(".tcb-pct"), tip = q(".tcb-tip");
+    var dust = q(".tcb-dust"), coins = q(".tcb-coins"), i;
+    for (i = 0; i < 18; i++) {
+      var d = document.createElement("i"), sz = 2 + Math.random() * 3;
+      d.style.left = (Math.random() * 100).toFixed(1) + "%";
+      d.style.width = d.style.height = sz.toFixed(1) + "px";
+      d.style.setProperty("--x", ((Math.random() - 0.5) * 120).toFixed(0) + "px");
+      d.style.setProperty("--o", (0.35 + Math.random() * 0.5).toFixed(2));
+      var dur = 7 + Math.random() * 7;
+      d.style.animationDuration = dur.toFixed(1) + "s";
+      d.style.animationDelay = (-Math.random() * dur).toFixed(1) + "s";
+      dust.appendChild(d);
+    }
+    for (i = 0; i < 14; i++) {
+      var c = document.createElement("i"), a = (-90 + (i / 13 - 0.5) * 150 + (Math.random() - 0.5) * 14) * Math.PI / 180, dist = 90 + Math.random() * 80;
+      c.style.setProperty("--dx", (Math.cos(a) * dist).toFixed(0) + "px");
+      c.style.setProperty("--dy", (Math.sin(a) * dist).toFixed(0) + "px");
+      c.style.setProperty("--r", ((Math.random() - 0.5) * 720).toFixed(0) + "deg");
+      c.style.animationDelay = (Math.random() * 0.12).toFixed(2) + "s";
+      coins.appendChild(c);
+    }
+
+    var tipIdx = Math.floor(Math.random() * TIPS.length);
+    tip.textContent = TIPS[tipIdx];
+    var tipTimer = setInterval(function () {
+      tip.classList.add("tcb-fade");
+      setTimeout(function () { tipIdx = (tipIdx + 1) % TIPS.length; tip.textContent = TIPS[tipIdx]; tip.classList.remove("tcb-fade"); }, 420);
+    }, 5000);
+
+    var cur = -1, curAt = performance.now(), ended = false, poll = -1, raf = 0, shownPct = -1;
+    function go(s) {
+      var k = ORDER.indexOf(s);
+      if (k <= cur || ended) return;
+      var now = performance.now();
+      if (cur >= 0) measured[ORDER[cur]] = Math.round(now - curAt);
+      cur = k; curAt = now;
+      step.textContent = LABEL[s];
+      if (s === "done") { finish(); return; }
+      var target = PCT[ORDER[k + 1]] - 1;
+      var ms = Math.max(400, Math.min(60000, (times[s] || DEF[s] || 2000) * 1.15));
+      fill.style.transition = "transform " + Math.round(ms) + "ms cubic-bezier(.12,.7,.3,1)";
+      fill.style.transform = "scaleX(" + (target / 100) + ")";
+    }
+    function readPct() {
+      var m = getComputedStyle(fill).transform;
+      if (!m || m === "none") return 0;
+      var v = parseFloat(m.slice(m.indexOf("(") + 1));
+      return isNaN(v) ? 0 : v * 100;
+    }
+    function frame() {
+      raf = 0;
+      if (ended) return;
+      var p = Math.floor(readPct());
+      if (p !== shownPct) { shownPct = p; pct.textContent = p + "%"; }
+      raf = requestAnimationFrame(frame);
+    }
+    function cleanup(fast) {
+      ended = true;
+      clearInterval(poll); clearInterval(tipTimer);
+      if (raf) cancelAnimationFrame(raf);
+      el.classList.add("tcb-out");
+      setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+        if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl);
+      }, fast ? 650 : 900);
+    }
+    function finish() {
+      ended = true;
+      el.classList.remove("tcb-wait");
+      try { localStorage.setItem(TKEY, JSON.stringify(measured)); } catch (e) {}
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      fill.style.transition = "transform 320ms ease-out";
+      fill.style.transform = "scaleX(1)";
+      pct.textContent = "100%";
+      setTimeout(function () { el.classList.add("tcb-open"); }, 340);
+      setTimeout(function () { cleanup(false); }, 1250);
+    }
+    function bail() { if (!ended) cleanup(true); }
+
+    var ERR = "._eaglercraftX_crash_element,._eaglercraftX_incompatible_element,._eaglercraftX_jspi_unsupported_container,._eaglercraftX_loader_failed_container,#game_frame > h2";
+    function check() {
+      if (ended) return;
+      try {
+        if (document.querySelector(ERR)) { bail(); return; }
+        if (document.querySelector("._eaglercraftX_canvas_element")) go("canvas");
+        else if (document.querySelector("._eaglercraftX_root_element")) go("engine");
+        else if (document.querySelector("._eaglercraftX_wrapper_element,._eaglercraftX_early_splash_element")) go("loader");
+        var raw = null;
+        try { raw = localStorage.getItem(KEY); } catch (e) {}
+        if (raw) { try { var id = atob(raw); if (PCT[id] !== undefined) go(id); } catch (e) {} }
+        if (ended) return;
+        /* the phone version of "press any key" has its own button: step aside so it can be seen */
+        el.classList.toggle("tcb-hide", !!document.querySelector("._eaglercraftX_mobile_press_any_key"));
+        var ua = navigator.userActivation;
+        var waiting = cur >= ORDER.indexOf("engine") && cur < ORDER.indexOf("start")
+          && (ua ? !ua.hasBeenActive : !!document.querySelector("._eaglercraftX_press_any_key_image"));
+        if (waiting !== el.classList.contains("tcb-wait")) {
+          el.classList.toggle("tcb-wait", waiting);
+          step.textContent = waiting ? "Waiting for you" : LABEL[ORDER[cur]];
+        }
+        if (performance.now() - curAt > 150000) bail();
+      } catch (e) { bail(); }
+    }
+    go("page");
+    poll = setInterval(check, 100);
+    raf = requestAnimationFrame(frame);
+    window.addEventListener("load", function () { go("load"); check(); });
+  } catch (e) {
+    try { var b = document.getElementById("tc-boot"); if (b && b.parentNode) b.parentNode.removeChild(b); } catch (e2) {}
+  }
+})();
+</script>
+<!-- TC-BOOT END -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
 <meta name="description" content="Eaglercraft 1.12 WASM-GC Offline" />
 <meta name="keywords" content="eaglercraft, eaglercraftx, minecraft, 1.12, 1.12.2" />
@@ -68,7 +305,7 @@ ${classes_js}
 	var launchCounter = 1;
 	var launchCountdownNumberElement = null;
 	var launchCountdownProgressElement = null;
-	var launchSkipCountdown = false;
+	var launchSkipCountdown = true; /* Treasure Client: no 5 s countdown, the loading screen starts the game right away */
 
 	var launchTick = function() {
 		launchCountdownNumberElement.innerText = "" + Math.floor(6.0 - launchCounter * 0.06);
@@ -3607,7 +3844,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 </script>
 
-<div style="margin:0px;width:100%;height:100%;font-family:sans-serif;display:flex;align-items:center;user-select:none;" id="launch_countdown_screen">
+<div style="margin:0px;width:100%;height:100%;font-family:sans-serif;align-items:center;user-select:none;display:none;" id="launch_countdown_screen">
 <div style="margin:auto;text-align:center;">
 <h1>This file is from <span style="color:#AA0000;">${date}</span></h1>
 <h2>Game will launch in <span id="launchCountdownNumber">5</span>...</h2>
