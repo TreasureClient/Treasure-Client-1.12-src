@@ -397,11 +397,19 @@ public class EntityPlayerSP extends AbstractClientPlayer {
 				net.minecraft.client.TCPerfStats.print(this.mc);
 				return;
 			}
+			if (tcCmd.equalsIgnoreCase(".autologin") || tcCmd.toLowerCase().startsWith(".autologin ")) {
+				net.minecraft.client.TCAutoLogin.command(this.mc, tcCmd.substring(10));
+				return;
+			}
 			if (tcCmd.equalsIgnoreCase(".viablocks")) {
 				this.mc.ingameGUI.getChatGUI().printChatMessage(new net.minecraft.util.text.TextComponentString(
 						net.minecraft.client.network.TuffViaBlocks.status()));
 				return;
 			}
+		}
+		try {
+			net.minecraft.client.TCAutoLogin.onSend(this.mc, message); // Treasure Client: Auto Login
+		} catch (Throwable t) {
 		}
 		if (this.connection.getNetworkManager() instanceof SingleplayerNetworkManager && message.startsWith("/eagskull")) {
 			this.mc.eagskullCommand.openFileChooser();

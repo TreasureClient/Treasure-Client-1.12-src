@@ -975,6 +975,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 		this.gameController.ingameGUI.func_191742_a(packetIn.func_192590_c(), packetIn.getChatComponent());
 		try {
 			net.minecraft.client.TCKickLog.chat(this.gameController, packetIn.getChatComponent().getUnformattedText()); // Treasure Client: kick log
+			net.minecraft.client.TCAutoLogin.onServerText(this.gameController, packetIn.getChatComponent().getUnformattedText()); // Treasure Client: Auto Login
 			if (packetIn.func_192590_c() != net.minecraft.util.text.ChatType.GAME_INFO) {
 				net.minecraft.client.TCAutoGG.onChat(packetIn.getChatComponent().getUnformattedText()); // Treasure Client: Auto GG
 			}
@@ -1677,15 +1678,24 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
 			s = s2;
 			try {
 				net.minecraft.client.TCAutoGG.onTitle(packetIn.getMessage() != null ? packetIn.getMessage().getUnformattedText() : null); // Treasure Client: Auto GG
+				net.minecraft.client.TCAutoLogin.onServerText(this.gameController, packetIn.getMessage() != null ? packetIn.getMessage().getUnformattedText() : null); // Treasure Client: Auto Login
 			} catch (Throwable t) {
 			}
 			break;
 
 		case SUBTITLE:
 			s1 = s2;
+			try {
+				net.minecraft.client.TCAutoLogin.onServerText(this.gameController, packetIn.getMessage() != null ? packetIn.getMessage().getUnformattedText() : null); // Treasure Client: Auto Login
+			} catch (Throwable t) {
+			}
 			break;
 
 		case ACTIONBAR:
+			try {
+				net.minecraft.client.TCAutoLogin.onServerText(this.gameController, packetIn.getMessage() != null ? packetIn.getMessage().getUnformattedText() : null); // Treasure Client: Auto Login
+			} catch (Throwable t) {
+			}
 			this.gameController.ingameGUI.setRecordPlaying(s2, false);
 			return;
 
