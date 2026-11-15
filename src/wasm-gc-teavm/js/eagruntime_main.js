@@ -222,7 +222,10 @@ async function initializeContext() {
 		}
 	};
 	
-	if(isLikelyMobileBrowser || !navigator.userActivation || !navigator.userActivation.hasBeenActive) {
+	// Treasure Client: no "press any key" wait on computers. The audio context starts
+	// suspended and the loading screen (TC-BOOT in the page template) resumes it on the
+	// first click or key press. Phones keep the launch screen (it also warns about memory).
+	if(isLikelyMobileBrowser) {
 		const pressAnyKeyImage = /** @type {HTMLElement} */ (document.createElement("div"));
 		pressAnyKeyImage.classList.add("_eaglercraftX_press_any_key_image");
 		pressAnyKeyImage.style.position = "absolute";
