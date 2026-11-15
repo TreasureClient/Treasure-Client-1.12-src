@@ -1,0 +1,77 @@
+{
+  "rules": {
+    "pub": {
+      ".read": "auth != null",
+      ".indexOn": ["nl"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['n', 'nl', 'num'])",
+        "n": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16" },
+        "nl": { ".validate": "newData.isString() && newData.val() === newData.parent().child('n').val().toLowerCase()" },
+        "num": { ".validate": "newData.isNumber() && root.child('ids/' + newData.val()).val() === $uid" },
+        "face": { ".validate": "newData.isString() && newData.val().length === 256" },
+        "seen": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "$other": { ".validate": false }
+      }
+    },
+    "ids": {
+      "$num": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists()))",
+        ".validate": "$num.matches(/^[0-9]{5,6}$/) && newData.isString()"
+      }
+    },
+    "u": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && !newData.exists()",
+        "cfg": {
+          ".write": "auth != null && auth.uid === $uid",
+          "noReq": { ".validate": "newData.isBoolean()" },
+          "$other": { ".validate": false }
+        },
+        "bl": {
+          "$o": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "in": {
+          "$from": {
+            ".write": "auth != null && ((auth.uid === $from && $from !== $uid && newData.exists() && !root.child('u/' + $uid + '/bl/' + $from).exists() && !root.child('u/' + $uid + '/cfg/noReq').exists() && !root.child('u/' + $uid + '/fr/' + $from).exists()) || ((auth.uid === $uid || auth.uid === $from) && !newData.exists()))",
+            ".validate": "newData.isNumber() && newData.val() === now"
+          }
+        },
+        "out": {
+          "$to": {
+            ".write": "auth != null && ((auth.uid === $uid && $to !== $uid && newData.exists()) || ((auth.uid === $uid || auth.uid === $to) && !newData.exists()))",
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "fr": {
+          "$o": {
+            ".write": "auth != null && ((!newData.exists() && (auth.uid === $uid || auth.uid === $o)) || (newData.exists() && auth.uid === $uid && root.child('u/' + $uid + '/in/' + $o).exists()) || (newData.exists() && auth.uid === $o && root.child('u/' + $o + '/in/' + $uid).exists()))",
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "nt": {
+          "$o": {
+            ".write": "auth != null && ((auth.uid === $o && root.child('u/' + $uid + '/fr/' + $o).exists() && !root.child('u/' + $uid + '/bl/' + $o).exists()) || (auth.uid === $uid && !newData.exists()))",
+            ".validate": "newData.isNumber() && newData.val() === now"
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+    "c": {
+      "$cid": {
+        ".read": "auth != null && ($cid.beginsWith(auth.uid + '_') || $cid.endsWith('_' + auth.uid))",
+        "$mid": {
+          ".write": "auth != null && !data.exists() && ($cid.beginsWith(auth.uid + '_') || $cid.endsWith('_' + auth.uid)) && root.child('u/' + auth.uid + '/fr/' + $cid.replace(auth.uid, '').replace('_', '')).exists()",
+          ".validate": "newData.hasChildren(['f', 't', 'ts']) && newData.child('f').val() === auth.uid && newData.child('t').isString() && newData.child('t').val().length >= 1 && newData.child('t').val().length <= 256 && newData.child('ts').val() === now",
+          "$field": { ".validate": "$field === 'f' || $field === 't' || $field === 'ts'" }
+        }
+      }
+    }
+  }
+}

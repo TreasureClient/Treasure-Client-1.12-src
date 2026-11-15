@@ -1799,7 +1799,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     function tcSetView(view) {
       try {
         var body = $('#tc-body');
-        if (body) { body.classList.remove('tcv-modules', 'tcv-hud', 'tcv-themes'); body.classList.add('tcv-' + view); }
+        if (body) { body.classList.remove('tcv-modules', 'tcv-hud', 'tcv-themes', 'tcv-friends'); body.classList.add('tcv-' + view); }
         $$('.tc-view').forEach(function (b) { b.classList.toggle('active', b.dataset.view === view); });
         if (view === 'hud') {
           var eb = $('#tc-hud-edit'); if (eb) eb.click(); // open the HUD drag editor (closes the menu)
@@ -2930,6 +2930,714 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     applyFullbrightToEngine(); // only writes the Fullbright gamma option
     applyResolutionScale();    // write the render-resolution scale for PlatformInput
     writeModsToEngine(); // write toggle-sprint/sneak/hitbox flags for the native Java module
+
+    /* ---------- Friends & Messages (1.4) ----------
+       Add other Treasure Client players by name or number and message them on any
+       server. Each profile (alt) has its own Friends account with its own number.
+       Online part: a Firebase Realtime Database (rules in tcnet/database.rules.json);
+       only accepted friends can message each other. Nothing is sent anywhere until
+       you press "Turn on Friends" for a profile. */
+    (function () {
+      var TCNET = { apiKey: '', db: '' }; // Firebase project: see tcnet/SETUP.md
+      var configured = !!(TCNET.apiKey && TCNET.db);
+      var DBU = (TCNET.db || '').replace(/\/+$/, '');
+      var TS = { '.sv': 'timestamp' };
+      var LSK = 'treasureClient.tcnet', RDK = 'treasureClient.tcnetRead';
+      var cfg = {}; try { cfg = JSON.parse(localStorage.getItem(LSK)) || {}; } catch (e) { cfg = {}; }
+      if (!cfg.acc || typeof cfg.acc !== 'object') cfg.acc = {};
+      if (cfg.popups == null) cfg.popups = true;
+      if (cfg.sound == null) cfg.sound = true;
+      function saveCfg() { try { localStorage.setItem(LSK, JSON.stringify(cfg)); } catch (e) {} }
+      var readMap = {}; try { readMap = JSON.parse(localStorage.getItem(RDK)) || {}; } catch (e) { readMap = {}; }
+      function saveRead() { try { localStorage.setItem(RDK, JSON.stringify(readMap)); } catch (e) {} }
+
+      /* ---- the profile in use (written by Java: TCProfiles.publish / publishFace) ---- */
+      var prof = { id: null, name: '' }, myFace = '';
+      function readProfile() {
+        try {
+          var raw = localStorage.getItem('_eaglercraft_1.12.tcprofile');
+          if (raw) {
+            var p = atob(raw).split('\n');
+            prof.id = (p[0] || '').trim() || null;
+            if (prof.id === '-1') prof.id = null;
+            var n = p[2] || ''; try { n = decodeURIComponent(escape(n)); } catch (e) {}
+            prof.name = n.trim();
+          }
+        } catch (e) {}
+        try { myFace = localStorage.getItem('_eaglercraft_1.12.tcface') || ''; } catch (e) {}
+      }
+
+      /* ---- helpers ---- */
+      function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+      function btn(cls, text, fn) { var b = el('button', 'tcf-btn ' + (cls || ''), text); b.addEventListener('click', function (e) { e.stopPropagation(); fn(e); }); return b; }
+      function isolate(inp) {
+        ['keydown', 'keyup', 'keypress'].forEach(function (evt) {
+          inp.addEventListener(evt, function (e) { e.stopPropagation(); e.stopImmediatePropagation(); }, false);
+        });
+        inp.addEventListener('mousedown', function (e) { e.stopPropagation(); }, false);
+        inp.addEventListener('click', function (e) { e.stopPropagation(); try { inp.focus(); } catch (x) {} }, false);
+      }
+      var faceCache = {};
+      function faceURL(b64) {
+        if (!b64 || !/^[A-Za-z0-9+/]{256}$/.test(b64)) return null;
+        if (faceCache[b64]) return faceCache[b64];
+        try {
+          var bin = atob(b64); if (bin.length !== 192) return null;
+          var c = document.createElement('canvas'); c.width = c.height = 8;
+          var g = c.getContext('2d'), im = g.createImageData(8, 8);
+          for (var i = 0; i < 64; i++) { im.data[i * 4] = bin.charCodeAt(i * 3); im.data[i * 4 + 1] = bin.charCodeAt(i * 3 + 1); im.data[i * 4 + 2] = bin.charCodeAt(i * 3 + 2); im.data[i * 4 + 3] = 255; }
+          g.putImageData(im, 0, 0);
+          return (faceCache[b64] = c.toDataURL());
+        } catch (e) { return null; }
+      }
+      function face(b64, size) {
+        var u = faceURL(b64), d = el('div', 'tcf-face');
+        d.style.width = d.style.height = size + 'px';
+        if (u) d.style.backgroundImage = 'url(' + u + ')'; else d.classList.add('tcf-noface');
+        return d;
+      }
+      function ago(t) {
+        var s = Math.max(0, (Date.now() - t) / 1000);
+        if (s < 60) return 'just now';
+        if (s < 3600) return Math.floor(s / 60) + ' min ago';
+        if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+        return Math.floor(s / 86400) + ' d ago';
+      }
+      function online(p) { return p && typeof p.seen === 'number' && Date.now() - p.seen < 150000; }
+      function statusText(p) { if (!p) return ''; if (p.gone) return 'Account deleted'; return online(p) ? 'Online' : (p.seen ? 'Last seen ' + ago(p.seen) : 'Offline'); }
+      function clock(t) { try { var d = new Date(t), now = new Date(); var hm = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + hm; } catch (e) { return ''; } }
+      var PUSH = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+      function pushId() {
+        var t = Date.now(), s = '';
+        for (var i = 0; i < 8; i++) { s = PUSH.charAt(t % 64) + s; t = Math.floor(t / 64); }
+        for (var j = 0; j < 12; j++) s += PUSH.charAt(Math.floor(Math.random() * 64));
+        return s;
+      }
+
+      /* ---- Firebase REST ---- */
+      var S = null; // { pid, uid, rt, num, tok, exp }
+      function api(url, body, form) {
+        return fetch(url, { method: 'POST', headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' }, body: form ? body : JSON.stringify(body) })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j && j.error && j.error.message) || ('HTTP ' + r.status)); return j; }); });
+      }
+      function token() {
+        var s = S;
+        if (!s) return Promise.reject(new Error('not connected'));
+        if (s.tok && s.exp - Date.now() > 300000) return Promise.resolve(s.tok);
+        if (s.refreshing) return s.refreshing;
+        s.refreshing = api('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(TCNET.apiKey),
+          'grant_type=refresh_token&refresh_token=' + encodeURIComponent(s.rt), true).then(function (j) {
+          s.tok = j.id_token; s.rt = j.refresh_token; s.exp = Date.now() + (+j.expires_in || 3600) * 1000; s.refreshing = null;
+          var a = cfg.acc[s.pid]; if (a && a.uid === s.uid) { a.rt = s.rt; saveCfg(); }
+          return s.tok;
+        }, function (e) { s.refreshing = null; throw e; });
+        return s.refreshing;
+      }
+      function db(method, path, body, query) {
+        return token().then(function (t) {
+          var u = DBU + '/' + path + '.json?auth=' + encodeURIComponent(t) + (query || '');
+          return fetch(u, { method: method, body: body === undefined ? undefined : JSON.stringify(body) }).then(function (r) {
+            return r.text().then(function (x) {
+              var j = null; try { j = JSON.parse(x); } catch (e) {}
+              if (!r.ok) { var er = new Error((j && j.error) || ('HTTP ' + r.status)); er.status = r.status; throw er; }
+              return j;
+            });
+          });
+        });
+      }
+      function q(s) { return encodeURIComponent(JSON.stringify(s)); }
+
+      /* ---- account + live data ---- */
+      var data, pubs = {}, es = null, recon = null, first = true, prevNt = {}, status = '', loaded = false;
+      function blankData() { return { in: {}, out: {}, fr: {}, nt: {}, bl: {}, cfg: {} }; }
+      data = blankData();
+      function acct() { return prof.id != null ? cfg.acc[prof.id] : null; }
+      function setStatus(s) { status = s || ''; var st = $('#tcf-status'); if (st) st.textContent = status; }
+
+      function setup() {
+        if (!configured || prof.id == null || S) return;
+        var pid = prof.id;
+        setStatus('Setting up…');
+        api('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + encodeURIComponent(TCNET.apiKey), { returnSecureToken: true }).then(function (j) {
+          S = { pid: pid, uid: j.localId, rt: j.refreshToken, tok: j.idToken, exp: Date.now() + (+j.expiresIn || 3600) * 1000, num: 0 };
+          return claimNumber(0);
+        }).then(function (num) {
+          S.num = num;
+          cfg.acc[pid] = { uid: S.uid, rt: S.rt, num: num }; saveCfg();
+          return writePub();
+        }).then(function () { connect(); }).catch(function (e) { S = null; setStatus('Could not turn on Friends: ' + e.message); render(); });
+      }
+      function claimNumber(tries) {
+        var n = tries < 8 ? 10000 + Math.floor(Math.random() * 90000) : 100000 + Math.floor(Math.random() * 900000);
+        return db('PUT', 'ids/' + n, S.uid).then(function () { return n; }, function (e) {
+          if (tries < 15 && e.status === 401) return claimNumber(tries + 1);
+          throw e;
+        });
+      }
+      var pubSent = '';
+      function writePub() {
+        if (!S) return Promise.resolve();
+        var n = (prof.name || 'Player').slice(0, 16);
+        var p = { n: n, nl: n.toLowerCase(), num: S.num, seen: TS };
+        var f = /^[A-Za-z0-9+/]{256}$/.test(myFace) ? myFace : null;
+        p.face = f;
+        pubSent = n + '|' + (f || '');
+        return db('PATCH', 'pub/' + S.uid, p);
+      }
+      function disconnect() {
+        if (es) { try { es.close(); } catch (e) {} es = null; }
+        if (recon) { clearTimeout(recon); recon = null; }
+      }
+      function reconnectSoon(ms) {
+        if (es) { try { es.close(); } catch (e) {} es = null; }
+        if (recon) return;
+        recon = setTimeout(function () { recon = null; if (S) openStream(); }, ms);
+      }
+      function connect() {
+        disconnect();
+        var a = acct();
+        data = blankData(); first = true; prevNt = {}; loaded = false; chatWith = null; profileOf = null; msgs = [];
+        if (!a || !configured) { S = null; render(); updateBadge(); return; }
+        if (!S || S.uid !== a.uid) S = { pid: prof.id, uid: a.uid, rt: a.rt, num: a.num, tok: null, exp: 0 };
+        setStatus('Connecting…');
+        openStream();
+        render();
+      }
+      function openStream() {
+        var s = S;
+        token().then(function (t) {
+          if (S !== s) return;
+          es = new EventSource(DBU + '/u/' + s.uid + '.json?auth=' + encodeURIComponent(t));
+          es.addEventListener('put', function (ev) { if (S === s) onStream(ev, false); });
+          es.addEventListener('patch', function (ev) { if (S === s) onStream(ev, true); });
+          es.addEventListener('auth_revoked', function () { if (S === s) { s.exp = 0; reconnectSoon(500); } });
+          es.addEventListener('cancel', function () { if (S === s) reconnectSoon(15000); });
+          es.onerror = function () { if (S === s) { setStatus('Reconnecting…'); reconnectSoon(8000); } };
+          var nm = (prof.name || 'Player').slice(0, 16) + '|' + (/^[A-Za-z0-9+/]{256}$/.test(myFace) ? myFace : '');
+          (nm !== pubSent ? writePub() : db('PATCH', 'pub/' + s.uid, { seen: TS })).catch(function () {});
+        }).catch(function (e) { if (S === s) { setStatus('Offline (' + e.message + ')'); reconnectSoon(30000); } });
+      }
+      function onStream(ev, isPatch) {
+        var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+        if (!m) return;
+        var parts = String(m.path || '/').split('/').filter(Boolean);
+        if (isPatch && m.data && typeof m.data === 'object') { for (var k in m.data) setAt(parts.concat(k.split('/').filter(Boolean)), m.data[k]); }
+        else setAt(parts, m.data);
+        loaded = true; setStatus('');
+        afterData();
+      }
+      function setAt(parts, v) {
+        if (!parts.length) { data = blankData(); if (v && typeof v === 'object') for (var k in v) data[k] = v[k]; ensure(); return; }
+        var o = data;
+        for (var i = 0; i < parts.length - 1; i++) { if (o[parts[i]] == null || typeof o[parts[i]] !== 'object') o[parts[i]] = {}; o = o[parts[i]]; }
+        var last = parts[parts.length - 1];
+        if (v === null || v === undefined) delete o[last]; else o[last] = v;
+        ensure();
+      }
+      function ensure() { ['in', 'out', 'fr', 'nt', 'bl', 'cfg'].forEach(function (k) { if (!data[k] || typeof data[k] !== 'object') data[k] = {}; }); }
+      function myRead() { if (!S) return {}; if (!readMap[S.uid]) readMap[S.uid] = {}; return readMap[S.uid]; }
+      function isUnread(o) { return data.fr[o] != null && (data.nt[o] || 0) > (myRead()[o] || 0); }
+      function markRead(o) { if (!S) return; myRead()[o] = Math.max(data.nt[o] || 0, myRead()[o] || 0); saveRead(); updateBadge(); }
+      function afterData() {
+        var all = {};
+        ['in', 'out', 'fr'].forEach(function (k) { for (var u in data[k]) all[u] = 1; });
+        for (var u in all) if (!pubs[u]) loadPub(u);
+        for (var o in data.nt) {
+          var t = data.nt[o];
+          if (!first && t !== prevNt[o] && data.fr[o] != null) {
+            if (chatWith === o && isOpen()) { loadChat(o); }
+            else if (t > (myRead()[o] || 0)) notifyMsg(o);
+          }
+        }
+        if (!first) for (var r in data.in) if (prevIn[r] == null) notifyReq(r);
+        prevNt = JSON.parse(JSON.stringify(data.nt)); prevIn = JSON.parse(JSON.stringify(data.in));
+        first = false;
+        updateBadge(); render();
+      }
+      var prevIn = {};
+      var pubLoading = {};
+      function loadPub(u) {
+        if (pubLoading[u]) return;
+        pubLoading[u] = 1;
+        db('GET', 'pub/' + u).then(function (p) {
+          pubs[u] = p || { gone: true, n: 'Deleted account', num: 0 };
+          pubs[u].at = Date.now();
+        }, function () {}).then(function () { delete pubLoading[u]; render(); });
+      }
+      function nameOf(u) { var p = pubs[u]; return p ? p.n : '…'; }
+      function tagOf(u) { var p = pubs[u]; return p && p.num ? '#' + p.num : ''; }
+
+      /* ---- actions ---- */
+      function act(body, okMsg, failMsg) {
+        return db('PATCH', '', body).then(function () { if (okMsg) flash(okMsg); }, function (e) { flash(failMsg || ('Something went wrong (' + e.message + ')')); throw e; });
+      }
+      function sendRequest(u) {
+        if (!S || u === S.uid) return;
+        if (data.in[u] != null) return accept(u);
+        var b = {}; b['u/' + u + '/in/' + S.uid] = TS; b['u/' + S.uid + '/out/' + u] = TS;
+        act(b, 'Friend request sent to ' + nameOf(u), 'They aren’t taking friend requests right now').catch(function () {});
+      }
+      function accept(u) {
+        var b = {}; b['u/' + S.uid + '/fr/' + u] = TS; b['u/' + u + '/fr/' + S.uid] = TS; b['u/' + S.uid + '/in/' + u] = null; b['u/' + u + '/out/' + S.uid] = null;
+        act(b, 'You and ' + nameOf(u) + ' are now friends').catch(function () {});
+      }
+      function decline(u) { var b = {}; b['u/' + S.uid + '/in/' + u] = null; b['u/' + u + '/out/' + S.uid] = null; act(b).catch(function () {}); }
+      function cancelReq(u) { var b = {}; b['u/' + S.uid + '/out/' + u] = null; b['u/' + u + '/in/' + S.uid] = null; act(b).catch(function () {}); }
+      function unfriend(u) {
+        if (!window.confirm('Remove ' + nameOf(u) + ' from your friends?')) return;
+        var b = {}; b['u/' + S.uid + '/fr/' + u] = null; b['u/' + u + '/fr/' + S.uid] = null;
+        act(b, 'Removed ' + nameOf(u)).catch(function () {}); go('friends');
+      }
+      function block(u) {
+        if (!window.confirm('Block ' + nameOf(u) + '? They won’t be able to message you or send you requests.')) return;
+        var b = {}; b['u/' + S.uid + '/bl/' + u] = TS; b['u/' + S.uid + '/fr/' + u] = null; b['u/' + u + '/fr/' + S.uid] = null;
+        b['u/' + S.uid + '/in/' + u] = null; b['u/' + u + '/out/' + S.uid] = null; b['u/' + S.uid + '/out/' + u] = null; b['u/' + u + '/in/' + S.uid] = null;
+        act(b, 'Blocked ' + nameOf(u)).catch(function () {}); go('friends');
+      }
+      function unblock(u) { var b = {}; b['u/' + S.uid + '/bl/' + u] = null; act(b, 'Unblocked ' + nameOf(u)).catch(function () {}); }
+      function setAllowReq(on) { var b = {}; b['u/' + S.uid + '/cfg/noReq'] = on ? null : true; act(b).catch(function () {}); }
+      function deleteAccount() {
+        if (!S) return;
+        if (!window.confirm('Delete the Friends account of ' + (prof.name || 'this profile') + '? Your number and friends list are removed. Messages you sent stay with the people you sent them to.')) return;
+        var s = S, b = {};
+        for (var u in data.fr) { b['u/' + u + '/fr/' + s.uid] = null; }
+        for (var o in data.out) { b['u/' + o + '/in/' + s.uid] = null; }
+        b['u/' + s.uid] = null; b['pub/' + s.uid] = null;
+        db('PATCH', '', b).then(function () { return db('DELETE', 'ids/' + s.num); }).catch(function () {}).then(function () {
+          delete cfg.acc[s.pid]; saveCfg(); delete readMap[s.uid]; saveRead();
+          S = null; connect(); flash('Friends account deleted');
+        });
+      }
+
+      /* ---- chat ---- */
+      var view = 'friends', reqTab = 'received', chatWith = null, profileOf = null, msgs = [];
+      function cid(o) { return S.uid < o ? S.uid + '_' + o : o + '_' + S.uid; }
+      function loadChat(o) {
+        db('GET', 'c/' + cid(o), undefined, '&orderBy=' + q('$key') + '&limitToLast=60').then(function (j) {
+          if (chatWith !== o) return;
+          var arr = []; if (j) for (var k in j) if (j[k] && typeof j[k].t === 'string') arr.push({ id: k, f: j[k].f, t: j[k].t, ts: j[k].ts || 0 });
+          arr.sort(function (a, b) { return a.ts - b.ts || (a.id < b.id ? -1 : 1); });
+          msgs = arr; markRead(o); renderChat(true);
+        }, function () { if (chatWith === o) { msgs = []; renderChat(true); } });
+      }
+      function sendMsg(o, text) {
+        text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 256);
+        if (!text || !S) return;
+        var id = pushId(), b = {};
+        b['c/' + cid(o) + '/' + id] = { f: S.uid, t: text, ts: TS };
+        b['u/' + o + '/nt/' + S.uid] = TS;
+        var m = { id: id, f: S.uid, t: text, ts: Date.now(), pending: true };
+        msgs.push(m); renderChat(true);
+        db('PATCH', '', b).then(function () { m.pending = false; renderChat(false); }, function () { m.pending = false; m.failed = true; renderChat(false); });
+      }
+
+      /* ---- pop-ups + sound ---- */
+      var toastBox = null;
+      function toast(faceB64, title, text, onClick) {
+        if (!cfg.popups) return;
+        if (!toastBox) { toastBox = el('div', ''); toastBox.id = 'tcf-toasts'; (document.getElementById('tc-root') || document.documentElement).appendChild(toastBox); }
+        var t = el('div', 'tcf-toast');
+        t.appendChild(face(faceB64, 24));
+        var tx = el('div', 'tcf-toast-tx'); tx.appendChild(el('b', '', title)); tx.appendChild(el('span', '', text)); t.appendChild(tx);
+        t.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        t.addEventListener('click', function (e) { e.stopPropagation(); t.remove(); if (onClick) onClick(); });
+        toastBox.appendChild(t);
+        while (toastBox.children.length > 3) toastBox.removeChild(toastBox.firstChild);
+        setTimeout(function () { t.classList.add('tcf-out'); setTimeout(function () { t.remove(); }, 400); }, 5500);
+        ping();
+      }
+      var actx = null;
+      function ping() {
+        if (!cfg.sound) return;
+        try {
+          if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+          if (actx.state === 'suspended') actx.resume();
+          var t0 = actx.currentTime;
+          [[880, 0], [1320, 0.09]].forEach(function (n) {
+            var o = actx.createOscillator(), g = actx.createGain();
+            o.type = 'sine'; o.frequency.value = n[0];
+            g.gain.setValueAtTime(0.0001, t0 + n[1]); g.gain.exponentialRampToValueAtTime(0.12, t0 + n[1] + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + n[1] + 0.22);
+            o.connect(g); g.connect(actx.destination); o.start(t0 + n[1]); o.stop(t0 + n[1] + 0.25);
+          });
+        } catch (e) {}
+      }
+      function notifyMsg(o) {
+        db('GET', 'c/' + cid(o), undefined, '&orderBy=' + q('$key') + '&limitToLast=1').then(function (j) {
+          var m = null; if (j) for (var k in j) m = j[k];
+          if (!m || m.f !== o || typeof m.t !== 'string') return;
+          var p = pubs[o] || {};
+          toast(p.face, (p.n || 'Friend') + ' messaged you', m.t, function () { openMenu(); openChat(o); });
+        }, function () {});
+      }
+      function notifyReq(u) {
+        var show = function () { var p = pubs[u] || {}; toast(p.face, 'Friend request', (p.n || 'Someone') + (p.num ? ' #' + p.num : '') + ' wants to be friends', function () { openMenu(); reqTab = 'received'; go('requests'); }); };
+        if (pubs[u]) show(); else db('GET', 'pub/' + u).then(function (p) { if (p) { pubs[u] = p; p.at = Date.now(); } show(); }, function () {});
+      }
+      function flash(msg) { try { showModFlash(msg); } catch (e) {} }
+
+      /* ---- badge: title screen button + sidebar ---- */
+      function counts() {
+        var un = 0, rq = 0;
+        if (S) { for (var o in data.fr) if (isUnread(o)) un++; for (var r in data.in) rq++; }
+        return { un: un, rq: rq };
+      }
+      var lastBadge = null;
+      function updateBadge() {
+        var c = counts(), n = c.un + c.rq;
+        if (n !== lastBadge) {
+          lastBadge = n;
+          try { localStorage.setItem('_eaglercraft_1.12.tcnetunread', btoa(String(n))); } catch (e) {}
+        }
+        setBadge(sideBtn, n); setBadge(tabFriends, c.un); setBadge(tabReq, c.rq);
+      }
+      function setBadge(b, n) {
+        if (!b) return;
+        var s = b.querySelector('.tcf-badge');
+        if (!n) { if (s) s.remove(); return; }
+        if (!s) { s = el('span', 'tcf-badge'); b.appendChild(s); }
+        s.textContent = n > 99 ? '99+' : String(n);
+      }
+
+      /* ---- UI ---- */
+      var css = el('style');
+      css.textContent = [
+        '#tc-friends { display:none; max-width:640px; }',
+        '#tc-body.tcv-friends .tc-panel, #tc-body.tcv-friends #tc-catbar { display:none !important; }',
+        '#tc-body.tcv-friends #tc-friends { display:block; animation: tcFade var(--tc-med) var(--tc-ease); }',
+        '.tc-view .tcf-badge, .tcf-tab .tcf-badge { margin-left:7px; }',
+        '.tcf-badge { display:inline-block; min-width:16px; padding:1px 5px; border-radius:999px; background:#e0383e; color:#fff; font:700 10.5px/14px Outfit,sans-serif; text-align:center; vertical-align:1px; }',
+        '.tcf-face { flex:0 0 auto; border-radius:5px; background-size:100% 100%; image-rendering:pixelated; box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.35); background-color:#3a2c18; }',
+        '.tcf-noface { background:linear-gradient(135deg,#6b4a2b,#3a2a18); }',
+        '.tcf-me { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--tc-card-bord); border-radius:12px; background:var(--tc-card-bg); margin-bottom:12px; }',
+        '.tcf-me-tx { flex:1; min-width:0; }',
+        '.tcf-name { font:700 14px Outfit,sans-serif; color:var(--txt); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }',
+        '.tcf-num { font:600 12px "JetBrains Mono",monospace; color:var(--a-1); margin-left:6px; }',
+        '.tcf-sub { font:500 11.5px Outfit,sans-serif; color:var(--dim); margin-top:2px; }',
+        '.tcf-tabs { display:flex; gap:6px; margin:0 0 12px; flex-wrap:wrap; }',
+        '.tcf-tab, .tcf-btn { font:600 12px Outfit,sans-serif; color:var(--dim); background:var(--panel2); border:1px solid var(--bord); border-radius:999px; padding:7px 14px; cursor:pointer; transition:all var(--tc-fast); }',
+        '.tcf-tab:hover, .tcf-btn:hover { color:var(--txt); border-color:var(--a-2); }',
+        '.tcf-tab.on, .tcf-btn.tcf-main { color:var(--bg0); background:linear-gradient(180deg,var(--a-1),var(--a-2)); border-color:transparent; }',
+        '.tcf-btn.tcf-sm { padding:5px 11px; font-size:11.5px; }',
+        '.tcf-btn.tcf-bad:hover { color:#ff8a8a; border-color:#e0383e; }',
+        '.tcf-btn[disabled] { opacity:.5; cursor:default; }',
+        '.tcf-subtabs { display:flex; gap:6px; margin:-4px 0 12px; }',
+        '.tcf-add { display:flex; gap:8px; margin-bottom:10px; }',
+        '.tcf-in { flex:1; min-width:0; font:500 13px Outfit,sans-serif; color:var(--txt); background:rgba(0,0,0,.28); border:1px solid var(--bord); border-radius:10px; padding:8px 12px; outline:none; }',
+        '.tcf-in:focus { border-color:var(--a-2); }',
+        '.tcf-list { display:flex; flex-direction:column; gap:6px; }',
+        '.tcf-row { display:flex; align-items:center; gap:11px; padding:8px 10px; border:1px solid color-mix(in srgb, var(--bord) 70%, transparent); border-radius:10px; background:var(--panel2); }',
+        '.tcf-row.tcf-click { cursor:pointer; transition:border-color var(--tc-fast), background var(--tc-fast); }',
+        '.tcf-row.tcf-click:hover { border-color:var(--a-2); }',
+        '.tcf-row-tx { flex:1; min-width:0; }',
+        '.tcf-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#6f6656; margin-right:5px; vertical-align:1px; }',
+        '.tcf-dot.on { background:#4fd36b; box-shadow:0 0 6px #4fd36b; }',
+        '.tcf-empty { font:500 12.5px Outfit,sans-serif; color:var(--dim); padding:14px 4px; text-align:center; }',
+        '.tcf-h { font:700 12px Outfit,sans-serif; color:var(--dim); text-transform:uppercase; letter-spacing:.08em; margin:16px 2px 8px; }',
+        '.tcf-chat-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }',
+        '.tcf-msgs { height:300px; overflow-y:auto; padding:10px; border:1px solid var(--bord); border-radius:12px; background:rgba(0,0,0,.22); display:flex; flex-direction:column; gap:6px; }',
+        '.tcf-msg { max-width:78%; padding:7px 11px; border-radius:12px; font:500 13px/1.35 Outfit,sans-serif; color:var(--txt); background:var(--panel2); border:1px solid var(--bord); align-self:flex-start; word-wrap:break-word; overflow-wrap:anywhere; user-select:text; -webkit-user-select:text; }',
+        '.tcf-msg.mine { align-self:flex-end; color:var(--bg0); background:linear-gradient(180deg,var(--a-1),var(--a-2)); border-color:transparent; }',
+        '.tcf-msg.pending { opacity:.6; } .tcf-msg.failed { outline:1px solid #e0383e; }',
+        '.tcf-time { display:block; font:500 10px Outfit,sans-serif; opacity:.65; margin-top:2px; }',
+        '.tcf-send { display:flex; gap:8px; margin-top:10px; }',
+        '.tcf-prof { display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px; border:1px solid var(--tc-card-bord); border-radius:14px; background:var(--tc-card-bg); text-align:center; }',
+        '.tcf-prof .tcf-name { font-size:18px; }',
+        '.tcf-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px; }',
+        '.tcf-set { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 4px; font:500 12.5px Outfit,sans-serif; color:var(--txt); border-bottom:1px solid color-mix(in srgb, var(--bord) 40%, transparent); }',
+        '.tcf-setup { padding:22px; border:1px solid var(--tc-card-bord); border-radius:14px; background:var(--tc-card-bg); text-align:center; }',
+        '.tcf-setup p { font:500 12.5px/1.5 Outfit,sans-serif; color:var(--dim); margin:8px 0 14px; }',
+        '#tcf-status { font:500 11.5px Outfit,sans-serif; color:var(--dim); min-height:14px; margin:-6px 2px 8px; }',
+        '#tcf-toasts { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:2147483646; display:flex; flex-direction:column; gap:6px; pointer-events:none; }',
+        '#tcf-toasts .tcf-toast { pointer-events:auto; display:flex; align-items:center; gap:10px; min-width:240px; max-width:380px; padding:9px 12px; border-radius:12px; background:var(--panel, rgba(28,19,5,.94)); border:1px solid var(--a-2, #d4a537); box-shadow:0 6px 22px rgba(0,0,0,.5); cursor:pointer; animation:tcfIn .35s cubic-bezier(.19,1,.22,1); transition:opacity .4s, transform .4s; font-family:Outfit,sans-serif; }',
+        '#tcf-toasts .tcf-toast.tcf-out { opacity:0; transform:translateY(-8px); }',
+        '.tcf-toast-tx { display:flex; flex-direction:column; min-width:0; }',
+        '.tcf-toast-tx b { font:700 12.5px Outfit,sans-serif; color:var(--a-1, #ffd76b); }',
+        '.tcf-toast-tx span { font:500 12px Outfit,sans-serif; color:var(--txt, #f6ecd2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }',
+        '@keyframes tcfIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:none; } }'
+      ].join('\n');
+      (document.head || document.documentElement).appendChild(css);
+
+      var cats = $('#tc-cats'), panels = $('#tc-body .tc-panels');
+      if (!cats || !panels) return;
+      var sideBtn = el('button', 'tc-view', 'Friends'); sideBtn.dataset.view = 'friends';
+      var themesBtn = cats.querySelector('.tc-view[data-view="themes"]');
+      cats.insertBefore(sideBtn, themesBtn || null);
+      sideBtn.addEventListener('click', function () { tcSetView('friends'); readProfile(); render(); });
+
+      var box = el('div', ''); box.id = 'tc-friends';
+      panels.appendChild(box);
+      var meBox = el('div', 'tcf-me'), statusEl = el('div', ''); statusEl.id = 'tcf-status';
+      var tabs = el('div', 'tcf-tabs');
+      var tabFriends = el('button', 'tcf-tab', 'Friends'), tabReq = el('button', 'tcf-tab', 'Requests');
+      tabFriends.addEventListener('click', function () { go('friends'); });
+      tabReq.addEventListener('click', function () { go('requests'); });
+      tabs.appendChild(tabFriends); tabs.appendChild(tabReq);
+      // main screen
+      var secMain = el('div', '');
+      var addRow = el('div', 'tcf-add'), addIn = el('input', 'tcf-in');
+      addIn.type = 'text'; addIn.maxLength = 24; addIn.placeholder = 'Add a friend: name, or name#number'; addIn.autocomplete = 'off';
+      isolate(addIn);
+      var addBtn = btn('tcf-main', 'Search', function () { doSearch(); });
+      addIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+      addRow.appendChild(addIn); addRow.appendChild(addBtn);
+      var results = el('div', 'tcf-list'), friendsList = el('div', 'tcf-list'), settings = el('div', '');
+      secMain.appendChild(addRow); secMain.appendChild(results);
+      var fh = el('div', 'tcf-h', 'Your friends'); secMain.appendChild(fh); secMain.appendChild(friendsList);
+      secMain.appendChild(el('div', 'tcf-h', 'Settings')); secMain.appendChild(settings);
+      // requests
+      var secReq = el('div', ''), subtabs = el('div', 'tcf-subtabs');
+      var stRecv = el('button', 'tcf-tab', 'Received'), stSent = el('button', 'tcf-tab', 'Sent');
+      stRecv.addEventListener('click', function () { reqTab = 'received'; render(); });
+      stSent.addEventListener('click', function () { reqTab = 'sent'; render(); });
+      subtabs.appendChild(stRecv); subtabs.appendChild(stSent);
+      var reqList = el('div', 'tcf-list');
+      secReq.appendChild(subtabs); secReq.appendChild(reqList);
+      // chat
+      var secChat = el('div', ''), chatHead = el('div', 'tcf-chat-head'), msgBox = el('div', 'tcf-msgs');
+      var sendRow = el('div', 'tcf-send'), msgIn = el('input', 'tcf-in');
+      msgIn.type = 'text'; msgIn.maxLength = 256; msgIn.placeholder = 'Message'; msgIn.autocomplete = 'off';
+      isolate(msgIn);
+      var sendBtn = btn('tcf-main', 'Send', function () { doSend(); });
+      msgIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') doSend(); });
+      sendRow.appendChild(msgIn); sendRow.appendChild(sendBtn);
+      secChat.appendChild(chatHead); secChat.appendChild(msgBox); secChat.appendChild(sendRow);
+      msgBox.addEventListener('wheel', function (e) { e.stopPropagation(); }, { passive: true });
+      // profile
+      var secProf = el('div', '');
+      // not set up
+      var secSetup = el('div', '');
+      [meBox, statusEl, tabs, secMain, secReq, secChat, secProf, secSetup].forEach(function (x) { box.appendChild(x); });
+
+      function doSend() { if (chatWith && msgIn.value.trim()) { sendMsg(chatWith, msgIn.value); msgIn.value = ''; } }
+      function go(v) { view = v; if (v !== 'chat') chatWith = null; if (v !== 'profile') profileOf = null; render(); }
+      function openChat(o) { chatWith = o; profileOf = null; view = 'chat'; msgs = []; render(); loadChat(o); setTimeout(function () { try { msgIn.focus(); } catch (e) {} }, 50); }
+      function openProfile(o) { profileOf = o; view = 'profile'; render(); if (!pubs[o] || Date.now() - (pubs[o].at || 0) > 30000) { delete pubs[o]; loadPub(o); } }
+      function isOpen() { var g = document.getElementById('tc-gui'), b = $('#tc-body'); return !!(g && g.classList.contains('open') && b && b.classList.contains('tcv-friends')); }
+      function openMenu() { try { if (!gui.classList.contains('open')) openGui(); tcSetView('friends'); } catch (e) {} }
+
+      function personRow(u, sub, actions, onClick) {
+        var r = el('div', 'tcf-row' + (onClick ? ' tcf-click' : ''));
+        var p = pubs[u];
+        r.appendChild(face(p && p.face, 30));
+        var tx = el('div', 'tcf-row-tx'), nm = el('div', 'tcf-name', nameOf(u));
+        var tg = tagOf(u); if (tg) nm.appendChild(el('span', 'tcf-num', tg));
+        tx.appendChild(nm);
+        var sb = el('div', 'tcf-sub');
+        if (sub === 'status') { var d = el('span', 'tcf-dot' + (online(p) ? ' on' : '')); sb.appendChild(d); sb.appendChild(document.createTextNode(statusText(p))); }
+        else if (sub) sb.textContent = sub;
+        tx.appendChild(sb); r.appendChild(tx);
+        (actions || []).forEach(function (a) { r.appendChild(a); });
+        if (onClick) r.addEventListener('click', onClick);
+        return r;
+      }
+      function toggleRow(label, on, fn) {
+        var r = el('div', 'tcf-set'); r.appendChild(el('span', '', label));
+        var sw = el('div', 'tc-sw' + (on ? ' on' : ''));
+        sw.addEventListener('click', function (e) { e.stopPropagation(); var v = !sw.classList.contains('on'); sw.classList.toggle('on', v); fn(v); });
+        r.appendChild(sw); return r;
+      }
+
+      function render() {
+        if (!box) return;
+        readProfile();
+        var a = acct();
+        meBox.textContent = '';
+        meBox.appendChild(face(myFace, 40));
+        var mt = el('div', 'tcf-me-tx'), mn = el('div', 'tcf-name', prof.name || 'Player');
+        if (a && a.num) mn.appendChild(el('span', 'tcf-num', '#' + a.num));
+        mt.appendChild(mn);
+        mt.appendChild(el('div', 'tcf-sub', a ? 'Friends can add you as ' + (prof.name || 'Player') + '#' + a.num : 'Friends & Messages'));
+        meBox.appendChild(mt);
+        if (a) meBox.appendChild(btn('tcf-sm', 'Copy', function () {
+          var s = (prof.name || 'Player') + '#' + a.num;
+          try { navigator.clipboard.writeText(s).then(function () { flash('Copied ' + s); }, function () { flash(s); }); } catch (e) { flash(s); }
+        }));
+        statusEl.textContent = status;
+        var ready = configured && !!a;
+        tabs.style.display = ready ? '' : 'none';
+        secSetup.style.display = ready ? 'none' : '';
+        [secMain, secReq, secChat, secProf].forEach(function (x) { x.style.display = 'none'; });
+        if (!ready) { renderSetup(); return; }
+        tabFriends.classList.toggle('on', view === 'friends' || view === 'chat' || view === 'profile');
+        tabReq.classList.toggle('on', view === 'requests');
+        if (view === 'requests') { secReq.style.display = ''; renderReq(); }
+        else if (view === 'chat' && chatWith) { secChat.style.display = ''; renderChat(false); }
+        else if (view === 'profile' && profileOf) { secProf.style.display = ''; renderProfile(); }
+        else { view = 'friends'; secMain.style.display = ''; renderMain(); }
+        updateBadge();
+      }
+      function renderSetup() {
+        secSetup.textContent = '';
+        var w = el('div', 'tcf-setup');
+        w.appendChild(el('div', 'tcf-name', 'Friends & Messages'));
+        if (!configured) {
+          w.appendChild(el('p', '', 'Friends isn’t connected to its online server in this version yet.'));
+        } else if (prof.id == null) {
+          w.appendChild(el('p', '', 'Open the title screen once so Treasure Client knows which profile you’re using.'));
+        } else {
+          w.appendChild(el('p', '', 'Add Treasure Client players by name and number, and message them on any server. Only people you accept can message you. Your name, skin face and number can be seen by players who search for you. Each profile gets its own Friends account.'));
+          var b = btn('tcf-main', 'Turn on Friends for ' + (prof.name || 'this profile'), function () { b.disabled = true; setup(); });
+          if (S) b.disabled = true;
+          w.appendChild(b);
+        }
+        secSetup.appendChild(w);
+      }
+      function friendIds() {
+        var ids = Object.keys(data.fr);
+        ids.sort(function (x, y) {
+          var ux = isUnread(x) ? 1 : 0, uy = isUnread(y) ? 1 : 0; if (ux !== uy) return uy - ux;
+          var ox = online(pubs[x]) ? 1 : 0, oy = online(pubs[y]) ? 1 : 0; if (ox !== oy) return oy - ox;
+          return nameOf(x).toLowerCase() < nameOf(y).toLowerCase() ? -1 : 1;
+        });
+        return ids;
+      }
+      function renderMain() {
+        friendsList.textContent = '';
+        var ids = friendIds();
+        if (!loaded) friendsList.appendChild(el('div', 'tcf-empty', 'Loading…'));
+        else if (!ids.length) friendsList.appendChild(el('div', 'tcf-empty', 'No friends yet. Search for someone above, or share your name and number.'));
+        ids.forEach(function (u) {
+          var acts = [];
+          if (isUnread(u)) { var bd = el('span', 'tcf-badge', 'new'); acts.push(bd); }
+          acts.push(btn('tcf-sm', 'Profile', function () { openProfile(u); }));
+          friendsList.appendChild(personRow(u, 'status', acts, function () { openChat(u); }));
+        });
+        settings.textContent = '';
+        settings.appendChild(toggleRow('Allow friend requests', !data.cfg.noReq, function (v) { setAllowReq(v); }));
+        settings.appendChild(toggleRow('Pop-up when a message or request arrives', !!cfg.popups, function (v) { cfg.popups = v; saveCfg(); }));
+        settings.appendChild(toggleRow('Message sound', !!cfg.sound, function (v) { cfg.sound = v; saveCfg(); if (v) ping(); }));
+        var bl = Object.keys(data.bl);
+        if (bl.length) {
+          settings.appendChild(el('div', 'tcf-h', 'Blocked'));
+          var bll = el('div', 'tcf-list');
+          bl.forEach(function (u) { if (!pubs[u]) loadPub(u); bll.appendChild(personRow(u, '', [btn('tcf-sm', 'Unblock', function () { unblock(u); })])); });
+          settings.appendChild(bll);
+        }
+        var del = el('div', 'tcf-set'); del.appendChild(el('span', '', 'Delete this profile’s Friends account'));
+        del.appendChild(btn('tcf-sm tcf-bad', 'Delete', function () { deleteAccount(); }));
+        settings.appendChild(del);
+      }
+      var lastResults = null;
+      function doSearch() {
+        var raw = addIn.value.trim(); if (!raw || !S) return;
+        var m = raw.match(/^([^#\s]*)\s*#?\s*(\d{5,6})$/), name = raw.replace(/#.*$/, '').trim(), num = null;
+        if (m) { num = m[2]; name = m[1]; }
+        results.textContent = ''; results.appendChild(el('div', 'tcf-empty', 'Searching…'));
+        var p;
+        if (num) {
+          p = db('GET', 'ids/' + num).then(function (uid) {
+            if (!uid || typeof uid !== 'string') return [];
+            return db('GET', 'pub/' + uid).then(function (pp) { if (!pp) return []; if (name && pp.nl !== name.toLowerCase()) return []; var o = {}; o[uid] = pp; return o; });
+          });
+        } else {
+          if (name.length < 1) return;
+          p = db('GET', 'pub', undefined, '&orderBy=' + q('nl') + '&equalTo=' + q(name.toLowerCase()) + '&limitToFirst=20');
+        }
+        p.then(function (res) {
+          lastResults = []; for (var u in (res || {})) { if (res[u]) { pubs[u] = res[u]; pubs[u].at = Date.now(); lastResults.push(u); } }
+          renderResults();
+        }, function (e) { results.textContent = ''; results.appendChild(el('div', 'tcf-empty', 'Search failed (' + e.message + ')')); });
+      }
+      function renderResults() {
+        results.textContent = '';
+        if (!lastResults) return;
+        if (!lastResults.length) { results.appendChild(el('div', 'tcf-empty', 'No Treasure Client player found. Check the name and number.')); }
+        lastResults.forEach(function (u) {
+          var a;
+          if (u === S.uid) a = el('span', 'tcf-sub', 'That’s you');
+          else if (data.fr[u] != null) a = btn('tcf-sm', 'Message', function () { openChat(u); });
+          else if (data.bl[u] != null) a = btn('tcf-sm', 'Unblock', function () { unblock(u); });
+          else if (data.in[u] != null) a = btn('tcf-sm tcf-main', 'Accept', function () { accept(u); });
+          else if (data.out[u] != null) a = btn('tcf-sm', 'Requested', function () { reqTab = 'sent'; go('requests'); });
+          else a = btn('tcf-sm tcf-main', 'Add friend', function () { sendRequest(u); });
+          results.appendChild(personRow(u, 'status', [a]));
+        });
+        results.appendChild(btn('tcf-sm', 'Clear', function () { lastResults = null; addIn.value = ''; renderResults(); }));
+      }
+      function renderReq() {
+        stRecv.classList.toggle('on', reqTab === 'received'); stSent.classList.toggle('on', reqTab === 'sent');
+        setBadge(stRecv, Object.keys(data.in).length);
+        reqList.textContent = '';
+        var src = reqTab === 'received' ? data.in : data.out;
+        var ids = Object.keys(src).sort(function (x, y) { return (src[y] || 0) - (src[x] || 0); });
+        if (!ids.length) reqList.appendChild(el('div', 'tcf-empty', reqTab === 'received' ? 'No friend requests right now.' : 'You haven’t sent any requests that are still waiting.'));
+        ids.forEach(function (u) {
+          var when = typeof src[u] === 'number' ? (reqTab === 'received' ? 'Sent you a request ' : 'You sent a request ') + ago(src[u]) : '';
+          var acts = reqTab === 'received'
+            ? [btn('tcf-sm tcf-main', 'Accept', function () { accept(u); }), btn('tcf-sm', 'Decline', function () { decline(u); }), btn('tcf-sm tcf-bad', 'Block', function () { block(u); })]
+            : [btn('tcf-sm', 'Cancel', function () { cancelReq(u); })];
+          reqList.appendChild(personRow(u, when, acts));
+        });
+      }
+      var lastChatKey = '';
+      function renderChat(scroll) {
+        if (!chatWith) return;
+        var u = chatWith, p = pubs[u];
+        chatHead.textContent = '';
+        chatHead.appendChild(btn('tcf-sm', '‹ Back', function () { go('friends'); }));
+        chatHead.appendChild(face(p && p.face, 28));
+        var tx = el('div', 'tcf-row-tx'), nm = el('div', 'tcf-name', nameOf(u)); var tg = tagOf(u); if (tg) nm.appendChild(el('span', 'tcf-num', tg));
+        tx.appendChild(nm);
+        var sb = el('div', 'tcf-sub'); sb.appendChild(el('span', 'tcf-dot' + (online(p) ? ' on' : ''))); sb.appendChild(document.createTextNode(statusText(p))); tx.appendChild(sb);
+        chatHead.appendChild(tx);
+        chatHead.appendChild(btn('tcf-sm', 'Profile', function () { openProfile(u); }));
+        var key = u + ':' + msgs.length + ':' + msgs.map(function (m) { return (m.pending ? 'p' : '') + (m.failed ? 'f' : ''); }).join('');
+        if (key === lastChatKey && !scroll) return;
+        lastChatKey = key;
+        var atBottom = msgBox.scrollHeight - msgBox.scrollTop - msgBox.clientHeight < 40;
+        msgBox.textContent = '';
+        if (!msgs.length) msgBox.appendChild(el('div', 'tcf-empty', 'Say hi to ' + nameOf(u) + '!'));
+        msgs.forEach(function (m) {
+          var b = el('div', 'tcf-msg' + (m.f === S.uid ? ' mine' : '') + (m.pending ? ' pending' : '') + (m.failed ? ' failed' : ''), m.t);
+          b.appendChild(el('span', 'tcf-time', m.failed ? 'Not sent' : clock(m.ts)));
+          msgBox.appendChild(b);
+        });
+        var canSend = data.fr[u] != null;
+        msgIn.disabled = sendBtn.disabled = !canSend;
+        msgIn.placeholder = canSend ? 'Message ' + nameOf(u) : 'You can only message friends';
+        if (scroll || atBottom) msgBox.scrollTop = msgBox.scrollHeight;
+      }
+      function renderProfile() {
+        var u = profileOf, p = pubs[u];
+        secProf.textContent = '';
+        var back = el('div', 'tcf-chat-head'); back.appendChild(btn('tcf-sm', '‹ Back', function () { go('friends'); })); secProf.appendChild(back);
+        var c = el('div', 'tcf-prof');
+        c.appendChild(face(p && p.face, 72));
+        var nm = el('div', 'tcf-name', nameOf(u)); var tg = tagOf(u); if (tg) nm.appendChild(el('span', 'tcf-num', tg)); c.appendChild(nm);
+        var sb = el('div', 'tcf-sub'); sb.appendChild(el('span', 'tcf-dot' + (online(p) ? ' on' : ''))); sb.appendChild(document.createTextNode(statusText(p))); c.appendChild(sb);
+        if (typeof data.fr[u] === 'number') { try { c.appendChild(el('div', 'tcf-sub', 'Friends since ' + new Date(data.fr[u]).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }))); } catch (e) {} }
+        var acts = el('div', 'tcf-actions');
+        if (data.fr[u] != null) {
+          acts.appendChild(btn('tcf-main', 'Message', function () { openChat(u); }));
+          acts.appendChild(btn('', 'Copy name#number', function () { var s = nameOf(u) + tagOf(u); try { navigator.clipboard.writeText(s).then(function () { flash('Copied ' + s); }); } catch (e) { flash(s); } }));
+          acts.appendChild(btn('tcf-bad', 'Remove friend', function () { unfriend(u); }));
+        }
+        acts.appendChild(btn('tcf-bad', 'Block', function () { block(u); }));
+        c.appendChild(acts);
+        secProf.appendChild(c);
+      }
+
+      /* ---- open from the title screen button (tcopen=2), profile changes, heartbeat ---- */
+      readProfile();
+      var curPid = prof.id;
+      connect();
+      setInterval(function () {
+        try {
+          var raw = localStorage.getItem('_eaglercraft_1.12.tcopen');
+          if (raw && atob(raw).charCodeAt(0) === 2) { localStorage.removeItem('_eaglercraft_1.12.tcopen'); openMenu(); readProfile(); go(view === 'chat' || view === 'profile' ? view : 'friends'); }
+        } catch (e) {}
+        var oldName = prof.name, oldFace = myFace;
+        readProfile();
+        if (prof.id !== curPid) { curPid = prof.id; S = null; pubs = {}; lastResults = null; view = 'friends'; connect(); return; }
+        if (S && loaded && (prof.name !== oldName || myFace !== oldFace)) { writePub().catch(function () {}); if (isOpen()) render(); }
+      }, 700);
+      setInterval(function () {
+        if (!S || !loaded) return;
+        db('PATCH', 'pub/' + S.uid, { seen: TS }).catch(function () {});
+        for (var u in data.fr) if (!pubs[u] || Date.now() - (pubs[u].at || 0) > 55000) { delete pubs[u]; loadPub(u); }
+        if (isOpen()) render();
+      }, 60000);
+    })();
 
     /* ---------- Profiles: each profile (alt) keeps its own mod setup ----------
        Java (TCProfiles) writes storage "tcprofile" = "activeId\nid,id,...". When the
