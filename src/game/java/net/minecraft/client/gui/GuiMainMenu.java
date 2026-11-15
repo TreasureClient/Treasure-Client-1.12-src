@@ -267,6 +267,7 @@ public class GuiMainMenu extends GuiScreen {
 		// Treasure Client: always-available Treasure Settings opener (so an unbound
 		// hotkey can never lock you out of the overlay menu).
 		this.buttonList.add(new GuiButton(101, this.width / 2 - 100, j + 72 + 36, 200, 20, "Treasure Settings"));
+		this.buttonList.add(new GuiButtonTCProfile(103, this.width - 28, 6)); // Treasure Client: Profiles
 	}
 
 	/**
@@ -312,6 +313,10 @@ public class GuiMainMenu extends GuiScreen {
 
 		if (button.id == 0) {
 			this.mc.displayGuiScreen(new GuiOptions(this, this.mc.gameSettings));
+		}
+
+		if (button.id == 103) {
+			this.mc.displayGuiScreen(new GuiTCProfiles(this));
 		}
 
 		if (button.id == 102) {

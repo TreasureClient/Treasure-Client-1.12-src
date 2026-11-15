@@ -561,6 +561,7 @@ public class Minecraft implements IThreadListener {
 
 		ServerList.initServerList(this);
 		EaglerProfile.read();
+		net.minecraft.client.gui.TCProfiles.init(); // Treasure Client: Profiles (alt manager)
 		ServerCookieDataStore.load();
 
 		if (this.serverName != null) {

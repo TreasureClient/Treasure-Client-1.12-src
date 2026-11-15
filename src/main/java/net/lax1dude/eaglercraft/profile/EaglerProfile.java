@@ -453,6 +453,7 @@ public class EaglerProfile {
 		byte[] b = write();
 		if(b != null) {
 			EagRuntime.setStorage("p", b);
+			net.minecraft.client.gui.TCProfiles.onSaved(b); // Treasure Client: keep the active profile's copy
 		}
 	}
 

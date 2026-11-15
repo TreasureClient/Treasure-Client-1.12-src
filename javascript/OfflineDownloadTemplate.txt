@@ -3213,6 +3213,59 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     applyResolutionScale();    // write the render-resolution scale for PlatformInput
     writeModsToEngine(); // write toggle-sprint/sneak/hitbox flags for the native Java module
 
+    /* ---------- Profiles: each profile (alt) keeps its own mod setup ----------
+       Java (TCProfiles) writes storage "tcprofile" = "activeId\nid,id,...". When the
+       active profile changes, the current mods are saved for the old profile and the
+       new profile's mods are loaded. Performance/video settings and the menu look are
+       shared by every profile (they belong to this computer, not the account). */
+    (function () {
+      var PKEY = '_eaglercraft_1.12.tcprofile', MKEY = 'treasureClient.profileMods', AKEY = 'treasureClient.activeProfile';
+      var SHARED = ['celeritas','entcull','pcull','vanillafix','ebe','lithium','ifast','dynfps','memsaver','pcore','c2me','bfmath','badopt','xcull','cextra','perfpack','dynResOn','resolutionScale','pauseUnfocused','leafCull','entDist','theme','themeTitles','themeBg','titleFont','mode'];
+      function shared(k) { return SHARED.indexOf(k) >= 0 || /^ce[A-Z]/.test(k) || /^vs[A-Z]/.test(k); }
+      function slice() { var o = {}; for (var k in state) if (Object.prototype.hasOwnProperty.call(state, k) && !shared(k)) o[k] = state[k]; return JSON.parse(JSON.stringify(o)); }
+      var mods = {}; try { mods = JSON.parse(localStorage.getItem(MKEY)) || {}; } catch (e) { mods = {}; }
+      var cur = null; try { cur = localStorage.getItem(AKEY); } catch (e) {}
+      var lastRaw = null;
+      function applyToUI() {
+        $$('.tc-sw[data-mod]').forEach(function (sw) { sw.classList.toggle('on', !!state[sw.dataset.mod]); });
+        $$('select[data-mod]').forEach(function (sel) { if (state[sel.dataset.mod] != null) sel.value = state[sel.dataset.mod]; });
+        $$('input[type="range"][data-mod]').forEach(function (sl) {
+          var key = sl.dataset.mod; if (state[key] != null) sl.value = state[key];
+          var out = sl.parentNode.querySelector('.tc-val'); if (out) out.textContent = (key === 'entDist' && +sl.value === 0) ? 'Off' : sl.value;
+        });
+        $$('.tc-seg[data-seg]').forEach(function (seg) { var key = seg.dataset.seg; $$('button', seg).forEach(function (b) { b.classList.toggle('on', b.dataset.val === String(state[key])); }); });
+        HUD_ELS.forEach(function (id) { var el = document.getElementById(id); if (el) { el.style.left = el.style.top = el.style.right = el.style.bottom = el.style.transform = ''; } });
+        [refreshBindButtons, applyHud, applyHudPositions, applyFullbrightToEngine, writeModsToEngine].forEach(function (f) { try { f(); } catch (e) {} });
+      }
+      function check() {
+        var raw = null; try { raw = localStorage.getItem(PKEY); } catch (e) {}
+        if (!raw || raw === lastRaw) return;
+        lastRaw = raw;
+        var txt; try { txt = atob(raw); } catch (e) { return; }
+        var parts = txt.split('\n'), act = (parts[0] || '').trim();
+        if (!act || act === '-1') return;
+        var ids = (parts[1] || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        if (act !== cur) {
+          if (cur != null && ids.indexOf(cur) >= 0) mods[cur] = slice();
+          var m = mods[act];
+          if (m) {
+            var keep = {}; for (var k in state) if (shared(k)) keep[k] = state[k];
+            for (var k2 in state) delete state[k2];
+            Object.assign(state, JSON.parse(JSON.stringify(defaults)), m, keep);
+            save(); applyToUI();
+          } else {
+            mods[act] = slice(); // a new profile starts with the current mods (first run: your mods become profile 1's)
+          }
+          cur = act;
+        }
+        for (var id in mods) if (ids.indexOf(id) < 0 && id !== act) delete mods[id];
+        try { localStorage.setItem(MKEY, JSON.stringify(mods)); localStorage.setItem(AKEY, cur); } catch (e) {}
+      }
+      // keep the saved copy of the profile in use fresh when the page closes
+      window.addEventListener('pagehide', function () { if (cur != null) { mods[cur] = slice(); try { localStorage.setItem(MKEY, JSON.stringify(mods)); } catch (e) {} } });
+      check(); setInterval(check, 500);
+    })();
+
     /* ---------- animated ClickGUI background (gold rain / flowing water) ---------- */
     (function () {
       var cv = document.getElementById('tc-gui-bg');
