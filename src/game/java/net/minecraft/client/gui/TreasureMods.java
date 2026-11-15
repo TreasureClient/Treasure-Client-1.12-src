@@ -180,6 +180,9 @@ public class TreasureMods {
 	public static int taStyle() { return taStyle; }
 	public static int taSpeed() { return taSpeed; }
 	public static boolean oaHitSwing() { return oaHitSwing; }
+	// Treasure Client: Auto Login (off by default: it saves passwords)
+	private static boolean autoLogin = false;
+	public static boolean autoLogin() { return autoLogin; }
 	// Treasure Client: Auto GG
 	private static boolean autoGG = false, agGlhf = false;
 	private static String agMessage = "gg";
@@ -494,6 +497,7 @@ public class TreasureMods {
 			tAnim = false; taPunch = true; taDraw = true; taSway = true; taBlockHit = true; taStyle = 0; taSpeed = 100;
 			taParticles = 1; taTotemFx = true; taHitFx = true; taEat = true; taThrow = true;
 			autoGG = false; agGlhf = false; agMessage = "gg"; agDelay = 1000;
+			autoLogin = false;
 			fullbright = false; clearWater = true; satDisplay = false; clearLiquids = false;
 			hitColorOn = false; hitColor = 0xFF0000; hitAlpha = 0.30f;
 			TCCrosshairAddons.on = false; TCCrosshairAddons.target = true; TCCrosshairAddons.mobs = false;
@@ -575,6 +579,7 @@ public class TreasureMods {
 				else if (k.equals("taEat")) taEat = v.equals("1");
 				else if (k.equals("taThrow")) taThrow = v.equals("1");
 				else if (k.equals("autoGG")) autoGG = v.equals("1");
+				else if (k.equals("autoLogin")) autoLogin = v.equals("1");
 				else if (k.equals("agGlhf")) agGlhf = v.equals("1");
 				else if (k.equals("agMsg")) agMessage = v.equals("ggwp") ? "gg wp" : v.equals("goodgame") ? "good game" : v.equals("gf") ? "gf" : v.equals("ggs") ? "ggs" : "gg";
 				else if (k.equals("agDelay")) { try { agDelay = Math.max(0, Math.min(5000, Integer.parseInt(v))); } catch (Throwable t) {} }
@@ -766,6 +771,7 @@ public class TreasureMods {
 
 			net.minecraft.client.renderer.TCTreasureAnimations.tick(mc); // Treasure Animations swing speed
 			net.minecraft.client.TCAutoGG.tick(mc); // Auto GG
+			net.minecraft.client.TCAutoLogin.tick(mc); // Auto Login
 			net.lax1dude.eaglercraft.internal.PlatformAudio.tcNoWaitDecode = true; // decode new sounds (music too, also in menus) without freezing
 
 			// only drive the game while actually in a world with no screen open
