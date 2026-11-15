@@ -46,21 +46,21 @@ public class TreasureButtons {
 
 	// ---- palette (ARGB ints). Frost=icy blue, Tropical=turquoise+sand,
 	// Terracotta=burnt orange, Forest=green, else the default gold. ----
-	private static int accent() {
+	public static int accent() {
 		if (isTropical()) return 0xFF45E3C6;
 		if (isFrost()) return 0xFF7FE9FF;
 		if (isTerracotta()) return 0xFFDB7A3C;
 		if (isForest()) return 0xFF6FCB5B;
 		return 0xFFFFD76B;
 	}
-	private static int accentDeep() {
+	public static int accentDeep() {
 		if (isTropical()) return 0xFF1AA7B0;
 		if (isFrost()) return 0xFF2EC4F1;
 		if (isTerracotta()) return 0xFFB85C2A;
 		if (isForest()) return 0xFF2F8F3E;
 		return 0xFFD4A537;
 	}
-	private static int textIdle() {
+	public static int textIdle() {
 		if (isTropical()) return 0xFFF1E6C6;
 		if (isFrost()) return 0xFFDFF6FF;
 		if (isTerracotta()) return 0xFFF3E0CC;
@@ -75,7 +75,7 @@ public class TreasureButtons {
 		return 0xFF0F0A05;
 	}
 	private static int textDisabled(){ return 0xFF6A6A6A; }
-	private static int panelBg() {
+	public static int panelBg() {
 		if (isTropical()) return 0xE6071D22;
 		if (isFrost()) return 0xE6031019;
 		if (isTerracotta()) return 0xE6241206;
@@ -83,7 +83,7 @@ public class TreasureButtons {
 		return 0xE6140D06;
 	}
 
-	private static int lerpColor(int a, int b, float t) {
+	public static int lerpColor(int a, int b, float t) {
 		int aa = (a >>> 24) & 0xFF, ar = (a >>> 16) & 0xFF, ag = (a >>> 8) & 0xFF, ab = a & 0xFF;
 		int ba = (b >>> 24) & 0xFF, br = (b >>> 16) & 0xFF, bg = (b >>> 8) & 0xFF, bb = b & 0xFF;
 		int oa = (int) (aa + (ba - aa) * t);
@@ -97,7 +97,7 @@ public class TreasureButtons {
 	 * Draw a rounded rectangle by stacking drawRect rows with the corners inset
 	 * (1px on the outer row, then full width). Cheap and matches the pixel look.
 	 */
-	private static void roundedRect(int x, int y, int w, int h, int color) {
+	public static void roundedRect(int x, int y, int w, int h, int color) {
 		if (w <= 0 || h <= 0) return;
 		int x2 = x + w, y2 = y + h;
 		// middle block
@@ -110,7 +110,7 @@ public class TreasureButtons {
 	}
 
 	/** 1px rounded outline (four sides, corners inset to match roundedRect). */
-	private static void roundedOutline(int x, int y, int w, int h, int color) {
+	public static void roundedOutline(int x, int y, int w, int h, int color) {
 		if (w <= 0 || h <= 0) return;
 		int x2 = x + w, y2 = y + h;
 		// top & bottom (inset ends)
