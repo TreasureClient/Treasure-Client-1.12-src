@@ -83,13 +83,59 @@ public class ChunkProviderClient implements IChunkProvider {
 	public Chunk loadChunk(int chunkX, int chunkZ) {
 		Chunk chunk = new Chunk(this.worldObj, chunkX, chunkZ);
 		this.tcLastChunk = null;
-		this.chunkMapping.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
+		Chunk old = this.chunkMapping.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
+		if (old != null && old != chunk) {
+			this.tcReplaced(old, chunk);
+		}
 		chunk.setChunkLoaded(true);
 		if (this.worldObj instanceof WorldClient) {
 			((WorldClient) this.worldObj).sodium$getTracker().onChunkStatusAdded(chunkX, chunkZ,
 					org.embeddedt.embeddium.impl.render.chunk.map.ChunkStatus.FLAG_ALL);
 		}
 		return chunk;
+	}
+
+	/**
+	 * Treasure Client: the server sent a whole chunk we already had (Duels map resets,
+	 * minigame rounds and proxies do this without unloading it first). Vanilla just
+	 * dropped the old chunk, so its block entities (chests, signs, skulls, banners) stayed
+	 * in the world's lists forever and the ticking ones kept running every tick: block
+	 * entities grew from 43 to 4965 in 18 minutes of Duels on the same 117 chunks. The
+	 * old ones are removed now (the packet brings fresh ones), and entities standing in
+	 * the old chunk move to the new one so hitting and collisions still find them.
+	 */
+	private void tcReplaced(Chunk old, Chunk chunk) {
+		try {
+			old.setChunkLoaded(false);
+			for (net.minecraft.tileentity.TileEntity te : old.getTileEntityMap().values()) {
+				this.worldObj.markTileEntityForRemoval(te);
+			}
+			java.util.ArrayList<net.minecraft.entity.Entity> move = null;
+			for (net.minecraft.util.ClassInheritanceMultiMap<net.minecraft.entity.Entity> list : old.getEntityLists()) {
+				for (net.minecraft.entity.Entity e : list) {
+					if (move == null) {
+						move = new java.util.ArrayList<net.minecraft.entity.Entity>();
+					}
+					move.add(e);
+				}
+			}
+			if (move != null) {
+				// not chunk.addEntity: that kills an entity that drifted over the chunk edge since
+				// the last tick. The world's entity update moves such an entity to the right chunk.
+				net.minecraft.util.ClassInheritanceMultiMap<net.minecraft.entity.Entity>[] lists = chunk.getEntityLists();
+				for (int i = 0, n = move.size(); i < n; i++) {
+					net.minecraft.entity.Entity e = move.get(i);
+					int k = Math.max(0, Math.min(lists.length - 1, net.minecraft.util.math.MathHelper.floor(e.posY / 16.0D)));
+					e.addedToChunk = true;
+					e.chunkCoordX = chunk.xPosition;
+					e.chunkCoordY = k;
+					e.chunkCoordZ = chunk.zPosition;
+					lists[k].add(e);
+				}
+			}
+		} catch (Throwable t) {
+			LOGGER.warn("Could not clean up a replaced chunk", t);
+		}
 	}
 
 	public Chunk provideChunk(int x, int z) {
