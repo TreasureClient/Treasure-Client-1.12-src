@@ -191,14 +191,14 @@ pub(super) enum Tag {
 }
 
 impl Tag {
-    fn get(&self, key: &str) -> Option<&Tag> {
+    pub(super) fn get(&self, key: &str) -> Option<&Tag> {
         match self {
             Tag::Compound(entries) => entries.iter().find(|(k, _)| k == key).map(|(_, v)| v),
             _ => None,
         }
     }
 
-    fn as_int(&self) -> Option<i32> {
+    pub(super) fn as_int(&self) -> Option<i32> {
         match *self {
             Tag::Byte(v) => Some(i32::from(v)),
             Tag::Short(v) => Some(i32::from(v)),

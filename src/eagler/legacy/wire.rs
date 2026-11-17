@@ -86,6 +86,18 @@ impl<'a> In<'a> {
         None
     }
 
+    pub(super) fn varlong(&mut self) -> Option<i64> {
+        let mut value: u64 = 0;
+        for i in 0..10 {
+            let byte = self.u8()?;
+            value |= u64::from(byte & 0x7F) << (7 * i);
+            if byte & 0x80 == 0 {
+                return Some(value as i64);
+            }
+        }
+        None
+    }
+
     pub(super) fn string(&mut self) -> Option<String> {
         let len = usize::try_from(self.varint()?).ok()?;
         Some(String::from_utf8_lossy(self.take(len)?).into_owned())

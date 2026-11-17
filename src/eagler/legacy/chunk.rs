@@ -18,7 +18,8 @@ use azalea_core::bitset::BitSet;
 use azalea_core::position::{BlockPos, ChunkSectionBlockPos, ChunkSectionPos};
 use azalea_protocol::packets::game::{
     ClientboundBlockUpdate, ClientboundLevelChunkWithLight, ClientboundSectionBlocksUpdate,
-    c_level_chunk_with_light::ClientboundLevelChunkPacketData,
+    ClientboundBlockEntityData,
+    c_level_chunk_with_light::{BlockEntity as PacketBlockEntity, ClientboundLevelChunkPacketData},
     c_light_update::ClientboundLightUpdatePacketData,
     c_section_blocks_update::BlockStateWithPosition,
 };
@@ -57,6 +58,8 @@ struct Tables {
     full: Box<[bool]>,
     /// Modern state id -> stops movement or holds fluid (the "motion blocking" heightmap).
     blocking: Box<[bool]>,
+    /// Modern block name -> its default state.
+    by_name: HashMap<&'static str, BlockState>,
 }
 
 fn tables() -> &'static Tables {
@@ -138,7 +141,13 @@ fn build() -> Tables {
         kind: kind.into_boxed_slice(),
         full: full.into_boxed_slice(),
         blocking: blocking.into_boxed_slice(),
+        by_name,
     }
+}
+
+/// `name[a=b]` (a modern block) as a state.
+pub(super) fn state_named(text: &str) -> Option<BlockState> {
+    modern(text, &tables().by_name)
 }
 
 /// `name[a=b,c=d]` -> the modern state, starting from the block's default.
@@ -169,7 +178,7 @@ pub(super) fn state(global: u32) -> BlockState {
 }
 
 /// Reads one 1.12 section's blocks into `out` (4096 modern ids, y-z-x order).
-fn read_section(r: &mut In, out: &mut [u16]) -> Option<()> {
+fn read_section(r: &mut In, out: &mut [u16], special: &mut Vec<(usize, u32)>) -> Option<()> {
     let bits = usize::from(r.u8()?);
     let palette_len = usize::try_from(r.varint()?).ok()?;
     let mut palette = Vec::with_capacity(palette_len);
@@ -202,6 +211,9 @@ fn read_section(r: &mut In, out: &mut [u16]) -> Option<()> {
             value
         };
         *slot = legacy.get(global).copied().unwrap_or(0);
+        if super::blockents::is_special(global as u32) {
+            special.push((i, global as u32));
+        }
     }
     Some(())
 }
@@ -209,6 +221,38 @@ fn read_section(r: &mut In, out: &mut [u16]) -> Option<()> {
 pub(super) struct Column {
     pub(super) packets: Vec<ClientboundLevelChunkWithLight>,
     pub(super) updates: Vec<ClientboundSectionBlocksUpdate>,
+    /// Block entities of a partial update (a full chunk carries its own).
+    pub(super) entity_data: Vec<ClientboundBlockEntityData>,
+}
+
+/// Reads a chunk's 1.12 block entities, changes the blocks whose look they decide, and
+/// returns the modern ones.
+fn block_entities(
+    r: &mut In,
+    x: i32,
+    z: i32,
+    blocks: &mut [u16],
+    specials: &HashMap<(i32, i32, i32), u32>,
+) -> Vec<super::blockents::Converted> {
+    let mut list = Vec::new();
+    let Some(count) = r.varint() else { return list };
+    for _ in 0..count.max(0) {
+        let Some(Some(tag)) = super::items::read_root(r) else { break };
+        let Some(entity) = super::blockents::convert(&tag, |p| specials.get(&p).copied()) else {
+            continue;
+        };
+        let (bx, by, bz) = entity.pos;
+        if let Some(state) = entity.state
+            && bx >> 4 == x
+            && bz >> 4 == z
+            && (0..256).contains(&by)
+        {
+            let index = (by as usize) << 8 | ((bz & 15) as usize) << 4 | (bx & 15) as usize;
+            blocks[index] = state.id();
+        }
+        list.push(entity);
+    }
+    list
 }
 
 /// A 1.12 Chunk Data packet (after x and z) -> a modern chunk, or for a partial update,
@@ -221,6 +265,7 @@ pub(super) fn chunk(
     has_sky: bool,
     below: usize,
     biome_of: impl Fn(u8) -> u32,
+    specials: &mut HashMap<(i32, i32, i32), u32>,
 ) -> Option<Column> {
     let mask = r.varint()? as u32;
     let size = usize::try_from(r.varint()?).ok()?;
@@ -233,7 +278,14 @@ pub(super) fn chunk(
         if mask & (1 << s) == 0 {
             continue;
         }
-        read_section(&mut d, &mut blocks[s * 4096..(s + 1) * 4096])?;
+        let mut special = Vec::new();
+        read_section(&mut d, &mut blocks[s * 4096..(s + 1) * 4096], &mut special)?;
+        let base_y = s as i32 * 16;
+        specials.retain(|p, _| p.0 >> 4 != x || p.2 >> 4 != z || p.1 >> 4 != s as i32);
+        for (i, global) in special {
+            let pos = (x * 16 + (i & 15) as i32, base_y + (i >> 8) as i32, z * 16 + ((i >> 4) & 15) as i32);
+            specials.insert(pos, global);
+        }
         block_light[s] = Some(d.bytes(NIBBLES)?);
         if has_sky {
             sky_light[s] = Some(d.bytes(NIBBLES)?);
@@ -241,6 +293,17 @@ pub(super) fn chunk(
     }
 
     if !full {
+        let entities = block_entities(r, x, z, &mut blocks, specials);
+        let entity_data = entities
+            .into_iter()
+            .filter_map(|e| {
+                Some(ClientboundBlockEntityData {
+                    pos: BlockPos::new(e.pos.0, e.pos.1, e.pos.2),
+                    block_entity_type: Ok(e.kind?),
+                    tag: e.data,
+                })
+            })
+            .collect();
         let updates = (0..SECTIONS)
             .filter(|s| mask & (1 << s) != 0)
             .map(|s| ClientboundSectionBlocksUpdate {
@@ -255,11 +318,23 @@ pub(super) fn chunk(
                     .collect(),
             })
             .collect();
-        return Some(Column { packets: Vec::new(), updates });
+        return Some(Column { packets: Vec::new(), updates, entity_data });
     }
 
     let biomes = d.bytes(256)?;
     fix_neighbours(&mut blocks);
+    let entities = block_entities(r, x, z, &mut blocks, specials);
+    let block_entities: Vec<_> = entities
+        .into_iter()
+        .filter_map(|e| {
+            Some(PacketBlockEntity {
+                packed_xz: ((e.pos.0 & 15) << 4 | (e.pos.2 & 15)) as u8,
+                y: e.pos.1 as i16 as u16,
+                kind: e.kind?,
+                data: e.data,
+            })
+        })
+        .collect();
 
     // `below` empty sections first (the modern overworld starts at y = -64, under 1.12's
     // bottom), then the 16 sections of 1.12, then empty sky to the modern top.
@@ -354,11 +429,12 @@ pub(super) fn chunk(
             chunk_data: ClientboundLevelChunkPacketData {
                 heightmaps: heightmaps(&blocks, below * 16),
                 data: Arc::new(data.into_boxed_slice()),
-                block_entities: Vec::new(),
+                block_entities,
             },
             light_data: light,
         }],
         updates: Vec::new(),
+        entity_data: Vec::new(),
     })
 }
 

@@ -16,10 +16,12 @@
 //! inventories (see TREASURE_1.12_PORT.md).
 
 mod chunk;
+mod blockents;
 mod entities;
 mod items;
 mod registries;
 mod wire;
+mod world;
 
 use std::io::Cursor;
 
@@ -71,6 +73,7 @@ pub(crate) fn remember(url: &str) {
 /// 1.12.2 clientbound play packet ids.
 mod cb {
     pub const CHAT: i32 = 0x0F;
+    pub const BLOCK_ENTITY: i32 = 0x09;
     pub const BLOCK_CHANGE: i32 = 0x0B;
     pub const DIFFICULTY: i32 = 0x0D;
     pub const MULTI_BLOCK_CHANGE: i32 = 0x10;
@@ -104,6 +107,7 @@ mod sb {
     pub const CLIENT_STATUS: i32 = 0x03;
     pub const CONFIRM_TRANSACTION: i32 = 0x05;
     pub const CLICK_WINDOW: i32 = 0x07;
+    pub const UPDATE_SIGN: i32 = 0x1C;
     pub const CLOSE_WINDOW: i32 = 0x08;
     pub const SETTINGS: i32 = 0x04;
     pub const PLUGIN_MESSAGE: i32 = 0x09;
@@ -152,6 +156,9 @@ pub(crate) struct Legacy {
     windows: std::collections::HashMap<i32, Vec<Vec<u8>>>,
     state_id: u32,
     action: i16,
+    world: world::World,
+    /// 1.12 blocks whose look comes from their block entity (skulls, banners, beds, pots).
+    specials: std::collections::HashMap<(i32, i32, i32), u32>,
 }
 
 impl Legacy {
@@ -173,6 +180,8 @@ impl Legacy {
             windows: Default::default(),
             state_id: 0,
             action: 0,
+            world: world::World::default(),
+            specials: Default::default(),
         }
     }
 
@@ -255,6 +264,14 @@ impl Legacy {
         let Some(id) = r.varint() else {
             return;
         };
+        match world::translate(&mut self.world, id, &mut r, out, &self.items) {
+            Some(true) => return,
+            None => {
+                crate::log_warn!("net", "1.12: server packet 0x{id:02x} was cut short");
+                return;
+            }
+            Some(false) => {}
+        }
         match entities::translate(id, &mut r, out, &self.items) {
             Some(true) => return,
             Some(false) => {}
@@ -417,9 +434,35 @@ impl Legacy {
                 });
                 Some(())
             })(),
+            cb::BLOCK_ENTITY => (|| {
+                let pos = r.position()?;
+                let _action = r.u8()?;
+                let Some(tag) = items::read_root(&mut r)? else { return Some(()) };
+                let specials = &self.specials;
+                let entity = blockents::convert(&tag, |p| specials.get(&p).copied())?;
+                if let Some(state) = entity.state {
+                    game(out, azalea_protocol::packets::game::ClientboundBlockUpdate {
+                        pos: BlockPos::new(pos.0, pos.1, pos.2),
+                        block_state: state,
+                    });
+                }
+                if let Some(kind) = entity.kind {
+                    game(out, azalea_protocol::packets::game::ClientboundBlockEntityData {
+                        pos: BlockPos::new(pos.0, pos.1, pos.2),
+                        block_entity_type: Ok(kind),
+                        tag: entity.data,
+                    });
+                }
+                Some(())
+            })(),
             cb::BLOCK_CHANGE => (|| {
                 let pos = r.position()?;
                 let global = r.varint()? as u32;
+                if blockents::is_special(global) {
+                    self.specials.insert(pos, global);
+                } else {
+                    self.specials.remove(&pos);
+                }
                 game(out, chunk::block_update(pos, global));
                 Some(())
             })(),
@@ -431,7 +474,14 @@ impl Legacy {
                 for _ in 0..count {
                     let xz = r.u8()?;
                     let y = r.u8()?;
-                    records.push((xz, y, r.varint()? as u32));
+                    let global = r.varint()? as u32;
+                    let pos = (cx * 16 + i32::from(xz >> 4), i32::from(y), cz * 16 + i32::from(xz & 15));
+                    if blockents::is_special(global) {
+                        self.specials.insert(pos, global);
+                    } else {
+                        self.specials.remove(&pos);
+                    }
+                    records.push((xz, y, global));
                 }
                 for update in chunk::section_update(cx, cz, records) {
                     game(out, update);
@@ -441,6 +491,7 @@ impl Legacy {
             cb::UNLOAD_CHUNK => (|| {
                 let x = r.i32()?;
                 let z = r.i32()?;
+                self.specials.retain(|p, _| p.0 >> 4 != x || p.2 >> 4 != z);
                 game(out, ClientboundForgetLevelChunk { pos: azalea_core::position::ChunkPos::new(x, z) });
                 Some(())
             })(),
@@ -573,14 +624,24 @@ impl Legacy {
         let plains = self.plains;
         // The overworld keeps its modern height (from y = -64): 4 empty sections first.
         let below = if self.dimension == 0 { 4 } else { 0 };
-        let column = chunk::chunk(r, x, z, full, self.dimension == 0, below, |id| {
-            biomes.get(usize::from(id)).copied().unwrap_or(plains)
-        })?;
+        let column = chunk::chunk(
+            r,
+            x,
+            z,
+            full,
+            self.dimension == 0,
+            below,
+            |id| biomes.get(usize::from(id)).copied().unwrap_or(plains),
+            &mut self.specials,
+        )?;
         for packet in column.packets {
             game(out, packet);
         }
         for update in column.updates {
             game(out, update);
+        }
+        for data in column.entity_data {
+            game(out, data);
         }
         Some(())
     }
@@ -615,6 +676,13 @@ impl Legacy {
                         .bytes(&clicked)
                         .done(),
                 );
+            }
+            ServerboundGamePacket::SignUpdate(p) => {
+                let mut packet = Out::new(sb::UPDATE_SIGN).position(p.pos.x, p.pos.y, p.pos.z);
+                for line in &p.lines {
+                    packet = packet.string(line);
+                }
+                to.push(packet.done());
             }
             ServerboundGamePacket::ContainerClose(p) => {
                 if p.container_id != 0 {
