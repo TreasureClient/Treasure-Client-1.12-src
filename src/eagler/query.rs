@@ -85,17 +85,28 @@ fn protocol_for(version: &serde_json::Value) -> i32 {
     let min = range.and_then(|r| r.get("min")).and_then(|v| v.as_i64());
     let max = range.and_then(|r| r.get("max")).and_then(|v| v.as_i64());
 
+    // Treasure Client: a server that runs 1.12.2 is joined through the 1.12 translator
+    // (`super::legacy`); the game itself stays on its own protocol.
+    let legacy = |min: i64, max: i64| {
+        (min..=max)
+            .contains(&i64::from(super::legacy::PROTOCOL))
+            .then_some(ours)
+    };
     #[cfg(feature = "multiversion")]
     let joined = match (min, max) {
         (Some(min), Some(max)) => (min..=max)
             .rev()
             .find(|p| crate::protocol::joinable(*p as i32))
-            .map(|p| p as i32),
+            .map(|p| p as i32)
+            .or_else(|| legacy(min, max)),
         _ => Some(ours),
     };
     #[cfg(not(feature = "multiversion"))]
     let joined = match (min, max) {
-        (Some(min), Some(max)) => (min..=max).contains(&(ours as i64)).then_some(ours),
+        (Some(min), Some(max)) => (min..=max)
+            .contains(&(ours as i64))
+            .then_some(ours)
+            .or_else(|| legacy(min, max)),
         _ => Some(ours),
     };
 

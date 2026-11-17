@@ -25,8 +25,8 @@ use crate::{log_error, log_info, log_warn};
 
 static PREPARED: Mutex<Option<transport::HandshakeConn>> = Mutex::new(None);
 
-pub(super) fn prepare(socket: Socket, profile: GameProfile, eagler_version: u16) {
-    let bridge = spawn_bridge(socket, Some(profile), None);
+pub(super) fn prepare(socket: Socket, profile: GameProfile, eagler_version: u16, legacy: bool) {
+    let bridge = spawn_bridge(socket, Some(profile), None, legacy);
     #[cfg(eagler_skins)]
     super::skins::begin(eagler_version, bridge.to_server.clone());
     #[cfg(not(eagler_skins))]
@@ -42,13 +42,14 @@ pub(super) fn raw_connection(
     socket: Socket,
     wisp: Option<wisp::Stream>,
 ) -> transport::HandshakeConn {
-    Connection::wrap_stream(spawn_bridge(socket, None, wisp))
+    Connection::wrap_stream(spawn_bridge(socket, None, wisp, false))
 }
 
 fn spawn_bridge(
     socket: Socket,
     profile: Option<GameProfile>,
     wisp: Option<wisp::Stream>,
+    legacy: bool,
 ) -> Bridge {
     let raw = profile.is_none();
     let (to_server, outgoing) = unbounded_channel();
@@ -64,7 +65,8 @@ fn spawn_bridge(
     let (tx, rx) = socket.split();
     let pump_side = from_server.clone();
     crate::platform::executor::spawn_task(async move {
-        let reason = match pump(tx, rx, outgoing, pump_side.clone(), gate, raw, wisp).await {
+        let legacy = legacy.then(super::legacy::Legacy::new);
+        let reason = match pump(tx, rx, outgoing, pump_side.clone(), gate, raw, wisp, legacy).await {
             Ok(()) => None,
             Err(e) => {
                 log_error!("net", "eagler: the connection stopped: {e}");
@@ -116,12 +118,21 @@ async fn pump(
     gate: oneshot::Receiver<()>,
     raw: bool,
     mut wisp: Option<wisp::Stream>,
+    mut legacy: Option<super::legacy::Legacy>,
 ) -> eyre::Result<()> {
     if gate.await.is_err() {
         return Ok(());
     }
     if !raw {
         log_info!("net", "eagler: past the faked login, relaying packets");
+    }
+    // Treasure Client: a 1.12 server never configures the client, so build that phase.
+    if let Some(legacy) = legacy.as_mut() {
+        for body in legacy.configuration() {
+            if incoming.send(FromServer::Bytes(body)).is_err() {
+                return Ok(());
+            }
+        }
     }
 
     loop {
@@ -131,6 +142,18 @@ async fn pump(
                     log_info!("net", "eagler: azalea closed the connection");
                     return Ok(());
                 };
+                if let Some(legacy) = legacy.as_mut() {
+                    let moved = legacy.from_game(&body);
+                    for body in moved.to_server {
+                        tx.send_binary(body).await?;
+                    }
+                    for body in moved.to_game {
+                        if incoming.send(FromServer::Bytes(body)).is_err() {
+                            return Ok(());
+                        }
+                    }
+                    continue;
+                }
                 tx.send_binary(body).await?;
             }
             message = rx.recv() => {
@@ -156,7 +179,14 @@ async fn pump(
                         super::skins::receive_injected(&payload);
                     }
                     Frame::Binary(payload) => {
-                        for body in unprefixed(payload) {
+                        let bodies = match legacy.as_mut() {
+                            Some(legacy) => unprefixed(payload)
+                                .into_iter()
+                                .flat_map(|body| legacy.from_server(body))
+                                .collect(),
+                            None => unprefixed(payload),
+                        };
+                        for body in bodies {
                             if incoming.send(FromServer::Bytes(body)).is_err() {
                                 log_info!("net", "eagler: azalea dropped the connection");
                                 return Ok(());

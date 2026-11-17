@@ -1,4 +1,3 @@
-#[cfg(feature = "asset_download")]
 pub(crate) mod advancements;
 pub(crate) mod assets;
 #[cfg(feature = "online_mode")]

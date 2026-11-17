@@ -1,0 +1,786 @@
+//! Treasure Client: playing on 1.12.2 servers (protocol 340).
+//!
+//! The game speaks today's protocol. When an Eaglercraft server picks protocol 340 in
+//! the handshake, this translator sits in the Eagler bridge (`super::stream`) and
+//! rewrites every packet in both directions:
+//!
+//! - server -> game: 1.12 packets become the modern packets the game understands, and
+//!   the configuration phase 1.12 never had is built from bundled data (`registries`).
+//!   Server packets are held until the game has finished configuring.
+//! - game -> server: modern packets become 1.12 ones, or are dropped when 1.12 has
+//!   nothing like them (chat signing, chunk batch acks, tick ends and so on).
+//!
+//! Stage 2 covers joining: login, respawn, keep-alive, position, time, chat, health,
+//! experience, abilities, held slot, game state, disconnects, and empty placeholder
+//! chunks so the loading screen can finish. Later stages add terrain, entities and
+//! inventories (see TREASURE_1.12_PORT.md).
+
+mod chunk;
+mod entities;
+mod registries;
+mod wire;
+
+use std::io::Cursor;
+
+use azalea_chat::FormattedText;
+use azalea_core::difficulty::Difficulty;
+use azalea_core::game_type::{GameMode, OptionalGameType};
+use azalea_core::position::{BlockPos, GlobalPos, Vec3};
+use azalea::entity::LookDirection;
+use azalea_protocol::common::client_information::ClientInformation;
+use azalea_protocol::common::movements::{PositionMoveRotation, RelativeMovements};
+use azalea_protocol::packets::{Packet, ProtocolPacket};
+use azalea_protocol::packets::common::CommonPlayerSpawnInfo;
+use azalea_protocol::packets::config::ServerboundConfigPacket;
+use azalea_protocol::packets::game::{
+    ClientboundChangeDifficulty, ClientboundDisconnect, ClientboundForgetLevelChunk,
+    ClientboundGameEvent, ClientboundGamePacket, ClientboundKeepAlive,
+    ClientboundLogin, ClientboundPlayerAbilities,
+    ClientboundPlayerPosition, ClientboundRespawn, ClientboundSetChunkCacheCenter,
+    ClientboundSetDefaultSpawnPosition, ClientboundSetExperience, ClientboundSetHealth,
+    ClientboundSetHeldSlot, ClientboundSetTime, ClientboundSystemChat, ServerboundGamePacket,
+    c_game_event::EventType,
+    c_player_abilities::PlayerAbilitiesFlags,
+    c_set_time::ClockState,
+};
+use azalea_registry::DataRegistry;
+use azalea_registry::data::{DimensionKind, WorldClock};
+use azalea_registry::identifier::Identifier;
+
+use wire::{In, Out};
+
+/// The Minecraft protocol number of 1.12.2.
+pub(crate) const PROTOCOL: u16 = 340;
+
+/// Servers where the modern login failed and 1.12.2 worked (until the page reloads).
+static PREFERS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+pub(crate) fn prefers(url: &str) -> bool {
+    PREFERS.lock().map(|list| list.iter().any(|u| u == url)).unwrap_or(false)
+}
+
+pub(crate) fn remember(url: &str) {
+    if let Ok(mut list) = PREFERS.lock() {
+        if !list.iter().any(|u| u == url) {
+            list.push(url.to_owned());
+        }
+    }
+}
+
+/// 1.12.2 clientbound play packet ids.
+mod cb {
+    pub const CHAT: i32 = 0x0F;
+    pub const BLOCK_CHANGE: i32 = 0x0B;
+    pub const DIFFICULTY: i32 = 0x0D;
+    pub const MULTI_BLOCK_CHANGE: i32 = 0x10;
+    pub const CONFIRM_TRANSACTION: i32 = 0x11;
+    pub const DISCONNECT: i32 = 0x1A;
+    pub const UNLOAD_CHUNK: i32 = 0x1D;
+    pub const GAME_STATE: i32 = 0x1E;
+    pub const KEEP_ALIVE: i32 = 0x1F;
+    pub const CHUNK_DATA: i32 = 0x20;
+    pub const JOIN_GAME: i32 = 0x23;
+    pub const ABILITIES: i32 = 0x2C;
+    pub const POSITION: i32 = 0x2F;
+    pub const RESPAWN: i32 = 0x35;
+    pub const HELD_SLOT: i32 = 0x3A;
+    pub const EXPERIENCE: i32 = 0x40;
+    pub const HEALTH: i32 = 0x41;
+    pub const SPAWN_POSITION: i32 = 0x46;
+    pub const TIME: i32 = 0x47;
+    pub const TITLE: i32 = 0x48;
+}
+
+/// 1.12.2 serverbound play packet ids.
+mod sb {
+    pub const TELEPORT_CONFIRM: i32 = 0x00;
+    pub const CHAT: i32 = 0x02;
+    pub const CLIENT_STATUS: i32 = 0x03;
+    pub const CONFIRM_TRANSACTION: i32 = 0x05;
+    pub const SETTINGS: i32 = 0x04;
+    pub const PLUGIN_MESSAGE: i32 = 0x09;
+    pub const USE_ENTITY: i32 = 0x0A;
+    pub const KEEP_ALIVE: i32 = 0x0B;
+    pub const DIGGING: i32 = 0x14;
+    pub const ENTITY_ACTION: i32 = 0x15;
+    pub const PLACE_BLOCK: i32 = 0x1F;
+    pub const USE_ITEM: i32 = 0x20;
+    pub const PLAYER: i32 = 0x0C;
+    pub const POSITION: i32 = 0x0D;
+    pub const POSITION_LOOK: i32 = 0x0E;
+    pub const LOOK: i32 = 0x0F;
+    pub const HELD_SLOT: i32 = 0x1A;
+    pub const ANIMATION: i32 = 0x1D;
+}
+
+/// What leaves the translator after one packet: 1.12 bodies for the server and modern
+/// bodies for the game.
+#[derive(Default)]
+pub(crate) struct Moved {
+    pub(crate) to_server: Vec<Vec<u8>>,
+    pub(crate) to_game: Vec<Vec<u8>>,
+}
+
+pub(crate) struct Legacy {
+    /// True once the game has finished the configuration phase and is playing.
+    playing: bool,
+    /// 1.12 packets that arrived while the game was still configuring.
+    held: Vec<Vec<u8>>,
+    sent: registries::Sent,
+    settings: Option<ClientInformation>,
+    brand: Option<String>,
+    dimension: i32,
+    game_mode: u8,
+    plains: u32,
+    /// 1.12 biome id -> index in the biome registry we sent.
+    biomes: Vec<u32>,
+    /// Our own entity id (1.12 asks for it in sprint and sneak packets).
+    entity: i32,
+    sneaking: bool,
+    /// Server packets with no translation yet (logged once each).
+    untranslated: std::collections::HashSet<i32>,
+}
+
+impl Legacy {
+    pub(crate) fn new() -> Self {
+        Self {
+            playing: false,
+            held: Vec::new(),
+            sent: registries::Sent::default(),
+            settings: None,
+            brand: None,
+            dimension: 0,
+            game_mode: 0,
+            plains: 0,
+            biomes: Vec::new(),
+            entity: 0,
+            sneaking: false,
+            untranslated: Default::default(),
+        }
+    }
+
+    /// The configuration phase, right after azalea acknowledged the (faked) login.
+    pub(crate) fn configuration(&mut self) -> Vec<Vec<u8>> {
+        let (packets, sent) = registries::configuration();
+        self.plains = sent.biome("plains").unwrap_or(0);
+        self.biomes = (0..=255u8)
+            .map(|id| sent.biome(chunk::biome_name(id)).unwrap_or(self.plains))
+            .collect();
+        self.sent = sent;
+        packets
+    }
+
+    /// A 1.12 packet from the server.
+    pub(crate) fn from_server(&mut self, body: Vec<u8>) -> Vec<Vec<u8>> {
+        if !self.playing {
+            self.held.push(body);
+            return Vec::new();
+        }
+        let mut out = Vec::new();
+        self.translate_server(&body, &mut out);
+        out
+    }
+
+    /// A modern packet from the game.
+    pub(crate) fn from_game(&mut self, body: &[u8]) -> Moved {
+        let mut moved = Moved::default();
+        if self.playing {
+            self.translate_game(body, &mut moved);
+            return moved;
+        }
+        let mut cursor = Cursor::new(body);
+        let Ok(packet) =
+            azalea_protocol::read::deserialize_packet::<ServerboundConfigPacket>(&mut cursor)
+        else {
+            return moved;
+        };
+        match packet {
+            ServerboundConfigPacket::ClientInformation(p) => self.settings = Some(p.information),
+            ServerboundConfigPacket::CustomPayload(p) => {
+                if p.identifier.to_string() == "minecraft:brand" {
+                    self.brand = Some(brand_text(&p.data));
+                }
+            }
+            ServerboundConfigPacket::FinishConfiguration(_) => {
+                self.playing = true;
+                crate::log_info!(
+                    "net",
+                    "1.12: configured; releasing {} held server packets",
+                    self.held.len()
+                );
+                if let Some(info) = self.settings.clone() {
+                    moved.to_server.push(settings(&info));
+                }
+                let brand = self.brand.clone().unwrap_or_else(|| "Treasure Client".to_owned());
+                moved.to_server.push(
+                    Out::new(sb::PLUGIN_MESSAGE)
+                        .string("MC|Brand")
+                        .string(&brand)
+                        .done(),
+                );
+                for body in std::mem::take(&mut self.held) {
+                    self.translate_server(&body, &mut moved.to_game);
+                }
+            }
+            _ => {}
+        }
+        moved
+    }
+
+    fn translate_server(&mut self, body: &[u8], out: &mut Vec<Vec<u8>>) {
+        let mut r = In::new(body);
+        let Some(id) = r.varint() else {
+            return;
+        };
+        match entities::translate(id, &mut r, out) {
+            Some(true) => return,
+            Some(false) => {}
+            None => {
+                crate::log_warn!("net", "1.12: could not read entity packet 0x{id:02x} ({} bytes)", body.len());
+                return;
+            }
+        }
+        let done = match id {
+            cb::JOIN_GAME => self.join_game(&mut r, out),
+            cb::RESPAWN => self.respawn(&mut r, out),
+            cb::KEEP_ALIVE => r.i64().map(|id| game(out, ClientboundKeepAlive { id: id as u64 })),
+            cb::POSITION => position(&mut r, out),
+            cb::CHAT => (|| {
+                let json = r.string()?;
+                let kind = r.u8()?;
+                game(out, ClientboundSystemChat { content: text(&json), overlay: kind == 2 });
+                Some(())
+            })(),
+            cb::DISCONNECT => r.string().map(|json| game(out, ClientboundDisconnect { reason: text(&json) })),
+            cb::TIME => self.time(&mut r, out),
+            cb::SPAWN_POSITION => r.position().map(|(x, y, z)| {
+                game(out, ClientboundSetDefaultSpawnPosition {
+                    global_pos: GlobalPos {
+                        dimension: dimension_name(self.dimension),
+                        pos: BlockPos::new(x, y, z),
+                    },
+                    yaw: 0.0,
+                    pitch: 0.0,
+                })
+            }),
+            cb::DIFFICULTY => r.u8().map(|d| {
+                game(out, ClientboundChangeDifficulty { difficulty: difficulty(d), locked: false })
+            }),
+            cb::ABILITIES => (|| {
+                let flags = r.u8()?;
+                let flying_speed = r.f32()?;
+                let walking_speed = r.f32()?;
+                game(out, ClientboundPlayerAbilities {
+                    flags: PlayerAbilitiesFlags {
+                        invulnerable: flags & 0x01 != 0,
+                        flying: flags & 0x02 != 0,
+                        can_fly: flags & 0x04 != 0,
+                        instant_break: flags & 0x08 != 0,
+                    },
+                    flying_speed,
+                    walking_speed,
+                });
+                Some(())
+            })(),
+            cb::HELD_SLOT => r.u8().map(|slot| game(out, ClientboundSetHeldSlot { slot: u32::from(slot.min(8)) })),
+            cb::HEALTH => (|| {
+                let health = r.f32()?;
+                let food = r.varint()?;
+                let saturation = r.f32()?;
+                game(out, ClientboundSetHealth { health, food: food.max(0) as u32, saturation });
+                Some(())
+            })(),
+            cb::EXPERIENCE => (|| {
+                let experience_progress = r.f32()?;
+                let level = r.varint()?;
+                let total = r.varint()?;
+                game(out, ClientboundSetExperience {
+                    experience_progress,
+                    experience_level: level.max(0) as u32,
+                    total_experience: total.max(0) as u32,
+                });
+                Some(())
+            })(),
+            cb::GAME_STATE => self.game_state(&mut r, out),
+            cb::TITLE => title(&mut r, out),
+            cb::CHUNK_DATA => self.chunk(&mut r, out),
+            // Anticheats (Grim, Vulcan and others) send unaccepted window transactions as
+            // pings and kick clients that do not answer. Modern clients answer Ping with Pong.
+            cb::CONFIRM_TRANSACTION => (|| {
+                let window = r.i8()?;
+                let action = r.i16()?;
+                if !r.bool()? {
+                    let id = u32::from(window as u8) << 16 | u32::from(action as u16);
+                    game(out, azalea_protocol::packets::game::ClientboundPing { id });
+                }
+                Some(())
+            })(),
+            cb::BLOCK_CHANGE => (|| {
+                let pos = r.position()?;
+                let global = r.varint()? as u32;
+                game(out, chunk::block_update(pos, global));
+                Some(())
+            })(),
+            cb::MULTI_BLOCK_CHANGE => (|| {
+                let cx = r.i32()?;
+                let cz = r.i32()?;
+                let count = usize::try_from(r.varint()?).ok()?;
+                let mut records = Vec::with_capacity(count.min(4096));
+                for _ in 0..count {
+                    let xz = r.u8()?;
+                    let y = r.u8()?;
+                    records.push((xz, y, r.varint()? as u32));
+                }
+                for update in chunk::section_update(cx, cz, records) {
+                    game(out, update);
+                }
+                Some(())
+            })(),
+            cb::UNLOAD_CHUNK => (|| {
+                let x = r.i32()?;
+                let z = r.i32()?;
+                game(out, ClientboundForgetLevelChunk { pos: azalea_core::position::ChunkPos::new(x, z) });
+                Some(())
+            })(),
+            _ => {
+                if self.untranslated.insert(id) {
+                    crate::log_info!("net", "1.12: server packet 0x{id:02x} is not translated yet");
+                }
+                Some(())
+            }
+        };
+        if done.is_none() {
+            crate::log_warn!("net", "1.12: could not read server packet 0x{id:02x} ({} bytes)", body.len());
+        }
+    }
+
+    fn spawn_info(&self, game_mode: u8, dimension: i32, level_type: &str) -> CommonPlayerSpawnInfo {
+        CommonPlayerSpawnInfo {
+            dimension_type: DimensionKind::new_raw(dimension_index(dimension)),
+            dimension: dimension_name(dimension),
+            seed: 0,
+            game_type: game_mode_of(game_mode),
+            previous_game_type: OptionalGameType(None),
+            is_debug: false,
+            is_flat: level_type.eq_ignore_ascii_case("flat"),
+            last_death_location: None,
+            portal_cooldown: 0,
+            sea_level: 63,
+        }
+    }
+
+    fn join_game(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        let entity = r.i32()?;
+        let mode = r.u8()?;
+        let dimension = r.i32()?;
+        let difficulty_byte = r.u8()?;
+        let max_players = r.u8()?;
+        let level_type = r.string()?;
+        let reduced_debug_info = r.bool()?;
+        self.dimension = dimension;
+        self.game_mode = mode & 0x7;
+        self.entity = entity;
+        let view = self.settings.as_ref().map_or(8, |s| u32::from(s.view_distance)).clamp(2, 32);
+        game(out, ClientboundLogin {
+            player_id: azalea_core::entity_id::MinecraftEntityId(entity),
+            hardcore: mode & 0x8 != 0,
+            levels: [0, -1, 1].into_iter().map(dimension_name).collect(),
+            max_players: i32::from(max_players),
+            chunk_radius: view,
+            simulation_distance: view,
+            reduced_debug_info,
+            show_death_screen: true,
+            do_limited_crafting: false,
+            common: self.spawn_info(self.game_mode, dimension, &level_type),
+            online_mode: false,
+            enforces_secure_chat: false,
+        });
+        game(out, ClientboundChangeDifficulty { difficulty: difficulty(difficulty_byte), locked: false });
+        game(out, ClientboundGameEvent { event: EventType::WaitForLevelChunks, param: 0.0 });
+        Some(())
+    }
+
+    fn respawn(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        let dimension = r.i32()?;
+        let difficulty_byte = r.u8()?;
+        let mode = r.u8()?;
+        let level_type = r.string()?;
+        self.dimension = dimension;
+        self.game_mode = mode & 0x7;
+        game(out, ClientboundRespawn {
+            common: self.spawn_info(self.game_mode, dimension, &level_type),
+            data_to_keep: 0,
+        });
+        game(out, ClientboundChangeDifficulty { difficulty: difficulty(difficulty_byte), locked: false });
+        game(out, ClientboundGameEvent { event: EventType::WaitForLevelChunks, param: 0.0 });
+        Some(())
+    }
+
+    fn time(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        let world_age = r.i64()?;
+        let time_of_day = r.i64()?;
+        let mut packet = ClientboundSetTime {
+            game_time: world_age.max(0) as u64,
+            clock_updates: Default::default(),
+        };
+        let clock = if self.dimension == 1 { "the_end" } else { "overworld" };
+        if let Some(index) = self.sent.clock(clock) {
+            packet.clock_updates.insert(
+                WorldClock::new_raw(index),
+                ClockState {
+                    total_ticks: time_of_day.unsigned_abs(),
+                    partial_tick: 0.0,
+                    // 1.12 sends a negative time when the daylight cycle is off.
+                    rate: if time_of_day < 0 { 0.0 } else { 1.0 },
+                },
+            );
+        }
+        game(out, packet);
+        Some(())
+    }
+
+    fn game_state(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        let reason = r.u8()?;
+        let value = r.f32()?;
+        let event = match reason {
+            0 => EventType::NoRespawnBlockAvailable,
+            1 => EventType::StartRaining,
+            2 => EventType::StopRaining,
+            3 => {
+                self.game_mode = value as u8;
+                EventType::ChangeGameMode
+            }
+            4 => EventType::WinGame,
+            5 => EventType::DemoEvent,
+            6 => EventType::ArrowHitPlayer,
+            7 => EventType::RainLevelChange,
+            8 => EventType::ThunderLevelChange,
+            9 => EventType::PufferFishSting,
+            10 => EventType::GuardianElderEffect,
+            _ => return Some(()),
+        };
+        game(out, ClientboundGameEvent { event, param: value });
+        Some(())
+    }
+
+    fn chunk(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        let x = r.i32()?;
+        let z = r.i32()?;
+        let full = r.bool()?;
+        let biomes = &self.biomes;
+        let plains = self.plains;
+        // The overworld keeps its modern height (from y = -64): 4 empty sections first.
+        let below = if self.dimension == 0 { 4 } else { 0 };
+        let column = chunk::chunk(r, x, z, full, self.dimension == 0, below, |id| {
+            biomes.get(usize::from(id)).copied().unwrap_or(plains)
+        })?;
+        for packet in column.packets {
+            game(out, packet);
+        }
+        for update in column.updates {
+            game(out, update);
+        }
+        Some(())
+    }
+
+    fn translate_game(&mut self, body: &[u8], moved: &mut Moved) {
+        let mut cursor = Cursor::new(body);
+        let Ok(packet) = azalea_protocol::read::deserialize_packet::<ServerboundGamePacket>(&mut cursor) else {
+            return;
+        };
+        let to = &mut moved.to_server;
+        let back = &mut moved.to_game;
+        // Modern clients wait for the server to confirm block predictions; 1.12 servers
+        // do not, so confirm them here (the server's block updates still win).
+        let mut ack = |seq: u32| {
+            game(back, azalea_protocol::packets::game::ClientboundBlockChangedAck { seq });
+        };
+        match packet {
+            ServerboundGamePacket::Pong(p) => to.push(
+                Out::new(sb::CONFIRM_TRANSACTION)
+                    .u8((p.id >> 16) as u8)
+                    .i16(p.id as u16 as i16)
+                    .bool(true)
+                    .done(),
+            ),
+            ServerboundGamePacket::PlayerCommand(p) => {
+                use azalea_protocol::packets::game::s_player_command::Action;
+                let (action, data) = match p.action {
+                    Action::StopSleeping => (2, 0),
+                    Action::StartSprinting => (3, 0),
+                    Action::StopSprinting => (4, 0),
+                    Action::StartRidingJump => (5, p.data as i32),
+                    Action::StopRidingJump => (6, 0),
+                    Action::OpenInventory => (7, 0),
+                    Action::StartFallFlying => (8, 0),
+                };
+                to.push(Out::new(sb::ENTITY_ACTION).varint(self.entity).varint(action).varint(data).done());
+            }
+            ServerboundGamePacket::PlayerInput(p) => {
+                if p.shift != self.sneaking {
+                    self.sneaking = p.shift;
+                    let action = if p.shift { 0 } else { 1 };
+                    to.push(Out::new(sb::ENTITY_ACTION).varint(self.entity).varint(action).varint(0).done());
+                }
+            }
+            ServerboundGamePacket::Interact(p) => {
+                let at = azalea_core::position::Vec3::from(p.location);
+                let hand = p.hand as i32;
+                // A 1.12 right click on an entity sends "interact at" and then "interact".
+                to.push(
+                    Out::new(sb::USE_ENTITY)
+                        .varint(p.entity_id.0)
+                        .varint(2)
+                        .f32(at.x as f32)
+                        .f32(at.y as f32)
+                        .f32(at.z as f32)
+                        .varint(hand)
+                        .done(),
+                );
+                to.push(Out::new(sb::USE_ENTITY).varint(p.entity_id.0).varint(0).varint(hand).done());
+            }
+            ServerboundGamePacket::Attack(p) => {
+                to.push(Out::new(sb::USE_ENTITY).varint(p.entity_id.0).varint(1).done());
+            }
+            ServerboundGamePacket::PlayerAction(p) => {
+                let status = p.action as i32;
+                if status <= 6 {
+                    to.push(
+                        Out::new(sb::DIGGING)
+                            .varint(status)
+                            .position(p.pos.x, p.pos.y, p.pos.z)
+                            .u8(p.direction as u8)
+                            .done(),
+                    );
+                }
+                ack(p.seq);
+            }
+            ServerboundGamePacket::UseItemOn(p) => {
+                let b = &p.block_hit;
+                let pos = b.block_pos;
+                to.push(
+                    Out::new(sb::PLACE_BLOCK)
+                        .position(pos.x, pos.y, pos.z)
+                        .varint(b.direction as i32)
+                        .varint(p.hand as i32)
+                        .f32((b.location.x - f64::from(pos.x)) as f32)
+                        .f32((b.location.y - f64::from(pos.y)) as f32)
+                        .f32((b.location.z - f64::from(pos.z)) as f32)
+                        .done(),
+                );
+                ack(p.seq);
+            }
+            ServerboundGamePacket::UseItem(p) => {
+                to.push(Out::new(sb::USE_ITEM).varint(p.hand as i32).done());
+                ack(p.seq);
+            }
+            ServerboundGamePacket::KeepAlive(p) => to.push(Out::new(sb::KEEP_ALIVE).i64(p.id as i64).done()),
+            ServerboundGamePacket::AcceptTeleportation(p) => {
+                to.push(Out::new(sb::TELEPORT_CONFIRM).varint(p.id as i32).done());
+            }
+            ServerboundGamePacket::MovePlayerPos(p) => to.push(
+                Out::new(sb::POSITION)
+                    .f64(p.pos.x)
+                    .f64(p.pos.y)
+                    .f64(p.pos.z)
+                    .bool(p.flags.on_ground)
+                    .done(),
+            ),
+            ServerboundGamePacket::MovePlayerPosRot(p) => to.push(
+                Out::new(sb::POSITION_LOOK)
+                    .f64(p.pos.x)
+                    .f64(p.pos.y)
+                    .f64(p.pos.z)
+                    .f32(p.look_direction.y_rot())
+                    .f32(p.look_direction.x_rot())
+                    .bool(p.flags.on_ground)
+                    .done(),
+            ),
+            ServerboundGamePacket::MovePlayerRot(p) => to.push(
+                Out::new(sb::LOOK)
+                    .f32(p.look_direction.y_rot())
+                    .f32(p.look_direction.x_rot())
+                    .bool(p.flags.on_ground)
+                    .done(),
+            ),
+            ServerboundGamePacket::MovePlayerStatusOnly(p) => {
+                to.push(Out::new(sb::PLAYER).bool(p.flags.on_ground).done());
+            }
+            ServerboundGamePacket::Chat(p) => to.push(chat(&p.message)),
+            ServerboundGamePacket::ChatCommand(p) => to.push(chat(&format!("/{}", p.command))),
+            ServerboundGamePacket::ChatCommandSigned(p) => to.push(chat(&format!("/{}", p.command))),
+            ServerboundGamePacket::ClientCommand(p) => {
+                use azalea_protocol::packets::game::s_client_command::Action;
+                let action = match p.action {
+                    Action::PerformRespawn => 0,
+                    Action::RequestStats => 1,
+                    Action::RequestGameruleValues => return,
+                };
+                to.push(Out::new(sb::CLIENT_STATUS).varint(action).done());
+            }
+            ServerboundGamePacket::ClientInformation(p) => {
+                to.push(settings(&p.client_information));
+                self.settings = Some(p.client_information);
+            }
+            ServerboundGamePacket::CustomPayload(p) => {
+                if p.identifier.to_string() == "minecraft:brand" {
+                    to.push(
+                        Out::new(sb::PLUGIN_MESSAGE)
+                            .string("MC|Brand")
+                            .string(&brand_text(&p.data))
+                            .done(),
+                    );
+                }
+            }
+            ServerboundGamePacket::SetCarriedItem(p) => {
+                to.push(Out::new(sb::HELD_SLOT).i16(p.slot as i16).done());
+            }
+            ServerboundGamePacket::Swing(p) => {
+                to.push(Out::new(sb::ANIMATION).varint(p.hand as i32).done());
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Encodes one modern game packet into `out`.
+pub(super) fn game(out: &mut Vec<Vec<u8>>, packet: impl Packet<ClientboundGamePacket>) {
+    let packet = packet.into_variant();
+    match azalea_protocol::write::serialize_packet(&packet) {
+        Ok(body) => out.push(body.into_vec()),
+        Err(e) => crate::log_warn!("net", "1.12: could not encode {}: {e}", packet.name()),
+    }
+}
+
+/// 1.12 sends every title change as one packet with an action number.
+fn title(r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+    use azalea_protocol::packets::game::{
+        ClientboundClearTitles, ClientboundSetActionBarText, ClientboundSetSubtitleText,
+        ClientboundSetTitleText, ClientboundSetTitlesAnimation,
+    };
+    match r.varint()? {
+        0 => game(out, ClientboundSetTitleText { text: text(&r.string()?) }),
+        1 => game(out, ClientboundSetSubtitleText { text: text(&r.string()?) }),
+        2 => game(out, ClientboundSetActionBarText { text: text(&r.string()?) }),
+        3 => {
+            let fade_in = r.i32()?.max(0) as u32;
+            let stay = r.i32()?.max(0) as u32;
+            let fade_out = r.i32()?.max(0) as u32;
+            game(out, ClientboundSetTitlesAnimation { fade_in, stay, fade_out });
+        }
+        4 => game(out, ClientboundClearTitles { reset_times: false }),
+        5 => game(out, ClientboundClearTitles { reset_times: true }),
+        _ => {}
+    }
+    Some(())
+}
+
+fn position(r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+    let x = r.f64()?;
+    let y = r.f64()?;
+    let z = r.f64()?;
+    let yaw = r.f32()?;
+    let pitch = r.f32()?;
+    let flags = r.i8()? as u8;
+    let id = r.varint()?;
+    // The game loads chunks around this center; follow the player when the server
+    // places them at an absolute spot.
+    if flags & 0x05 == 0 {
+        game(out, ClientboundSetChunkCacheCenter {
+            x: (x.floor() as i32).div_euclid(16),
+            z: (z.floor() as i32).div_euclid(16),
+        });
+    }
+    game(out, ClientboundPlayerPosition {
+        id: id as u32,
+        change: PositionMoveRotation {
+            pos: Vec3::new(x, y, z),
+            delta: Vec3::ZERO,
+            look_direction: LookDirection::new(yaw, pitch),
+        },
+        relative: RelativeMovements {
+            x: flags & 0x01 != 0,
+            y: flags & 0x02 != 0,
+            z: flags & 0x04 != 0,
+            y_rot: flags & 0x08 != 0,
+            x_rot: flags & 0x10 != 0,
+            // 1.12 kept the player's motion through a teleport.
+            delta_x: true,
+            delta_y: true,
+            delta_z: true,
+            rotate_delta: false,
+        },
+    });
+    Some(())
+}
+
+fn chat(message: &str) -> Vec<u8> {
+    // 1.12 servers kick messages longer than 256 characters.
+    let message: String = message.chars().take(256).collect();
+    Out::new(sb::CHAT).string(&message).done()
+}
+
+fn settings(info: &ClientInformation) -> Vec<u8> {
+    let m = &info.model_customization;
+    let parts = u8::from(m.cape)
+        | u8::from(m.jacket) << 1
+        | u8::from(m.left_sleeve) << 2
+        | u8::from(m.right_sleeve) << 3
+        | u8::from(m.left_pants) << 4
+        | u8::from(m.right_pants) << 5
+        | u8::from(m.hat) << 6;
+    Out::new(sb::SETTINGS)
+        .string(&info.language)
+        .u8(info.view_distance)
+        .varint(info.chat_visibility as i32)
+        .bool(info.chat_colors)
+        .u8(parts)
+        .varint(info.main_hand as i32)
+        .done()
+}
+
+/// The brand payload is a VarInt-length string in both versions.
+fn brand_text(data: &[u8]) -> String {
+    In::new(data).string().unwrap_or_else(|| "Treasure Client".to_owned())
+}
+
+/// 1.12 chat is JSON text; older plugins sometimes send a bare string.
+pub(super) fn text(json: &str) -> FormattedText {
+    serde_json::from_str::<FormattedText>(json).unwrap_or_else(|_| FormattedText::from(json))
+}
+
+fn dimension_name(dimension: i32) -> Identifier {
+    Identifier::new(match dimension {
+        -1 => "minecraft:the_nether",
+        1 => "minecraft:the_end",
+        _ => "minecraft:overworld",
+    })
+}
+
+/// The index of a 1.12 dimension's type in the dimension type registry we sent.
+fn dimension_index(dimension: i32) -> u32 {
+    let name = match dimension {
+        -1 => "the_nether",
+        1 => "the_end",
+        _ => "overworld",
+    };
+    registries::DIMENSION_TYPES.iter().position(|d| *d == name).unwrap_or(0) as u32
+}
+
+pub(super) fn game_mode_of(mode: u8) -> GameMode {
+    match mode & 0x7 {
+        1 => GameMode::Creative,
+        2 => GameMode::Adventure,
+        3 => GameMode::Spectator,
+        _ => GameMode::Survival,
+    }
+}
+
+fn difficulty(d: u8) -> Difficulty {
+    match d {
+        0 => Difficulty::Peaceful,
+        1 => Difficulty::Easy,
+        3 => Difficulty::Hard,
+        _ => Difficulty::Normal,
+    }
+}

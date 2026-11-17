@@ -16,11 +16,16 @@ const LINKS: &[(&str, &str)] = &[
 ];
 
 const LINES: &[(&str, u32)] = &[
-    ("Torch Client", 0xFFFFFF),
+    ("Treasure Client Rust (Beta)", 0xFFD76B),
+    ("by the Treasure Client team, based on", 0xE0E0E0),
+    ("Torch Client by the Torch Client contributors", 0xFFFFFF),
     ("", 0),
     ("Free software, licensed under the", 0xE0E0E0),
     ("GNU Affero General Public License v3.0", 0xE0E0E0),
     ("(AGPL-3.0).", 0xE0E0E0),
+    ("", 0),
+    ("1.12 block table from minecraft-data", 0xE0E0E0),
+    ("by PrismarineJS (MIT license).", 0xE0E0E0),
     ("", 0),
     ("Not affiliated with Mojang or Microsoft.", 0xA0A0A0),
 ];

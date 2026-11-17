@@ -21,14 +21,12 @@ pub(super) enum Transport {
     Wisp(&'static str),
 }
 
-pub(crate) static ALL: [Proxy; 3] = [
+// Treasure Client: only the public Wisp servers (anura.pro is the default, as in the
+// JS/WASM clients' Wispcraft). Torch's third-party relay was removed.
+pub(crate) static ALL: [Proxy; 2] = [
     Proxy {
         name: "anura.pro",
         transport: Transport::Wisp("wss://anura.pro/"),
-    },
-    Proxy {
-        name: "xpncvr",
-        transport: Transport::Relay("wss://proxier.xpncvr.workers.dev/test/tcp/"),
     },
     Proxy {
         name: "mercurywork",

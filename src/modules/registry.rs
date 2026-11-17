@@ -1334,6 +1334,32 @@ modules! {
 
 }
 
+/// Treasure Client: modules that give an unfair advantage (combat aim, ESP/X-ray, movement
+/// hacks, automation, packet tricks). They can never be switched on, so the game code
+/// behind them never runs; their files are being deleted step by step.
+pub const CHEATS: &[Id] = &[
+    Id::TriggerBot, Id::AimAssist, Id::AutoMace, Id::AutoTotem, Id::CrystalAura, Id::SafeAnchor,
+    Id::CrystalMacro, Id::Xray, Id::BlockEsp, Id::OreEsp, Id::SeedXray, Id::SoundEsp,
+    Id::Basefinder, Id::SeedCracker, Id::StorageEsp, Id::PlayerEsp, Id::Freecam, Id::AutoMine,
+    Id::OreMiner, Id::Scaffold, Id::Flight, Id::AutoWalk, Id::NoFall, Id::VClip, Id::Velocity,
+    Id::AutoSell, Id::Spam, Id::Speed, Id::UiUtils,
+];
+
+const CHEAT_MASK: [bool; COUNT] = {
+    let mut m = [false; COUNT];
+    let mut i = 0;
+    while i < CHEATS.len() {
+        m[CHEATS[i] as usize] = true;
+        i += 1;
+    }
+    m
+};
+
+/// True for a built-in module Treasure Client blocks (see [`CHEATS`]).
+pub const fn is_cheat(index: usize) -> bool {
+    index < COUNT && CHEAT_MASK[index]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

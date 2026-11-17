@@ -1,5 +1,6 @@
 mod handshake;
 pub(crate) use handshake::Refused;
+pub(crate) mod legacy;
 pub(crate) mod proxy;
 pub(crate) mod query;
 #[cfg(eagler_skins)]
@@ -12,7 +13,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use azalea_protocol::address::{ResolvedAddr, ServerAddr};
 
-use crate::log_info;
+use crate::{log_info, log_warn};
 
 struct Target {
     url: String,
@@ -266,15 +267,38 @@ pub(crate) async fn prepare(address: &str, username: &str) -> eyre::Result<Optio
             socket: SocketAddr::from((Ipv4Addr::LOCALHOST, target.port)),
         }));
     }
-    log_info!("net", "eagler: opening a websocket to {}", target.url);
-    let mut socket = socket::Socket::connect(&target.url).await?;
     #[cfg(eagler_skins)]
     let skin = crate::gui::skinpick::for_account(username);
     #[cfg(eagler_skins)]
     let wire = skin.as_ref().map(|s| s.wire.as_slice());
     #[cfg(not(eagler_skins))]
     let wire = None;
-    let (profile, version) = handshake::run(&mut socket, username, wire).await?;
+    // Treasure Client: some servers (1.12 with ViaVersion) say yes to the modern version
+    // and then drop the connection at login. When that happens, join again offering only
+    // 1.12.2, and remember to do that for this server until the page reloads.
+    let only_legacy = crate::protocol::legacy_forced() || legacy::prefers(&target.url);
+    log_info!("net", "eagler: opening a websocket to {}", target.url);
+    let mut socket = socket::Socket::connect(&target.url).await?;
+    let first = handshake::run(&mut socket, username, wire, only_legacy).await;
+    let (socket, (profile, version, minecraft)) = match first {
+        Ok(done) => (socket, done),
+        Err(e) if !only_legacy && e.downcast_ref::<handshake::Refused>().is_none() => {
+            log_warn!("net", "eagler: modern login failed ({e}); trying again as 1.12.2");
+            let mut socket = socket::Socket::connect(&target.url).await?;
+            match handshake::run(&mut socket, username, wire, true).await {
+                Ok(done) => {
+                    legacy::remember(&target.url);
+                    (socket, done)
+                }
+                Err(_) => return Err(e),
+            }
+        }
+        Err(e) => return Err(e),
+    };
+    let legacy = minecraft == legacy::PROTOCOL;
+    if legacy {
+        log_info!("net", "eagler: the server picked 1.12.2; translating to and from 1.12");
+    }
     #[cfg(eagler_skins)]
     crate::gui::skinpick::wear(skin, profile.uuid.as_u128());
     log_info!(
@@ -284,7 +308,7 @@ pub(crate) async fn prepare(address: &str, username: &str) -> eyre::Result<Optio
         profile.uuid
     );
 
-    stream::prepare(socket, profile, version);
+    stream::prepare(socket, profile, version, legacy);
 
     Ok(Some(ResolvedAddr {
         server: ServerAddr {

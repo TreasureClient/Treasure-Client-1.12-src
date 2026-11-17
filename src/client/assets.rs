@@ -11,8 +11,11 @@ pub(super) const VERSION_MANIFEST: &str =
 
 const OBJECT_STORE: &str = "https://resources.download.minecraft.net";
 
+// Treasure Client: no third-party relay. Torch fetched Mojang's files through a stranger's
+// CORS relay here; we bundle the files instead (assets.bin). If we ever host the objects
+// ourselves, put that address here. Empty means "no relay".
 #[cfg(target_arch = "wasm32")]
-const OBJECT_PROXY: &str = "https://getstuff.xpncvr.workers.dev/";
+const OBJECT_PROXY: &str = "";
 
 const NAMESPACE_DIR: &str = "assets/minecraft/";
 
@@ -521,7 +524,7 @@ fn object_url(hash: &str) -> String {
     let direct = format!("{OBJECT_STORE}/{}/{hash}", &hash[..2]);
     #[cfg(target_arch = "wasm32")]
     {
-        format!("{OBJECT_PROXY}{direct}")
+        if OBJECT_PROXY.is_empty() { direct } else { format!("{OBJECT_PROXY}{direct}") }
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -812,7 +815,7 @@ impl Download {
                 return;
             }
         }
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", feature = "asset_download"))]
         if missing() & piece::OBJECTS != 0 {
             let result = self
                 .repair_web_objects(version, missing() & piece::OBJECTS)
@@ -1362,7 +1365,7 @@ impl Download {
         Ok(Some(out))
     }
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "asset_download"))]
     async fn repair_web_objects(
         &'static self,
         version: &str,
@@ -1784,7 +1787,7 @@ pub(super) async fn get_json(url: &str) -> Result<serde_json::Value, Failure> {
 
 #[cfg(target_arch = "wasm32")]
 fn fallback_url(url: &str) -> Option<String> {
-    Some(format!("{OBJECT_PROXY}{url}"))
+    (!OBJECT_PROXY.is_empty()).then(|| format!("{OBJECT_PROXY}{url}"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

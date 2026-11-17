@@ -25,12 +25,6 @@ pub(crate) mod reload;
 pub(crate) mod variants;
 #[cfg_attr(not(feature = "multiversion"), allow(dead_code))]
 pub(crate) mod wire;
-#[cfg(any(
-    feature = "asset_download",
-    feature = "shader_support",
-    resource_packs,
-    lua_mods
-))]
 pub(crate) mod zip;
 
 use bevy::math::DVec3;

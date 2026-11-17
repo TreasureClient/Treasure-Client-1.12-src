@@ -212,10 +212,16 @@ impl Plugin for GuiPlugin {
             .insert_resource(GuiState {
                 screen: self.startup.screen,
                 options_parent: self.startup.screen,
-                profile: crate::gui::profile::ProfileState::starting(
-                    self.startup.first_run,
-                    self.startup.pending_connect.clone(),
-                ),
+                profile: {
+                    let mut profile = crate::gui::profile::ProfileState::starting(
+                        self.startup.first_run,
+                        self.startup.pending_connect.clone(),
+                    );
+                    if self.startup.screen == crate::gui::Screen::Accounts {
+                        profile.open();
+                    }
+                    profile
+                },
                 options,
                 chat: crate::gui::chat::ChatState::with_saved_history(),
                 hud_state: crate::gui::hud_layout::HudState::load(),

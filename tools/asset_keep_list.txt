@@ -45,3 +45,10 @@ data/minecraft/dialog/
 data/minecraft/enchantment/
 data/minecraft/instrument/
 data/minecraft/jukebox_song/
+
+# Treasure Client: registries the 1.12 translator sends (src/eagler/legacy/registries.rs)
+data/minecraft/wolf_sound_variant/
+data/minecraft/cat_sound_variant/
+data/minecraft/cow_sound_variant/
+data/minecraft/pig_sound_variant/
+data/minecraft/chicken_sound_variant/

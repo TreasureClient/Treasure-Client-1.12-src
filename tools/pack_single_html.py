@@ -39,9 +39,11 @@ def read(path, mode="r"):
 def js_string(text):
     return json.dumps(text).replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
 
-def compress(glue, wasm):
+def compress(glue, wasm, assets=b""):
+    # Treasure Client: the game files (assets.bin) ride in the same LZMA stream, after the
+    # module, so the page is one file with nothing else to fetch.
     g = glue.encode("utf-8")
-    raw = struct.pack("<I", len(g)) + g + wasm
+    raw = struct.pack("<I", len(g)) + g + struct.pack("<I", len(wasm)) + wasm + assets
     filters = [{"id": lzma.FILTER_LZMA1, "preset": 9 | lzma.PRESET_EXTREME, "dict_size": 64 << 20,
                 "lc": 4, "lp": 0, "pb": 0, "nice_len": 273, "mf": lzma.MF_BT4, "depth": 0}]
     packed = bytearray(lzma.compress(raw, format=lzma.FORMAT_ALONE, filters=filters))
@@ -111,7 +113,10 @@ self.onmessage = (e) => {
   });
   const glueLen = raw[0] | (raw[1] << 8) | (raw[2] << 16) | (raw[3] << 24);
   const glue = new TextDecoder().decode(raw.subarray(4, 4 + glueLen));
-  const bytes = raw.subarray(4 + glueLen);
+  const at = 4 + glueLen;
+  const wasmLen = raw[at] | (raw[at + 1] << 8) | (raw[at + 2] << 16) | (raw[at + 3] << 24);
+  const bytes = raw.subarray(at + 4, at + 4 + wasmLen);
+  const assetBytes = raw.subarray(at + 4 + wasmLen);
   const WASM_NAME = %(wasm_name)s;
 
   const blobUrl = (t) => URL.createObjectURL(new Blob([t], { type: "text/javascript" }));
@@ -136,6 +141,12 @@ self.onmessage = (e) => {
     const url = typeof input === "string" ? input : input.url;
     if (url.endsWith(WASM_NAME)) return wasmResponse(bytes);
     if (seedBytes !== null && url.endsWith(SEED_WASM_NAME)) return wasmResponse(seedBytes);
+    if (assetBytes.length > 0 && /(^|\/)assets\.bin$/.test(url)) {
+      return Promise.resolve(new Response(assetBytes.slice().buffer, {
+        status: 200,
+        headers: { "content-length": String(assetBytes.length), "content-type": "application/octet-stream" },
+      }));
+    }
     return realFetch(input, init);
   };
 
@@ -237,7 +248,11 @@ def main():
     page = page.replace('<meta charset="utf-8">', '<meta charset="windows-1252">', 1)
 
     wasm = gzip.decompress(read(wasm_path, "rb"))
-    packed = compress(glue, wasm)
+    assets_path = os.path.join(site, "assets.bin")
+    assets = read(assets_path, "rb") if os.path.exists(assets_path) else b""
+    if assets:
+        print("assets.bin %.1f MB inside the page" % (len(assets) / 1e6))
+    packed = compress(glue, wasm, assets)
     body, esc, table = escape(packed)
     print("wasm %.1f MB, lzma %.1f MB, escaped %.1f MB" % (len(wasm) / 1e6, len(packed) / 1e6, len(body) / 1e6))
 

@@ -42,14 +42,20 @@ pub(crate) fn logo(p: &mut Painter, vw: f32, y: f32) {
         LOGO_W,
         LOGO_H,
     );
-    p.sprite(
-        "title/edition",
-        (vw / 2.0 - EDITION_W / 2.0).floor(),
-        y + LOGO_H - EDITION_OVERLAP,
-        EDITION_W,
-        EDITION_H,
+    // Treasure Client: our edition line (gold) instead of "Java Edition".
+    let _ = (EDITION_W, EDITION_H);
+    p.text_centered(
+        TC_EDITION,
+        (vw / 2.0).floor(),
+        y + LOGO_H - EDITION_OVERLAP + 3.0,
+        TC_GOLD,
+        true,
     );
 }
+
+/// Treasure Client branding (the Rust edition is based on Torch Client).
+pub(crate) const TC_EDITION: &str = "Treasure Client Rust (Beta)";
+pub(crate) const TC_GOLD: u32 = 0xFFD76B;
 
 pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     if crate::renderer::panorama::absent() {
@@ -122,7 +128,7 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     }
 
     let version = format!(
-        "Minecraft {ASSET_VERSION} (protocol {})",
+        "{TC_EDITION}, based on Torch \u{2022} Minecraft {ASSET_VERSION} (protocol {})",
         azalea_protocol::packets::PROTOCOL_VERSION
     );
     p.text_plain(&version, 2.0, ctx.vh - 10.0, 0xFFFFFF, true);

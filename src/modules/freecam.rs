@@ -18,12 +18,13 @@ static ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::ne
 
 #[cfg(not(feature = "click_gui"))]
 pub fn active() -> bool {
-    ACTIVE.load(std::sync::atomic::Ordering::Relaxed)
+    // Treasure Client: freecam is blocked (see registry::CHEATS); the key does nothing.
+    false
 }
 
 #[cfg(not(feature = "click_gui"))]
 pub fn toggle() {
-    ACTIVE.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = &ACTIVE;
 }
 
 static EYE: std::sync::Mutex<View> = std::sync::Mutex::new(View {

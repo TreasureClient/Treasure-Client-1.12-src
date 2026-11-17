@@ -1,13 +1,17 @@
 use super::socket::{Frame, Socket};
 use crate::{log_info, log_warn};
 
-pub(super) const HANDSHAKE_VERSIONS: [u16; 2] = [5, 4];
+// Treasure Client: v3 too, which many 1.12 Eaglercraft servers still use.
+pub(super) const HANDSHAKE_VERSIONS: [u16; 3] = [5, 4, 3];
 
 fn offered_protocol() -> i32 {
     crate::util::session_protocol()
 }
 
-fn offered_version_name() -> &'static str {
+fn offered_version_name(only_legacy: bool) -> &'static str {
+    if only_legacy {
+        return "1.12.2";
+    }
     #[cfg(feature = "multiversion")]
     {
         use crate::protocol::version::{NATIVE, ProtocolVersion};
@@ -39,8 +43,9 @@ pub(super) async fn run(
     socket: &mut Socket,
     username: &str,
     skin: Option<&[u8]>,
-) -> eyre::Result<(azalea_auth::game_profile::GameProfile, u16)> {
-    send(socket, client_version(username)?).await?;
+    only_legacy: bool,
+) -> eyre::Result<(azalea_auth::game_profile::GameProfile, u16, u16)> {
+    send(socket, client_version(username, only_legacy)?).await?;
 
     let mut version = expect(socket, SERVER_VERSION).await?;
     let eagler = version.u16()?;
@@ -57,7 +62,7 @@ pub(super) async fn run(
         "net",
         "eagler: handshake v{eagler} against {brand} {server_version}, minecraft protocol {minecraft}"
     );
-    if minecraft as i32 != offered_protocol() {
+    if minecraft as i32 != offered_protocol() && minecraft != super::legacy::PROTOCOL {
         log_warn!(
             "net",
             "eagler: the server picked minecraft protocol {minecraft} but this connection was \
@@ -72,7 +77,7 @@ pub(super) async fn run(
     let name = allow.str()?;
     let uuid = uuid::Uuid::from_u64_pair(allow.u64()?, allow.u64()?);
 
-    if let Some(skin) = skin {
+    if let Some(skin) = skin.filter(|_| eagler >= 4) {
         send(socket, profile_data("skin_v2", skin)?).await?;
     }
     send(socket, vec![CLIENT_FINISH_LOGIN]).await?;
@@ -81,10 +86,11 @@ pub(super) async fn run(
     Ok((
         azalea_auth::game_profile::GameProfile::new(uuid, name),
         eagler,
+        minecraft,
     ))
 }
 
-fn client_version(username: &str) -> eyre::Result<Vec<u8>> {
+fn client_version(username: &str, only_legacy: bool) -> eyre::Result<Vec<u8>> {
     let mut out = vec![CLIENT_VERSION];
     out.push(2);
     out.extend_from_slice(&(HANDSHAKE_VERSIONS.len() as u16).to_be_bytes());
@@ -93,10 +99,20 @@ fn client_version(username: &str) -> eyre::Result<Vec<u8>> {
     }
     let protocol = u16::try_from(offered_protocol())
         .map_err(|_| eyre::eyre!("minecraft protocol version does not fit the eagler handshake"))?;
-    out.extend_from_slice(&1u16.to_be_bytes());
-    out.extend_from_slice(&protocol.to_be_bytes());
+    // Treasure Client: also offer 1.12.2; the server picks the one it runs.
+    let protocols: Vec<u16> = if only_legacy {
+        vec![super::legacy::PROTOCOL]
+    } else if protocol == super::legacy::PROTOCOL {
+        vec![protocol]
+    } else {
+        vec![protocol, super::legacy::PROTOCOL]
+    };
+    out.extend_from_slice(&(protocols.len() as u16).to_be_bytes());
+    for p in protocols {
+        out.extend_from_slice(&p.to_be_bytes());
+    }
     put_str(&mut out, "vanilla")?;
-    put_str(&mut out, offered_version_name())?;
+    put_str(&mut out, offered_version_name(only_legacy))?;
     out.push(0);
     put_str(&mut out, username)?;
     Ok(out)
@@ -107,6 +123,10 @@ fn request_login(username: &str, eagler: u16) -> eyre::Result<Vec<u8>> {
     put_str(&mut out, username)?;
     out.push(0);
     out.push(0);
+    if eagler < 4 {
+        // v3 has no cookie fields.
+        return Ok(out);
+    }
     out.push(0);
     out.push(0);
     if eagler < 5 {

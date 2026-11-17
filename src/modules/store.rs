@@ -142,6 +142,9 @@ impl Store {
 
     pub fn enabled(&self, id: impl Into<ModuleIx>) -> bool {
         let i = id.into().0 as usize;
+        if super::registry::is_cheat(i) {
+            return false;
+        }
         #[cfg(lua_mods)]
         if i >= COUNT {
             let p = self.profile();
@@ -152,6 +155,9 @@ impl Store {
 
     pub fn armed(&self, id: impl Into<ModuleIx>) -> bool {
         let i = id.into().0 as usize;
+        if super::registry::is_cheat(i) {
+            return false;
+        }
         #[cfg(lua_mods)]
         if i >= COUNT {
             return self.script(|s| s.row(i).is_some_and(|r| r.on.load(Relaxed)));
@@ -172,6 +178,9 @@ impl Store {
     pub fn set_enabled(&self, id: impl Into<ModuleIx>, on: bool) {
         let id = id.into();
         let i = id.0 as usize;
+        if on && super::registry::is_cheat(i) {
+            return;
+        }
         #[cfg(lua_mods)]
         if i >= COUNT {
             let p = self.profile();

@@ -645,6 +645,9 @@ fn run(args: platform::cli::Args) -> eyre::Result<()> {
                     client::bot::start_bot(address);
                     gui::Screen::None
                 }
+                // Treasure Client: like Eaglercraft, the browser build opens on Edit
+                // Profile (name and skin) every time; Done leads to the title screen.
+                None if cfg!(target_arch = "wasm32") => gui::Screen::Accounts,
                 None => gui::Screen::Title,
             },
             ..Default::default()

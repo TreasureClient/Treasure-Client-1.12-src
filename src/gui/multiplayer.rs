@@ -321,9 +321,13 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
 fn draw_version_menu(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx, locked: bool) {
     use crate::protocol::version;
 
+    // Treasure Client: "1.12.2" is listed last and joins through the 1.12 translator.
+    const LEGACY_NAME: &str = "1.12.2";
+    let legacy = crate::protocol::legacy_forced();
     let current = version::selectable()
         .find(|v| v.protocol == crate::protocol::preselected())
         .unwrap_or(version::NATIVE);
+    let current_name = if legacy { LEGACY_NAME } else { current.name };
 
     #[cfg(feature = "tutorial")]
     crate::gui::tutorial::mark(
@@ -334,13 +338,21 @@ fn draw_version_menu(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx, loc
         p,
         ctx,
         (VERSION_X, VERSION_W),
-        current.name,
-        version::selectable().map(|v| v.name),
+        current_name,
+        version::selectable()
+            .map(|v| v.name)
+            .chain(std::iter::once(LEGACY_NAME)),
         &mut state.menu.version_open,
         locked,
     );
-    if let Some(v) = picked.and_then(|i| version::selectable().nth(i)) {
-        crate::protocol::set_forced(Some(v.protocol));
+    if let Some(i) = picked {
+        match version::selectable().nth(i) {
+            Some(v) => {
+                crate::protocol::set_legacy_forced(false);
+                crate::protocol::set_forced(Some(v.protocol));
+            }
+            None => crate::protocol::set_legacy_forced(true),
+        }
     }
 }
 
