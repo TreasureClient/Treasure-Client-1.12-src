@@ -109,7 +109,8 @@ public class ConnectionHandshake {
 			
 			d.writeBoolean(password != null);
 			
-			String username = mc.getSession().getProfile().getName();
+			// Treasure Client: a java:// server can have its own name (see TCJavaNames)
+			String username = net.minecraft.client.gui.TCJavaNames.nameFor(client.getCurrentURI(), mc.getSession().getProfile().getName());
 			d.writeByte(username.length());
 			d.writeBytes(username);
 			
@@ -467,6 +468,14 @@ public class ConnectionHandshake {
 		err.read(dat);
 		String errStr = new String(dat, StandardCharsets.UTF_8);
 		logger.info("Server Error Code {}: {}", errorCode, errStr);
+		// Treasure Client: Wispcraft's "log in with Microsoft" kick from a java:// server means the
+		// name belongs to a paid account: offer other names for that server instead.
+		if(errStr.contains(net.minecraft.client.gui.TCJavaNames.WISPCRAFT_NEEDS_ACCOUNT)
+				&& net.minecraft.client.gui.TCJavaNames.isJava(client.getCurrentURI())) {
+			mc.displayGuiScreen(new net.minecraft.client.gui.GuiTCJavaName(scr, client.getCurrentURI(),
+					mc.getSession().getProfile().getName()));
+			return;
+		}
 		if(errorCode == HandshakePacketTypes.SERVER_ERROR_RATELIMIT_BLOCKED) {
 			RateLimitTracker.registerBlock(client.getCurrentURI());
 			mc.displayGuiScreen(GuiDisconnected.createRateLimitKick(scr));
