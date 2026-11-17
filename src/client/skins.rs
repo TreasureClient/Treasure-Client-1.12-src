@@ -472,8 +472,46 @@ fn submit(url: Arc<str>, kind: Kind) {
     let _ = queue.send((url, kind));
 }
 
+/// Treasure Client: the web build downloads skins and capes too (the Mojang texture
+/// server allows browser requests). Old profiles name `http://` URLs, which an `https`
+/// page may not load, so those are fetched over `https`.
 #[cfg(target_arch = "wasm32")]
-fn submit(_url: Arc<str>, _kind: Kind) {}
+fn submit(url: Arc<str>, kind: Kind) {
+    use crate::platform::http::Fetched;
+
+    const MAX_BODY: u64 = 2 * 1024 * 1024;
+    if !is_allowed_texture_domain(&url) {
+        return;
+    }
+    crate::platform::executor::spawn_detached(async move {
+        let secure = match url.strip_prefix("http://") {
+            Some(rest) => format!("https://{rest}"),
+            None => url.to_string(),
+        };
+        let bytes = match crate::platform::http::get_bytes(&secure, 0, &mut |done, _| done <= MAX_BODY).await {
+            Ok(Fetched::Body(body)) => body,
+            Ok(Fetched::Cancelled) => return,
+            Err(e) => {
+                log_warn!("skins", "{url}: {e}");
+                return;
+            }
+        };
+        let image = match image::load_from_memory(&bytes) {
+            Ok(image) => image.to_rgba8(),
+            Err(e) => {
+                log_warn!("skins", "{url}: not an image ({e})");
+                return;
+            }
+        };
+        let image = match kind {
+            Kind::Body => process_legacy_skin(image, &url),
+            Kind::Cape => Some(image),
+        };
+        if let Some(image) = image {
+            READY.lock().unwrap().push((url, kind, image));
+        }
+    });
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 fn load(url: &str, kind: Kind) -> Option<RgbaImage> {

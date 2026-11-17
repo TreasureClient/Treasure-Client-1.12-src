@@ -16,6 +16,15 @@ const V5_SKIN_CUSTOM: u8 = 0x02;
 const V4_GET_OTHER_SKIN: u8 = 0x01;
 const V4_SKIN_PRESET: u8 = 0x02;
 const V4_SKIN_CUSTOM: u8 = 0x03;
+// Treasure Client: capes (EaglerX game protocol message ids).
+const V5_GET_OTHER_CAPE: u8 = 0x02;
+const V5_CAPE_PRESET: u8 = 0x03;
+const V5_CAPE_CUSTOM: u8 = 0x04;
+const V4_GET_OTHER_CAPE: u8 = 0x06;
+const V4_CAPE_PRESET: u8 = 0x07;
+const V4_CAPE_CUSTOM: u8 = 0x08;
+/// A custom cape: the 23x17 cape part of a 64x32 cape texture, 3 bytes a pixel.
+const CAPE_LEN: usize = 23 * 17 * 3;
 
 const MULTI: u8 = 0xFF;
 const INJECTED: u8 = 0xEE;
@@ -28,6 +37,8 @@ struct Session {
     outbox: Vec<Vec<u8>>,
     next_id: i32,
     pending: HashMap<i32, u128>,
+    pending_capes: HashMap<i32, u128>,
+    capes: HashMap<u128, Arc<str>>,
     asked: HashSet<u128>,
     worn: HashMap<u128, SkinRef>,
 }
@@ -43,6 +54,8 @@ pub(super) fn begin(version: u16, socket: UnboundedSender<Vec<u8>>) {
         outbox: Vec::new(),
         next_id: 0,
         pending: HashMap::new(),
+        pending_capes: HashMap::new(),
+        capes: HashMap::new(),
         asked: HashSet::new(),
         worn: HashMap::new(),
     });
@@ -56,13 +69,21 @@ pub(crate) fn forget() {
     if let Some(s) = SESSION.lock().unwrap().as_mut() {
         s.outbox.clear();
         s.pending.clear();
+        s.pending_capes.clear();
+        s.capes.clear();
         s.asked.clear();
         s.worn.clear();
     }
 }
 
 pub(crate) fn worn_by(uuid: u128) -> Option<SkinRef> {
-    SESSION.lock().unwrap().as_ref()?.worn.get(&uuid).cloned()
+    let guard = SESSION.lock().unwrap();
+    let s = guard.as_ref()?;
+    let cape = s.capes.get(&uuid).cloned();
+    match s.worn.get(&uuid) {
+        Some(refs) => Some(SkinRef { cape: cape.or_else(|| refs.cape.clone()), ..refs.clone() }),
+        None => None,
+    }
 }
 
 pub(crate) fn request(uuid: u128) {
@@ -81,11 +102,21 @@ pub(crate) fn request(uuid: u128) {
         frame.extend(hi.to_be_bytes());
         frame.extend(lo.to_be_bytes());
         let _ = s.socket.send(frame);
+        let id = s.next_id;
+        s.next_id = s.next_id.wrapping_add(1) & i32::MAX;
+        s.pending_capes.insert(id, uuid);
+        let mut frame = vec![INJECTED, V5_GET_OTHER_CAPE];
+        write_varint(&mut frame, id);
+        frame.extend(hi.to_be_bytes());
+        frame.extend(lo.to_be_bytes());
+        let _ = s.socket.send(frame);
     } else {
-        let mut message = vec![V4_GET_OTHER_SKIN];
-        message.extend(hi.to_be_bytes());
-        message.extend(lo.to_be_bytes());
-        s.outbox.push(message);
+        for kind in [V4_GET_OTHER_SKIN, V4_GET_OTHER_CAPE] {
+            let mut message = vec![kind];
+            message.extend(hi.to_be_bytes());
+            message.extend(lo.to_be_bytes());
+            s.outbox.push(message);
+        }
     }
 }
 
@@ -136,6 +167,10 @@ enum Texture<'a> {
 fn receive(message: &[u8], version: u16) {
     let mut r = Reader::new(message);
     let Some(id) = r.u8() else { return };
+    if let Some((who, pixels)) = cape_message(&mut r, id, version) {
+        apply_cape(who, pixels);
+        return;
+    }
     let parsed = if version >= 5 {
         match id {
             V5_SKIN_PRESET => r
@@ -238,6 +273,73 @@ fn apply(who: Who, texture: Texture) {
     s.worn.insert(uuid, refs);
 }
 
+/// A cape reply: who it is for, and the custom pixels (`None` for a preset, which this
+/// client does not ship, or no cape).
+fn cape_message<'a>(r: &mut Reader<'a>, id: u8, version: u16) -> Option<(Who, Option<&'a [u8]>)> {
+    match (version >= 5, id) {
+        (true, V5_CAPE_PRESET) => {
+            let req = r.varint()?;
+            r.varint()?;
+            Some((Who::Request(req), None))
+        }
+        (true, V5_CAPE_CUSTOM) => {
+            let req = r.varint()?;
+            Some((Who::Request(req), Some(r.take(CAPE_LEN)?)))
+        }
+        (false, V4_CAPE_PRESET) => {
+            let uuid = r.uuid()?;
+            r.i32()?;
+            Some((Who::Player(uuid), None))
+        }
+        (false, V4_CAPE_CUSTOM) => {
+            let uuid = r.uuid()?;
+            Some((Who::Player(uuid), Some(r.take(CAPE_LEN)?)))
+        }
+        _ => None,
+    }
+}
+
+fn apply_cape(who: Who, pixels: Option<&[u8]>) {
+    let mut guard = SESSION.lock().unwrap();
+    let Some(s) = guard.as_mut() else { return };
+    let uuid = match who {
+        Who::Request(id) => match s.pending_capes.remove(&id) {
+            Some(uuid) => uuid,
+            None => return,
+        },
+        Who::Player(uuid) => uuid,
+    };
+    let Some(image) = pixels.and_then(decode_cape) else {
+        s.capes.remove(&uuid);
+        return;
+    };
+    let url: Arc<str> = format!("eagler:cape/{uuid:032x}").into();
+    crate::client::skins::provide(url.clone(), image);
+    s.capes.insert(uuid, url);
+}
+
+/// The server's 23x17 cape pixels (blue, green, red) back into a 64x32 cape texture: the
+/// cape itself is 22x17, and the 23rd column holds one 11-pixel column of the elytra.
+fn decode_cape(pixels: &[u8]) -> Option<RgbaImage> {
+    if pixels.len() < CAPE_LEN {
+        return None;
+    }
+    let mut image = RgbaImage::new(64, 32);
+    let at = |x: usize, y: usize| {
+        let j = (y * 23 + x) * 3;
+        image::Rgba([pixels[j + 2], pixels[j + 1], pixels[j], 0xFF])
+    };
+    for y in 0..17 {
+        for x in 0..22 {
+            image.put_pixel(x as u32, y as u32, at(x, y));
+        }
+    }
+    for y in 0..11 {
+        image.put_pixel(22, (y + 11) as u32, at(22, y + 6));
+    }
+    Some(image)
+}
+
 fn decode(pixels: &[u8]) -> Option<RgbaImage> {
     let rgba = pixels
         .chunks_exact(3)
@@ -262,6 +364,15 @@ mod tests {
         let body = [MULTI, 2, 2, 0xAA, 0xBB, 1, 0xCC];
         assert_eq!(unbatch(&body), vec![&[0xAA, 0xBB][..], &[0xCC][..]]);
         assert_eq!(unbatch(&[0x01, 0x02]), vec![&[0x01, 0x02][..]]);
+    }
+
+    #[test]
+    fn a_custom_cape_pixel_decodes_as_the_server_encoded_it() {
+        let mut pixels = vec![0u8; CAPE_LEN];
+        pixels[..3].copy_from_slice(&[0x30, 0x20, 0x10]);
+        let image = decode_cape(&pixels).unwrap();
+        assert_eq!(image.get_pixel(0, 0).0, [0x10, 0x20, 0x30, 0xFF]);
+        assert_eq!(image.get_pixel(40, 0).0[3], 0);
     }
 
     #[test]
