@@ -268,8 +268,6 @@ public class GuiMainMenu extends GuiScreen {
 		// hotkey can never lock you out of the overlay menu).
 		this.buttonList.add(new GuiButton(101, this.width / 2 - 100, j + 72 + 36, 200, 20, "Treasure Settings"));
 		this.buttonList.add(new GuiButtonTCProfile(103, this.width - 28, 6)); // Treasure Client: Profiles
-		this.buttonList.add(new GuiButtonTCFriends(104, 6, 6)); // Treasure Client: Friends & Messages
-		TCProfiles.publishFace(); // preset skins can only be read once the game is loaded
 	}
 
 	/**
@@ -315,10 +313,6 @@ public class GuiMainMenu extends GuiScreen {
 
 		if (button.id == 0) {
 			this.mc.displayGuiScreen(new GuiOptions(this, this.mc.gameSettings));
-		}
-
-		if (button.id == 104) {
-			GuiButtonTCFriends.open();
 		}
 
 		if (button.id == 103) {

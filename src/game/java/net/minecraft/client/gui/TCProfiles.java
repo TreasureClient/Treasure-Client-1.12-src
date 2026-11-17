@@ -153,7 +153,6 @@ public final class TCProfiles {
 		if (a != null) {
 			a.setData(b);
 			persist();
-			publish(); // the name or skin may have changed (Friends shows them)
 		}
 	}
 
@@ -334,10 +333,7 @@ public final class TCProfiles {
 		}
 	}
 
-	/**
-	 * Tells the mod menu which profile is in use ("activeId\nid,id,...\nname"): it swaps
-	 * that profile's mod setup and Friends account. Also refreshes the face picture.
-	 */
+	/** Tells the mod menu which profile's mod setup to use. */
 	private static void publish() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(active).append('\n');
@@ -347,73 +343,8 @@ public final class TCProfiles {
 			}
 			sb.append(list.get(i).id);
 		}
-		String n = EaglerProfile.getName();
-		sb.append('\n').append(n != null ? n : "");
 		try {
 			EagRuntime.setStorage("tcprofile", sb.toString().getBytes(StandardCharsets.UTF_8));
-		} catch (Throwable t) {
-		}
-		publishFace();
-	}
-
-	private static String lastFaceKey = null;
-
-	/**
-	 * Writes storage "tcface": the active skin's face (with its hat layer) as 8x8 RGB
-	 * bytes (192), so Friends can show it to your friends. Needs the resource manager
-	 * for preset skins, so the title screen calls it again once the game is loaded.
-	 */
-	public static void publishFace() {
-		try {
-			int[] px = null;
-			int w = 64;
-			String key;
-			if (EaglerProfile.presetSkinId == -1 && EaglerProfile.customSkinId >= 0
-					&& EaglerProfile.customSkinId < EaglerProfile.customSkins.size()) {
-				byte[] b = EaglerProfile.customSkins.get(EaglerProfile.customSkinId).texture;
-				key = "c" + EaglerProfile.customSkinId + ":" + java.util.Arrays.hashCode(b);
-				if (key.equals(lastFaceKey)) {
-					return;
-				}
-				px = EaglerSkinTexture.convertToInt(b);
-			} else {
-				int id = EaglerProfile.presetSkinId;
-				DefaultSkins ds = DefaultSkins.getSkinFromId(id);
-				if (ds == null || ds.model.highPoly != null) {
-					ds = DefaultSkins.getSkinFromId(0);
-				}
-				key = "p" + ds.id;
-				if (key.equals(lastFaceKey)) {
-					return;
-				}
-				Minecraft mc = Minecraft.getMinecraft();
-				if (mc == null || mc.getResourceManager() == null) {
-					return;
-				}
-				net.lax1dude.eaglercraft.opengl.ImageData img = net.lax1dude.eaglercraft.opengl.ImageData
-						.loadImageFile(mc.getResourceManager().getResource(ds.location).getInputStream());
-				if (img == null) {
-					return;
-				}
-				px = img.pixels;
-				w = img.width;
-			}
-			byte[] out = new byte[192];
-			for (int y = 0; y < 8; y++) {
-				for (int x = 0; x < 8; x++) {
-					int c = px[(8 + y) * w + 8 + x];
-					int h = px[(8 + y) * w + 40 + x];
-					if ((h >>> 24) >= 128) {
-						c = h;
-					}
-					int o = (y * 8 + x) * 3;
-					out[o] = (byte) (c >> 16);
-					out[o + 1] = (byte) (c >> 8);
-					out[o + 2] = (byte) c;
-				}
-			}
-			EagRuntime.setStorage("tcface", out);
-			lastFaceKey = key;
 		} catch (Throwable t) {
 		}
 	}
