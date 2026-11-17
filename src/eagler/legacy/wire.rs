@@ -17,6 +17,16 @@ impl<'a> In<'a> {
         Self { buf, at: 0 }
     }
 
+    /// Where the reader is, for `since`.
+    pub(super) fn at(&self) -> usize {
+        self.at
+    }
+
+    /// The bytes read since `start`.
+    pub(super) fn since(&self, start: usize) -> &'a [u8] {
+        &self.buf[start.min(self.at)..self.at]
+    }
+
     pub(super) fn bytes(&mut self, n: usize) -> Option<&'a [u8]> {
         self.take(n)
     }

@@ -17,6 +17,7 @@
 
 mod chunk;
 mod entities;
+mod items;
 mod registries;
 mod wire;
 
@@ -74,6 +75,11 @@ mod cb {
     pub const DIFFICULTY: i32 = 0x0D;
     pub const MULTI_BLOCK_CHANGE: i32 = 0x10;
     pub const CONFIRM_TRANSACTION: i32 = 0x11;
+    pub const CLOSE_WINDOW: i32 = 0x12;
+    pub const OPEN_WINDOW: i32 = 0x13;
+    pub const WINDOW_ITEMS: i32 = 0x14;
+    pub const WINDOW_PROPERTY: i32 = 0x15;
+    pub const SET_SLOT: i32 = 0x16;
     pub const DISCONNECT: i32 = 0x1A;
     pub const UNLOAD_CHUNK: i32 = 0x1D;
     pub const GAME_STATE: i32 = 0x1E;
@@ -97,6 +103,8 @@ mod sb {
     pub const CHAT: i32 = 0x02;
     pub const CLIENT_STATUS: i32 = 0x03;
     pub const CONFIRM_TRANSACTION: i32 = 0x05;
+    pub const CLICK_WINDOW: i32 = 0x07;
+    pub const CLOSE_WINDOW: i32 = 0x08;
     pub const SETTINGS: i32 = 0x04;
     pub const PLUGIN_MESSAGE: i32 = 0x09;
     pub const USE_ENTITY: i32 = 0x0A;
@@ -139,6 +147,11 @@ pub(crate) struct Legacy {
     sneaking: bool,
     /// Server packets with no translation yet (logged once each).
     untranslated: std::collections::HashSet<i32>,
+    items: items::Ctx,
+    /// Each open window's slots as the server sent them (1.12 clicks name the clicked item).
+    windows: std::collections::HashMap<i32, Vec<Vec<u8>>>,
+    state_id: u32,
+    action: i16,
 }
 
 impl Legacy {
@@ -156,6 +169,10 @@ impl Legacy {
             entity: 0,
             sneaking: false,
             untranslated: Default::default(),
+            items: items::Ctx::default(),
+            windows: Default::default(),
+            state_id: 0,
+            action: 0,
         }
     }
 
@@ -165,6 +182,12 @@ impl Legacy {
         self.plains = sent.biome("plains").unwrap_or(0);
         self.biomes = (0..=255u8)
             .map(|id| sent.biome(chunk::biome_name(id)).unwrap_or(self.plains))
+            .collect();
+        self.items.enchantments = sent
+            .enchantments
+            .iter()
+            .enumerate()
+            .map(|(i, name)| (name.clone(), i as u32))
             .collect();
         self.sent = sent;
         packets
@@ -232,7 +255,7 @@ impl Legacy {
         let Some(id) = r.varint() else {
             return;
         };
-        match entities::translate(id, &mut r, out) {
+        match entities::translate(id, &mut r, out, &self.items) {
             Some(true) => return,
             Some(false) => {}
             None => {
@@ -313,6 +336,85 @@ impl Legacy {
                     let id = u32::from(window as u8) << 16 | u32::from(action as u16);
                     game(out, azalea_protocol::packets::game::ClientboundPing { id });
                 }
+                Some(())
+            })(),
+            cb::OPEN_WINDOW => (|| {
+                let window = i32::from(r.u8()?);
+                let kind = r.string()?;
+                let title = r.string()?;
+                let slots = usize::from(r.u8()?);
+                let Some(menu_type) = menu(&kind, slots) else {
+                    crate::log_info!("net", "1.12: window type {kind} is not supported yet");
+                    return Some(());
+                };
+                self.windows.insert(window, Vec::new());
+                game(out, azalea_protocol::packets::game::ClientboundOpenScreen {
+                    container_id: window,
+                    menu_type,
+                    title: text(&title),
+                });
+                Some(())
+            })(),
+            cb::CLOSE_WINDOW => r.u8().map(|window| {
+                self.windows.remove(&i32::from(window));
+                game(out, azalea_protocol::packets::game::ClientboundContainerClose {
+                    container_id: i32::from(window),
+                });
+            }),
+            cb::WINDOW_ITEMS => (|| {
+                let window = i32::from(r.u8()?);
+                let count = usize::from(r.i16()? as u16);
+                let mut raw = Vec::with_capacity(count);
+                let mut stacks = Vec::with_capacity(count);
+                for _ in 0..count {
+                    let slot = items::read(&mut r, &self.items)?;
+                    raw.push(slot.raw);
+                    stacks.push(slot.item);
+                }
+                self.windows.insert(window, raw);
+                self.state_id = self.state_id.wrapping_add(1);
+                game(out, azalea_protocol::packets::game::ClientboundContainerSetContent {
+                    container_id: window,
+                    state_id: self.state_id,
+                    items: stacks,
+                    carried_item: azalea_inventory::ItemStack::Empty,
+                });
+                Some(())
+            })(),
+            cb::SET_SLOT => (|| {
+                let window = i32::from(r.i8()?);
+                let slot = r.i16()?;
+                let item = items::read(&mut r, &self.items)?;
+                if window == -1 && slot == -1 {
+                    game(out, azalea_protocol::packets::game::ClientboundSetCursorItem {
+                        contents: item.item,
+                    });
+                    return Some(());
+                }
+                if let (Some(slots), Ok(at)) = (self.windows.get_mut(&window), usize::try_from(slot)) {
+                    if slots.len() <= at {
+                        slots.resize(at + 1, items::EMPTY.to_vec());
+                    }
+                    slots[at] = item.raw;
+                }
+                self.state_id = self.state_id.wrapping_add(1);
+                game(out, azalea_protocol::packets::game::ClientboundContainerSetSlot {
+                    container_id: window,
+                    state_id: self.state_id,
+                    slot: slot as u16,
+                    item_stack: item.item,
+                });
+                Some(())
+            })(),
+            cb::WINDOW_PROPERTY => (|| {
+                let window = i32::from(r.u8()?);
+                let id = r.i16()? as u16;
+                let value = r.i16()? as u16;
+                game(out, azalea_protocol::packets::game::ClientboundContainerSetData {
+                    container_id: window,
+                    id,
+                    value,
+                });
                 Some(())
             })(),
             cb::BLOCK_CHANGE => (|| {
@@ -496,6 +598,30 @@ impl Legacy {
             game(back, azalea_protocol::packets::game::ClientboundBlockChangedAck { seq });
         };
         match packet {
+            ServerboundGamePacket::ContainerClick(p) => {
+                let window = p.container_id;
+                let clicked = usize::try_from(p.slot_num)
+                    .ok()
+                    .and_then(|at| self.windows.get(&window)?.get(at).cloned())
+                    .unwrap_or_else(|| items::EMPTY.to_vec());
+                self.action = self.action.wrapping_add(1).max(1);
+                to.push(
+                    Out::new(sb::CLICK_WINDOW)
+                        .u8(window as u8)
+                        .i16(p.slot_num)
+                        .u8(p.button_num)
+                        .i16(self.action)
+                        .varint(p.click_type as i32)
+                        .bytes(&clicked)
+                        .done(),
+                );
+            }
+            ServerboundGamePacket::ContainerClose(p) => {
+                if p.container_id != 0 {
+                    self.windows.remove(&p.container_id);
+                }
+                to.push(Out::new(sb::CLOSE_WINDOW).u8(p.container_id as u8).done());
+            }
             ServerboundGamePacket::Pong(p) => to.push(
                 Out::new(sb::CONFIRM_TRANSACTION)
                     .u8((p.id >> 16) as u8)
@@ -765,6 +891,32 @@ fn dimension_index(dimension: i32) -> u32 {
         _ => "overworld",
     };
     registries::DIMENSION_TYPES.iter().position(|d| *d == name).unwrap_or(0) as u32
+}
+
+/// A 1.12 window type (and slot count) as a modern menu.
+fn menu(kind: &str, slots: usize) -> Option<azalea_registry::builtin::MenuKind> {
+    use azalea_registry::builtin::MenuKind as M;
+    Some(match kind {
+        "minecraft:chest" | "minecraft:container" => match slots.div_ceil(9) {
+            0 | 1 => M::Generic9x1,
+            2 => M::Generic9x2,
+            3 => M::Generic9x3,
+            4 => M::Generic9x4,
+            5 => M::Generic9x5,
+            _ => M::Generic9x6,
+        },
+        "minecraft:crafting_table" => M::Crafting,
+        "minecraft:furnace" => M::Furnace,
+        "minecraft:dispenser" | "minecraft:dropper" => M::Generic3x3,
+        "minecraft:enchanting_table" => M::Enchantment,
+        "minecraft:brewing_stand" => M::BrewingStand,
+        "minecraft:villager" => M::Merchant,
+        "minecraft:beacon" => M::Beacon,
+        "minecraft:anvil" => M::Anvil,
+        "minecraft:hopper" => M::Hopper,
+        "minecraft:shulker_box" => M::ShulkerBox,
+        _ => return None,
+    })
 }
 
 pub(super) fn game_mode_of(mode: u8) -> GameMode {

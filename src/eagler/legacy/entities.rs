@@ -50,6 +50,7 @@ pub(super) mod cb {
     pub const VELOCITY: i32 = 0x3E;
     pub const TELEPORT: i32 = 0x4C;
     pub const TEAMS: i32 = 0x44;
+    pub const EQUIPMENT: i32 = 0x3F;
 }
 
 fn id(raw: i32) -> MinecraftEntityId {
@@ -94,7 +95,12 @@ fn add(out: &mut Vec<Vec<u8>>, raw: i32, uuid: Uuid, kind: EntityKind, pos: Vec3
 }
 
 /// Translates one entity packet; false when `id` is not an entity packet.
-pub(super) fn translate(id_: i32, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<bool> {
+pub(super) fn translate(
+    id_: i32,
+    r: &mut In,
+    out: &mut Vec<Vec<u8>>,
+    items: &super::items::Ctx,
+) -> Option<bool> {
     match id_ {
         cb::SPAWN_PLAYER => {
             let raw = r.varint()?;
@@ -104,7 +110,7 @@ pub(super) fn translate(id_: i32, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<
             let pitch = r.i8()?;
             crate::log_info!("net", "1.12: player or NPC #{raw} at {:.1} {:.1} {:.1}", pos.x, pos.y, pos.z);
             add(out, raw, uuid, EntityKind::Player, pos, (yaw, pitch, yaw), LpVec3::default(), 0);
-            metadata(raw, r, out);
+            metadata(raw, r, out, items);
         }
         cb::SPAWN_MOB => {
             let raw = r.varint()?;
@@ -118,7 +124,7 @@ pub(super) fn translate(id_: i32, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<
             if let Some(kind) = kind {
                 crate::log_info!("net", "1.12: {kind:?} #{raw} at {:.1} {:.1} {:.1}", pos.x, pos.y, pos.z);
                 add(out, raw, uuid, kind, pos, (yaw, pitch, head), motion, 0);
-                metadata(raw, r, out);
+                metadata(raw, r, out, items);
             }
         }
         cb::SPAWN_OBJECT => {
@@ -218,25 +224,47 @@ pub(super) fn translate(id_: i32, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<
         }
         cb::METADATA => {
             let raw = r.varint()?;
-            metadata(raw, r, out);
+            metadata(raw, r, out, items);
         }
         cb::PLAYER_LIST => player_list(r, out)?,
+        cb::EQUIPMENT => {
+            use azalea_inventory::components::EquipmentSlot;
+            use azalea_protocol::packets::game::{
+                ClientboundSetEquipment, c_set_equipment::EquipmentSlots,
+            };
+            let raw = r.varint()?;
+            let slot = EquipmentSlot::from_byte(r.varint()?.clamp(0, 5) as u8)?;
+            let item = super::items::read(r, items)?.item;
+            game(out, ClientboundSetEquipment {
+                entity_id: id(raw),
+                slots: EquipmentSlots { slots: vec![(slot, item)] },
+            });
+        }
         cb::TEAMS => teams(r, out)?,
         _ => return Some(false),
     }
     Some(true)
 }
 
-/// The shared part of 1.12 metadata (indices 0-5 are the same in both versions).
-/// Entries come sorted, so reading stops at the first type-specific one.
-fn metadata(raw: i32, r: &mut In, out: &mut Vec<Vec<u8>>) {
+/// 1.12 metadata: the shared part (indices 0-5 are the same in both versions), and the
+/// item of item entities, item frames, potions and fireworks (1.12 index 6, modern 8).
+fn metadata(raw: i32, r: &mut In, out: &mut Vec<Vec<u8>>, ctx: &super::items::Ctx) {
     let mut items = Vec::new();
     loop {
         let Some(index) = r.u8() else { break };
-        if index == 0xFF || index > 5 {
+        if index == 0xFF {
             break;
         }
         let Some(kind) = r.varint() else { break };
+        if index > 5 {
+            if kind == 5 {
+                let Some(slot) = super::items::read(r, ctx) else { break };
+                items.push(EntityDataItem { index: 8, value: EntityDataValue::ItemStack(slot.item) });
+            } else if skip_value(r, kind).is_none() {
+                break;
+            }
+            continue;
+        }
         let value = match (index, kind) {
             (0, 0) => r.u8().map(EntityDataValue::Byte),
             (1, 1) => r.varint().map(EntityDataValue::Int),
@@ -254,6 +282,32 @@ fn metadata(raw: i32, r: &mut In, out: &mut Vec<Vec<u8>>) {
     if !items.is_empty() {
         game(out, ClientboundSetEntityData { id: id(raw), packed_items: EntityMetadataItems(items) });
     }
+}
+
+/// Steps over a 1.12 metadata value this translator does not use.
+fn skip_value(r: &mut In, kind: i32) -> Option<()> {
+    match kind {
+        0 => drop(r.u8()?),
+        1 | 10 | 12 => drop(r.varint()?),
+        2 => drop(r.f32()?),
+        3 | 4 => drop(r.string()?),
+        6 => drop(r.bool()?),
+        7 => drop(r.bytes(12)?),
+        8 => drop(r.i64()?),
+        9 => {
+            if r.bool()? {
+                r.i64()?;
+            }
+        }
+        11 => {
+            if r.bool()? {
+                r.bytes(16)?;
+            }
+        }
+        13 => drop(super::items::read_root(r)?),
+        _ => return None,
+    }
+    Some(())
 }
 
 fn player_list(r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {

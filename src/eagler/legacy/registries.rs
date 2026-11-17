@@ -56,6 +56,7 @@ pub(super) struct Sent {
     /// Biome name (without `minecraft:`) to its index in the biome registry.
     pub(super) biomes: Vec<String>,
     pub(super) clocks: Vec<String>,
+    pub(super) enchantments: Vec<String>,
 }
 
 impl Sent {
@@ -85,6 +86,7 @@ pub(super) fn configuration() -> (Vec<Vec<u8>>, Sent) {
         match *folder {
             "worldgen/biome" => sent.biomes = names,
             "world_clock" => sent.clocks = names,
+            "enchantment" => sent.enchantments = names,
             _ => {}
         }
         let packet = ClientboundRegistryData {
