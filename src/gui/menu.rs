@@ -1,18 +1,18 @@
 use crate::gui::painter::Painter;
 
+// Treasure Client: menus use the theme's background picture instead of dirt.
 pub fn background(p: &mut Painter, vw: f32, vh: f32) {
-    p.sprite("menu_background", 0.0, 0.0, vw, vh);
+    crate::gui::tc_style::background(p, vw, vh);
 }
 
 pub fn dirt_background(p: &mut Painter, vw: f32, vh: f32) {
-    p.sprite("dirt_background", 0.0, 0.0, vw, vh);
+    crate::gui::tc_style::background(p, vw, vh);
 }
 
-pub fn list_background(p: &mut Painter, x: f32, y: f32, w: f32, h: f32, scroll: f32) {
-    let offset = scroll.trunc().rem_euclid(32.0);
-    let guard = p.push_clip(x, y, w, h);
-    p.sprite("menu_list_background", x, y - offset, w, h + offset);
-    p.pop_clip(guard);
-    p.sprite("header_separator", x, y - 2.0, w, 2.0);
-    p.sprite("footer_separator", x, y + h, w, 2.0);
+// Treasure Client: lists sit on a dark see-through panel with accent lines above and below.
+pub fn list_background(p: &mut Painter, x: f32, y: f32, w: f32, h: f32, _scroll: f32) {
+    p.fill(x, y, w, h, 0x7800_0000);
+    let line = (crate::gui::tc_style::accent() & 0x00FF_FFFF) | 0x9000_0000;
+    p.fill(x, y - 1.0, w, 1.0, line);
+    p.fill(x, y + h, w, 1.0, line);
 }

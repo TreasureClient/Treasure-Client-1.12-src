@@ -1450,6 +1450,11 @@ impl<'a> Hud<'a> {
         if !id.available() {
             return false;
         }
+        // Treasure Client: the Treasure Client HUD (FPS, coordinates, direction...) is
+        // drawn by the overlay, so Torch's own extras never show.
+        if id.layer() == Layer::Extras {
+            return false;
+        }
         match self.layout.get(id).visibility {
             Visibility::Shown => true,
             Visibility::Hidden => self.editing && self.frames.layer == id.layer(),

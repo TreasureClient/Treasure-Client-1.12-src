@@ -1274,6 +1274,30 @@ pub(super) fn toggle_screen(
         }
     }
 
+    // Treasure Client: the Treasure Client menu (an HTML overlay) asks for the game to
+    // be held while it is open, and to come back when it closes.
+    #[cfg(target_arch = "wasm32")]
+    {
+        match crate::gui::tc_bridge::take_pause() {
+            Some(3) if state.screen == Screen::None => {
+                enter_screen(Screen::TcFreeze, &mut state, &shared, &mut windows, &buttons);
+                return;
+            }
+            Some(2) if state.screen == Screen::TcFreeze => {
+                enter_screen(Screen::None, &mut state, &shared, &mut windows, &buttons);
+                return;
+            }
+            _ => {}
+        }
+        if state.screen == Screen::TcFreeze {
+            if keys.just_pressed(KeyCode::Escape) {
+                crate::gui::tc_bridge::freeze_closed();
+                enter_screen(Screen::None, &mut state, &shared, &mut windows, &buttons);
+            }
+            return;
+        }
+    }
+
     #[cfg(feature = "hud_editor")]
     {
         let hud_key = state.keybinds.just(Action::HudEditor, &keys, &buttons);

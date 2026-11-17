@@ -46,6 +46,8 @@ pub struct ProfileState {
     pub pending_connect: Option<String>,
     #[cfg(feature = "online_mode")]
     copied_link: bool,
+    /// Treasure Client: the Treasure Client profile screens.
+    pub(crate) tc: TcUi,
 }
 
 impl Default for ProfileState {
@@ -65,6 +67,7 @@ impl Default for ProfileState {
             pending_connect: None,
             #[cfg(feature = "online_mode")]
             copied_link: false,
+            tc: TcUi::default(),
         }
     }
 }
@@ -186,7 +189,8 @@ pub fn entry_screen() -> Screen {
     }
 }
 
-pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+#[allow(dead_code)]
+fn torch_draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     state.profile.ensure_loaded();
     menu::background(p, ctx.vw, ctx.vh);
     p.text_centered(TITLE, ctx.vw / 2.0, LAYOUT.title_y(), 0xFFFFFF, true);
@@ -579,7 +583,8 @@ pub fn draw_microsoft(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     }
 }
 
-pub fn draw_edit(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+#[allow(dead_code)]
+fn torch_draw_edit(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     state.profile.ensure_loaded();
     menu::background(p, ctx.vw, ctx.vh);
 
@@ -727,5 +732,578 @@ mod tests {
         };
         st.begin_edit(0);
         assert_eq!(st.editing, None);
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Treasure Client: the Treasure Client profile screens, the same as the JS and WASM
+// editions. Edit Profile (name, skin, capes) opens first; Profiles (the face button in
+// the top right of the title screen) lists every profile. Each profile is a Torch
+// account: its own name, skin and cape (and its own mod setup in the Mod Menu).
+// ---------------------------------------------------------------------------------------
+
+#[derive(Default)]
+pub(crate) struct TcUi {
+    skin_list: crate::gui::tc_style::Dropdown,
+    cape_list: crate::gui::tc_style::Dropdown,
+    pub(crate) capes: crate::gui::capepick::CapeList,
+    cape_index: usize,
+    choosing_model: bool,
+    cape_rejected: bool,
+    edit_parent: Option<Screen>,
+    faces_key: String,
+    scroll: f32,
+}
+
+#[cfg(not(eagler_skins))]
+pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+    torch_draw(p, state, ctx);
+}
+
+#[cfg(not(eagler_skins))]
+pub fn draw_edit(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+    torch_draw_edit(p, state, ctx);
+}
+
+#[cfg(not(eagler_skins))]
+pub fn draw_cape(_p: &mut Painter, state: &mut GuiState, _ctx: &ScreenCtx) {
+    state.nav = Some(Screen::EditProfile);
+}
+
+#[cfg(eagler_skins)]
+pub(crate) use tc::*;
+
+#[cfg(eagler_skins)]
+mod tc {
+    use super::*;
+    use crate::gui::tc_style;
+
+    const CARD_W: f32 = 250.0;
+    const CARD_H: f32 = 30.0;
+    const CARD_GAP: f32 = 4.0;
+    const MAX_PROFILES: usize = 20;
+    const LABEL: u32 = 0xA0A0A0;
+
+    /// Opens Edit Profile for the profile in use (a new one when there are none).
+    pub(crate) fn open_edit(state: &mut GuiState, parent: Screen) {
+        state.profile.open();
+        match state.profile.accounts.active {
+            Some(i) => state.profile.begin_edit(i),
+            None => state.profile.begin_add(),
+        }
+        let name = state.profile.username.text.clone();
+        state.profile.tc.capes.load();
+        state.profile.tc.cape_index = state.profile.tc.capes.index_for(&name);
+        state.profile.tc.choosing_model = false;
+        state.profile.tc.skin_list.open = false;
+        state.profile.tc.edit_parent = Some(parent);
+        state.nav = Some(Screen::EditProfile);
+    }
+
+    /// Tells the Mod Menu which profile is in use, so each profile keeps its own mods.
+    fn tell_overlay(state: &GuiState) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let accounts = &state.profile.accounts;
+            let names: Vec<&str> = accounts.entries.iter().map(|a| a.name.as_str()).collect();
+            let active = accounts.active().map(|a| a.name.as_str()).unwrap_or("-1");
+            crate::gui::tc_bridge::set_profile(active, &names);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = state;
+    }
+
+    /// Keeps the faces sheet (8x8 faces of every profile) up to date.
+    fn update_faces(state: &mut GuiState) {
+        let profile = &mut state.profile;
+        profile.skin.ensure_loaded();
+        let mut key = String::new();
+        for a in &profile.accounts.entries {
+            key.push_str(&a.name);
+            key.push('=');
+            key.push_str(profile.skin.label_for(&a.name).unwrap_or(""));
+            key.push(';');
+        }
+        if key == profile.tc.faces_key {
+            return;
+        }
+        let mut sheet = vec![0u8; 64 * 64 * 4];
+        for (i, a) in profile.accounts.entries.iter().enumerate().take(64) {
+            let Some(skin) = profile.skin.face_rgba(&a.name) else { continue };
+            let (ox, oy) = ((i % 8) * 8, (i / 8) * 8);
+            for y in 0..8 {
+                for x in 0..8 {
+                    let face = ((8 + y) * 64 + 8 + x) * 4;
+                    let hat = ((8 + y) * 64 + 40 + x) * 4;
+                    let src = if skin[hat + 3] > 0 { hat } else { face };
+                    let dst = ((oy + y) * 64 + ox + x) * 4;
+                    sheet[dst..dst + 3].copy_from_slice(&skin[src..src + 3]);
+                    sheet[dst + 3] = 0xFF;
+                }
+            }
+        }
+        crate::gui::puppet::show_faces(&std::sync::Arc::new(sheet));
+        profile.tc.faces_key = key;
+        tell_overlay(state);
+    }
+
+    fn face(p: &mut Painter, index: usize, x: f32, y: f32, size: f32) {
+        if index >= 64 {
+            return;
+        }
+        let Some(sheet) = p.atlas.server_icon(crate::gui::atlas::PUPPET_FACES_SLOT) else {
+            return;
+        };
+        let (sx, sy) = (((index % 8) * 8) as f32, ((index / 8) * 8) as f32);
+        p.region_part(sheet, sx, sy, 8.0, 8.0, x, y, size, size, [1.0; 4]);
+    }
+
+    /// The face button in the top right of the title screen. Opens Profiles.
+    pub(crate) fn title_button(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+        state.profile.ensure_loaded();
+        update_faces(state);
+        let (x, y, s) = (ctx.vw - 28.0, 6.0, 22.0);
+        let hovered = ctx.hovering(x, y, s, s);
+        let acc = tc_style::accent();
+        let bg = if hovered { tc_style::lerp(tc_style::panel_bg(), acc, 0.25) } else { tc_style::panel_bg() };
+        tc_style::rounded_rect(p, x, y, s, s, bg);
+        tc_style::rounded_outline(p, x, y, s, s, if hovered { 0xFFFF_FFFF } else { acc });
+        if let Some(active) = state.profile.accounts.active {
+            face(p, active, x + 3.0, y + 3.0, 16.0);
+        }
+        if let Some(name) = state.profile.accounts.active().map(|a| a.name.clone()) {
+            let w = p.atlas.font.width_str(&name);
+            let color = if hovered { 0xFFFFFF } else { tc_style::text_idle() & 0x00FF_FFFF };
+            p.text_plain(&name, x - 6.0 - w, y + 7.0, color, true);
+        }
+        if hovered {
+            let tip = "Profiles";
+            let tw = p.atlas.font.width_str(tip);
+            let (tx, ty) = (x + s - tw - 4.0, y + s + 4.0);
+            p.fill(tx - 3.0, ty - 2.0, tw + 6.0, 12.0, 0xE000_0000);
+            p.text_plain(tip, tx, ty, acc & 0x00FF_FFFF, true);
+        }
+        if crate::gui::widgets::click_in(ctx, x, y, s, s) {
+            #[cfg(feature = "audio")]
+            crate::gui::widgets::play_click();
+            state.profile.open();
+            state.nav = Some(Screen::Accounts);
+        }
+    }
+
+    /// The Profiles screen.
+    pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+        state.profile.ensure_loaded();
+        update_faces(state);
+        menu::background(p, ctx.vw, ctx.vh);
+        let cx = (ctx.vw / 2.0).floor();
+        let acc = tc_style::accent();
+        p.text_centered("Profiles", cx, 14.0, acc & 0x00FF_FFFF, true);
+        p.text_centered(
+            "Each profile has its own name, skin, cape and mods",
+            cx,
+            27.0,
+            0xB8A888,
+            true,
+        );
+
+        let confirming = state.profile.confirm_delete.is_some();
+        let blocked_input;
+        let ctx_ui = if confirming {
+            let mut i = ctx.input.clone();
+            i.mouse = None;
+            i.left_click = false;
+            i.scroll = 0.0;
+            i.escape = false;
+            blocked_input = i;
+            ctx.with_input(&blocked_input)
+        } else {
+            ctx.with_input(ctx.input)
+        };
+        let ctx2 = &ctx_ui;
+
+        let by = ctx.vh - 52.0;
+        let (top, bottom) = (44.0, by - 8.0);
+        let count = state.profile.accounts.entries.len();
+        let content = count as f32 * (CARD_H + CARD_GAP);
+        let max_scroll = (content - (bottom - top)).max(0.0);
+        if ctx2.hovering(0.0, top, ctx.vw, bottom - top) && ctx2.input.scroll != 0.0 {
+            state.profile.tc.scroll -= ctx2.input.scroll.signum() * (CARD_H + CARD_GAP);
+        }
+        state.profile.tc.scroll = state.profile.tc.scroll.clamp(0.0, max_scroll);
+        let x = cx - CARD_W / 2.0;
+        let active = state.profile.accounts.active;
+        let mut clicked = None;
+        for i in 0..count {
+            let y = top + i as f32 * (CARD_H + CARD_GAP) - state.profile.tc.scroll;
+            if y < top - 1.0 || y + CARD_H > bottom + 1.0 {
+                continue;
+            }
+            let account = &state.profile.accounts.entries[i];
+            let act = active == Some(i);
+            let hover = ctx2.hovering(x, y, CARD_W, CARD_H);
+            let bg = if hover && !act {
+                tc_style::lerp(tc_style::panel_bg(), acc, 0.12)
+            } else {
+                tc_style::panel_bg()
+            };
+            tc_style::rounded_rect(p, x, y, CARD_W, CARD_H, bg);
+            let outline = if act { acc } else if hover { 0x80FF_FFFF } else { 0x40FF_FFFF };
+            tc_style::rounded_outline(p, x, y, CARD_W, CARD_H, outline);
+            face(p, i, x + 5.0, y + 5.0, 20.0);
+            let name_color = if act { acc & 0x00FF_FFFF } else { 0xFFFFFF };
+            p.text_plain(&account.name, x + 32.0, y + 6.0, name_color, true);
+            let mut sub = if act { "In use".to_owned() } else { "Click to use".to_owned() };
+            if let Some(label) = state.profile.skin.label_for(&account.name) {
+                sub.push_str(" \u{00B7} ");
+                sub.push_str(label);
+            }
+            let sub_color = if act { tc_style::lerp(acc, 0xFF00_0000, 0.25) & 0x00FF_FFFF } else { 0x9A8F7A };
+            p.text_plain(&sub, x + 32.0, y + 17.0, sub_color, false);
+            if act {
+                p.text_plain("\u{2714}", x + CARD_W - 12.0, y + 11.0, acc & 0x00FF_FFFF, true);
+            }
+            if hover && ctx2.input.left_click && !act {
+                clicked = Some(i);
+            }
+        }
+        if content > bottom - top {
+            p.text_centered("\u{2195} scroll", cx + CARD_W / 2.0 + 26.0, bottom - 10.0, 0x6F6656, true);
+        }
+        if let Some(i) = clicked {
+            #[cfg(feature = "audio")]
+            crate::gui::widgets::play_click();
+            state.profile.accounts.activate(i);
+            state.profile.selected = Some(i);
+            state.profile.save();
+            state.profile.publish();
+            tell_overlay(state);
+        }
+
+        if Button::new(cx - 152.0, by, 150.0, WIDGET_HEIGHT, "Edit Name & Skin").draw(p, ctx2) {
+            open_edit(state, Screen::Accounts);
+        }
+        if Button::new(cx + 2.0, by, 150.0, WIDGET_HEIGHT, "Mod Settings").draw(p, ctx2) {
+            #[cfg(target_arch = "wasm32")]
+            crate::gui::tc_bridge::open_menu();
+        }
+        let new = Button {
+            active: count < MAX_PROFILES,
+            ..Button::new(cx - 152.0, by + 24.0, 98.0, WIDGET_HEIGHT, "New Profile")
+        };
+        if new.draw(p, ctx2) {
+            let name = random_name(&state.profile.accounts);
+            state.profile.accounts.add(Account {
+                name,
+                kind: AccountKind::Offline,
+                ..Account::default()
+            });
+            state.profile.selected = state.profile.accounts.active;
+            state.profile.save();
+            state.profile.publish();
+            tell_overlay(state);
+            state.profile.tc.scroll = f32::MAX;
+            open_edit(state, Screen::Accounts);
+        }
+        let delete = Button {
+            active: count > 1,
+            ..Button::new(cx - 50.0, by + 24.0, 98.0, WIDGET_HEIGHT, "Delete")
+        };
+        if delete.draw(p, ctx2) {
+            state.profile.confirm_delete = state.profile.accounts.active;
+        }
+        if Button::new(cx + 54.0, by + 24.0, 98.0, WIDGET_HEIGHT, "Done").draw(p, ctx2)
+            || ctx2.input.escape
+        {
+            state.nav = Some(Screen::Title);
+        }
+
+        if confirming {
+            let name = state
+                .profile
+                .confirm_delete
+                .and_then(|i| state.profile.accounts.get(i))
+                .map(|a| a.name.clone());
+            draw_delete_confirm(p, state, ctx);
+            if state.profile.confirm_delete.is_none()
+                && let Some(name) = name
+                && !state.profile.accounts.entries.iter().any(|a| a.name == name)
+            {
+                state.profile.skin.forget(&name);
+                state.profile.tc.capes.load();
+                state.profile.tc.capes.forget(&name);
+                tell_overlay(state);
+            }
+        }
+    }
+
+    fn random_name(accounts: &Accounts) -> String {
+        let seed = crate::platform::time::SystemTime::now()
+            .duration_since(crate::platform::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(7);
+        for n in 0..1000u64 {
+            let name = format!("Player{}", (seed / 7 + n * 37) % 900 + 100);
+            if !accounts.entries.iter().any(|a| a.name == name) {
+                return name;
+            }
+        }
+        "Player".to_owned()
+    }
+
+    /// The Edit Profile screen: username, skin (with Add Skin / Clear List and a 3D
+    /// preview) and a Capes link.
+    pub fn draw_edit(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+        state.profile.ensure_loaded();
+        state.profile.skin.ensure_loaded();
+        state.profile.tc.capes.load();
+        menu::background(p, ctx.vw, ctx.vh);
+        let cx = (ctx.vw / 2.0).floor();
+        let h6 = (ctx.vh / 6.0).floor();
+        let acc = tc_style::accent();
+        let title = if state.profile.editing.is_some() { "Edit Profile" } else { "New Profile" };
+        p.text_centered(title, cx, 15.0, acc & 0x00FF_FFFF, true);
+
+        if state.profile.skin.poll_upload() {
+            state.profile.tc.choosing_model = true;
+        }
+
+        let overlay = state.profile.tc.skin_list.open || state.profile.tc.choosing_model;
+        let blocked_input;
+        let ctx_ui = if overlay {
+            let mut i = ctx.input.clone();
+            i.mouse = None;
+            i.left_click = false;
+            i.enter = false;
+            blocked_input = i;
+            ctx.with_input(&blocked_input)
+        } else {
+            ctx.with_input(ctx.input)
+        };
+        let ui = &ctx_ui;
+
+        p.text_plain("Username", cx - 20.0, h6 + 8.0, LABEL, true);
+        let field = &mut state.profile.username;
+        field.update(p, ui, cx - 20.0, h6 + 24.0, 140.0, WIDGET_HEIGHT);
+        // Like the original: only letters, numbers and _ (anything else becomes _).
+        let clean: String = field
+            .text
+            .chars()
+            .take(16)
+            .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+            .collect();
+        if clean != field.text {
+            field.set_text(&clean);
+        }
+        let valid = valid_username(field.text.trim());
+
+        p.text_plain("Player Skin", cx - 20.0, h6 + 66.0, LABEL, true);
+        let names = state.profile.skin.names();
+        let index = state.profile.skin.index();
+        let was_open = state.profile.tc.skin_list.open;
+        state.profile.tc.skin_list.draw_box(
+            p,
+            if state.profile.tc.choosing_model { ui } else { ctx },
+            cx - 20.0,
+            h6 + 82.0,
+            names.get(index).map(String::as_str).unwrap_or(""),
+        );
+        if !was_open && state.profile.tc.skin_list.open {
+            state.profile.tc.skin_list.show(index);
+        }
+
+        if Button::new(cx - 21.0, h6 + 110.0, 71.0, WIDGET_HEIGHT, "Add Skin").draw(p, ui) {
+            state.profile.skin.choose_file();
+        }
+        if Button::new(cx + 50.0, h6 + 110.0, 72.0, WIDGET_HEIGHT, "Clear List").draw(p, ui) {
+            state.profile.skin.clear_uploads();
+        }
+        if state.profile.skin.rejected() {
+            p.text_centered(
+                "That file is not a 64x64 or 64x32 skin PNG",
+                cx + 50.0,
+                h6 + 134.0,
+                0xFF5555,
+                true,
+            );
+        }
+
+        // The preview: the skin on a 3D figure that looks at the mouse.
+        let (fx, fy, fw, fh) = (cx - 120.0, h6 + 8.0, 80.0, 130.0);
+        tc_style::frame(p, fx, fy, fw, fh);
+        if !state.profile.tc.choosing_model {
+            let slim = state.profile.skin.slim();
+            state.profile.skin.preview_as(p, ui, [fx + 2.0, fy + 12.0, fw - 4.0, fh - 16.0], slim);
+        }
+        if state.profile.skin.uploaded() && ui.hovering(fx, fy + 10.0, fw, fh - 10.0) {
+            p.text_centered("Click for Steve / Alex", fx + fw / 2.0, fy + fh + 3.0, 0x9A8F7A, false);
+        }
+        if state.profile.skin.uploaded() && crate::gui::widgets::click_in(ui, fx, fy + 10.0, fw, fh - 10.0) {
+            state.profile.tc.choosing_model = true;
+        }
+        if tc_style::link(p, ui, "Capes", fx + 2.0, fy - 9.0, 0.75) {
+            state.profile.tc.cape_list.open = false;
+            state.profile.tc.cape_rejected = false;
+            state.nav = Some(Screen::EditCape);
+        }
+
+        let done = Button {
+            active: valid,
+            ..Button::new(cx - 100.0, h6 + 168.0, 200.0, WIDGET_HEIGHT, "Done")
+        };
+        if (done.draw(p, ui) || ui.input.enter) && valid {
+            let old = state
+                .profile
+                .editing
+                .and_then(|i| state.profile.accounts.get(i))
+                .map(|a| a.name.clone());
+            let name = state.profile.username.text.trim().to_owned();
+            state.profile.commit_form();
+            let cape = state.profile.tc.cape_index;
+            state.profile.tc.capes.pick(old.as_deref(), &name, cape);
+            tell_overlay(state);
+            let back = state.profile.tc.edit_parent.take().unwrap_or(Screen::Title);
+            leave(state, back);
+            return;
+        }
+        if ctx.input.escape && !overlay && !state.profile.first_run {
+            state.nav = Some(state.profile.tc.edit_parent.take().unwrap_or(Screen::Title));
+        }
+
+        // On top: the skin list, or the Steve / Alex choice after adding a skin.
+        let picked = state.profile.tc.skin_list.draw_list(
+            p,
+            ctx,
+            cx - 20.0,
+            h6 + 82.0,
+            &names,
+            index,
+        );
+        if let Some(i) = picked {
+            state.profile.skin.set_index(i);
+        }
+        if ctx.input.escape && state.profile.tc.skin_list.open {
+            state.profile.tc.skin_list.open = false;
+        }
+        if state.profile.tc.choosing_model {
+            choose_model(p, state, ctx);
+        }
+    }
+
+    /// After adding a skin: pick the Steve (wide arms) or Alex (slim arms) model.
+    fn choose_model(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+        p.fill(0.0, 0.0, ctx.vw, ctx.vh, 0xBB00_0000);
+        let cx = (ctx.vw / 2.0).floor();
+        let top = (ctx.vh / 4.0).floor();
+        p.text_centered("Which model is this skin for?", cx, top - 16.0, 0xFFFFFF, true);
+        for (slim, x, label) in [(false, cx - 90.0, "Steve"), (true, cx + 20.0, "Alex")] {
+            let hovered = ctx.hovering(x, top, 70.0, 120.0);
+            let color = if hovered { 0xFFDD_DD99 } else { 0xFF55_5555 };
+            p.fill(x, top, 70.0, 120.0, 0xBB00_0000);
+            tc_style::rounded_outline(p, x, top, 70.0, 120.0, color);
+            state.profile.skin.preview_as(p, ctx, [x + 2.0, top + 4.0, 66.0, 112.0], slim);
+            if hovered {
+                p.text_centered(label, x + 35.0, top + 126.0, color & 0x00FF_FFFF, true);
+            }
+            if crate::gui::widgets::click_in(ctx, x, top, 70.0, 120.0) {
+                state.profile.skin.set_slim(slim);
+                state.profile.tc.choosing_model = false;
+            }
+        }
+        if ctx.input.escape {
+            state.profile.tc.choosing_model = false;
+        }
+    }
+
+    /// The Edit Cape screen.
+    pub fn draw_cape(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+        state.profile.tc.capes.load();
+        menu::background(p, ctx.vw, ctx.vh);
+        let cx = (ctx.vw / 2.0).floor();
+        let h6 = (ctx.vh / 6.0).floor();
+        let acc = tc_style::accent();
+        p.text_centered("Edit Cape", cx, 15.0, acc & 0x00FF_FFFF, true);
+
+        #[cfg(target_arch = "wasm32")]
+        if let Some((file, bytes)) = crate::platform::upload::take_png() {
+            match state.profile.tc.capes.add(&file, &bytes) {
+                Some(i) => {
+                    state.profile.tc.cape_index = i;
+                    state.profile.tc.cape_rejected = false;
+                }
+                None => state.profile.tc.cape_rejected = true,
+            }
+        }
+
+        let open = state.profile.tc.cape_list.open;
+        let blocked_input;
+        let ctx_ui = if open {
+            let mut i = ctx.input.clone();
+            i.mouse = None;
+            i.left_click = false;
+            i.enter = false;
+            blocked_input = i;
+            ctx.with_input(&blocked_input)
+        } else {
+            ctx.with_input(ctx.input)
+        };
+        let ui = &ctx_ui;
+
+        let capes = &mut state.profile.tc.capes;
+        let names = capes.names();
+        let index = state.profile.tc.cape_index.min(capes.len() - 1);
+        p.text_plain("Player Cape", cx - 20.0, h6 + 36.0, LABEL, true);
+        state.profile.tc.cape_list.draw_box(p, ctx, cx - 20.0, h6 + 52.0, &names[index]);
+        if !open && state.profile.tc.cape_list.open {
+            state.profile.tc.cape_list.show(index);
+        }
+        if Button::new(cx - 21.0, h6 + 80.0, 71.0, WIDGET_HEIGHT, "Add Cape").draw(p, ui) {
+            #[cfg(target_arch = "wasm32")]
+            crate::platform::upload::choose_png();
+        }
+        if Button::new(cx + 50.0, h6 + 80.0, 72.0, WIDGET_HEIGHT, "Clear List").draw(p, ui) {
+            let none = state.profile.tc.capes.custom.len();
+            let was_custom = index < none;
+            state.profile.tc.capes.clear_custom();
+            state.profile.tc.cape_index = if was_custom { 0 } else { index - none };
+        }
+        if state.profile.tc.cape_rejected {
+            p.text_centered(
+                "Capes must be 64x32 or 32x32 PNGs",
+                cx + 50.0,
+                h6 + 104.0,
+                0xFF5555,
+                true,
+            );
+        }
+
+        // The preview: the cape's outside, big.
+        let (fx, fy, fw, fh) = (cx - 120.0, h6 + 8.0, 80.0, 130.0);
+        tc_style::frame(p, fx, fy, fw, fh);
+        let capes = &state.profile.tc.capes;
+        let index = state.profile.tc.cape_index.min(capes.len() - 1);
+        if capes.is_none(index) {
+            p.text_centered("No Cape", fx + fw / 2.0, fy + fh / 2.0 - 4.0, 0x808080, true);
+        } else if let Some(rgba) = capes.rgba(index) {
+            crate::gui::puppet::show_cape(&rgba);
+            if let Some(slot) = p.atlas.server_icon(crate::gui::atlas::PUPPET_CAPE_SLOT) {
+                let (w, h) = (50.0, 80.0);
+                p.region_part(slot, 1.0, 1.0, 10.0, 16.0, fx + (fw - w) / 2.0, fy + (fh - h) / 2.0, w, h, [1.0; 4]);
+            }
+        }
+
+        if Button::new(cx - 100.0, h6 + 168.0, 200.0, WIDGET_HEIGHT, "Done").draw(p, ui)
+            || (ctx.input.escape && !open)
+        {
+            state.nav = Some(Screen::EditProfile);
+        }
+
+        let names = state.profile.tc.capes.names();
+        if let Some(i) = state.profile.tc.cape_list.draw_list(p, ctx, cx - 20.0, h6 + 52.0, &names, index) {
+            state.profile.tc.cape_index = i;
+        }
+        if ctx.input.escape && open {
+            state.profile.tc.cape_list.open = false;
+        }
     }
 }

@@ -63,6 +63,7 @@ const PRESET_PNGS: [&[u8]; 24] = [
     include_bytes!("../eagler/skins/preset_23.png"),
 ];
 const WORN_URL: &str = "eagler:self";
+const WORN_CAPE_URL: &str = "eagler:selfcape";
 const GAP: f32 = 4.0;
 const ARROW_W: f32 = 20.0;
 pub const HEIGHT: f32 = 12.0 + WIDGET_HEIGHT + 2.0 * (WIDGET_HEIGHT + GAP);
@@ -273,12 +274,108 @@ impl SkinPick {
         crate::platform::storage::SKINS.store(&doc.to_string());
     }
 
-    fn preview(&mut self, p: &mut Painter, ctx: &ScreenCtx, [x, y, w, h]: [f32; 4]) {
+    fn preview(&mut self, p: &mut Painter, ctx: &ScreenCtx, rect: [f32; 4]) {
+        let slim = self.skins[self.index].slim;
+        self.preview_as(p, ctx, rect, slim);
+    }
+
+    // Treasure Client: what the Treasure Client Edit Profile screen needs.
+
+    pub fn names(&self) -> Vec<String> {
+        self.skins.iter().map(|s| s.name.clone()).collect()
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn set_index(&mut self, index: usize) {
+        if index < self.skins.len() {
+            self.index = index;
+        }
+    }
+
+    /// True when the picked skin is one you added (not a preset).
+    pub fn uploaded(&self) -> bool {
+        self.index >= PRESETS.len()
+    }
+
+    pub fn slim(&self) -> bool {
+        self.skins.get(self.index).is_some_and(|s| s.slim)
+    }
+
+    pub fn set_slim(&mut self, slim: bool) {
+        if self.uploaded() {
+            self.skins[self.index].slim = slim;
+            self.save();
+        }
+    }
+
+    /// Removes every skin you added ("Clear List").
+    pub fn clear_uploads(&mut self) {
+        self.skins.truncate(PRESETS.len());
+        self.index = 0;
+        self.save();
+    }
+
+    /// Opens the browser's file picker for a skin PNG.
+    pub fn choose_file(&self) {
+        #[cfg(target_arch = "wasm32")]
+        crate::platform::upload::choose_png();
+    }
+
+    /// Adds a skin picked in the file picker; true when one was added.
+    pub fn poll_upload(&mut self) -> bool {
+        #[cfg(target_arch = "wasm32")]
+        if let Some((file, bytes)) = crate::platform::upload::take_png() {
+            let before = self.skins.len();
+            self.add(&file, &bytes);
+            return self.skins.len() > before;
+        }
+        false
+    }
+
+    pub fn rejected(&self) -> bool {
+        self.rejected
+    }
+
+    /// The skin picture (64x64 RGBA) an account wears, for its face.
+    pub fn rgba_for(&self, account: &str) -> Option<Arc<Vec<u8>>> {
+        let name = self.picks.get(account)?;
+        self.skins.iter().find(|s| &s.name == name).map(|s| s.rgba.clone())
+    }
+
+    /// The picked skin's name, for an account.
+    pub fn label_for(&self, account: &str) -> Option<&str> {
+        self.picks.get(account).map(String::as_str)
+    }
+
+    pub fn ensure_loaded(&mut self) {
+        if !self.loaded {
+            self.open(None);
+        }
+    }
+
+    /// The skin an account wears, or Steve.
+    pub fn face_rgba(&self, account: &str) -> Option<Arc<Vec<u8>>> {
+        self.rgba_for(account).or_else(|| self.skins.first().map(|s| s.rgba.clone()))
+    }
+
+    pub fn forget(&mut self, account: &str) {
+        self.picks.remove(account);
+        self.save();
+    }
+
+    /// The 3D figure wearing the picked skin, turned toward the mouse.
+    pub fn preview_as(&mut self, p: &mut Painter, ctx: &ScreenCtx, [x, y, w, h]: [f32; 4], slim: bool) {
+        if !self.loaded {
+            self.open(None);
+        }
         let skin = &self.skins[self.index];
         crate::gui::puppet::show_skin(&skin.rgba);
         let figure = crate::gui::puppet::Figure {
             sample: &AnimSample::default(),
-            slim: skin.slim,
+            slim,
             parts: u8::MAX,
             armor: [false; 4],
         };
@@ -388,6 +485,15 @@ pub(crate) fn for_account(name: &str) -> Option<Picked> {
 static WORN: Mutex<Option<(u128, SkinRef)>> = Mutex::new(None);
 
 pub(crate) fn wear(picked: Option<Picked>, uuid: u128) {
+    // Treasure Client: your own cape shows on you too.
+    let cape = picked
+        .as_ref()
+        .and_then(|_| crate::gui::accountlist::active_username())
+        .and_then(|name| crate::gui::capepick::for_account(&name).image)
+        .map(|image| {
+            crate::client::skins::provide(WORN_CAPE_URL.into(), image);
+            std::sync::Arc::<str>::from(WORN_CAPE_URL)
+        });
     let worn = picked.map(|p| {
         crate::client::skins::provide(WORN_URL.into(), p.image);
         (
@@ -395,6 +501,7 @@ pub(crate) fn wear(picked: Option<Picked>, uuid: u128) {
             SkinRef {
                 body: Some(WORN_URL.into()),
                 slim: p.slim,
+                cape: cape.clone(),
                 ..SkinRef::default()
             },
         )

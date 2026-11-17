@@ -30,6 +30,16 @@ pub fn show_skin(pixels: &Arc<Vec<u8>>) {
     show(0, pixels);
 }
 
+/// Treasure Client: a 64x64 picture with a cape texture at the top (the cape preview).
+pub fn show_cape(pixels: &Arc<Vec<u8>>) {
+    show(5, pixels);
+}
+
+/// Treasure Client: a 64x64 sheet of 8x8 faces (the Profiles screen).
+pub fn show_faces(pixels: &Arc<Vec<u8>>) {
+    show(6, pixels);
+}
+
 fn show_armor(slot: usize, pixels: &Arc<Vec<u8>>) {
     show(1 + slot, pixels);
 }

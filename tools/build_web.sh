@@ -188,6 +188,8 @@ if [[ -n "$HEARTBEAT" ]]; then
   page_args+=("--heartbeat=$HEARTBEAT")
 fi
 python3 tools/minify_page.py ${page_args[@]+"${page_args[@]}"} web/index.html "$DIST/index.html"
+# Treasure Client: the Treasure Client menu and HUD overlay.
+python3 tools/tc_overlay_inject.py "$DIST/index.html"
 
 sed -i "s/torch-client_bg\.wasm\.gz/$MODULE/" "$DIST/index.html"
 

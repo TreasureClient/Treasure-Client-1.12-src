@@ -2002,6 +2002,8 @@ fn web_frame_gate(
     mut gate: ResMut<FrameGate>,
     mut next_frame: Local<Option<Instant>>,
 ) {
+    // Treasure Client: VSync off = no screen-refresh cap (see bevy_winit::WEB_UNCAPPED).
+    bevy::winit::WEB_UNCAPPED.store(!gui.options.vsync, std::sync::atomic::Ordering::Relaxed);
     let target = gui.options.max_fps;
     if target >= crate::gui::MAX_FPS_UNLIMITED {
         *next_frame = None;

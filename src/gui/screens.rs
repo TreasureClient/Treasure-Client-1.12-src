@@ -189,6 +189,10 @@ pub fn draw(
     };
 
     state.hud_overlays.update(&mut snap, input.time);
+    #[cfg(target_arch = "wasm32")]
+    crate::gui::tc_bridge::publish(state, &snap, f64::from(input.time));
+    #[cfg(target_arch = "wasm32")]
+    crate::gui::tc_bridge::boot_done();
     #[cfg(feature = "audio")]
     state.subtitles.update(
         input.time,
@@ -557,6 +561,10 @@ pub fn draw(
             profile::draw_edit(p, state, &ctx);
             None
         }
+        Screen::EditCape => {
+            profile::draw_cape(p, state, &ctx);
+            None
+        }
         #[cfg(feature = "online_mode")]
         Screen::AddAccount => {
             profile::draw_add(p, state, &ctx);
@@ -623,6 +631,7 @@ pub fn draw(
             sleep::draw(p, &ctx, shared);
             None
         }
+        Screen::TcFreeze => None,
         Screen::Death => {
             if let Some(next) = crate::gui::death::draw(p, &mut state.death, &ctx, shared) {
                 state.disconnect = true;

@@ -1,6 +1,5 @@
 use std::sync::OnceLock;
 
-use crate::gui::menu;
 use crate::gui::painter::Painter;
 use crate::gui::tooltip::label;
 use crate::gui::widgets::{Button, WIDGET_HEIGHT, WIDGET_WIDTH_BIG, centered_x};
@@ -28,7 +27,7 @@ const HALF_WIDTH: f32 = 98.0;
 #[allow(dead_code, reason = "asserted on by this module's layout test")]
 const BUTTON_GAP: f32 = 4.0;
 
-use crate::ASSET_VERSION;
+
 
 fn first_row_y(vh: f32) -> f32 {
     (vh / 4.0).floor() + 48.0
@@ -58,47 +57,87 @@ pub(crate) const TC_EDITION: &str = "Treasure Client Rust (Beta)";
 pub(crate) const TC_GOLD: u32 = 0xFFD76B;
 
 pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
-    if crate::renderer::panorama::absent() {
-        menu::background(p, ctx.vw, ctx.vh);
-    }
+    // Treasure Client: the Treasure Client title screen (the same layout and look as
+    // the JS and WASM editions' main menu).
+    use crate::gui::tc_style;
+    tc_style::title_background(p, ctx.vw, ctx.vh);
+    let (accent, dim, _) = tc_style::title_colors();
+    let cx = (ctx.vw / 2.0).floor();
 
-    let logo_x = (ctx.vw / 2.0 - LOGO_W / 2.0).floor();
-    logo(p, ctx.vw, LOGO_Y);
+    // Chest logo crest, then the wordmark.
+    let logo_h = 36.0;
+    let logo_w = (logo_h * 221.0 / 224.0_f32).round();
+    p.sprite(tc_style::logo_sprite(), cx - logo_w / 2.0, 1.0, logo_w, logo_h);
+    let bold = |text: &str, color: u32| {
+        [Span {
+            text: text.to_owned(),
+            style: Style { color: color & 0x00FF_FFFF, bold: true, ..Style::default() },
+        }]
+    };
+    let plain = |text: &str, color: u32| {
+        [Span {
+            text: text.to_owned(),
+            style: Style { color: color & 0x00FF_FFFF, ..Style::default() },
+        }]
+    };
+    let centered = |p: &mut Painter, spans: &[Span], scale: f32, x: f32, y: f32| {
+        let w = p.atlas.font.width(spans);
+        p.scaled(scale, x, y, |p| {
+            p.text(spans, -w / 2.0, 0.0, false);
+        });
+    };
+    centered(p, &bold("TREASURE", 0xFF00_0000), 2.5, cx + 2.5, 48.0 - 3.0 * 2.5);
+    centered(p, &bold("TREASURE", accent), 2.5, cx, 48.0 - 4.0 * 2.5);
+    centered(p, &plain("C L I E N T", 0xFF00_0000), 1.4, cx + 1.4, 72.0 + 1.4);
+    centered(p, &plain("C L I E N T", dim), 1.4, cx, 72.0);
 
     if let Some(splash) = session_splash() {
-        let splash_x = logo_x + LOGO_W * 0.7;
-        let splash_y = LOGO_Y + LOGO_H - 3.0;
-        p.scaled(1.5, splash_x, splash_y, |p| {
-            p.text_plain(splash, 0.0, 0.0, 0xFFFF00, true);
+        let millis = (SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+            % 1000) as f32;
+        let pulse = 1.0 - 0.08 * (millis / 1000.0 * std::f32::consts::TAU).sin().abs();
+        let spans = plain(splash, accent);
+        let w = p.atlas.font.width(&spans);
+        p.scaled(pulse, cx, 90.0, |p| {
+            p.text(&spans, -w / 2.0, 0.0, true);
         });
     }
 
     let x = centered_x(ctx.vw);
     let top = first_row_y(ctx.vh);
+    let row = 24.0;
 
     #[cfg(feature = "online_mode")]
     crate::client::ban::check_once();
-    if Button::new(
-        x,
-        top,
-        WIDGET_WIDTH_BIG,
-        WIDGET_HEIGHT,
-        label!("menu.multiplayer"),
-    )
-    .draw(p, ctx)
+    // Singleplayer comes with the 1.12 world (a later stage).
+    Button {
+        active: false,
+        ..Button::new(x, top, WIDGET_WIDTH_BIG, WIDGET_HEIGHT, label!("menu.singleplayer"))
+    }
+    .draw(p, ctx);
+    if Button::new(x, top + row, WIDGET_WIDTH_BIG, WIDGET_HEIGHT, label!("menu.multiplayer"))
+        .draw(p, ctx)
     {
         state.nav = Some(Screen::Multiplayer);
         #[cfg(feature = "online_mode")]
         crate::gui::bannotice::before_multiplayer(state);
     }
+    if Button::new(x, top + row * 2.0, WIDGET_WIDTH_BIG, WIDGET_HEIGHT, label!("menu.options"))
+        .draw(p, ctx)
+    {
+        state.options_parent = Screen::Title;
+        state.nav = Some(Screen::Options);
+    }
 
-    let bottom = top + BOTTOM_ROW_STEP;
+    let mods_y = top + 72.0 + 12.0;
     #[cfg(feature = "asset_download")]
     if crate::gui::widgets::icon_button(
         p,
         ctx,
-        (ctx.vw / 2.0).floor() - LANGUAGE_X_OFFSET,
-        bottom,
+        cx - LANGUAGE_X_OFFSET,
+        mods_y,
         WIDGET_HEIGHT,
         WIDGET_HEIGHT,
         "icon/language",
@@ -107,58 +146,37 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
         state.language.open();
         state.nav = Some(Screen::Language);
     }
-    if Button::new(x, bottom, HALF_WIDTH, WIDGET_HEIGHT, label!("menu.options")).draw(p, ctx) {
-        state.options_parent = Screen::Title;
-        state.nav = Some(Screen::Options);
+    if Button::new(x, mods_y, HALF_WIDTH, WIDGET_HEIGHT, "Mods").draw(p, ctx) {
+        open_mod_menu();
     }
-    let quit = Button::new(
-        (ctx.vw / 2.0).floor() + 2.0,
-        bottom,
-        HALF_WIDTH,
-        WIDGET_HEIGHT,
-        label!("menu.quit"),
-    );
-    #[cfg(target_arch = "wasm32")]
-    let quit = Button {
-        active: false,
-        ..quit
-    };
-    if quit.draw(p, ctx) {
-        state.quit = true;
+    if Button::new(cx + 2.0, mods_y, HALF_WIDTH, WIDGET_HEIGHT, EDIT_PROFILE).draw(p, ctx) {
+        #[cfg(eagler_skins)]
+        crate::gui::profile::open_edit(state, Screen::Title);
+        #[cfg(not(eagler_skins))]
+        {
+            state.profile.open();
+            state.nav = Some(Screen::Accounts);
+        }
+    }
+    // Profiles: your face in the top right.
+    #[cfg(eagler_skins)]
+    crate::gui::profile::title_button(p, state, ctx);
+    if Button::new(x, mods_y + 24.0, WIDGET_WIDTH_BIG, WIDGET_HEIGHT, "Treasure Settings")
+        .draw(p, ctx)
+    {
+        open_mod_menu();
     }
 
-    let version = format!(
-        "{TC_EDITION}, based on Torch \u{2022} Minecraft {ASSET_VERSION} (protocol {})",
-        azalea_protocol::packets::PROTOCOL_VERSION
-    );
-    p.text_plain(&version, 2.0, ctx.vh - 10.0, 0xFFFFFF, true);
-
-    let disclaimer_y = ctx.vh - 20.0;
-    let credits_x =
-        p.text_plain(DISCLAIMER, 2.0, disclaimer_y, 0xA0A0A0, true) + p.atlas.font.width_str(" ");
-    if credits_link(p, ctx, credits_x, disclaimer_y) {
+    // Bottom left: the edition, and where it comes from (with the credits).
+    p.text_plain(TC_EDITION, 2.0, ctx.vh - 20.0, dim & 0x00FF_FFFF, true);
+    let line = "Eaglercraft 1.12.2 \u{2022} based on Torch";
+    let credits_x = p.text_plain(line, 2.0, ctx.vh - 10.0, dim & 0x00FF_FFFF, true)
+        + p.atlas.font.width_str(" ");
+    if credits_link(p, ctx, credits_x, ctx.vh - 10.0) {
         state.credits_parent = Screen::Title;
         state.nav = Some(Screen::Credits);
     }
-
-    #[cfg(all(feature = "update_checker", not(target_arch = "wasm32")))]
-    if let Some(tag) = crate::client::update_checker::available() {
-        let label = format!("Update available: {tag}");
-        if link(p, ctx, &label, 0xFFFF00, 2.0, ctx.vh - 30.0) {
-            crate::platform::url::open(crate::client::update_checker::RELEASES_URL);
-        }
-    }
-
-    #[cfg(self_update)]
-    {
-        #[cfg(feature = "tutorial")]
-        let tutorial = crate::gui::tutorial::running();
-        #[cfg(not(feature = "tutorial"))]
-        let tutorial = false;
-        if !tutorial && state.nav.is_none() && crate::client::self_update::take_offer() {
-            state.nav = Some(Screen::SelfUpdate);
-        }
-    }
+    let _ = (LOGO_W, LOGO_H, LOGO_Y, BOTTOM_ROW_STEP, PROFILE_LABEL_PAD, DISCLAIMER, EAGLER_MODE);
 
     #[cfg(all(feature = "mobile_ui", target_arch = "wasm32"))]
     {
@@ -174,43 +192,12 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
             }
         }
     }
+}
 
-    {
-        let w = p.atlas.font.width_str(EDIT_PROFILE) + 2.0 * PROFILE_LABEL_PAD;
-        #[cfg(feature = "tutorial")]
-        crate::gui::tutorial::mark(
-            crate::gui::tutorial::Spot::EditProfile,
-            crate::gui::hud_layout::Rect::new(
-                (ctx.vw - w - 4.0).floor(),
-                ctx.vh - WIDGET_HEIGHT - 14.0,
-                w,
-                WIDGET_HEIGHT,
-            ),
-        );
-        if Button::new(
-            (ctx.vw - w - 4.0).floor(),
-            ctx.vh - WIDGET_HEIGHT - 14.0,
-            w,
-            WIDGET_HEIGHT,
-            EDIT_PROFILE,
-        )
-        .draw(p, ctx)
-        {
-            state.profile.open();
-            state.nav = Some(Screen::Accounts);
-        }
-    }
-
-    if crate::platform::address::EAGLER {
-        let w = p.atlas.font.width_str(EAGLER_MODE);
-        p.text_plain(
-            EAGLER_MODE,
-            (ctx.vw - w - 2.0).floor(),
-            ctx.vh - 10.0,
-            0xFFAA00,
-            true,
-        );
-    }
+/// Opens the Treasure Client Mod Menu (the overlay watches `tcopen`).
+fn open_mod_menu() {
+    #[cfg(target_arch = "wasm32")]
+    crate::gui::tc_bridge::open_menu();
 }
 
 const DISCLAIMER: &str = "Not affiliated with Mojang or Microsoft.";

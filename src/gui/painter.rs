@@ -464,7 +464,7 @@ impl<'a> Painter<'a> {
         self.push_quad(positions, uvs, [color; 4]);
     }
 
-    fn region_part(
+    pub(crate) fn region_part(
         &mut self,
         r: Region,
         sx: f32,

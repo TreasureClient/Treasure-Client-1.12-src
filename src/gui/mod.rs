@@ -86,8 +86,12 @@ pub mod subtitles;
 pub mod suggestions;
 pub mod tablist;
 pub mod title;
+pub mod capepick;
+pub mod tc_style;
 pub mod toast;
 pub mod tooltip;
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod tc_bridge;
 #[cfg(feature = "tutorial")]
 pub mod tutorial;
 pub mod widgets;
@@ -114,6 +118,8 @@ pub enum Screen {
     SelfUpdate,
     Accounts,
     EditProfile,
+    /// Treasure Client: the Edit Cape screen (opened from Edit Profile).
+    EditCape,
     Credits,
     #[cfg(feature = "asset_download")]
     Language,
@@ -186,6 +192,10 @@ pub enum Screen {
 
     #[cfg(lua_mods)]
     LuaList,
+
+    /// Treasure Client: an empty screen that holds the game (and frees the mouse) while
+    /// the Treasure Client menu or HUD editor is open over it.
+    TcFreeze,
 }
 
 impl Screen {
@@ -210,6 +220,7 @@ impl Screen {
                 | Screen::DirectConnect
                 | Screen::Accounts
                 | Screen::EditProfile
+                | Screen::EditCape
                 | Screen::Credits
                 | Screen::Disconnected
                 | Screen::LevelLoading
@@ -244,7 +255,11 @@ impl Screen {
     pub fn is_local_overlay(self) -> bool {
         if matches!(
             self,
-            Screen::Dialog | Screen::Advancements | Screen::Statistics | Screen::GameModeSwitcher
+            Screen::Dialog
+                | Screen::Advancements
+                | Screen::Statistics
+                | Screen::GameModeSwitcher
+                | Screen::TcFreeze
         ) {
             return true;
         }
@@ -348,6 +363,7 @@ impl Screen {
                 | Screen::DirectConnect
                 | Screen::Accounts
                 | Screen::EditProfile
+                | Screen::EditCape
                 | Screen::Credits
                 | Screen::Disconnected
                 | Screen::Death

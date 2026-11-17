@@ -21,10 +21,10 @@ static SESSION: AtomicI32 = AtomicI32::new(0);
 
 static FORCED: AtomicI32 = AtomicI32::new(0);
 
-/// Treasure Client: "1.12.2" picked in the version menu. The game keeps its own protocol;
-/// the Eagler handshake then offers only 1.12.2, so servers that run both (1.12 plus
-/// ViaVersion) are joined through the 1.12 translator.
-static LEGACY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Treasure Client: always join as 1.12.2. The game keeps its own protocol; the Eagler
+/// handshake offers only 1.12.2, so every server (1.12 servers and ones that run 1.12
+/// plus ViaVersion) is joined through the 1.12 translator.
+static LEGACY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 
 pub(crate) fn legacy_forced() -> bool {
     LEGACY.load(Ordering::Relaxed)

@@ -69,7 +69,7 @@ const VERSION_X: f32 = 4.0;
 const VERSION_Y: f32 = 4.0;
 const VERSION_GAP: f32 = 2.0;
 #[cfg(any(feature = "eagler", target_arch = "wasm32"))]
-const PROXY_X: f32 = VERSION_X + VERSION_W + VERSION_GAP;
+const PROXY_X: f32 = VERSION_X;
 #[cfg(any(feature = "eagler", target_arch = "wasm32"))]
 const PROXY_PAD: f32 = 10.0;
 #[cfg(any(feature = "eagler", target_arch = "wasm32"))]
@@ -302,7 +302,7 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     let (tooltip, list_focused) = draw_rows(p, state, ctx, locked);
     draw_scrollbar(p, &mut state.menu, ctx, lh, locked);
     draw_footer(p, state, ctx, locked);
-    draw_version_menu(p, state, ctx, confirming);
+    // Treasure Client: no version menu; every server is joined as 1.12.2.
     #[cfg(any(feature = "eagler", target_arch = "wasm32"))]
     draw_proxy_menu(p, state, ctx, confirming);
     if let Some(lines) = tooltip
@@ -318,6 +318,7 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     }
 }
 
+#[allow(dead_code)]
 fn draw_version_menu(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx, locked: bool) {
     use crate::protocol::version;
 

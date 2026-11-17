@@ -1,0 +1,182 @@
+//! Treasure Client: the bridge to the Treasure Client menu and HUD.
+//!
+//! The Mod Menu, the HUD (keystrokes, CPS, FPS, coordinates, armor, potions...), the
+//! HUD editor and the themes are the same HTML overlay the JS and WASM editions use
+//! (`web/tc-overlay.js`). It talks to the game through browser storage keys, base64
+//! encoded, named `_eaglercraft_1.12.<key>` (the Eaglercraft storage names, so the
+//! settings are shared with the other editions on the same site):
+//!
+//! - `tchud`: the game writes what the HUD shows (`active`, `x`, `y`, `z`, `yaw`,
+//!   `ping`, `armor`, `potions`, `held`, `sprintmode`, `sneakmode`).
+//! - `tcinworld`: 1 while in a world.
+//! - `tcpause`: the overlay writes 3 to freeze the game (an empty screen that frees the
+//!   mouse) and 2 to go back; the game answers 0, or 4 when Escape closed it.
+//! - `tczoom`: 1 while the Zoom key is held. `tcmods`: the mod settings.
+
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+
+use base64::Engine;
+
+use crate::gui::{GuiState, Snapshot};
+
+const PREFIX: &str = "_eaglercraft_1.12.";
+
+fn storage() -> Option<web_sys::Storage> {
+    web_sys::window()?.local_storage().ok()?
+}
+
+fn get(key: &str) -> Option<Vec<u8>> {
+    let raw = storage()?.get_item(&format!("{PREFIX}{key}")).ok()??;
+    base64::engine::general_purpose::STANDARD.decode(raw.trim()).ok()
+}
+
+fn set(key: &str, value: &[u8]) {
+    if let Some(s) = storage() {
+        let _ = s.set_item(
+            &format!("{PREFIX}{key}"),
+            &base64::engine::general_purpose::STANDARD.encode(value),
+        );
+    }
+}
+
+/// What the overlay asked for through `tcpause`, if anything (3 = freeze, 2 = back).
+pub(crate) fn take_pause() -> Option<u8> {
+    let value = *get("tcpause")?.first()?;
+    if value == 2 || value == 3 {
+        set("tcpause", &[0]);
+        Some(value)
+    } else {
+        None
+    }
+}
+
+/// The loading screen: the game has drawn its first menu frame (once; after a few
+/// frames, so the picture is up before the loading screen fades).
+pub(crate) fn boot_done() {
+    static FRAMES: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    match FRAMES.fetch_add(1, Ordering::Relaxed) {
+        0 => set("tcboot", b"title"),
+        5 => set("tcboot", b"done"),
+        _ => {}
+    }
+}
+
+/// Asks the overlay to open the Mod Menu (the title screen's Mods buttons).
+pub(crate) fn open_menu() {
+    set("tcopen", &[1]);
+}
+
+/// Tells the Mod Menu which profile is in use ("active\nname,name,..."), so each
+/// profile keeps its own mod setup. Only writes when it changes.
+pub(crate) fn set_profile(active: &str, names: &[&str]) {
+    static LAST: Mutex<String> = Mutex::new(String::new());
+    let text = format!("{active}\n{}", names.join(","));
+    let mut last = LAST.lock().unwrap();
+    if *last != text {
+        set("tcprofile", text.as_bytes());
+        *last = text;
+    }
+}
+
+/// The freeze screen was closed by the game (Escape), not by the overlay.
+pub(crate) fn freeze_closed() {
+    set("tcpause", &[4]);
+}
+
+/// True while the overlay's Zoom key is held (and the Zoom mod is on).
+pub(crate) fn zooming() -> bool {
+    get("tczoom").and_then(|v| v.first().copied()) == Some(1)
+}
+
+static OWN_UUID: Mutex<u128> = Mutex::new(0);
+
+pub(crate) fn set_own_uuid(uuid: u128) {
+    *OWN_UUID.lock().unwrap() = uuid;
+}
+
+static LAST_HUD: AtomicU64 = AtomicU64::new(0);
+static IN_WORLD: AtomicBool = AtomicBool::new(false);
+static WROTE_IN_WORLD: AtomicBool = AtomicBool::new(false);
+
+/// Called every frame with the published game state; writes `tchud` ten times a second.
+pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
+    let in_world = state.hud.in_world;
+    if in_world != IN_WORLD.swap(in_world, Ordering::Relaxed) || !WROTE_IN_WORLD.swap(true, Ordering::Relaxed) {
+        set("tcinworld", &[u8::from(in_world)]);
+    }
+    let now = (time * 1000.0) as u64;
+    if now.saturating_sub(LAST_HUD.load(Ordering::Relaxed)) < 100 {
+        return;
+    }
+    LAST_HUD.store(now, Ordering::Relaxed);
+    if !in_world {
+        set("tchud", b"active=0\n");
+        return;
+    }
+
+    let hud = &state.hud;
+    let mut out = String::with_capacity(512);
+    out.push_str("active=1\n");
+    out.push_str(&format!("x={:.3}\ny={:.3}\nz={:.3}\n", hud.pos[0], hud.pos[1], hud.pos[2]));
+    let yaw = hud.yaw.rem_euclid(360.0);
+    out.push_str(&format!("yaw={yaw:.1}\n"));
+
+    let own = *OWN_UUID.lock().unwrap();
+    if let Some(row) = snap.tab_list.rows.iter().find(|r| r.uuid == own && own != 0) {
+        out.push_str(&format!("ping={}\n", row.latency.max(0)));
+    }
+
+    // Armor: helmet, chestplate, leggings, boots, as "name|durability left" or "-".
+    let armor: Vec<String> = (0..4)
+        .map(|i| match snap.armor.get(i) {
+            Some(stack) if !stack.item.is_empty() && stack.count > 0 => {
+                format!("{}|{}", safe(&name(stack)), durability(stack))
+            }
+            _ => "-".to_owned(),
+        })
+        .collect();
+    out.push_str(&format!("armor={}\n", armor.join("~")));
+
+    let potions: Vec<String> = snap
+        .active_effects
+        .iter()
+        .map(|e| {
+            let label = crate::play::mob_effects::display_name(&e.id, 0);
+            format!("{}|{}|{}", safe(&label), e.amplifier, (e.duration / 20).max(0))
+        })
+        .collect();
+    out.push_str(&format!("potions={}\n", potions.join("~")));
+
+    let held = snap.hotbar(snap.selected as usize);
+    if held.item.is_empty() || held.count == 0 {
+        out.push_str("held=-\n");
+    } else {
+        out.push_str(&format!("held={}|{}|{}\n", safe(&name(held)), held.count, durability(held)));
+    }
+    out.push_str("sprintmode=vanilla\nsneakmode=vanilla\n");
+    set("tchud", out.as_bytes());
+}
+
+fn name(stack: &crate::session::SlotStack) -> String {
+    crate::gui::tooltip::styled_hover_name(stack)
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect::<String>()
+}
+
+/// The fraction of durability left, or -1 for items that don't wear out.
+fn durability(stack: &crate::session::SlotStack) -> String {
+    if stack.max_damage == 0 || stack.unbreakable {
+        return "-1".to_owned();
+    }
+    let left = 1.0 - f64::from(stack.damage) / f64::from(stack.max_damage);
+    format!("{left:.3}")
+}
+
+/// The HUD format uses `\n`, `~` and `|` as separators.
+fn safe(text: &str) -> String {
+    text.chars()
+        .map(|c| if matches!(c, '\n' | '~' | '|') { ' ' } else { c })
+        .collect()
+}

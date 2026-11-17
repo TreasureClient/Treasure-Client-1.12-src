@@ -309,10 +309,13 @@
 
   try {
     say("loading the client…");
+    window.__tcBoot?.("client");
     const wasmBytes = await fetchModule(progress);
+    window.__tcBoot?.("unpack");
     await init({ module_or_path: wasmBytes });
 
     say("downloading assets…");
+    window.__tcBoot?.("assets");
     progress(0, 1);
     let assets = await storedAssets();
     const fromStore = assets !== null;
@@ -328,11 +331,13 @@
     await restoreMods();
 
     say("initializing client, this may take a moment…");
+    window.__tcBoot?.("init");
     await new Promise((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(resolve));
     });
 
     canvas.hidden = false;
+    window.__tcBoot?.("start");
     try {
       start_web(assets, user, server);
     } catch (e) {
@@ -352,6 +357,7 @@
     if (!forceLog) status.classList.add("quiet");
   } catch (e) {
     canvas.hidden = true;
+    window.__tcBoot?.("fail");
     say(`failed to start:\n\n${e}\n\nThe browser console has the detail.`);
     throw e;
   }

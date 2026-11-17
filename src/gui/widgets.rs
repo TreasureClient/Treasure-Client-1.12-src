@@ -603,13 +603,12 @@ impl TextBox {
             crate::platform::keyboard::arm();
         }
         if self.bordered {
-            let frame_color = if self.focused {
-                0xFFFF_FFFF
-            } else {
-                0xFFA0_A0A0
-            };
-            p.fill(x - 1.0, y - 1.0, w + 2.0, h + 2.0, frame_color);
-            p.fill(x, y, w, h, 0xFF00_0000);
+            // Treasure Client: a dark rounded box with an accent outline (brighter when typing).
+            use crate::gui::tc_style;
+            let acc = tc_style::accent();
+            let frame_color = if self.focused { tc_style::lerp(acc, 0xFFFF_FFFF, 0.4) } else { acc };
+            tc_style::rounded_rect(p, x - 1.0, y - 1.0, w + 2.0, h + 2.0, 0xF00A_0806);
+            tc_style::rounded_outline(p, x - 1.0, y - 1.0, w + 2.0, h + 2.0, frame_color);
         }
         let font = &p.atlas.font;
         let (tx, text_y) = self.text_origin(x, y, h);
@@ -1113,14 +1112,7 @@ pub fn tab_bar_with(
     const INACTIVE: u32 = 0xA0_A0A0;
     let (x0, tab_w) = tab_layout(ctx.vw, labels.len());
     let right = x0 + tab_w * labels.len() as f32;
-    p.sprite("header_separator", 0.0, TAB_BAR_H - 2.0, x0, 2.0);
-    p.sprite(
-        "header_separator",
-        right,
-        TAB_BAR_H - 2.0,
-        (ctx.vw - right).max(0.0),
-        2.0,
-    );
+    let _ = right;
 
     let mut picked = None;
     for (i, label) in labels.iter().enumerate() {
@@ -1129,30 +1121,18 @@ pub fn tab_bar_with(
         let enabled = active(i);
         let color = if enabled { 0xFF_FFFF } else { INACTIVE };
         let hovered = ctx.hovering(x, 0.0, tab_w, TAB_BAR_H);
-        let sprite = match (selected, false) {
-            (true, false) => "widget/tab_selected",
-            (true, true) => "widget/tab_selected_highlighted",
-            (false, false) => "widget/tab",
-            (false, true) => "widget/tab_highlighted",
+        // Treasure Client: dark tabs, the picked one with an accent line under it.
+        let bg = if selected {
+            0xE000_0000
+        } else if hovered && enabled {
+            0xB000_0000
+        } else {
+            0x9000_0000
         };
-        p.sprite(sprite, x, 0.0, tab_w, TAB_BAR_H);
+        p.fill(x + 1.0, 2.0, tab_w - 2.0, TAB_BAR_H - 2.0, bg);
         let text_w = p.atlas.font.width_str(label);
         if selected {
-            p.sprite(
-                "menu_background",
-                x + 2.0,
-                2.0,
-                tab_w - 4.0,
-                TAB_BAR_H - 2.0,
-            );
-            let line_w = text_w.min(tab_w - 4.0);
-            p.fill(
-                x + ((tab_w - line_w) / 2.0).floor(),
-                TAB_BAR_H - 2.0,
-                line_w,
-                1.0,
-                0xFF00_0000 | color,
-            );
+            p.fill(x + 1.0, TAB_BAR_H - 2.0, tab_w - 2.0, 1.0, crate::gui::tc_style::accent());
         }
         let top = if selected { 0.0 } else { 3.0 };
         let y = ((top + TAB_BAR_H - LINE_HEIGHT) / 2.0).floor() + 1.0;
@@ -1184,6 +1164,18 @@ pub(in crate::gui) fn draw_label_spans(
     w: f32,
     h: f32,
 ) {
+    draw_label_spans_shadow(p, label, x, y, w, h, true);
+}
+
+fn draw_label_spans_shadow(
+    p: &mut Painter,
+    label: &[Span],
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    shadow: bool,
+) {
     let lw = p.atlas.font.width(label);
     let (left, right) = (x + TEXT_MARGIN, x + w - TEXT_MARGIN);
     let mut cx = x + w / 2.0;
@@ -1191,7 +1183,7 @@ pub(in crate::gui) fn draw_label_spans(
         cx = cx.clamp(left + lw / 2.0, right - lw / 2.0);
     }
     let top = ((y + y + h - LINE_HEIGHT) / 2.0 + 1.0).floor();
-    p.text(label, (cx - lw / 2.0).floor(), top, true);
+    p.text(label, (cx - lw / 2.0).floor(), top, shadow);
 }
 
 pub(in crate::gui) fn draw_button_spans(
@@ -1206,14 +1198,23 @@ pub(in crate::gui) fn draw_button_spans(
 ) -> bool {
     let hovered = ctx.hovering(x, y, w, h);
     let focused = focus::next(active) && focus::by_keyboard();
-    let sprite = match (active, hovered || focused) {
-        (false, _) => "widget/button_disabled",
-        (true, false) => "widget/button",
-        (true, true) => "widget/button_highlighted",
-    };
-    p.sprite(sprite, x, y, w, h);
+    // Treasure Client: the Treasure Client button (hollow accent outline, fills on hover).
+    let (text_color, shadow) =
+        crate::gui::tc_style::button(p, x, y, w, h, hovered || focused, active);
     if active {
-        draw_label_spans(p, label, x, y, w, h);
+        // Labels in the default white take the theme's text colour.
+        let themed: Vec<Span> = label
+            .iter()
+            .map(|s| Span {
+                text: s.text.clone(),
+                style: if s.style.color == LABEL_ACTIVE {
+                    Style { color: text_color & 0x00FF_FFFF, ..s.style }
+                } else {
+                    s.style
+                },
+            })
+            .collect();
+        draw_label_spans_shadow(p, &themed, x, y, w, h, shadow);
     } else {
         let greyed: Vec<Span> = label
             .iter()
@@ -1505,24 +1506,20 @@ pub(in crate::gui) fn draw_slider(
     track_lit: bool,
     handle_lit: bool,
 ) {
-    let track = if track_lit {
-        "widget/slider_highlighted"
-    } else {
-        "widget/slider"
-    };
-    p.sprite(track, x, y, w, h);
-    let handle = if handle_lit {
-        "widget/slider_handle_highlighted"
-    } else {
-        "widget/slider_handle"
-    };
-    p.sprite(
-        handle,
-        x + (frac * (w - HANDLE_WIDTH)).floor(),
-        y,
-        HANDLE_WIDTH,
-        h,
-    );
+    // Treasure Client: a hollow rounded track that fills with the accent up to the
+    // handle, and an accent handle.
+    use crate::gui::tc_style;
+    let acc = tc_style::accent();
+    tc_style::rounded_rect(p, x, y, w, h, tc_style::panel_bg());
+    let hx = x + (frac * (w - HANDLE_WIDTH)).floor();
+    let fill = (tc_style::lerp(tc_style::panel_bg(), acc, 0.35) & 0x00FF_FFFF) | 0xFF00_0000;
+    if hx > x + 2.0 {
+        tc_style::rounded_rect(p, x + 1.0, y + 1.0, hx - x, h - 2.0, fill);
+    }
+    let outline = if track_lit { tc_style::lerp(acc, 0xFFFF_FFFF, 0.25) } else { acc };
+    tc_style::rounded_outline(p, x, y, w, h, outline);
+    let handle = if handle_lit { 0xFFFF_FFFF } else { acc };
+    tc_style::rounded_rect(p, hx, y, HANDLE_WIDTH, h, handle);
 }
 
 pub struct Slider<F: Fn(i32) -> String> {

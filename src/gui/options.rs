@@ -577,13 +577,16 @@ pub(in crate::gui) fn draw_scrollbar(
     }
     let x = left + row_w + SCROLLBAR_GAP;
     let scroller_h = scroller_height(list_h, content_h);
-    p.sprite("widget/scroller_background", x, list_y, SCROLLBAR_W, list_h);
-    p.sprite(
-        "widget/scroller",
-        x,
-        scroller_y(scroll, max_scroll, list_y, list_h, scroller_h).floor(),
-        SCROLLBAR_W,
+    // Treasure Client: a thin dark track with an accent bar.
+    p.fill(x, list_y, SCROLLBAR_W, list_h, 0x6000_0000);
+    let bar_y = scroller_y(scroll, max_scroll, list_y, list_h, scroller_h).floor();
+    crate::gui::tc_style::rounded_rect(
+        p,
+        x + 1.0,
+        bar_y,
+        SCROLLBAR_W - 2.0,
         scroller_h,
+        crate::gui::tc_style::accent(),
     );
 }
 
@@ -881,7 +884,8 @@ macro_rules! opt_slider {
 }
 
 pub(in crate::gui) fn draw_title(p: &mut Painter, ctx: &ScreenCtx, title: &str) {
-    p.text_centered(title, ctx.vw / 2.0, LAYOUT.title_y(), 0xFFFFFF, true);
+    let accent = crate::gui::tc_style::accent() & 0x00FF_FFFF;
+    p.text_centered(title, ctx.vw / 2.0, LAYOUT.title_y(), accent, true);
 }
 
 pub(in crate::gui) fn draw_done(p: &mut Painter, ctx: &ScreenCtx) -> bool {
@@ -1292,7 +1296,8 @@ fn export_client_data() {
     }
 }
 
-pub fn draw_video(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+#[allow(dead_code)]
+fn torch_draw_video(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     draw_title(p, ctx, tr::video_title());
 
     let max = auto_gui_scale(ctx.vw * ctx.input.scale, ctx.vh * ctx.input.scale) as i32;
@@ -1395,10 +1400,8 @@ pub fn draw_video(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     let (x, y) = cell(0.0, Y_DISPLAY_ROW_2);
     opt_toggle!(p, ctx, state; x, y, FPS_COUNTER, fps_counter);
 
-    #[cfg(not(target_arch = "wasm32"))]
+    // Treasure Client: VSync shows on the web too; off lifts the 60 fps cap.
     let vsync_cell = Some(cell(1.0, Y_DISPLAY_ROW_2));
-    #[cfg(target_arch = "wasm32")]
-    let vsync_cell: Option<(f32, f32)> = None;
     if let Some((x, y)) = vsync_cell
         && toggle(p, ctx, x, y, VSYNC, &mut state.options.vsync)
     {
@@ -2553,4 +2556,12 @@ mod tests {
             .min(100);
         assert_eq!(missing, VOLUME_DEFAULT);
     }
+}
+
+// Treasure Client: Video Settings in the Treasure Client layout (see tc_video.rs).
+#[path = "tc_video.rs"]
+mod tc_video;
+
+pub fn draw_video(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+    tc_video::draw(p, state, ctx);
 }

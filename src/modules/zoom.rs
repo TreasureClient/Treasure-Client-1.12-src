@@ -20,8 +20,20 @@ pub struct Settings {
 pub fn settings() -> Settings {
     let s = store();
     Settings {
-        on: s.enabled(Id::Zoom) || TOUCH.load(Ordering::Relaxed),
+        on: s.enabled(Id::Zoom) || TOUCH.load(Ordering::Relaxed) || tc_zoom(),
         fov: s.num(setting::FOV),
         duration: s.num(setting::DURATION).max(0.001),
+    }
+}
+
+/// Treasure Client: the Zoom key of the Treasure Client menu (held, with the Zoom mod on).
+fn tc_zoom() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::gui::tc_bridge::zooming()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
     }
 }

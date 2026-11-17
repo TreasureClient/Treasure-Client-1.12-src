@@ -89,7 +89,10 @@ const SERVER_ICON_GRID: ReservedGrid = ReservedGrid::new(
 
 pub const PUPPET_SKIN_SLOT: usize = ICON_SLOTS;
 pub const PUPPET_ARMOR_SLOT: usize = ICON_SLOTS + 1;
-pub const PUPPET_SLOTS: usize = 5;
+pub const PUPPET_SLOTS: usize = 7;
+/// Treasure Client: the cape preview and the profile faces sheet.
+pub const PUPPET_CAPE_SLOT: usize = ICON_SLOTS + 5;
+pub const PUPPET_FACES_SLOT: usize = ICON_SLOTS + 6;
 
 const BANNER_ICON_GRID: ReservedGrid = ReservedGrid::new(
     BANNER_ICON_PX,
@@ -485,6 +488,97 @@ struct Extra {
 pub const GLINT_SPRITE: &str = "enchanted_glint";
 
 const EXTRAS: &[Extra] = &[
+    // Treasure Client: the theme backgrounds and logos (built in, see tc_embedded).
+    Extra {
+        key: "tc_logo/normal",
+        path: "tc/logo_normal.png",
+        alt_path: None,
+        size: (110, 112),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_logo/frost",
+        path: "tc/logo_frost.png",
+        alt_path: None,
+        size: (110, 112),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_logo/tropical",
+        path: "tc/logo_tropical.png",
+        alt_path: None,
+        size: (110, 112),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_logo/terracotta",
+        path: "tc/logo_terracotta.png",
+        alt_path: None,
+        size: (110, 112),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_logo/forest",
+        path: "tc/logo_forest.png",
+        alt_path: None,
+        size: (110, 112),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_bg/treasure",
+        path: "tc/treasure.png",
+        alt_path: None,
+        size: (384, 192),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_bg/frost",
+        path: "tc/frost.png",
+        alt_path: None,
+        size: (384, 192),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_bg/tropical",
+        path: "tc/tropical.png",
+        alt_path: None,
+        size: (384, 192),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_bg/terracotta",
+        path: "tc/terracotta.png",
+        alt_path: None,
+        size: (384, 192),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
+    Extra {
+        key: "tc_bg/forest",
+        path: "tc/forest.png",
+        alt_path: None,
+        size: (384, 192),
+        crop_h: None,
+        nearest: false,
+        scaling: Scaling::Stretch,
+    },
     Extra {
         key: "menu_background",
         path: "gui/menu_background.png",
@@ -779,7 +873,27 @@ fn dirt_tile(textures: &Path) -> Option<RgbaImage> {
     Some(out)
 }
 
+/// Treasure Client: pictures that ship inside the client instead of the game files.
+fn tc_embedded(path: &str) -> Option<&'static [u8]> {
+    Some(match path {
+        "tc/treasure.png" => include_bytes!("tc_bg/treasure.png"),
+        "tc/frost.png" => include_bytes!("tc_bg/frost.png"),
+        "tc/tropical.png" => include_bytes!("tc_bg/tropical.png"),
+        "tc/terracotta.png" => include_bytes!("tc_bg/terracotta.png"),
+        "tc/forest.png" => include_bytes!("tc_bg/forest.png"),
+        "tc/logo_normal.png" => include_bytes!("tc_bg/logo_normal.png"),
+        "tc/logo_frost.png" => include_bytes!("tc_bg/logo_frost.png"),
+        "tc/logo_tropical.png" => include_bytes!("tc_bg/logo_tropical.png"),
+        "tc/logo_terracotta.png" => include_bytes!("tc_bg/logo_terracotta.png"),
+        "tc/logo_forest.png" => include_bytes!("tc_bg/logo_forest.png"),
+        _ => return None,
+    })
+}
+
 fn load_extra(textures: &Path, extra: &Extra) -> Option<RgbaImage> {
+    if let Some(bytes) = tc_embedded(extra.path) {
+        return image::load_from_memory(bytes).ok().map(|i| i.to_rgba8());
+    }
     let path = textures.join(extra.path);
     let img = match crate::platform::assets::open_image(&path) {
         Ok(img) => img.to_rgba8(),

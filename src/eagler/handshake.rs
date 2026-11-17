@@ -77,8 +77,17 @@ pub(super) async fn run(
     let name = allow.str()?;
     let uuid = uuid::Uuid::from_u64_pair(allow.u64()?, allow.u64()?);
 
-    if let Some(skin) = skin.filter(|_| eagler >= 4) {
-        send(socket, profile_data("skin_v2", skin)?).await?;
+    if eagler >= 4 {
+        // Treasure Client: the skin and the cape go in one profile data message.
+        let mut items: Vec<(&str, Vec<u8>)> = Vec::new();
+        if let Some(skin) = skin {
+            items.push(("skin_v2", skin.to_vec()));
+        }
+        #[cfg(eagler_skins)]
+        items.push(("cape_v1", crate::gui::capepick::for_account(username).wire));
+        if !items.is_empty() {
+            send(socket, profile_data_many(&items)?).await?;
+        }
     }
     send(socket, vec![CLIENT_FINISH_LOGIN]).await?;
     expect(socket, SERVER_FINISH_LOGIN).await?;
@@ -137,6 +146,19 @@ fn request_login(username: &str, eagler: u16) -> eyre::Result<Vec<u8>> {
     Ok(out)
 }
 
+fn profile_data_many(items: &[(&str, Vec<u8>)]) -> eyre::Result<Vec<u8>> {
+    let mut out = vec![CLIENT_PROFILE_DATA, items.len() as u8];
+    for (key, data) in items {
+        let len = u16::try_from(data.len()).map_err(|_| eyre::eyre!("profile data too long"))?;
+        out.push(key.len() as u8);
+        out.extend_from_slice(key.as_bytes());
+        out.extend_from_slice(&len.to_be_bytes());
+        out.extend_from_slice(data);
+    }
+    Ok(out)
+}
+
+#[allow(dead_code)]
 fn profile_data(key: &str, data: &[u8]) -> eyre::Result<Vec<u8>> {
     let len = u16::try_from(data.len()).map_err(|_| eyre::eyre!("profile data too long"))?;
     let mut out = vec![CLIENT_PROFILE_DATA, 1, key.len() as u8];

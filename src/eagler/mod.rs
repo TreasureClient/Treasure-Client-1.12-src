@@ -301,6 +301,8 @@ pub(crate) async fn prepare(address: &str, username: &str) -> eyre::Result<Optio
     }
     #[cfg(eagler_skins)]
     crate::gui::skinpick::wear(skin, profile.uuid.as_u128());
+    #[cfg(target_arch = "wasm32")]
+    crate::gui::tc_bridge::set_own_uuid(profile.uuid.as_u128());
     log_info!(
         "net",
         "eagler: the proxy logged us in as {} ({})",

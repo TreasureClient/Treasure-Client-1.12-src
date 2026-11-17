@@ -60,11 +60,19 @@ def escape(packed):
         body = body.replace(bytes([b]), bytes([esc, 0x41 + k]))
     return body, esc, table
 
+def js_escape(c):
+    """A non-ASCII character as JS escapes (characters past U+FFFF as a surrogate pair)."""
+    n = ord(c)
+    if n <= 0xFFFF:
+        return "\\u%04x" % n
+    n -= 0x10000
+    return "\\u%04x\\u%04x" % (0xD800 + (n >> 10), 0xDC00 + (n & 0x3FF))
+
 def ascii_page(page):
     out = []
     for i, part in enumerate(re.split(r"(<script\b[^>]*>.*?</script>)", page, flags=re.S)):
         if i % 2:
-            out.append("".join(c if ord(c) < 128 else "\\u%04x" % ord(c) for c in part))
+            out.append("".join(c if ord(c) < 128 else js_escape(c) for c in part))
         else:
             out.append("".join(c if ord(c) < 128 else "&#%d;" % ord(c) for c in part))
     return "".join(out)
