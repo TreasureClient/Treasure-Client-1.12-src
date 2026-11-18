@@ -555,6 +555,13 @@ fn arm_with_item(f: &HandFrame) -> Chain {
                 apply_item_arm_transform(&mut c, invert, f.inverse_arm_height);
             }
             UseAnimation::Block => {
+                // Treasure Client: Low Shield moves the raised shield down out of the way.
+                if f.item.id == "shield" {
+                    let tc = crate::tc_mods::get();
+                    if tc.low_shield {
+                        c.translate(0.0, -(tc.low_shield_amount / 100.0).min(0.6), 0.0);
+                    }
+                }
                 if f.item.id != "shield" {
                     c.translate(invert * -0.141_421_36, 0.08, 0.141_421_36);
                     c.rot_x(-102.25);

@@ -1263,6 +1263,7 @@ fn session_state(world: &WorldHolder, shared: &SharedMutex, packet: &Clientbound
         }
         ClientboundGamePacket::SetTitleText(p) => {
             let spans = crate::client::chat_text::to_spans(&p.text);
+            crate::tc_chat::on_title(&spans.iter().map(|s| s.text.as_str()).collect::<String>());
             shared.lock().unwrap().session.set_title(spans);
         }
         ClientboundGamePacket::SetSubtitleText(p) => {

@@ -312,6 +312,33 @@ pub fn draw_food(
             p.sprite(half, x, y, HEART, HEART);
         }
     }
+    // Treasure Client: Saturation Display draws gold shank outlines, one per shank of
+    // saturation left (half a shank for an odd point).
+    if crate::tc_mods::get().saturation {
+        const MASK: [&str; 9] = [
+            "..##.....", ".#..#....", "#....#...", "#.....#..", ".#....#..", "..#...#..",
+            "...###.##", "......#.#", "......##.",
+        ];
+        let sat = snap.saturation.ceil() as i32;
+        let scale = HEART / 9.0;
+        for i in 0..10 {
+            let from = if i * 2 + 1 < sat {
+                0
+            } else if i * 2 + 1 == sat {
+                4
+            } else {
+                break;
+            };
+            let x = right - i as f32 * HEART_STRIDE - HEART;
+            for (row, line) in MASK.iter().enumerate() {
+                for (col, c) in line.bytes().enumerate().skip(from) {
+                    if c == b'#' {
+                        p.fill(x + col as f32 * scale, top + row as f32 * scale, scale, scale, 0xFFFF_C82A);
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn vehicle_hearts(max_health: f32) -> i32 {

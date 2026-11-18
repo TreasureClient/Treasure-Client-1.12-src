@@ -578,8 +578,15 @@ pub(crate) fn bot_movement_input(
     mut intent: ResMut<crate::renderer::intent::Intent>,
     mut last_forward_tap: Local<Option<f32>>,
     mut sprint_latch: Local<bool>,
+    mut sneak_latch: Local<bool>,
 ) {
-    let toggle_mode = state.options.toggle_sprint;
+    // Treasure Client: Toggle Sprint / Toggle Sneak from the Mod Menu.
+    let tc = crate::tc_mods::get();
+    if !tc.toggle_sneak {
+        *sneak_latch = false;
+    }
+    let toggle_mode = state.options.toggle_sprint || tc.toggle_sprint;
+    crate::tc_mods::set_toggled(tc.toggle_sprint && *sprint_latch, *sneak_latch);
     if camera.free() || state.screen.is_open() || crate::gui::keyboard_elsewhere() {
         *last_forward_tap = None;
         if !toggle_mode {
@@ -594,7 +601,10 @@ pub(crate) fn bot_movement_input(
     let left = down(Action::Left);
     let right = down(Action::Right);
     let jump = down(Action::Jump);
-    let shift = down(Action::Sneak);
+    if tc.toggle_sneak && binds.just(Action::Sneak, &keys, &buttons) {
+        *sneak_latch = !*sneak_latch;
+    }
+    let shift = down(Action::Sneak) || *sneak_latch;
     let sprint_key = down(Action::Sprint);
 
     let (flying, blind) = {
@@ -1212,6 +1222,9 @@ pub(super) fn handle_spectator_fly_speed_scroll(
 }
 
 pub(crate) fn send_typed(shared: &crate::session::SharedMutex, line: String) {
+    if !crate::tc_chat::on_typed(&mut shared.lock().unwrap().session, &line) {
+        return;
+    }
     let Some(line) = crate::modules::commands::intercept(shared, line) else {
         return;
     };

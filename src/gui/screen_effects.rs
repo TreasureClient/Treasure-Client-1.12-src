@@ -257,6 +257,9 @@ fn draw_fire(p: &mut Painter, hud_fov: f32, vw: f32, vh: f32) {
         [(ndc_x + 1.0) * 0.5 * vw, (1.0 - ndc_y) * 0.5 * vh]
     };
     let argb = painter::argb(FIRE_ALPHA, 0x00FF_FFFF);
+    // Treasure Client: Low Fire lowers the flames (Fire Height = how much still shows).
+    let tc = crate::tc_mods::get();
+    let lowered = if tc.low_fire { (1.0 - tc.low_fire_height / 100.0) * 0.75 } else { 0.0 };
     for i in 0..2 {
         let side = if i == 0 { 1.0 } else { -1.0 };
         let (sin, cos) = (-side * FIRE_TURN_DEGREES).to_radians().sin_cos();
@@ -265,7 +268,7 @@ fn draw_fire(p: &mut Painter, hud_fov: f32, vw: f32, vh: f32) {
             let z = -lx * sin + FIRE_Z * cos;
             project([
                 x + side * FIRE_X_OFFSET,
-                ly + FIRE_Y_OFFSET - FIRE_LOWERED_BY,
+                ly + FIRE_Y_OFFSET - FIRE_LOWERED_BY - lowered,
                 z,
             ])
         };

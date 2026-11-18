@@ -1074,7 +1074,10 @@ pub(crate) fn handle_tick(bot: &Client, shared: &SharedMutex) {
             s.session.sign_edit_open_pos,
             s.session.edit_book.take(),
             std::mem::take(&mut s.session.seen_advancements),
-            std::mem::take(&mut s.session.outgoing_chat),
+            {
+                crate::tc_chat::tick(&mut s.session);
+                std::mem::take(&mut s.session.outgoing_chat)
+            },
             (
                 s.chat_signing_allowed || s.session.chat_signing_session,
                 s.session.chat_signing_wait,

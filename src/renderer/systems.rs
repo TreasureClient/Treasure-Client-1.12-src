@@ -187,7 +187,7 @@ pub(crate) fn update_lightmap(
             boss_prev + (boss - boss_prev) * view.partial
         },
     });
-    if crate::modules::fullbright::night_vision() {
+    if crate::modules::fullbright::night_vision() || crate::tc_mods::get().fullbright {
         lm.night_vision_factor = 1.0;
         lm.night_vision_color = [1.0; 3];
     }
@@ -909,7 +909,10 @@ fn poll_shared_state(
         view.camera_render = transform.translation;
         view.camera_rotation = transform.rotation;
         view.hurt_tilt =
-            if camera_view.free() || view.no_render.has(crate::modules::no_render::Part::HurtCam) {
+            if camera_view.free()
+                || view.no_render.has(crate::modules::no_render::Part::HurtCam)
+                || crate::tc_mods::get().no_hurt_cam
+            {
                 Quat::IDENTITY
             } else {
                 let local = &view.local;
@@ -2242,6 +2245,7 @@ fn apply_fov(
     if let Projection::Perspective(perspective) = &*projection {
         let modifier = view.fov_modifier;
 
+        crate::modules::zoom::set_base_fov(state.options.fov);
         let zoom = crate::modules::zoom::settings();
         let (target_fov, target) = (zoom.fov, if zoom.on { 1.0 } else { 0.0 });
         let step = time.delta_secs() / zoom.duration;

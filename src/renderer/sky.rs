@@ -798,9 +798,14 @@ pub(super) fn update_sky(
     let darkness = view.blindness.map_or(view.darkness, blindness_darkness);
     let mut environmental = match eye_fluid {
         Some(EyeFluid::Water) => {
-            sky.fog_color = shade_fog(env.water_fog_color, darkness, lightmap.water_vision);
+            // Treasure Client: Clear Water sees far underwater with a brighter fog colour,
+            // as if your eyes had already adjusted.
+            let clear = crate::tc_mods::get().clear_water;
+            let vision = if clear { 1.0 } else { lightmap.water_vision };
+            sky.fog_color = shade_fog(env.water_fog_color, darkness, vision);
             let (start, end) = env.water_fog_distance;
-            let end = water_fog_end(end, lightmap.water_vision);
+            let end = water_fog_end(end, vision);
+            let end = if clear { (end * 3.0).min(env.render_distance as f32 * 16.0).max(end) } else { end };
             sky_end = end;
             cloud_end.0 = Some(end);
             (start, end)

@@ -154,7 +154,9 @@ pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
     } else {
         out.push_str(&format!("held={}|{}|{}\n", safe(&name(held)), held.count, durability(held)));
     }
-    out.push_str("sprintmode=vanilla\nsneakmode=vanilla\n");
+    let (sprint, sneak) = crate::tc_mods::toggled();
+    let mode = |on: bool| if on { "toggled" } else { "vanilla" };
+    out.push_str(&format!("sprintmode={}\nsneakmode={}\n", mode(sprint), mode(sneak)));
     set("tchud", out.as_bytes());
 }
 

@@ -206,7 +206,14 @@ pub fn own_levels(_st: &EntityState, levels: (u8, u8)) -> (u8, u8) {
 }
 
 pub(crate) fn hurt_overlay_alpha(has_red_overlay: bool) -> f32 {
-    if has_red_overlay { 0.698 } else { 1.0 }
+    if !has_red_overlay {
+        return 1.0;
+    }
+    // Treasure Client: Hit Color sets how strong the flash is.
+    match crate::tc_mods::get().hit_color {
+        Some((_, strength)) => 1.0 - strength,
+        None => 0.698,
+    }
 }
 
 fn fuse_flash_alpha(st: &EntityState, spec: &RenderSpec) -> Option<f32> {
@@ -1911,12 +1918,16 @@ fn sync_entities(
     let mut posed: Vec<PosedPart> = Vec::new();
     let mut hidden_states: Vec<PartState> = Vec::new();
 
+    // Treasure Client: Entity Distance hides entities farther than the menu's setting.
+    let tc_limit = crate::tc_mods::get().entity_distance;
+    let tc_limit_sq = (tc_limit > 0.0).then(|| f64::from(tc_limit * tc_limit));
     for st in frame.iter().chain(&carried.0) {
         let spec_ids = registry.specs_for_state(st);
         if spec_ids.is_empty() {
             continue;
         }
-        let in_range = within_view_range(st, &camera);
+        let in_range = within_view_range(st, &camera)
+            && tc_limit_sq.is_none_or(|l| f64::from(camera.distance_squared_to(st.pos)) <= l);
         let levels = entity_levels(&light, st);
         let lit = Lit {
             tint: [1.0; 4],

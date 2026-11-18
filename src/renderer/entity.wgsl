@@ -170,7 +170,13 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     color = vec4(color.rgb * shade, color.a);
 #endif
     if params.light1.w < 1.0 {
-        let overlay_color = mix(vec3(1.0, 0.0, 0.0), vec3(1.0), params.light0.w);
+        var hurt_color = vec3(1.0, 0.0, 0.0);
+        if params.light_floor.w > 0.5 {
+            // Treasure Client: Hit Color
+            let rgb = u32(params.light_floor.w - 0.5);
+            hurt_color = vec3(f32((rgb >> 16u) & 255u), f32((rgb >> 8u) & 255u), f32(rgb & 255u)) / 255.0;
+        }
+        let overlay_color = mix(hurt_color, vec3(1.0), params.light0.w);
         let mixed_srgb = mix(overlay_color, srgb_encode(color.rgb), params.light1.w);
         color = vec4(srgb_decode(mixed_srgb), color.a);
     }

@@ -31,7 +31,10 @@ fn pose(progress: f32, swing: [f32; 2], aspect: f32) -> Chain {
         swing[1] * SWING_SCALE * swing_out,
         START_Z + APPROACH_Z * pi_scale.sin(),
     );
-    chain.scale(SIZE, SIZE, SIZE);
+    // Treasure Client: Small Totem shrinks the totem animation.
+    let tc = crate::tc_mods::get();
+    let size = if tc.small_totem { SIZE * tc.totem_scale / 100.0 } else { SIZE };
+    chain.scale(size, size, size);
     chain.rot_y(SPIN_DEGREES * pi_scale.sin().abs());
     let wobble = WOBBLE_DEGREES * (progress * WOBBLE_RATE).cos();
     chain.rot_x(wobble);

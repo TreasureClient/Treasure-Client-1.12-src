@@ -121,7 +121,14 @@ impl EntityParams {
         self.light.z = lit.light.color[2];
         self.light0 = lit.dirs[0].extend(if lit.overlay_white { 1.0 } else { 0.0 });
         self.light1 = lit.dirs[1].extend(lit.overlay_alpha);
-        self.light_floor = Vec3::from(lit.light.floor).extend(0.0);
+        // Treasure Client: Hit Color. The chosen colour (as 1 + 0xRRGGBB) for the hurt flash;
+        // 0 keeps the normal red.
+        let hit = if lit.overlay_alpha < 1.0 && !lit.overlay_white {
+            crate::tc_mods::get().hit_color.map_or(0.0, |(rgb, _)| (rgb & 0xFF_FFFF) as f32 + 1.0)
+        } else {
+            0.0
+        };
+        self.light_floor = Vec3::from(lit.light.floor).extend(hit);
         self.light_block = Vec3::from(lit.light.block).extend(0.0);
         self.light_sky = Vec3::from(lit.light.sky).extend(0.0);
         #[cfg(feature = "shader_support")]

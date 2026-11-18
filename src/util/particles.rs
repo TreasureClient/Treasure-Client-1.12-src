@@ -383,7 +383,7 @@ fn spawn_particles(
     use crate::session::ParticleEmit;
 
     let emits = std::mem::take(&mut shared.0.lock().unwrap().session.particle_emits);
-    if emits.is_empty() {
+    if emits.is_empty() || crate::tc_mods::get().no_particles {
         return;
     }
     if let (Some(atlas), Some(gui_assets)) = (&mut atlas.0, &gui_assets) {

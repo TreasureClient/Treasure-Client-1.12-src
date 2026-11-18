@@ -145,6 +145,9 @@ pub(crate) fn handle_chat(bot: &Client, shared: &SharedMutex, m: ChatPacket) {
     #[cfg(target_arch = "wasm32")]
     crate::client::chat_trace::received(&spans.iter().map(|s| s.text.as_str()).collect::<String>());
     let mut s = shared.lock().unwrap();
+    // Treasure Client: AutoGG and Auto Login read chat.
+    let plain: String = spans.iter().map(|s| s.text.as_str()).collect();
+    crate::tc_chat::on_chat(&s.session, &plain);
 
     if shown {
         s.session.chat_incoming.push(ChatEntry {

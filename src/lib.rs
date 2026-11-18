@@ -1,5 +1,9 @@
 #![cfg_attr(target_arch = "wasm32", feature(alloc_error_hook))]
 
+/// Treasure Client: the Mod Menu's mods.
+pub mod tc_mods;
+/// Treasure Client: AutoGG and Auto Login.
+pub mod tc_chat;
 #[cfg(feature = "audio")]
 mod audio;
 mod blockentities;
