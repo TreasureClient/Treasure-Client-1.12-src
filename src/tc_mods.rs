@@ -33,6 +33,11 @@ pub struct TcMods {
     /// Percent of the normal totem animation size.
     pub totem_scale: f32,
     pub clear_water: bool,
+    pub clear_lava: bool,
+    pub dynamic_fov: bool,
+    pub pause_unfocused: bool,
+    pub tnt_timer: bool,
+    pub password_hider: bool,
     pub saturation: bool,
     pub hit_color: Option<(u32, f32)>,
     /// Hide entities farther than this many blocks (0 = off).
@@ -42,6 +47,29 @@ pub struct TcMods {
     pub gg_delay_ms: u32,
     pub gg_glhf: bool,
     pub auto_login: bool,
+    pub old_anim: bool,
+    pub oa_no_dip: bool,
+    pub oa_use_swing: bool,
+    pub t_anim: bool,
+    pub ta_style: crate::renderer::tc_anim::Style,
+    pub ta_speed: f32,
+    pub ta_punch: bool,
+    pub ta_draw: bool,
+    pub ta_sway: bool,
+    pub ta_eat: bool,
+    pub ta_throw: bool,
+    pub tier_tagger: bool,
+    /// The gamemode to show ("highest" = overall).
+    pub tt_mode: String,
+    pub ch_addons: bool,
+    pub ch_target: bool,
+    pub ch_mobs: bool,
+    pub ch_elytra: bool,
+    pub ch_rocket: bool,
+    pub ch_hit: bool,
+    pub ch_hit_melee: bool,
+    pub ch_shield_break: bool,
+    pub ch_shield_up: bool,
 }
 
 impl Default for TcMods {
@@ -54,7 +82,7 @@ impl Default for TcMods {
             hitbox_players: true,
             hitbox_mobs: true,
             hitbox_animals: true,
-            hitbox_other: true,
+            hitbox_other: false,
             no_particles: false,
             no_hurt_cam: false,
             zoom_level: 30.0,
@@ -66,7 +94,12 @@ impl Default for TcMods {
             low_shield_amount: 30.0,
             small_totem: false,
             totem_scale: 40.0,
-            clear_water: true,
+            clear_water: false,
+            clear_lava: false,
+            dynamic_fov: false,
+            pause_unfocused: false,
+            tnt_timer: false,
+            password_hider: false,
             saturation: false,
             hit_color: None,
             entity_distance: 0.0,
@@ -75,6 +108,28 @@ impl Default for TcMods {
             gg_delay_ms: 1000,
             gg_glhf: false,
             auto_login: false,
+            old_anim: false,
+            oa_no_dip: true,
+            oa_use_swing: true,
+            t_anim: false,
+            ta_style: crate::renderer::tc_anim::Style::Treasure,
+            ta_speed: 100.0,
+            ta_punch: true,
+            ta_draw: true,
+            ta_sway: true,
+            ta_eat: true,
+            ta_throw: true,
+            tier_tagger: false,
+            tt_mode: "highest".to_owned(),
+            ch_addons: false,
+            ch_target: true,
+            ch_mobs: false,
+            ch_elytra: true,
+            ch_rocket: true,
+            ch_hit: true,
+            ch_hit_melee: false,
+            ch_shield_break: false,
+            ch_shield_up: false,
         }
     }
 }
@@ -85,6 +140,7 @@ fn parse(text: &str) -> TcMods {
     let mut hit_rgb = 0xFF0000;
     let mut hit_alpha = 30.0;
     let mut perf_pack = true;
+    let mut clear_water = true;
     for part in text.split(',') {
         let Some((k, v)) = part.split_once('=') else { continue };
         let on = v == "1";
@@ -109,7 +165,12 @@ fn parse(text: &str) -> TcMods {
             "lowShieldA" => m.low_shield_amount = num.unwrap_or(30.0).clamp(0.0, 100.0),
             "smallTotem" => m.small_totem = on,
             "totemScale" => m.totem_scale = num.unwrap_or(40.0).clamp(5.0, 100.0),
-            "clearWater" => m.clear_water = on,
+            "clearWater" => clear_water = on,
+            "clearLiquids" => m.clear_lava = on,
+            "dynfov" => m.dynamic_fov = on,
+            "pauseUnfocused" => m.pause_unfocused = on,
+            "tntTimer" => m.tnt_timer = on,
+            "pwHide" => m.password_hider = on,
             "satDisplay" => m.saturation = on,
             "hitColorOn" => hit_on = on,
             "hitColor" => hit_rgb = u32::from_str_radix(v, 16).unwrap_or(0xFF0000),
@@ -121,9 +182,42 @@ fn parse(text: &str) -> TcMods {
             "agGlhf" => m.gg_glhf = on,
             "autoLogin" => m.auto_login = on,
             "perfpack" => perf_pack = on,
+            "oldAnim" => m.old_anim = on,
+            "oaNoDip" => m.oa_no_dip = on,
+            "oaUseSwing" => m.oa_use_swing = on,
+            "tAnim" => m.t_anim = on,
+            "taStyle" => {
+                use crate::renderer::tc_anim::Style;
+                m.ta_style = match v {
+                    "slash" => Style::Slash,
+                    "spin" => Style::Spin,
+                    "smooth" => Style::Smooth,
+                    _ => Style::Treasure,
+                };
+            }
+            "taSpeed" => m.ta_speed = num.unwrap_or(100.0).clamp(25.0, 300.0),
+            "taPunch" => m.ta_punch = on,
+            "taDraw" => m.ta_draw = on,
+            "taSway" => m.ta_sway = on,
+            "taEat" => m.ta_eat = on,
+            "taThrow" => m.ta_throw = on,
+            "tierTagger" => m.tier_tagger = on,
+            "ttMode" => m.tt_mode = v.to_owned(),
+            "chAddons" => m.ch_addons = on,
+            "chTarget" => m.ch_target = on,
+            "chMobs" => m.ch_mobs = on,
+            "chElytra" => m.ch_elytra = on,
+            "chRocket" => m.ch_rocket = on,
+            "chHit" => m.ch_hit = on,
+            "chHitMelee" => m.ch_hit_melee = on,
+            "chShieldBreak" => m.ch_shield_break = on,
+            "chShieldUp" => m.ch_shield_up = on,
             _ => {}
         }
     }
+    // Like the JS and WASM editions: Clear Water is a Fullbright option, and Clear Liquids
+    // clears both water and lava.
+    m.clear_water = (m.fullbright && clear_water) || m.clear_lava;
     // Like the JS and WASM editions, Entity Distance is part of the performance pack.
     if !perf_pack {
         m.entity_distance = 0.0;
@@ -191,6 +285,42 @@ pub fn get() -> Arc<TcMods> {
     *cache = Some((now, mods.clone()));
     mods
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Group {
+    /// Hostile mobs (1.12's IMob).
+    Mob,
+    /// Animals.
+    Animal,
+    Other,
+}
+
+/// The same groups as the JS and WASM editions: monsters, then animals, then the rest.
+pub fn group(kind: azalea_registry::builtin::EntityKind) -> Group {
+    const MOBS: &[&str] = &[
+        "Zombie", "Husk", "Drowned", "ZombieVillager", "Skeleton", "Stray", "WitherSkeleton",
+        "Bogged", "Creeper", "Spider", "CaveSpider", "Enderman", "Endermite", "Silverfish",
+        "Blaze", "Ghast", "MagmaCube", "Slime", "Witch", "Guardian", "ElderGuardian", "Shulker",
+        "Vex", "Vindicator", "Evoker", "Pillager", "Ravager", "Illusioner", "Phantom", "Piglin",
+        "PiglinBrute", "ZombifiedPiglin", "Hoglin", "Zoglin", "Wither", "EnderDragon", "Warden",
+        "Breeze", "Creaking",
+    ];
+    const ANIMALS: &[&str] = &[
+        "Pig", "Cow", "Sheep", "Chicken", "Horse", "Donkey", "Mule", "SkeletonHorse",
+        "ZombieHorse", "Llama", "TraderLlama", "Wolf", "Cat", "Ocelot", "Rabbit", "PolarBear",
+        "Parrot", "Fox", "Panda", "Bee", "Turtle", "Mooshroom", "Goat", "Axolotl", "Frog",
+        "Strider", "Camel", "Sniffer", "Armadillo",
+    ];
+    let name = format!("{kind:?}");
+    if MOBS.contains(&name.as_str()) {
+        Group::Mob
+    } else if ANIMALS.contains(&name.as_str()) {
+        Group::Animal
+    } else {
+        Group::Other
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

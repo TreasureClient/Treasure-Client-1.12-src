@@ -1099,3 +1099,83 @@ mod tests {
         assert!((area - 1204.0).abs() < 1e-3, "{area}");
     }
 }
+
+/// Treasure Client: the Hitboxes mod (white boxes around entities, like F3+B), filtered by
+/// the Mod Menu's Players / Mobs / Animals / Other switches.
+#[derive(Resource)]
+pub(super) struct TcHitboxOverlay {
+    pub(super) entity: Entity,
+    pub(super) mesh: Handle<Mesh>,
+    pub(super) shown: bool,
+}
+
+#[derive(Component)]
+pub(super) struct TcHitboxMarker;
+
+fn tc_hitbox_wanted(kind: azalea_registry::builtin::EntityKind, tc: &crate::tc_mods::TcMods) -> bool {
+    match crate::tc_mods::group(kind) {
+        crate::tc_mods::Group::Mob => tc.hitbox_mobs,
+        crate::tc_mods::Group::Animal => tc.hitbox_animals,
+        crate::tc_mods::Group::Other => tc.hitbox_other,
+    }
+}
+
+pub(super) fn update_tc_hitboxes(
+    view: Res<FrameView>,
+    shared: Res<super::systems::Shared>,
+    mut overlay: ResMut<TcHitboxOverlay>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut targets: Query<&mut Visibility, With<TcHitboxMarker>>,
+    origin: Res<RenderOrigin>,
+) {
+    let tc = crate::tc_mods::get();
+    if !tc.hitboxes || !view.in_world {
+        if overlay.shown {
+            overlay.shown = false;
+            if let Ok(mut v) = targets.get_mut(overlay.entity) {
+                *v = Visibility::Hidden;
+            }
+        }
+        return;
+    }
+    let mut positions: Vec<[f32; 3]> = Vec::new();
+    let mut push = |feet: Vec3, w: f32, h: f32| {
+        let half = w * 0.5;
+        let lo = feet - Vec3::new(half, 0.0, half);
+        let hi = feet + Vec3::new(half, h, half);
+        let corners = box_corners(lo.to_array(), hi.to_array());
+        for (a, b) in BOX_EDGES {
+            positions.push(corners[a]);
+            positions.push(corners[b]);
+        }
+    };
+    for anim in view.entities.iter() {
+        if anim.kind == azalea_registry::builtin::EntityKind::Player || !tc_hitbox_wanted(anim.kind, &tc) {
+            continue;
+        }
+        let feet = origin.to_render_array(anim.position(view.partial));
+        push(feet, anim.bounding_box_width(), anim.bounding_box_height());
+    }
+    if tc.hitbox_players {
+        let s = shared.0.lock().unwrap();
+        for p in &s.session.other_players {
+            if p.health.is_some_and(|h| h <= 0.0) {
+                continue;
+            }
+            let [w, h] = p.body.bounding_box;
+            push(origin.to_render_array(p.anim.position(view.partial)), w, h);
+        }
+    }
+    let any = !positions.is_empty();
+    if any && let Some(mut mesh) = meshes.get_mut(&overlay.mesh) {
+        let colors = vec![[1.0, 1.0, 1.0, 1.0]; positions.len()];
+        *mesh = line_mesh(positions, Some(colors));
+    }
+    if let Ok(mut v) = targets.get_mut(overlay.entity) {
+        let want = if any { Visibility::Visible } else { Visibility::Hidden };
+        if *v != want {
+            *v = want;
+        }
+    }
+    overlay.shown = true;
+}

@@ -551,10 +551,27 @@ fn arm_with_item(f: &HandFrame) -> Chain {
         match animation {
             UseAnimation::Eat | UseAnimation::Drink => {
                 let duration = use_duration_ticks(f.item.id);
-                apply_eat_transform(&mut c, invert, f.curr_usage_time(duration), duration);
-                apply_item_arm_transform(&mut c, invert, f.inverse_arm_height);
+                if super::tc_anim::eat_on() {
+                    // Treasure Client: Treasure Animations' bites, squash and wobble.
+                    let left = f.curr_usage_time(duration);
+                    let drink = animation == UseAnimation::Drink;
+                    super::tc_anim::eat_pre(&mut c, left, duration, invert, drink);
+                    apply_item_arm_transform(&mut c, invert, f.inverse_arm_height);
+                    super::tc_anim::eat_post(&mut c, left, duration, invert, drink);
+                } else {
+                    apply_eat_transform(&mut c, invert, f.curr_usage_time(duration), duration);
+                    apply_item_arm_transform(&mut c, invert, f.inverse_arm_height);
+                }
+                // Treasure Client: 1.7 Animations, punch while eating.
+                if super::tc_anim::use_swing() {
+                    swing_arm(&mut c, f.attack, invert);
+                }
             }
             UseAnimation::Block => {
+                // Treasure Client: 1.7 Animations, punch while holding up a shield.
+                if super::tc_anim::use_swing() {
+                    swing_arm(&mut c, f.attack, invert);
+                }
                 // Treasure Client: Low Shield moves the raised shield down out of the way.
                 if f.item.id == "shield" {
                     let tc = crate::tc_mods::get();
@@ -570,6 +587,10 @@ fn arm_with_item(f: &HandFrame) -> Chain {
                 }
             }
             UseAnimation::Bow => {
+                // Treasure Client: 1.7 Animations, punch while drawing a bow.
+                if super::tc_anim::use_swing() {
+                    swing_arm(&mut c, f.attack, invert);
+                }
                 c.translate(invert * -0.278_568_2, 0.183_443_87, 0.157_315_31);
                 c.rot_x(-13.935);
                 c.rot_y(invert * 35.3);
@@ -621,6 +642,10 @@ fn arm_with_item(f: &HandFrame) -> Chain {
     apply_item_arm_transform(&mut c, invert, f.inverse_arm_height);
     if animation == UseAnimation::Spear {
         spear_attack_transform(&mut c, invert, f.attack);
+    } else if f.hand == Hand::Main && super::tc_anim::on() {
+        // Treasure Client: Treasure Animations' swing styles, speed, punch, draw and sway.
+        let attack = super::tc_anim::swing_progress(f.attack);
+        super::tc_anim::first_person(&mut c, invert, attack, f.view_lag_y);
     } else {
         swing_arm(&mut c, f.attack, invert);
     }
@@ -1830,7 +1855,8 @@ fn advance_ticked_state(
     hands_busy: bool,
     item_swap: f32,
 ) {
-    let main_target = item_swap * item_swap * item_swap;
+    // Treasure Client: 1.7 Animations' small dip.
+    let main_target = super::tc_anim::dip_target(item_swap * item_swap * item_swap);
     let tick = sample.age_ticks.floor();
     let steps = match rig.last_tick {
         Some(last) => ((tick - last).max(0.0) as u32).min(20),
@@ -1879,6 +1905,10 @@ fn advance_ticked_state(
             };
             state.ramp.advance(target);
             if state.ramp.hidden_enough() {
+                // Treasure Client: Treasure Animations' draw twirl for a new item.
+                if hand == Hand::Main && state.shown.id != next.id {
+                    super::tc_anim::on_draw();
+                }
                 state.shown = next.clone();
                 if hand == Hand::Main {
                     rig.shown_slot = slot;
@@ -1892,7 +1922,13 @@ fn advance_ticked_state(
         let state = &mut rig.hands[index];
         if state.item_used_seen != item_used[index] {
             state.item_used_seen = item_used[index];
-            state.ramp.height = 0.0;
+            // Treasure Client: the throw animation, and the 1.7 small dip (no equip replay).
+            if hand == Hand::Main {
+                super::tc_anim::on_use(state.shown.id);
+            }
+            if super::tc_anim::use_replays_equip() {
+                state.ramp.height = 0.0;
+            }
         }
     }
 }

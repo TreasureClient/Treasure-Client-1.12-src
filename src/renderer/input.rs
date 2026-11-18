@@ -704,6 +704,11 @@ pub(super) fn pause_on_lost_focus(
         return;
     }
     let now = time.elapsed_secs();
+    // Treasure Client: only pause on leaving the tab when "Pause When Unfocused" is on.
+    if !crate::tc_mods::get().pause_unfocused {
+        *last_active = now;
+        return;
+    }
     let focused = windows.single().map_or(true, |(window, _)| {
         crate::platform::keyboard::window_active(window.focused)
     });

@@ -25,6 +25,8 @@ macro_rules! material_no_prepass_no_shadows {
 pub(crate) use material_no_prepass_no_shadows;
 
 pub mod anim;
+/// Treasure Client: the first-person animation mods.
+pub(crate) mod tc_anim;
 mod atlas;
 #[cfg(feature = "animated_textures")]
 pub(crate) mod atlas_anim;

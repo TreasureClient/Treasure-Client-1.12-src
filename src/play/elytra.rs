@@ -169,6 +169,7 @@ fn firework_boost(
         (With<LocalEntity>, With<HasClientLoaded>),
     >,
 ) {
+    let mut boosted = false;
     for (id, fall_flying, direction, mut physics) in &mut players {
         if !**fall_flying {
             continue;
@@ -178,12 +179,15 @@ fn firework_boost(
             if attached.0.0.is_none_or(|target| target as i32 != id.0) {
                 continue;
             }
+            boosted = true;
             let movement = physics.velocity;
             physics.velocity.x += look.x * 0.1 + (look.x * 1.5 - movement.x) * 0.5;
             physics.velocity.y += look.y * 0.1 + (look.y * 1.5 - movement.y) * 0.5;
             physics.velocity.z += look.z * 0.1 + (look.z * 1.5 - movement.z) * 0.5;
         }
     }
+    // Treasure Client: Crosshair Addons' rocket icon.
+    crate::gui::tc_crosshair::rocket_boost(boosted);
 }
 
 #[cfg(feature = "audio")]

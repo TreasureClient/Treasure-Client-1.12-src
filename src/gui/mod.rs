@@ -88,6 +88,8 @@ pub mod tablist;
 pub mod title;
 pub mod capepick;
 pub mod tc_style;
+/// Treasure Client: Crosshair Addons.
+pub mod tc_crosshair;
 pub mod toast;
 pub mod tooltip;
 #[cfg(target_arch = "wasm32")]

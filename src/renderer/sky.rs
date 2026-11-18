@@ -814,7 +814,7 @@ pub(super) fn update_sky(
             sky.fog_color = LAVA_FOG_COLOR;
             let spectator = view.gamemode == crate::session::Gamemode::Spectator;
             let range = lava_fog_range(
-                spectator,
+                spectator || crate::tc_mods::get().clear_lava,
                 view.fire_resistance,
                 env.render_distance as f32 * 16.0,
             );

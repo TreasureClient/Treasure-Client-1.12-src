@@ -4,6 +4,8 @@
 pub mod tc_mods;
 /// Treasure Client: AutoGG and Auto Login.
 pub mod tc_chat;
+/// Treasure Client: Tier Tagger.
+pub mod tc_tiers;
 #[cfg(feature = "audio")]
 mod audio;
 mod blockentities;

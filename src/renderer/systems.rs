@@ -517,6 +517,15 @@ fn setup(
         chunk_border_mat.clone(),
         ChunkBorderMarker,
     );
+    // Treasure Client: the Hitboxes mod.
+    let (hb_entity, hb_mesh) = spawn_overlay(
+        &mut commands,
+        &mut meshes,
+        super::overlays::line_mesh(Vec::new(), Some(Vec::new())),
+        chunk_border_mat.clone(),
+        super::overlays::TcHitboxMarker,
+    );
+    commands.insert_resource(super::overlays::TcHitboxOverlay { entity: hb_entity, mesh: hb_mesh, shown: false });
     commands.insert_resource(LineMaterial(chunk_border_mat));
     commands.insert_resource(ChunkBorderOverlay {
         entity,
@@ -1354,6 +1363,11 @@ fn collect_player_tags(
         ) else {
             continue;
         };
+        // Treasure Client: Tier Tagger puts the player's tier before their name.
+        if let Some(mut spans) = crate::tc_tiers::prefix(&info.username) {
+            spans.extend(tag.name.iter().cloned());
+            tag.name = spans.into();
+        }
         if let Some(cfg) = &cfg {
             dress_player_tag(
                 &mut tag,
@@ -1371,6 +1385,28 @@ fn collect_player_tags(
     }
 }
 
+/// Treasure Client: seconds left on a lit TNT. The server sends the fuse once, so count it
+/// down here (20 ticks a second).
+fn tc_tnt_seconds(id: i32, fuse: i32) -> Option<f32> {
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    static SEEN: Mutex<Option<HashMap<i32, (i32, Instant)>>> = Mutex::new(None);
+    let mut seen = SEEN.lock().unwrap();
+    let seen = seen.get_or_insert_with(HashMap::new);
+    let now = Instant::now();
+    if seen.len() > 256 {
+        seen.retain(|_, (_, at)| now.duration_since(*at).as_secs() < 30);
+    }
+    let entry = seen.entry(id).or_insert((fuse, now));
+    if entry.0 != fuse {
+        *entry = (fuse, now);
+    }
+    if entry.0 <= 0 {
+        return None;
+    }
+    Some((entry.0 as f32 / 20.0 - now.duration_since(entry.1).as_secs_f32()).max(0.0))
+}
+
 fn collect_nametags(
     entities: &[crate::entities::feed::EntityAnim],
     crosshair_entity: Option<i32>,
@@ -1379,8 +1415,19 @@ fn collect_nametags(
     projector: &TagProjector,
     tags: &mut Vec<crate::gui::hud::NameTag>,
 ) {
+    let tnt_timer = crate::tc_mods::get().tnt_timer;
     for anim in entities {
         let extras = anim.shared();
+        // Treasure Client: TNT Timer draws the fuse countdown (seconds) above lit TNT.
+        if tnt_timer
+            && anim.kind == azalea_registry::builtin::EntityKind::Tnt
+            && let Some(secs) = tc_tnt_seconds(anim.id, extras.fuse)
+        {
+            let at = projector.anchor(anim.position(partial), anim.bounding_box_height() + 0.5);
+            let label: std::sync::Arc<[crate::text::Span]> =
+                vec![crate::text::Span::colored(format!("{secs:.1}s"), 0xFF_FFFF)].into();
+            tags.extend(projector.project(&label, None, at, NAME_TAG_RANGE, BELOW_NAME_RANGE));
+        }
         if extras.name_spans.is_empty() {
             continue;
         }
@@ -2243,7 +2290,9 @@ fn apply_fov(
         return;
     };
     if let Projection::Perspective(perspective) = &*projection {
-        let modifier = view.fov_modifier;
+        // Treasure Client: Dynamic FOV off (the default) keeps the view still when sprinting,
+        // flying, with Speed or Slowness, or drawing a bow.
+        let modifier = if crate::tc_mods::get().dynamic_fov { view.fov_modifier } else { 1.0 };
 
         crate::modules::zoom::set_base_fov(state.options.fov);
         let zoom = crate::modules::zoom::settings();
@@ -3114,6 +3163,7 @@ pub fn run(
                 update_block_outline,
                 update_chunk_borders,
                 update_break_overlay,
+                super::overlays::update_tc_hitboxes,
             )
                 .after(FrameViewSystems)
                 .run_if(in_state(AppState::InGame)),

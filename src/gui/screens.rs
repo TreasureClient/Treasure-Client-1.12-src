@@ -39,6 +39,7 @@ pub fn draw(
             .recipes
             .take_ghost(book_menu.map_or(-1, |(_, id)| id));
 
+        crate::gui::tc_crosshair::observe(&s.session);
         Snapshot {
             action_bar: s.session.action_bar.take(),
             title_text: s.session.title_text.take(),
@@ -1043,8 +1044,14 @@ fn draw_hud(
         15.0,
         15.0,
     );
+    // Treasure Client: Crosshair Addons (the attack indicator moves below its icons).
+    let push = crate::gui::tc_crosshair::draw(
+        p,
+        ((vw - 15.0) / 2.0).floor(),
+        ((vh - 15.0) / 2.0).floor(),
+    );
 
-    draw_attack_indicator(p, vw, vh, snap);
+    draw_attack_indicator(p, vw, vh + push * 2.0, snap);
 
     elements.draw(p, vw, vh, ElementId::Hotbar, |p| {
         draw_hotbar_cluster(p, vw, vh, snap, main_hand_left, hearts);

@@ -106,6 +106,7 @@ pub(crate) fn play_server_sounds(
                 };
                 match p.event {
                     EventType::ArrowHitPlayer => {
+                        crate::gui::tc_crosshair::on_arrow_hit();
                         let at = [pos.x, pos.y + eye_height(dims), pos.z];
                         audio::play_at(
                             "entity.arrow.hit_player",
@@ -132,6 +133,10 @@ pub(crate) fn play_server_sounds(
                 entity_sounds::firework_blast(p.entity_id.0);
             }
             ClientboundGamePacket::EntityEvent(p) => {
+                // Treasure Client: Crosshair Addons' shield break (event 30 = shield disabled).
+                if p.event_id == 30 {
+                    crate::gui::tc_crosshair::on_shield_disabled(p.entity_id.0);
+                }
                 let Some(entity) = find_entity(event, p.entity_id, &indexes) else {
                     continue;
                 };

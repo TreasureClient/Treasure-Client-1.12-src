@@ -424,6 +424,15 @@ impl HumanoidAnim {
         self.use_ticks
     }
 
+    /// Treasure Client: whether they are using an item (and with which hand).
+    pub fn using_item(&self) -> bool {
+        self.flags.using_item
+    }
+
+    pub fn using_offhand(&self) -> bool {
+        self.flags.using_offhand
+    }
+
     pub fn held(&self) -> [&HeldItem; 2] {
         [&self.flags.main_hand, &self.flags.off_hand]
     }

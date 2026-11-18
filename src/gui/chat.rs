@@ -1151,7 +1151,40 @@ fn draw_input(p: &mut Painter, chat: &mut ChatState, ctx: &ScreenCtx) {
     }
 }
 
+/// Treasure Client: Password Hider shows the password of login commands as stars.
+fn masked_password(text: &str) -> Option<String> {
+    if !crate::tc_mods::get().password_hider {
+        return None;
+    }
+    let (cmd, _) = text.split_once(' ')?;
+    let cmd = cmd.to_lowercase();
+    let login = [
+        "/login", "/l", "/register", "/reg", "/auth", "/password", "/pass", "/changepassword",
+        "/changepass",
+    ];
+    if !login.contains(&cmd.as_str()) {
+        return None;
+    }
+    let keep = text.find(' ')? + 1;
+    Some(text[..keep].to_owned() + &text[keep..].chars().map(|c| if c == ' ' { ' ' } else { '*' }).collect::<String>())
+}
+
 fn draw_input_line(p: &mut Painter, chat: &mut ChatState, ctx: &ScreenCtx, tick: u32) {
+    match masked_password(&chat.field.input.text) {
+        Some(masked) => {
+            let real = std::mem::replace(&mut chat.field.input.text, masked);
+            let ghost = chat.field.suggest.ghost.take();
+            let is_command = std::mem::replace(&mut chat.field.suggest.info.is_command, false);
+            draw_input_line_text(p, chat, ctx, tick);
+            chat.field.input.text = real;
+            chat.field.suggest.ghost = ghost;
+            chat.field.suggest.info.is_command = is_command;
+        }
+        None => draw_input_line_text(p, chat, ctx, tick),
+    }
+}
+
+fn draw_input_line_text(p: &mut Painter, chat: &mut ChatState, ctx: &ScreenCtx, tick: u32) {
     let (x, y, w, h) = (INPUT_TEXT_X, chat_base(ctx) - 14.0, ctx.vw - 8.0, 12.0);
     let text_y = y + (h - 8.0) / 2.0;
     let count = chat.field.input.text.chars().count();

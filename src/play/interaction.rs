@@ -296,6 +296,10 @@ pub fn handle_interaction(bot: &Client, shared: &SharedMutex) {
     };
     let attack_entity = attack_entity && !weapon.cannot_attack(attack_strength);
     let attack_clicked = attack_clicked && !weapon.cannot_attack(attack_strength);
+    // Treasure Client: 1.7 Animations, the hand punches while you use an item (visual only).
+    if attack_clicked && is_using_item() && crate::renderer::tc_anim::use_swing() {
+        crate::client::tick::swing_local_player(false, shared);
+    }
     let piercing = weapon.piercing.is_some();
     if let Some(sound) = weapon.piercing
         && attack_entity
@@ -316,6 +320,14 @@ pub fn handle_interaction(bot: &Client, shared: &SharedMutex) {
                 true
             }
             Some(HitResult::Entity(e)) => {
+                // Treasure Client: Crosshair Addons' hit marker and shield break.
+                if let Some(id) = picked_entity(bot, crosshair.as_ref()) {
+                    let is_player = bot
+                        .entity_component::<azalea::entity::metadata::Player>(e.entity)
+                        .is_ok();
+                    crate::gui::tc_crosshair::on_attack(id, is_player);
+                }
+                crate::renderer::tc_anim::on_hit();
                 bot.attack(e.entity);
                 crate::client::tick::swing_local_player(false, shared);
                 true
