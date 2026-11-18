@@ -444,7 +444,25 @@ mod web {
         BACKSPACE.swap(false, Ordering::Relaxed)
     }
 
+    /// Treasure Client: asked several times per frame, and reading the window size can make
+    /// the browser redo its layout, so the answer is kept for 100 ms.
     pub(super) fn inset_px() -> f32 {
+        use std::cell::Cell;
+        thread_local! {
+            static LAST: Cell<Option<(crate::platform::time::Instant, f32)>> = const { Cell::new(None) };
+        }
+        let now = crate::platform::time::Instant::now();
+        if let Some((at, px)) = LAST.get()
+            && now.duration_since(at).as_millis() < 100
+        {
+            return px;
+        }
+        let px = read_inset_px();
+        LAST.set(Some((now, px)));
+        px
+    }
+
+    fn read_inset_px() -> f32 {
         let Some(win) = web_sys::window() else {
             return 0.0;
         };

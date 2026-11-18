@@ -257,6 +257,51 @@ fn block_entities(
 
 /// A 1.12 Chunk Data packet (after x and z) -> a modern chunk, or for a partial update,
 /// whole-section block updates.
+/// Treasure Client: fills a section's blocks. Each distinct block is added to the palette once
+/// and the 4096 entries are written from a lookup table; setting them one by one searched the
+/// palette for every block (and was the slowest part of joining a server). Same result.
+fn fill_states(section: &mut Section, ids: &[u16]) {
+    use std::cell::RefCell;
+    const NONE: u32 = u32::MAX;
+    const FLUID: u32 = 1 << 31;
+    thread_local! {
+        static TABLE: RefCell<Vec<u32>> = RefCell::new(vec![NONE; 65536]);
+    }
+    let state_of = |id: u16| BlockState::try_from(u32::from(id)).unwrap_or(BlockState::AIR);
+    TABLE.with_borrow_mut(|table| {
+        let mut distinct: Vec<u16> = Vec::new();
+        for &id in ids {
+            if id != 0 && table[usize::from(id)] == NONE {
+                table[usize::from(id)] = 0;
+                distinct.push(id);
+            }
+        }
+        // the palette may be rebuilt while growing, so read the final indices afterwards
+        for &id in &distinct {
+            section.states.id_for(state_of(id));
+        }
+        for &id in &distinct {
+            let state = state_of(id);
+            let fluid = if FluidState::from(state).is_empty() { 0 } else { FLUID };
+            table[usize::from(id)] = section.states.id_for(state) as u32 | fluid;
+        }
+        for (i, &id) in ids.iter().enumerate() {
+            if id == 0 {
+                continue;
+            }
+            let entry = table[usize::from(id)];
+            section.states.storage.set(i, u64::from(entry & !FLUID));
+            section.block_count += 1;
+            if entry & FLUID != 0 {
+                section.fluid_count += 1;
+            }
+        }
+        for &id in &distinct {
+            table[usize::from(id)] = NONE;
+        }
+    });
+}
+
 pub(super) fn chunk(
     r: &mut In,
     x: i32,
@@ -351,17 +396,7 @@ pub(super) fn chunk(
     }
     for s in 0..SECTIONS {
         let mut section = Section::default();
-        for (i, id) in blocks[s * 4096..(s + 1) * 4096].iter().enumerate() {
-            if *id == 0 {
-                continue;
-            }
-            let state = BlockState::try_from(u32::from(*id)).unwrap_or(BlockState::AIR);
-            section.states.set_at_index(i, state);
-            section.block_count += 1;
-            if !FluidState::from(state).is_empty() {
-                section.fluid_count += 1;
-            }
-        }
+        fill_states(&mut section, &blocks[s * 4096..(s + 1) * 4096]);
         // Modern biomes are per 4x4x4 cell; 1.12 has one per column.
         for i in 0..64 {
             let (bx, bz) = (i & 3, (i >> 2) & 3);

@@ -70,6 +70,8 @@ struct Grid {
     seen: Bits,
     reached: Bits,
     list: Vec<u32>,
+    /// Sections still to visit (a fill can be spread over several frames).
+    queue: VecDeque<(i32, i32, i32)>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -159,8 +161,15 @@ impl Grid {
     where
         F: Fn((i32, i32, i32)) -> VisibilitySet,
     {
+        self.begin(here, radius, y_lo, y_hi);
+        self.advance(vis_at, || false);
+    }
+
+    /// Starts a fill: the camera's section (or the world's top or bottom layer) goes in the queue.
+    fn begin(&mut self, here: (i32, i32, i32), radius: i32, y_lo: i32, y_hi: i32) {
         self.resize(here, radius, y_lo, y_hi);
-        let mut queue: VecDeque<(i32, i32, i32)> = VecDeque::with_capacity(1024);
+        let mut queue = std::mem::take(&mut self.queue);
+        queue.clear();
 
         match self.index(here) {
             Some(i) => {
@@ -206,8 +215,25 @@ impl Grid {
                 queue.extend(seeds);
             }
         }
+        self.queue = queue;
+    }
 
+    /// Visits queued sections until the queue is empty (true) or `stop` says so (false).
+    /// `stop` is asked every 64 sections.
+    fn advance<F, S>(&mut self, vis_at: F, mut stop: S) -> bool
+    where
+        F: Fn((i32, i32, i32)) -> VisibilitySet,
+        S: FnMut() -> bool,
+    {
+        let mut queue = std::mem::take(&mut self.queue);
+        let mut visited = 0u32;
         while let Some(pos) = queue.pop_front() {
+            visited += 1;
+            if visited % 64 == 0 && stop() {
+                queue.push_front(pos);
+                self.queue = queue;
+                return false;
+            }
             let Some(i) = self.index(pos) else { continue };
             let (sources, directions) = (self.sources[i], self.directions[i]);
             self.reached.set(i);
@@ -238,6 +264,8 @@ impl Grid {
                 queue.push_back(next);
             }
         }
+        self.queue = queue;
+        true
     }
 
     fn visible_sections(&self) -> impl Iterator<Item = (i32, i32, i32)> + '_ {
@@ -284,8 +312,15 @@ struct FillResult {
 
 #[cfg(not(target_arch = "wasm32"))]
 type FillTask = bevy::tasks::Task<FillResult>;
+/// Treasure Client: on the web there is no second thread for this, so a fill is spread
+/// over frames (at most FILL_BUDGET per frame) instead of stalling one frame for 15+ ms.
 #[cfg(target_arch = "wasm32")]
-type FillTask = FillResult;
+struct FillTask {
+    job: FillJob,
+}
+
+#[cfg(target_arch = "wasm32")]
+const FILL_BUDGET: Duration = Duration::from_millis(2);
 
 struct FillJob {
     grid: Grid,
@@ -298,6 +333,7 @@ struct FillJob {
     smart_cull: bool,
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn run_fill(job: FillJob) -> FillResult {
     let FillJob {
         mut grid,
@@ -330,7 +366,9 @@ fn spawn_fill(job: FillJob) -> FillTask {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        run_fill(job)
+        let mut job = job;
+        job.grid.begin(job.here, job.radius, job.y_lo, job.y_hi);
+        FillTask { job }
     }
 }
 
@@ -375,7 +413,34 @@ fn poll_fill(task: &mut Option<FillTask>) -> Option<FillResult> {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        task.take()
+        let pending = task.as_mut()?;
+        let start = Instant::now();
+        let stop = || start.elapsed() >= FILL_BUDGET;
+        let job = &mut pending.job;
+        let done = if job.smart_cull {
+            let snapshot = &job.snapshot;
+            job.grid.advance(|pos| snapshot.at(pos), stop)
+        } else {
+            job.grid.advance(|_| VisibilitySet::all(), stop)
+        };
+        if !done {
+            return None;
+        }
+        let FillJob {
+            grid,
+            snapshot,
+            here,
+            generation,
+            smart_cull,
+            ..
+        } = task.take()?.job;
+        Some(FillResult {
+            grid,
+            snapshot,
+            section: here,
+            generation,
+            smart_cull,
+        })
     }
 }
 

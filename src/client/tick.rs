@@ -78,6 +78,40 @@ struct TickSnapshot {
     border: azalea::world::WorldBorder,
 }
 
+/// Treasure Client: the inventory, hotbar and armor slots are converted for the HUD only when
+/// they change (they were rebuilt, names and tooltips included, 20 times a second). Refreshed
+/// once a second anyway, and whenever advanced tooltips are switched.
+#[derive(Default)]
+struct SlotCache {
+    ticks: u32,
+    advanced: bool,
+    parts: [(Vec<ItemStack>, Arc<[SlotStack]>); 3],
+}
+
+static SLOT_CACHE: std::sync::Mutex<Option<SlotCache>> = std::sync::Mutex::new(None);
+
+fn begin_slot_cache(advanced: bool) {
+    let mut guard = SLOT_CACHE.lock().unwrap();
+    let cache = guard.get_or_insert_with(SlotCache::default);
+    cache.ticks += 1;
+    if cache.ticks >= 20 || cache.advanced != advanced {
+        cache.ticks = 0;
+        cache.advanced = advanced;
+        cache.parts = Default::default();
+    }
+}
+
+fn cached_slots(part: usize, slots: &[ItemStack], make: impl Fn(&ItemStack) -> SlotStack) -> Arc<[SlotStack]> {
+    let mut guard = SLOT_CACHE.lock().unwrap();
+    let cache = guard.get_or_insert_with(SlotCache::default);
+    let (last, out) = &mut cache.parts[part];
+    if last.as_slice() != slots || out.len() != slots.len() {
+        *last = slots.to_vec();
+        *out = slots.iter().map(make).collect();
+    }
+    out.clone()
+}
+
 fn read_tick_snapshot(bot: &Client, shared: &SharedMutex) -> Option<TickSnapshot> {
     if let Ok(world) = bot.world() {
         set_current_world(&world);
@@ -169,13 +203,11 @@ fn read_tick_snapshot(bot: &Client, shared: &SharedMutex) -> Option<TickSnapshot
             crate::items::dispatch::refresh_trims(registries);
             crate::items::kinetic::refresh_quick_charge(registries);
         }
+        begin_slot_cache(advanced_tooltips);
         let menu_slots: Arc<[SlotStack]> = bot
             .menu()
             .map(|menu| {
-                menu.slots()
-                    .iter()
-                    .map(|s| slot_stack(s, registries, advanced_tooltips))
-                    .collect()
+                cached_slots(0, &menu.slots(), |s| slot_stack(s, registries, advanced_tooltips))
             })
             .unwrap_or_default();
         let inventory = bot.component::<azalea::entity::inventory::Inventory>();
@@ -185,12 +217,7 @@ fn read_tick_snapshot(bot: &Client, shared: &SharedMutex) -> Option<TickSnapshot
             .unwrap_or_default();
         let hotbar: Arc<[SlotStack]> = player_slots
             .get(36..46)
-            .map(|slots| {
-                slots
-                    .iter()
-                    .map(|s| slot_stack(s, registries, advanced_tooltips))
-                    .collect()
-            })
+            .map(|slots| cached_slots(1, slots, |s| slot_stack(s, registries, advanced_tooltips)))
             .unwrap_or_default();
         let armor_slot = |i: usize| player_slots.get(5 + i);
         let armor = crate::renderer::Armor {
@@ -209,10 +236,9 @@ fn read_tick_snapshot(bot: &Client, shared: &SharedMutex) -> Option<TickSnapshot
             .map(|s| held_item_patterned(s, registries))
             .unwrap_or_default();
         let armor_stacks: Arc<[SlotStack]> = match player_slots.get(5..9) {
-            Some(slots) if crate::modules::extra_hud::enabled() => slots
-                .iter()
-                .map(|s| slot_stack(s, registries, advanced_tooltips))
-                .collect(),
+            Some(slots) if crate::modules::extra_hud::enabled() => {
+                cached_slots(2, slots, |s| slot_stack(s, registries, advanced_tooltips))
+            }
             _ => Arc::default(),
         };
         let carried = inventory
