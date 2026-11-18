@@ -154,6 +154,39 @@ const SLOT_COUNT: usize = TEAM_SLOT_BASE + 16;
 
 global!(fn state() -> Mutex<State>);
 
+/// Treasure Client: servers send tab list updates many times a second (pings, names), and
+/// each one rebuilt and sorted the whole list. It is now rebuilt at most every 250 ms; a
+/// change in between is picked up on the next game tick after that.
+static LIST_BUILT: Mutex<(Option<crate::platform::time::Instant>, bool)> = Mutex::new((None, false));
+const LIST_REBUILD_MS: u128 = 250;
+
+/// Whether to rebuild the list now (false = later, from `flush`).
+fn list_due() -> bool {
+    let now = crate::platform::time::Instant::now();
+    let mut t = LIST_BUILT.lock().unwrap();
+    if t.0.is_some_and(|at| now.duration_since(at).as_millis() < LIST_REBUILD_MS) {
+        t.1 = true;
+        return false;
+    }
+    *t = (Some(now), false);
+    true
+}
+
+/// Every game tick: publishes a tab list change that was held back.
+pub(crate) fn flush(shared: &SharedMutex) {
+    {
+        let t = LIST_BUILT.lock().unwrap();
+        if !t.1 {
+            return;
+        }
+    }
+    if !list_due() {
+        return;
+    }
+    let list = build(&state().lock().unwrap());
+    shared.lock().unwrap().session.tab_list = Arc::new(list);
+}
+
 fn player_names(s: &State) -> Vec<String> {
     let mut names: Vec<String> = s
         .players
@@ -356,7 +389,8 @@ pub(crate) fn packet(shared: &SharedMutex, packet: &ClientboundGamePacket) {
         _ => return,
     }
 
-    let list = list_dirty.then(|| build(&s));
+    let list = (list_dirty && (matches!(packet, ClientboundGamePacket::StartConfiguration(_)) || list_due()))
+        .then(|| build(&s));
     let sidebar = sidebar_dirty.then(|| build_sidebar(&s));
     let names = names_changed.then(|| player_names(&s));
     #[cfg(lua_mods)]

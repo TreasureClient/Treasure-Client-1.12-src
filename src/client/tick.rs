@@ -746,6 +746,7 @@ fn block_distance_sqr(pos: AzBlockPos, point: [f64; 3]) -> f64 {
 
 pub(crate) fn handle_tick(bot: &Client, shared: &SharedMutex) {
     let _ticking = crate::diag::TickGuard::new();
+    crate::client::tablist::flush(shared);
 
     #[cfg(eagler_skins)]
     for data in crate::eagler::skins::take_outbox() {

@@ -100,7 +100,26 @@ static IN_WORLD: AtomicBool = AtomicBool::new(false);
 static WROTE_IN_WORLD: AtomicBool = AtomicBool::new(false);
 
 /// Called every frame with the published game state; writes `tchud` ten times a second.
+/// Storage writes block the page, so an unchanged HUD isn't written again.
+fn set_hud(out: String) {
+    static LAST_OUT: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+    let mut last = LAST_OUT.lock().unwrap();
+    if *last != out {
+        set("tchud", out.as_bytes());
+        *last = out;
+    }
+}
+
 pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
+    let in_world = state.hud.in_world;
+    if in_world != IN_WORLD.swap(in_world, Ordering::Relaxed) || !WROTE_IN_WORLD.swap(true, Ordering::Relaxed) {
+        set("tcinworld", &[u8::from(in_world)]);
+    }
+    let now = (time * 1000.0) as u64;
+    if now.saturating_sub(LAST_HUD.load(Ordering::Relaxed)) < 100 {
+        return;
+    }
+    LAST_HUD.store(now, Ordering::Relaxed);
     // The Mod Menu and Zoom keys from Controls, for the overlay (as Minecraft key numbers).
     {
         use crate::gui::keybinds::{Action, lwjgl_code};
@@ -116,17 +135,8 @@ pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
             *last = keys;
         }
     }
-    let in_world = state.hud.in_world;
-    if in_world != IN_WORLD.swap(in_world, Ordering::Relaxed) || !WROTE_IN_WORLD.swap(true, Ordering::Relaxed) {
-        set("tcinworld", &[u8::from(in_world)]);
-    }
-    let now = (time * 1000.0) as u64;
-    if now.saturating_sub(LAST_HUD.load(Ordering::Relaxed)) < 100 {
-        return;
-    }
-    LAST_HUD.store(now, Ordering::Relaxed);
     if !in_world {
-        set("tchud", b"active=0\n");
+        set_hud("active=0\n".to_owned());
         return;
     }
 
@@ -174,7 +184,7 @@ pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
     let (sprint, sneak) = crate::tc_mods::toggled();
     let mode = |on: bool| if on { "toggled" } else { "vanilla" };
     out.push_str(&format!("sprintmode={}\nsneakmode={}\n", mode(sprint), mode(sneak)));
-    set("tchud", out.as_bytes());
+    set_hud(out);
 }
 
 fn name(stack: &crate::session::SlotStack) -> String {
