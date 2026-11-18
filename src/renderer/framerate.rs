@@ -66,6 +66,11 @@ impl Default for FramerateLimitTracker {
 }
 
 impl FramerateLimitTracker {
+    /// How long since the last key, click, scroll or mouse move.
+    pub fn idle(&self) -> Duration {
+        Instant::now().duration_since(self.latest_input)
+    }
+
     pub fn limit(&self, gui: &crate::gui::GuiState, in_world: bool) -> u32 {
         limit_for(
             gui.options.max_fps,

@@ -58,6 +58,14 @@ pub struct TcMods {
     pub ta_sway: bool,
     pub ta_eat: bool,
     pub ta_throw: bool,
+    /// Performance: Dynamic FPS (10 fps when another window is focused, 30 on menus).
+    pub dyn_fps: bool,
+    /// Performance: FPS Reducer (10 fps after 60 s without input).
+    pub fps_reducer: bool,
+    /// Performance: Particle Core (far particles skip block collision).
+    pub particle_core: bool,
+    /// Performance: Entity Culling (mobs and players hidden behind walls aren't drawn).
+    pub entity_culling: bool,
     pub tier_tagger: bool,
     /// The gamemode to show ("highest" = overall).
     pub tt_mode: String,
@@ -119,6 +127,10 @@ impl Default for TcMods {
             ta_sway: true,
             ta_eat: true,
             ta_throw: true,
+            dyn_fps: true,
+            fps_reducer: true,
+            particle_core: true,
+            entity_culling: true,
             tier_tagger: false,
             tt_mode: "highest".to_owned(),
             ch_addons: false,
@@ -201,6 +213,9 @@ fn parse(text: &str) -> TcMods {
             "taSway" => m.ta_sway = on,
             "taEat" => m.ta_eat = on,
             "taThrow" => m.ta_throw = on,
+            "dynfps" => m.dyn_fps = on,
+            "pcore" => m.particle_core = on,
+            "entcull" => m.entity_culling = on,
             "tierTagger" => m.tier_tagger = on,
             "ttMode" => m.tt_mode = v.to_owned(),
             "chAddons" => m.ch_addons = on,
@@ -221,6 +236,7 @@ fn parse(text: &str) -> TcMods {
     // Like the JS and WASM editions, Entity Distance is part of the performance pack.
     if !perf_pack {
         m.entity_distance = 0.0;
+        m.fps_reducer = false;
     }
     if hit_on {
         m.hit_color = Some((hit_rgb, (hit_alpha / 100.0).clamp(0.0, 1.0)));

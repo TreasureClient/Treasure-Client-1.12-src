@@ -2049,12 +2049,40 @@ fn frame_gate_decision(
 #[cfg(target_arch = "wasm32")]
 fn web_frame_gate(
     gui: Res<crate::gui::GuiState>,
+    view: Res<FrameView>,
+    tracker: Res<super::framerate::FramerateLimitTracker>,
     mut gate: ResMut<FrameGate>,
     mut next_frame: Local<Option<Instant>>,
+    mut focus_check: Local<(Option<Instant>, bool)>,
 ) {
+    // Treasure Client: Dynamic FPS and FPS Reducer, the same as the JS and WASM editions:
+    // 10 fps while another window has focus or after a minute without input, and 30 on the
+    // title screen, server list and pause menu. Playing is never capped.
+    let tc = crate::tc_mods::get();
+    let now = Instant::now();
+    if focus_check.0.is_none_or(|t| now.duration_since(t) >= Duration::from_millis(250)) {
+        focus_check.0 = Some(now);
+        focus_check.1 = web_sys::window()
+            .and_then(|w| w.document())
+            .is_none_or(|d| d.has_focus().unwrap_or(true));
+    }
+    let calm = matches!(gui.screen, crate::gui::Screen::Pause)
+        || (!view.in_world && !matches!(gui.screen, crate::gui::Screen::None));
+    let tc_limit = if tc.dyn_fps && !focus_check.1 {
+        Some(10)
+    } else if tc.fps_reducer && tracker.idle() > Duration::from_secs(60) {
+        Some(10)
+    } else if tc.dyn_fps && calm {
+        Some(30)
+    } else {
+        None
+    };
     // Treasure Client: VSync off = no screen-refresh cap (see bevy_winit::WEB_UNCAPPED).
-    bevy::winit::WEB_UNCAPPED.store(!gui.options.vsync, std::sync::atomic::Ordering::Relaxed);
-    let target = gui.options.max_fps;
+    bevy::winit::WEB_UNCAPPED.store(
+        !gui.options.vsync && tc_limit.is_none(),
+        std::sync::atomic::Ordering::Relaxed,
+    );
+    let target = tc_limit.map_or(gui.options.max_fps, |l| gui.options.max_fps.min(l));
     if target >= crate::gui::MAX_FPS_UNLIMITED {
         *next_frame = None;
         gate.render = true;

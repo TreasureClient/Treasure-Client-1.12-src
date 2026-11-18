@@ -1827,9 +1827,10 @@ fn sync_entities(
         WornSkins<'_>,
     ),
     mut nodes: Query<(&mut Transform, &mut Visibility), With<EntityRigNode>>,
-    (mut globals, culling): (
+    (mut globals, culling, occlusion): (
         Query<&mut GlobalTransform, With<EntityRigNode>>,
         Query<(Option<&Aabb>, Has<NoFrustumCulling>, Has<NoAutoAabb>), With<EntityRigNode>>,
+        Res<crate::renderer::occlusion::OcclusionState>,
     ),
     mut mats: Query<&mut MeshMaterial3d<EntityMaterial>>,
     (mut variant_tick, mut frame, mut seen, mut idx, mut glowing): (
@@ -1921,12 +1922,26 @@ fn sync_entities(
     // Treasure Client: Entity Distance hides entities farther than the menu's setting.
     let tc_limit = crate::tc_mods::get().entity_distance;
     let tc_limit_sq = (tc_limit > 0.0).then(|| f64::from(tc_limit * tc_limit));
+    let eye = view.camera_world.to_array();
+    let cull_on = crate::tc_mods::get().entity_culling;
     for st in frame.iter().chain(&carried.0) {
         let spec_ids = registry.specs_for_state(st);
         if spec_ids.is_empty() {
             continue;
         }
-        let in_range = within_view_range(st, &camera)
+        // Treasure Client: Entity Culling, nothing behind walls (glowing ones still show,
+        // and shader packs keep everything for their shadows).
+        let behind_walls = cull_on
+            && !glowing.contains_key(&st.id)
+            && !crate::renderer::terrain::pack_drawing()
+            && !occlusion.may_see(
+                eye,
+                st.pos,
+                f64::from(st.bounding_box_width),
+                f64::from(st.bounding_box_height),
+            );
+        let in_range = !behind_walls
+            && within_view_range(st, &camera)
             && tc_limit_sq.is_none_or(|l| f64::from(camera.distance_squared_to(st.pos)) <= l);
         let levels = entity_levels(&light, st);
         let lit = Lit {

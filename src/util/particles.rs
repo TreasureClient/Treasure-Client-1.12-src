@@ -825,7 +825,7 @@ pub(crate) fn spawn_block_break(
         };
         if particle.lifetime > 0 {
             particle.age = 1;
-            advance_one_tick(&mut particle, world, &mut rng);
+            advance_one_tick(&mut particle, world, &mut rng, false);
         }
         live.push(particle);
     }
@@ -997,7 +997,7 @@ fn push_recipe(
         light: recipe.light,
     };
     particle.age = 1;
-    advance_one_tick(&mut particle, world, rng);
+    advance_one_tick(&mut particle, world, rng, false);
     live.push(particle);
 }
 
@@ -3688,7 +3688,12 @@ fn drip_fall(p: &mut Particle, world: Option<&azalea_world::World>, drip: Drip, 
     }
 }
 
-fn advance_one_tick(p: &mut Particle, world: Option<&azalea_world::World>, rng: &mut JavaRandom) {
+fn advance_one_tick(
+    p: &mut Particle,
+    world: Option<&azalea_world::World>,
+    rng: &mut JavaRandom,
+    far: bool,
+) {
     p.prev = p.pos;
     match p.motion {
         Motion::Portal => {
@@ -3720,7 +3725,9 @@ fn advance_one_tick(p: &mut Particle, world: Option<&azalea_world::World>, rng: 
 
     let mut next = p.pos + p.velocity.as_dvec3();
     let mut on_ground = false;
-    if p.flags & PHYSICS != 0 {
+    // Treasure Client: Particle Core, particles far away (more than 24 blocks) skip the
+    // block collision checks; you can't tell from there.
+    if p.flags & PHYSICS != 0 && !far {
         if p.velocity.y != 0.0 && is_solid_at(world, DVec3::new(p.pos.x, next.y, p.pos.z)) {
             if p.velocity.y < 0.0 {
                 next.y = next.y.floor() + 1.0;
@@ -3878,15 +3885,18 @@ fn tick_particles(
         .map(|w| crate::client::tracking::read_lock(w, "tick_particles"));
     let world = world.as_deref();
 
+    let core = crate::tc_mods::get().particle_core;
+    let eye = next.eye;
     live.0.retain_mut(|particle| {
         particle.tick_acc += dt;
+        let far = core && particle.pos.distance_squared(eye) > 24.0 * 24.0;
         while particle.tick_acc >= TICK {
             particle.tick_acc -= TICK;
             if particle.age >= particle.lifetime {
                 break;
             }
             particle.age += 1;
-            advance_one_tick(particle, world, next.rng);
+            advance_one_tick(particle, world, next.rng, far);
         }
         particle.age < particle.lifetime || drip_stage_ended(particle, &mut next)
     });

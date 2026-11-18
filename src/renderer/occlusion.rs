@@ -24,6 +24,44 @@ pub struct OcclusionState {
 
 const TERRAIN_REFILL_INTERVAL: Duration = Duration::from_millis(250);
 
+/// Entities this close are always drawn (the culling result can be a moment behind).
+const ENTITY_CULL_NEAR: f64 = 8.0;
+
+impl OcclusionState {
+    /// Treasure Client: Entity Culling. False only when cave culling found no way to see
+    /// any 16x16x16 section the entity's box touches from where the camera is now.
+    pub fn may_see(&self, eye: [f64; 3], feet: [f64; 3], width: f64, height: f64) -> bool {
+        if disabled() || !self.smart_cull {
+            return true;
+        }
+        let Some(here) = self.section else { return true };
+        let cam = ((eye[0] / 16.0).floor() as i32, section_of(eye[1]), (eye[2] / 16.0).floor() as i32);
+        if cam != here {
+            return true; // the result is for another section; never guess
+        }
+        let (dx, dy, dz) = (feet[0] - eye[0], feet[1] - eye[1], feet[2] - eye[2]);
+        if dx * dx + dy * dy + dz * dz < ENTITY_CULL_NEAR * ENTITY_CULL_NEAR {
+            return true;
+        }
+        let half = width * 0.5 + 0.25;
+        let sx = |x: f64| (x / 16.0).floor() as i32;
+        for x in sx(feet[0] - half)..=sx(feet[0] + half) {
+            for z in sx(feet[2] - half)..=sx(feet[2] + half) {
+                let (lo, hi) = (section_of(feet[1] - 0.25), section_of(feet[1] + height + 0.25));
+                let mut y = lo;
+                while y <= hi {
+                    match self.grid.index((x, y, z)) {
+                        Some(i) if !self.grid.seen.get(i) => {}
+                        _ => return true, // seen, or outside what was checked
+                    }
+                    y += 16;
+                }
+            }
+        }
+        false
+    }
+}
+
 #[derive(Default)]
 struct Grid {
     window: Window,

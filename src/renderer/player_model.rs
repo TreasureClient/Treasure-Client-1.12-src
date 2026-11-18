@@ -1176,7 +1176,10 @@ fn sync_player_models(
     mut entity_materials: ResMut<Assets<EntityMaterial>>,
     mut entity_images: ResMut<crate::entities::EntityImages>,
     #[cfg(feature = "skins")] mut skin_textures: ResMut<super::skin::SkinTextures>,
-    lightmap: Res<crate::renderer::systems::LightmapState>,
+    (lightmap, occlusion): (
+        Res<crate::renderer::systems::LightmapState>,
+        Res<crate::renderer::occlusion::OcclusionState>,
+    ),
     origin: Res<crate::renderer::RenderOrigin>,
     armor_glint: Option<Res<super::glint::ArmorGlintTexture>>,
 ) {
@@ -1200,8 +1203,24 @@ fn sync_player_models(
     let dirs = diffuse_lights(crate::renderer::dimension::current());
 
     let partial = view.partial;
+    // Treasure Client: Entity Culling, players behind walls aren't drawn (their name tags
+    // still show, like vanilla).
+    let eye = view.camera_world.to_array();
+    let culls = !crate::renderer::terrain::pack_drawing() && crate::tc_mods::get().entity_culling;
+    let mut behind_walls: Vec<bool> = Vec::new();
     let players: Vec<(i32, [f64; 3], AnimSample, WornSkin, Body)> = {
         let s = shared.0.lock().unwrap();
+        behind_walls.extend(s.session.other_players.iter().map(|p| {
+            let feet = p.anim.position(partial);
+            culls
+                && p.body.outline == 0
+                && !occlusion.may_see(
+                    eye,
+                    feet,
+                    f64::from(p.body.bounding_box[0]),
+                    f64::from(p.body.bounding_box[1]),
+                )
+        }));
         s.session
             .other_players
             .iter()
@@ -1281,8 +1300,13 @@ fn sync_player_models(
     }
 
     let light = crate::client::worldsync::light_map().read();
-    for ((id, feet, sample, worn, body), slot) in players.iter().zip(assign.iter()) {
+    for (k, ((id, feet, sample, worn, body), slot)) in players.iter().zip(assign.iter()).enumerate() {
         let Some(slot) = *slot else { continue };
+        let shown = if behind_walls.get(k).copied().unwrap_or(false) {
+            RigVisibility::Hidden
+        } else {
+            RigVisibility::Shown
+        };
         rigs.entries[slot].id = Some(*id);
         let lit = player_lit(&lightmap.current, &light, *feet, sample, body.scale, dirs);
         let owner = Owner {
@@ -1299,7 +1323,7 @@ fn sync_player_models(
             owner,
             worn,
             *body,
-            RigVisibility::Shown,
+            shown,
             lit,
             &mut queries,
             &mut items,
