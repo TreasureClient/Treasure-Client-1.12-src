@@ -66,6 +66,8 @@ pub struct TcMods {
     pub particle_core: bool,
     /// Performance: Entity Culling (mobs and players hidden behind walls aren't drawn).
     pub entity_culling: bool,
+    /// Performance: Leaf Culling (0 off, 1 hollow, 2 aggressive, 3 solid).
+    pub leaf_cull: u8,
     pub tier_tagger: bool,
     /// The gamemode to show ("highest" = overall).
     pub tt_mode: String,
@@ -131,6 +133,7 @@ impl Default for TcMods {
             fps_reducer: true,
             particle_core: true,
             entity_culling: true,
+            leaf_cull: 3,
             tier_tagger: false,
             tt_mode: "highest".to_owned(),
             ch_addons: false,
@@ -216,6 +219,14 @@ fn parse(text: &str) -> TcMods {
             "dynfps" => m.dyn_fps = on,
             "pcore" => m.particle_core = on,
             "entcull" => m.entity_culling = on,
+            "leafCull" => {
+                m.leaf_cull = match v {
+                    "off" => 0,
+                    "hollow" => 1,
+                    "aggressive" => 2,
+                    _ => 3,
+                }
+            }
             "tierTagger" => m.tier_tagger = on,
             "ttMode" => m.tt_mode = v.to_owned(),
             "chAddons" => m.ch_addons = on,

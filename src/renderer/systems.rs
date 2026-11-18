@@ -2523,15 +2523,16 @@ fn forward_lighting_options() {
 fn sync_cutout_leaves(
     state: Res<crate::gui::GuiState>,
     shared: Res<Shared>,
-    mut last: Local<Option<bool>>,
+    mut last: Local<Option<(bool, u8)>>,
 ) {
-    let wanted = state.options.cutout_leaves;
+    let wanted = (state.options.cutout_leaves, crate::tc_mods::get().leaf_cull);
     if *last == Some(wanted) {
         return;
     }
     let had_previous_value = last.is_some();
     *last = Some(wanted);
-    crate::renderer::set_cutout_leaves(wanted);
+    crate::renderer::set_cutout_leaves(wanted.0);
+    crate::renderer::set_leaf_cull_mode(wanted.1);
     forward_lighting_options();
     if had_previous_value {
         shared.0.lock().unwrap().remesh_chunks_requested = true;

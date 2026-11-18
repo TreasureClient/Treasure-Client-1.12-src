@@ -119,6 +119,7 @@ pub enum ToWorker {
         lighting: bool,
         smooth: bool,
         cutout_leaves: bool,
+        leaf_cull: u8,
     },
     Level {
         dim: u8,
@@ -160,6 +161,7 @@ impl ToWorker {
             lighting: crate::renderer::lighting_enabled(),
             smooth: crate::renderer::smooth_lighting_enabled(),
             cutout_leaves: crate::renderer::cutout_leaves_enabled(),
+            leaf_cull: crate::renderer::leaf_cull_mode(),
         }
     }
 
@@ -188,11 +190,13 @@ impl ToWorker {
                 lighting,
                 smooth,
                 cutout_leaves,
+                leaf_cull,
             } => {
                 let mut w = Writer::new(TO_OPTIONS);
                 w.bool(*lighting);
                 w.bool(*smooth);
                 w.bool(*cutout_leaves);
+                w.u8(*leaf_cull);
                 w.finish()
             }
             ToWorker::Level { dim, min_y, height } => {
@@ -291,6 +295,7 @@ impl ToWorker {
                 lighting: r.bool()?,
                 smooth: r.bool()?,
                 cutout_leaves: r.bool()?,
+                leaf_cull: r.u8()?,
             },
             TO_LEVEL => ToWorker::Level {
                 dim: r.u8()?,

@@ -203,11 +203,15 @@ impl Mirror {
                 lighting,
                 smooth,
                 cutout_leaves,
+                leaf_cull,
             } => {
                 crate::renderer::set_lighting_enabled(lighting);
                 crate::renderer::set_smooth_lighting(smooth);
-                if crate::renderer::cutout_leaves_enabled() != cutout_leaves {
+                if crate::renderer::cutout_leaves_enabled() != cutout_leaves
+                    || crate::renderer::leaf_cull_mode() != leaf_cull
+                {
                     crate::renderer::set_cutout_leaves(cutout_leaves);
+                    crate::renderer::set_leaf_cull_mode(leaf_cull);
                     self.remesh_meshed();
                 }
             }

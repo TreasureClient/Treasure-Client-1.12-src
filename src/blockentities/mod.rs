@@ -657,7 +657,10 @@ fn sync_block_entities(
     origin: Res<crate::renderer::RenderOrigin>,
     mut nodes: Query<(&mut Transform, &mut Visibility), With<BeRigNode>>,
     mut mats: Query<&mut MeshMaterial3d<EntityMaterial>>,
-    lightmap: Res<crate::renderer::systems::LightmapState>,
+    (lightmap, occlusion): (
+        Res<crate::renderer::systems::LightmapState>,
+        Res<crate::renderer::occlusion::OcclusionState>,
+    ),
     gui_state: Option<Res<crate::gui::GuiState>>,
     mut carried: ResMut<CarriedEntities>,
     #[cfg(feature = "skins")] skins: Res<crate::renderer::skin::SkinTextures>,
@@ -690,6 +693,8 @@ fn sync_block_entities(
 
     let distance_sq_to =
         |pos: &[i32; 3]| camera.distance_squared_to(crate::util::block_centre(*pos).to_array());
+    let eye = view.camera_world.to_array();
+    let cull_on = crate::tc_mods::get().entity_culling && !crate::renderer::terrain::pack_drawing();
 
     live.retain(|pos, rig| {
         let keep = snapshot.get(pos).map(|info| info.kind) == Some(rig.kind)
@@ -715,6 +720,17 @@ fn sync_block_entities(
             continue;
         }
         let draw_outline = distance_sq < SIGN_OUTLINE_DISTANCE * SIGN_OUTLINE_DISTANCE;
+        // Treasure Client: banners and heads aren't drawn past 40 blocks (like the JS and
+        // WASM editions), and Entity Culling skips block entities behind walls.
+        let tc_far = matches!(info.kind, BlockEntityKind::Banner | BlockEntityKind::Skull)
+            && distance_sq >= TC_BANNER_SKULL_DISTANCE * TC_BANNER_SKULL_DISTANCE;
+        let behind_walls = cull_on
+            && !occlusion.may_see(
+                eye,
+                [f64::from(pos[0]) + 0.5, f64::from(pos[1]), f64::from(pos[2]) + 0.5],
+                1.0,
+                1.0,
+            );
         let preview = preview.filter(|p| p.pos == *pos && p.applies(info.rev));
         let data = match preview {
             Some(p) => {
@@ -815,7 +831,10 @@ fn sync_block_entities(
 
         for layer in &mut rig.layers {
             let spec = &registry.specs[layer.spec];
-            let show = distance_sq < spec.view_distance * spec.view_distance;
+            // beams stay: they reach the sky from blocks you can't see
+            let show = distance_sq < spec.view_distance * spec.view_distance
+                && !tc_far
+                && (!behind_walls || spec.view_distance > DEFAULT_VIEW_DISTANCE);
             if let Ok((_, mut visibility)) = nodes.get_mut(layer.root) {
                 let want = if show {
                     Visibility::Inherited
@@ -884,6 +903,7 @@ fn sync_block_entities(
 const DESPAWN_MARGIN: f32 = 1.1;
 
 const SIGN_OUTLINE_DISTANCE: f32 = 16.0;
+const TC_BANNER_SKULL_DISTANCE: f32 = 40.0;
 
 fn lit_for(
     spec: &BeSpec,

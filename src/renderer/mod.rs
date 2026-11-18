@@ -94,7 +94,7 @@ pub use atlas::{
 };
 pub use frame_view::{FrameView, FrameViewSystems};
 pub use mesh::{
-    MeshBuf, build_section_mesh, cutout_leaves_enabled, lighting_enabled, set_cutout_leaves,
+    MeshBuf, build_section_mesh, cutout_leaves_enabled, leaf_cull_mode, lighting_enabled, set_cutout_leaves, set_leaf_cull_mode,
     set_lighting_enabled, set_smooth_lighting, smooth_lighting_enabled,
 };
 pub use occupancy::Occupancy;

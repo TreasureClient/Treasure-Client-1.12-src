@@ -28,6 +28,33 @@ pub fn set_lighting_enabled(enabled: bool) {
 
 static CUTOUT_LEAVES: AtomicBool = AtomicBool::new(true);
 
+/// Treasure Client: Leaf Culling mode (0 off, 1 hollow, 2 aggressive, 3 solid).
+static LEAF_CULL: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(3);
+
+pub fn leaf_cull_mode() -> u8 {
+    LEAF_CULL.load(Ordering::Relaxed)
+}
+
+pub fn set_leaf_cull_mode(mode: u8) {
+    LEAF_CULL.store(mode.min(3), Ordering::Relaxed);
+}
+
+/// Treasure Client: Leaf Culling, a port of Celeritas Leaf Culling by Karnatour (MIT
+/// License; a fork of Sodium Leaf Culling). With fancy leaves, a leaf block boxed in by
+/// leaves or solid blocks (all 6 sides, or the 4 around it in aggressive mode) is drawn
+/// like a solid block, and faces between two boxed-in leaves are skipped.
+fn leaf_boxed(occ: &Occupancy, (x, y, z): (i32, i32, i32), aggressive: bool) -> bool {
+    use crate::util::block_model::LEAVES_CULL_GROUP;
+    if !occ.same_cull_group(x, y, z, LEAVES_CULL_GROUP) {
+        return false;
+    }
+    CULL_NBR.iter().all(|&(dx, dy, dz)| {
+        (aggressive && dy != 0)
+            || occ.is_solid(x + dx, y + dy, z + dz)
+            || occ.same_cull_group(x + dx, y + dy, z + dz, LEAVES_CULL_GROUP)
+    })
+}
+
 pub fn cutout_leaves_enabled() -> bool {
     CUTOUT_LEAVES.load(Ordering::Relaxed)
 }
@@ -694,7 +721,11 @@ fn emit_baked(
     };
 
     let leaves = rb.cull_group == crate::util::block_model::LEAVES_CULL_GROUP;
-    let force_opaque = leaves && !cutout_leaves_enabled();
+    let fancy_leaves = leaves && cutout_leaves_enabled();
+    let leaf_mode = if fancy_leaves { leaf_cull_mode() } else { 0 };
+    let aggressive = leaf_mode == 2;
+    let boxed = leaf_mode >= 2 && leaf_boxed(occ, (bx, by, bz), aggressive);
+    let force_opaque = (leaves && !cutout_leaves_enabled()) || boxed;
 
     for part in &baked.parts {
         let model = match (&mut random, part.choices.len()) {
@@ -710,7 +741,16 @@ fn emit_baked(
                 }
                 let skip_same = if leaves { force_opaque } else { true };
                 if skip_same && occ.same_cull_group(nx, ny, nz, rb.cull_group) {
-                    continue;
+                    // a boxed-in leaf still shows its face to a see-through neighbour
+                    if !boxed || leaf_boxed(occ, (nx, ny, nz), aggressive) {
+                        continue;
+                    }
+                }
+                if leaf_mode == 1
+                    && occ.same_cull_group(nx, ny, nz, rb.cull_group)
+                    && occ.same_cull_group(nx + dx, ny + dy, nz + dz, rb.cull_group)
+                {
+                    continue; // hollow: two leaves deep that way
                 }
             }
             let face_shade = quad.shade(cardinal);
