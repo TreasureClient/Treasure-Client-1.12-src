@@ -101,6 +101,21 @@ static WROTE_IN_WORLD: AtomicBool = AtomicBool::new(false);
 
 /// Called every frame with the published game state; writes `tchud` ten times a second.
 pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
+    // The Mod Menu and Zoom keys from Controls, for the overlay (as Minecraft key numbers).
+    {
+        use crate::gui::keybinds::{Action, lwjgl_code};
+        static LAST_KEYS: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+        let keys = format!(
+            "menu={},zoom={}",
+            lwjgl_code(state.keybinds.bound(Action::TcMenu)),
+            lwjgl_code(state.keybinds.bound(Action::TcZoom))
+        );
+        let mut last = LAST_KEYS.lock().unwrap();
+        if *last != keys {
+            set("tckeys", keys.as_bytes());
+            *last = keys;
+        }
+    }
     let in_world = state.hud.in_world;
     if in_world != IN_WORLD.swap(in_world, Ordering::Relaxed) || !WROTE_IN_WORLD.swap(true, Ordering::Relaxed) {
         set("tcinworld", &[u8::from(in_world)]);
@@ -118,6 +133,8 @@ pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
     let hud = &state.hud;
     let mut out = String::with_capacity(512);
     out.push_str("active=1\n");
+    // The game's own frame rate (higher than the browser's when VSync is off).
+    out.push_str(&format!("fps={}\n", hud.fps.round() as i64));
     out.push_str(&format!("x={:.3}\ny={:.3}\nz={:.3}\n", hud.pos[0], hud.pos[1], hud.pos[2]));
     let yaw = hud.yaw.rem_euclid(360.0);
     out.push_str(&format!("yaw={yaw:.1}\n"));

@@ -320,7 +320,9 @@ const GAMEPLAY: &str = "Gameplay";
 const INVENTORY: &str = "Inventory";
 const SPECTATOR: &str = "Spectator";
 const DEBUG: &str = "Debug";
-const CLIENT: &str = "Client";
+/// Treasure Client: its own keys, like the "Treasure Client" section in the JS and WASM
+/// editions' Controls.
+const CLIENT: &str = "Treasure Client";
 
 #[rustfmt::skip]
 pub static BINDS: LazyLock<Vec<BindDef>> = LazyLock::new(|| {
@@ -375,10 +377,12 @@ pub static BINDS: LazyLock<Vec<BindDef>> = LazyLock::new(|| {
     BindDef { action: Action::DebugSpectate, id: "key.debug.spectate", name: "Cycle Spectator", category: DEBUG, default: Bound::Key(KeyCode::KeyN) },
     BindDef { action: Action::SwitchGameMode, id: "key.debug.switchGameMode", name: "Game Mode Switcher", category: DEBUG, default: Bound::Key(KeyCode::F4) },
 
-    BindDef { action: Action::Freecam, id: "key.client.freecam", name: "Detached Camera", category: CLIENT, default: Bound::Key(KeyCode::KeyC) },
+    BindDef { action: Action::TcMenu, id: "key.client.treasureMenu", name: "Treasure Client Menu", category: CLIENT, default: Bound::Key(KeyCode::ShiftRight) },
+    BindDef { action: Action::TcZoom, id: "key.client.treasureZoom", name: "Zoom", category: CLIENT, default: Bound::Key(KeyCode::KeyC) },
+    BindDef { action: Action::Freecam, id: "key.client.freecam", name: "Detached Camera", category: MISC, default: Bound::Unbound },
     ];
     #[cfg(target_arch = "wasm32")]
-    binds.push(BindDef { action: Action::Pause, id: "key.client.pause", name: "Pause Menu", category: CLIENT, default: Bound::Key(KeyCode::Backquote) });
+    binds.push(BindDef { action: Action::Pause, id: "key.client.pause", name: "Pause Menu", category: MISC, default: Bound::Key(KeyCode::Backquote) });
     #[cfg(feature = "click_gui")]
     binds.push(BindDef { action: Action::ClickGui, id: "key.client.clickGui", name: "Click GUI", category: CLIENT, default: Bound::Key(KeyCode::ShiftRight) });
     #[cfg(feature = "hud_editor")]
@@ -426,6 +430,10 @@ pub enum Action {
     ReloadResourcePacks,
     DebugSpectate,
     SwitchGameMode,
+    /// Treasure Client: opens the Mod Menu (the page overlay listens for it).
+    TcMenu,
+    /// Treasure Client: the Zoom mod's key (the page overlay listens for it).
+    TcZoom,
     Freecam,
     #[cfg(target_arch = "wasm32")]
     Pause,
@@ -774,4 +782,33 @@ mod tests {
         buttons.press(MouseButton::Middle);
         assert_eq!(binds.clicks(Action::Drop, &events, &buttons), 1);
     }
+}
+
+/// Treasure Client: Minecraft 1.12 (LWJGL) key numbers, which the overlay reads from
+/// `tckeys` to know the Mod Menu and Zoom keys. 0 = unbound or a mouse button.
+pub fn lwjgl_code(bound: Bound) -> i32 {
+    let Bound::Key(key) = bound else { return 0 };
+    const ROW: [&str; 83] = [
+        "Escape", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8",
+        "Digit9", "Digit0", "Minus", "Equal", "Backspace", "Tab", "KeyQ", "KeyW", "KeyE", "KeyR",
+        "KeyT", "KeyY", "KeyU", "KeyI", "KeyO", "KeyP", "BracketLeft", "BracketRight", "Enter",
+        "ControlLeft", "KeyA", "KeyS", "KeyD", "KeyF", "KeyG", "KeyH", "KeyJ", "KeyK", "KeyL",
+        "Semicolon", "Quote", "Backquote", "ShiftLeft", "Backslash", "KeyZ", "KeyX", "KeyC", "KeyV",
+        "KeyB", "KeyN", "KeyM", "Comma", "Period", "Slash", "ShiftRight", "NumpadMultiply", "AltLeft",
+        "Space", "CapsLock", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "NumLock",
+        "ScrollLock", "Numpad7", "Numpad8", "Numpad9", "NumpadSubtract", "Numpad4", "Numpad5",
+        "Numpad6", "NumpadAdd", "Numpad1", "Numpad2", "Numpad3", "Numpad0", "NumpadDecimal",
+    ];
+    const EXTRA: [(&str, i32); 19] = [
+        ("F11", 87), ("F12", 88), ("NumpadEnter", 156), ("ControlRight", 157), ("NumpadDivide", 181),
+        ("AltRight", 184), ("Home", 199), ("ArrowUp", 200), ("PageUp", 201), ("ArrowLeft", 203),
+        ("ArrowRight", 205), ("End", 207), ("ArrowDown", 208), ("PageDown", 209), ("Insert", 210),
+        ("Delete", 211), ("SuperLeft", 219), ("SuperRight", 220), ("Meta", 219),
+    ];
+    let name = format!("{key:?}");
+    ROW.iter()
+        .position(|n| *n == name)
+        .map(|i| i as i32 + 1)
+        .or_else(|| EXTRA.iter().find(|(n, _)| *n == name).map(|(_, c)| *c))
+        .unwrap_or(0)
 }

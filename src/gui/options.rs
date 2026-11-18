@@ -1026,31 +1026,34 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
 
     enum Entry {
         Screen(Screen),
+        Profile,
         #[cfg(resource_packs)]
         Packs,
         #[cfg(feature = "hud_editor")]
         Hud,
     }
 
-    let mut entries = vec![
-        (tr::video(), Entry::Screen(Screen::VideoSettings)),
-        (tr::controls(), Entry::Screen(Screen::Controls)),
-        (GAME, Entry::Screen(Screen::GameSettings)),
-    ];
+    // Treasure Client: the 1.12 Options layout (the same as the JS and WASM editions):
+    // the FOV slider on top, then two columns of buttons, Done at the bottom.
+    let left = (ctx.vw / 2.0 - GRID_LEFT_OFFSET).floor();
+    let sixth = (ctx.vh / 6.0).floor();
+    opt_slider!(p, ctx, state; left, sixth - 12.0, FOV_SLIDER_ID, fov, FOV_MIN, FOV_MAX, fov_label);
+
+    let mut entries = vec![("Skin Customization...", Entry::Profile)];
     #[cfg(feature = "audio")]
-    entries.push((tr::audio(), Entry::Screen(Screen::AudioSettings)));
+    entries.push(("Music & Sounds...", Entry::Screen(Screen::AudioSettings)));
+    entries.push(("Video Settings...", Entry::Screen(Screen::VideoSettings)));
+    entries.push(("Controls...", Entry::Screen(Screen::Controls)));
+    entries.push(("Game Settings...", Entry::Screen(Screen::GameSettings)));
     #[cfg(resource_packs)]
-    entries.push((
-        crate::gui::tooltip::label!("options.resourcepack"),
-        Entry::Packs,
-    ));
+    entries.push(("Resource Packs...", Entry::Packs));
     #[cfg(feature = "hud_editor")]
     entries.push(("Edit HUD...", Entry::Hud));
     entries.push((MANAGE_STORAGE, Entry::Screen(Screen::ManageStorage)));
+    let _ = (GAME, menu_content_h(0));
 
-    let left = (ctx.vw / 2.0 - GRID_LEFT_OFFSET).floor();
-    let top = LAYOUT.content_y(ctx.vh, menu_content_h(entries.len()));
-    let row = |i: usize| top + i as f32 * (WIDGET_HEIGHT + ROW_SPACING);
+    let top = sixth + 42.0;
+    let row = |i: usize| top + i as f32 * 24.0;
 
     for (i, (label, entry)) in entries.iter().enumerate() {
         let x = left + (i % 2) as f32 * COLUMN_STEP;
@@ -1076,6 +1079,9 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
             continue;
         }
         match entry {
+            Entry::Profile => {
+                crate::gui::profile::open_edit(state, Screen::Options);
+            }
             Entry::Screen(screen) => {
                 state.video_scroll = 0.0;
                 state.video_scroll_drag = None;
@@ -1113,7 +1119,14 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
         }
     }
 
-    if draw_done(p, ctx) {
+    let done = Button::new(
+        centered_x(ctx.vw),
+        sixth + 168.0,
+        WIDGET_WIDTH_BIG,
+        WIDGET_HEIGHT,
+        tr::done(),
+    );
+    if done.draw(p, ctx) {
         state.nav = Some(state.options_parent);
     }
 }

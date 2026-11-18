@@ -204,12 +204,7 @@ impl Plugin for GuiPlugin {
         crate::gui::draw::build(app);
         #[cfg(lua_mods)]
         crate::gui::mod_images::build(app);
-        app.insert_resource(GuiShared(self.shared.clone()))
-            .insert_resource(PendingGuiAtlas(self.atlas.clone()))
-            .insert_resource(StartScreen(self.startup.screen))
-            .insert_resource(AfterDownloadScreen(self.startup.after_download))
-            .init_resource::<GuiInput>()
-            .insert_resource(GuiState {
+        let mut gui_state = GuiState {
                 screen: self.startup.screen,
                 options_parent: self.startup.screen,
                 profile: {
@@ -226,7 +221,24 @@ impl Plugin for GuiPlugin {
                 chat: crate::gui::chat::ChatState::with_saved_history(),
                 hud_state: crate::gui::hud_layout::HudState::load(),
                 ..Default::default()
-            })
+            };
+        // Treasure Client: like Eaglercraft, the game opens on Edit Profile (name, skin,
+        // cape); Done goes on to the title screen. The Profiles list is the face button.
+        if matches!(
+            gui_state.screen,
+            crate::gui::Screen::Accounts | crate::gui::Screen::EditProfile
+        ) {
+            crate::gui::profile::open_edit(&mut gui_state, crate::gui::Screen::Title);
+            if let Some(screen) = gui_state.nav.take() {
+                gui_state.screen = screen;
+            }
+        }
+        app.insert_resource(GuiShared(self.shared.clone()))
+            .insert_resource(PendingGuiAtlas(self.atlas.clone()))
+            .insert_resource(StartScreen(self.startup.screen))
+            .insert_resource(AfterDownloadScreen(self.startup.after_download))
+            .init_resource::<GuiInput>()
+            .insert_resource(gui_state)
             .init_resource::<crate::gui::atlas_writes::AtlasWrites>()
             .add_systems(Startup, setup_gui)
             .add_systems(Update, upload_server_icons)

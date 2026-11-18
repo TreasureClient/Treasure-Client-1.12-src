@@ -240,6 +240,33 @@ fn link(p: &mut Painter, ctx: &ScreenCtx, text: &str, color: u32, x: f32, y: f32
 
 const EAGLER_MODE: &str = "Eagler mode (wss:// enabled)";
 
+/// The Treasure Client splashes (the same list as the JS and WASM editions).
+const TREASURE_CLIENT_SPLASHES: [&str; 22] = [
+    "Set sail!", "X marks the spot!", "Yo ho ho!", "Anchors aweigh!",
+    "Dead men tell no tales...", "Thar she blows!", "Shiver me timbers!",
+    "Hoist the colors!", "Avast, ye scallywags!", "Batten down the hatches!",
+    "Land ho!", "All hands on deck!", "Buried treasure awaits!",
+    "Dive for the gold!", "Fair winds and following seas!", "A pirate's life for ye!",
+    "Hidden coves and buried chests!", "Beware the kraken!", "Walk the plank!",
+    "Full sail ahead!", "Doubloons and pieces of eight!", "To the depths we go!",
+];
+
+/// A random Treasure Client splash, with the usual holiday ones.
+fn tc_splash(seed: u64) -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let date = js_sys::Date::new_0();
+        match (date.get_month() + 1, date.get_date()) {
+            (12, 24) => return "Merry X-mas!".to_owned(),
+            (1, 1) => return "Happy new year!".to_owned(),
+            (10, 31) => return "OOoooOOOoooo! Spooky!".to_owned(),
+            _ => {}
+        }
+    }
+    let mixed = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 32;
+    TREASURE_CLIENT_SPLASHES[(mixed % TREASURE_CLIENT_SPLASHES.len() as u64) as usize].to_owned()
+}
+
 fn session_splash() -> Option<&'static str> {
     static SPLASH: OnceLock<Option<String>> = OnceLock::new();
     SPLASH
@@ -248,7 +275,8 @@ fn session_splash() -> Option<&'static str> {
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos() as u64)
                 .unwrap_or(0);
-            texts::splash_for(seed)
+            let _ = texts::splash_for;
+            Some(tc_splash(seed))
         })
         .as_deref()
 }

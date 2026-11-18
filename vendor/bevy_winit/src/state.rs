@@ -413,6 +413,7 @@ impl ApplicationHandler<WinitUserEvent> for WinitAppRunnerState {
                     }
                     WindowEvent::RedrawRequested => {
                         self.ran_update_since_last_redraw = false;
+                        LAST_SHOWN.set(Some(Instant::now()));
 
                         // https://github.com/bevyengine/bevy/issues/17488
                         #[cfg(target_os = "windows")]
@@ -696,7 +697,12 @@ impl WinitAppRunnerState {
                         });
                     }
                     _ => {
-                        event_loop.set_control_flow(if uncapped {
+                        // Treasure Client: uncapped, but every ~12 ms wait for the browser's
+                        // next frame, so the page (HUD, overlay) still gets shown smoothly.
+                        let shown_lately = LAST_SHOWN
+                            .get()
+                            .is_some_and(|t| t.elapsed() < core::time::Duration::from_millis(12));
+                        event_loop.set_control_flow(if uncapped && shown_lately {
                             ControlFlow::Poll
                         } else {
                             ControlFlow::Wait
@@ -1237,4 +1243,9 @@ mod tests {
 
         (app, window_entity)
     }
+}
+
+std::thread_local! {
+    /// Treasure Client: when the browser last showed a frame (see `WEB_UNCAPPED`).
+    static LAST_SHOWN: core::cell::Cell<Option<Instant>> = const { core::cell::Cell::new(None) };
 }

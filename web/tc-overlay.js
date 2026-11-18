@@ -2098,6 +2098,8 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
       frames++;
       if (now - lastFpsT >= 500) {
         fpsVal = Math.round(frames * 1000 / (now - lastFpsT)); frames = 0; lastFpsT = now;
+        // Rust edition: the game's own frame rate (it can run past the screen with VSync off)
+        if (hud && hud.active && hud.fps && !isNaN(parseInt(hud.fps, 10))) fpsVal = parseInt(hud.fps, 10);
         if (state.fps) tcSetText(fpsEl, fpsVal + ' FPS');
         var pf = $('#tc-perf-fps'); if (pf) pf.textContent = fpsVal; // REAL number in the perf panel
         fpsHistory.push(fpsVal); if (fpsHistory.length > 70) fpsHistory.shift();
