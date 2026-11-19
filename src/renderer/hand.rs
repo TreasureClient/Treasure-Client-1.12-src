@@ -1536,7 +1536,6 @@ fn sync_hands(
 ) {
     let (camera_view, gui, gui_assets) = view;
     crate::prof_span!("render:sync_hands");
-    #[cfg(feature = "budget")]
     let _t = crate::diag::budget::timed(crate::diag::budget::Slot::Hand);
     let Some(mut rig) = rig else { return };
 

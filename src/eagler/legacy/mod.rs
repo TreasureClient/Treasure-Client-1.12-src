@@ -20,6 +20,10 @@ mod blockents;
 mod entities;
 mod items;
 mod registries;
+mod via_guess;
+mod via_items;
+mod via_mobs;
+mod via_tuff;
 mod wire;
 mod world;
 
@@ -51,6 +55,8 @@ use azalea_registry::data::{DimensionKind, WorldClock};
 use azalea_registry::identifier::Identifier;
 
 use wire::{In, Out};
+
+pub(crate) use via_guess::set_server;
 
 /// The Minecraft protocol number of 1.12.2.
 pub(crate) const PROTOCOL: u16 = 340;
@@ -98,6 +104,7 @@ mod cb {
     pub const SPAWN_POSITION: i32 = 0x46;
     pub const TIME: i32 = 0x47;
     pub const TITLE: i32 = 0x48;
+    pub const PLUGIN_MESSAGE: i32 = 0x18;
 }
 
 /// 1.12.2 serverbound play packet ids.
@@ -159,6 +166,18 @@ pub(crate) struct Legacy {
     world: world::World,
     /// 1.12 blocks whose look comes from their block entity (skulls, banners, beds, pots).
     specials: std::collections::HashMap<(i32, i32, i32), u32>,
+    /// Treasure Client: TuffX+ ViaBlocks (servers that send the real modern blocks).
+    tuff: via_tuff::Tuff,
+    /// 1.12 packets for the server that came up while reading server packets.
+    to_server: Vec<Vec<u8>>,
+    /// The hotbar slot in hand, and the modern item in hotbar slots 0-8 and the off hand.
+    carried: u8,
+    hands: [azalea_registry::builtin::ItemKind; 10],
+    /// A hidden 1.16-style smithing menu (2 inputs), shown as the modern one (slots + 1).
+    smith_shift: Option<i32>,
+    /// Block predictions (placing, breaking) waiting for the server's answer: the
+    /// sequence number, the spot the server will send back, and when it was sent.
+    pending_acks: Vec<(u32, (i32, i32, i32), crate::platform::time::Instant)>,
 }
 
 impl Legacy {
@@ -182,6 +201,12 @@ impl Legacy {
             action: 0,
             world: world::World::default(),
             specials: Default::default(),
+            tuff: via_tuff::Tuff::default(),
+            to_server: Vec::new(),
+            carried: 0,
+            hands: [azalea_registry::builtin::ItemKind::Air; 10],
+            smith_shift: None,
+            pending_acks: Vec::new(),
         }
     }
 
@@ -211,6 +236,48 @@ impl Legacy {
         let mut out = Vec::new();
         self.translate_server(&body, &mut out);
         out
+    }
+
+    /// The server sent these spots back: confirm the predictions waiting for them. The game
+    /// then shows what the server sent. Confirming earlier made a placed block vanish
+    /// until the server's update came (falling through while bridging).
+    fn settle(&mut self, spots: &[(i32, i32, i32)], out: &mut Vec<Vec<u8>>) {
+        if self.pending_acks.is_empty() {
+            return;
+        }
+        let upto = self
+            .pending_acks
+            .iter()
+            .filter(|(_, pos, _)| spots.contains(pos))
+            .map(|(seq, _, _)| *seq)
+            .max();
+        if let Some(upto) = upto {
+            self.pending_acks.retain(|(seq, _, _)| *seq > upto);
+            game(out, azalea_protocol::packets::game::ClientboundBlockChangedAck { seq: upto });
+        }
+    }
+
+    /// Predictions the server never answered (1.5 s): confirm them anyway.
+    fn settle_old(&mut self, out: &mut Vec<Vec<u8>>) {
+        let Some(&(_, _, first)) = self.pending_acks.first() else { return };
+        if first.elapsed().as_millis() < 1500 {
+            return;
+        }
+        let upto = self
+            .pending_acks
+            .iter()
+            .filter(|(_, _, at)| at.elapsed().as_millis() >= 1500)
+            .map(|(seq, _, _)| *seq)
+            .max();
+        if let Some(upto) = upto {
+            self.pending_acks.retain(|(seq, _, _)| *seq > upto);
+            game(out, azalea_protocol::packets::game::ClientboundBlockChangedAck { seq: upto });
+        }
+    }
+
+    /// 1.12 packets for the server made while reading server packets (TuffX+ handshake).
+    pub(crate) fn take_to_server(&mut self) -> Vec<Vec<u8>> {
+        std::mem::take(&mut self.to_server)
     }
 
     /// A modern packet from the game.
@@ -260,6 +327,7 @@ impl Legacy {
     }
 
     fn translate_server(&mut self, body: &[u8], out: &mut Vec<Vec<u8>>) {
+        self.settle_old(out);
         let mut r = In::new(body);
         let Some(id) = r.varint() else {
             return;
@@ -283,6 +351,36 @@ impl Legacy {
         let done = match id {
             cb::JOIN_GAME => self.join_game(&mut r, out),
             cb::RESPAWN => self.respawn(&mut r, out),
+            cb::PLUGIN_MESSAGE => (|| {
+                let channel = r.string()?;
+                let data = r.rest();
+                match channel.as_str() {
+                    "REGISTER" => {
+                        let names: Vec<&[u8]> = data.split(|b| *b == 0).collect();
+                        let has = |c: &str| names.iter().any(|n| *n == c.as_bytes());
+                        if has(via_tuff::HANDSHAKE) || has(via_tuff::DATA) {
+                            // TuffX+: opt in, and stop guessing (the server sends the real blocks)
+                            via_guess::set_plugin();
+                            self.to_server.extend(via_tuff::handshake());
+                        } else if has("TC|ViaBlocks") {
+                            via_guess::set_plugin();
+                        }
+                        if has("entities:handshake") || has("viaentities:data") {
+                            // TuffX+ ViaEntities: opt in
+                            self.to_server.extend(via_tuff::handshake_on("viaentities:data", "entities:handshake"));
+                        }
+                    }
+                    "viaentities:data" => entities::tuff_entities(data, out),
+                    via_tuff::DATA => {
+                        via_guess::set_plugin();
+                        for (pos, real) in self.tuff.read(data, None) {
+                            game(out, chunk::block_update(pos, real));
+                        }
+                    }
+                    _ => {}
+                }
+                Some(())
+            })(),
             cb::KEEP_ALIVE => r.i64().map(|id| game(out, ClientboundKeepAlive { id: id as u64 })),
             cb::POSITION => position(&mut r, out),
             cb::CHAT => (|| {
@@ -322,7 +420,10 @@ impl Legacy {
                 });
                 Some(())
             })(),
-            cb::HELD_SLOT => r.u8().map(|slot| game(out, ClientboundSetHeldSlot { slot: u32::from(slot.min(8)) })),
+            cb::HELD_SLOT => r.u8().map(|slot| {
+                self.carried = slot.min(8);
+                game(out, ClientboundSetHeldSlot { slot: u32::from(slot.min(8)) });
+            }),
             cb::HEALTH => (|| {
                 let health = r.f32()?;
                 let food = r.varint()?;
@@ -360,6 +461,9 @@ impl Legacy {
                 let kind = r.string()?;
                 let title = r.string()?;
                 let slots = usize::from(r.u8()?);
+                if let Some(pos) = via_guess::opened(kind == "minecraft:crafting_table") {
+                    game(out, chunk::block_update(pos, chunk::state(58 << 4)));
+                }
                 let Some(menu_type) = menu(&kind, slots) else {
                     crate::log_info!("net", "1.12: window type {kind} is not supported yet");
                     return Some(());
@@ -374,6 +478,9 @@ impl Legacy {
             })(),
             cb::CLOSE_WINDOW => r.u8().map(|window| {
                 self.windows.remove(&i32::from(window));
+                if self.smith_shift == Some(i32::from(window)) {
+                    self.smith_shift = None;
+                }
                 game(out, azalea_protocol::packets::game::ClientboundContainerClose {
                     container_id: i32::from(window),
                 });
@@ -387,6 +494,33 @@ impl Legacy {
                     let slot = items::read(&mut r, &self.items)?;
                     raw.push(slot.raw);
                     stacks.push(slot.item);
+                }
+                if window == 0 {
+                    for (i, stack) in stacks.iter().enumerate().skip(36).take(10) {
+                        self.hands[i - 36] = stack.kind();
+                    }
+                }
+                // Treasure Client: the smithing menu of modern servers never "opens" in
+                // 1.12; its contents just arrive after you click a smithing table
+                if window > 0
+                    && !self.windows.contains_key(&window)
+                    && let Some(pos) = via_guess::hidden_menu(count.saturating_sub(37))
+                {
+                    if let Some(table) = via_guess::smithing_state() {
+                        game(out, chunk::block_update(pos, table));
+                    }
+                    game(out, azalea_protocol::packets::game::ClientboundOpenScreen {
+                        container_id: window,
+                        menu_type: azalea_registry::builtin::MenuKind::Smithing,
+                        title: FormattedText::from("Upgrade Gear"),
+                    });
+                    if count == 39 {
+                        // 1.16 layout (base, addition, result): the modern one has a template first
+                        self.smith_shift = Some(window);
+                    }
+                }
+                if self.smith_shift == Some(window) {
+                    stacks.insert(0, azalea_inventory::ItemStack::Empty);
                 }
                 self.windows.insert(window, raw);
                 self.state_id = self.state_id.wrapping_add(1);
@@ -408,7 +542,12 @@ impl Legacy {
                     });
                     return Some(());
                 }
-                if let (Some(slots), Ok(at)) = (self.windows.get_mut(&window), usize::try_from(slot)) {
+                if window == 0 && (36..=45).contains(&slot) {
+                    self.hands[(slot - 36) as usize] = item.item.kind();
+                }
+                let slot = if self.smith_shift == Some(window) && slot >= 0 { slot + 1 } else { slot };
+                let raw_slot = if self.smith_shift == Some(window) && slot > 0 { slot - 1 } else { slot };
+                if let (Some(slots), Ok(at)) = (self.windows.get_mut(&window), usize::try_from(raw_slot)) {
                     if slots.len() <= at {
                         slots.resize(at + 1, items::EMPTY.to_vec());
                     }
@@ -463,7 +602,15 @@ impl Legacy {
                 } else {
                     self.specials.remove(&pos);
                 }
-                game(out, chunk::block_update(pos, global));
+                // Treasure Client: Modern Block Guessing, blocks you placed, smithing tables
+                let look = chunk::state(global);
+                let shown = via_guess::block(pos, global, self.dimension).map_or(look, |t| chunk::restyle(t, look));
+                game(out, chunk::block_update(pos, shown));
+                // TuffX+ appends the real block to the packet
+                for (pos, real) in self.tuff.read(r.rest(), None) {
+                    game(out, chunk::block_update(pos, real));
+                }
+                self.settle(&[pos], out);
                 Some(())
             })(),
             cb::MULTI_BLOCK_CHANGE => (|| {
@@ -471,6 +618,7 @@ impl Legacy {
                 let cz = r.i32()?;
                 let count = usize::try_from(r.varint()?).ok()?;
                 let mut records = Vec::with_capacity(count.min(4096));
+                let mut spots = Vec::new();
                 for _ in 0..count {
                     let xz = r.u8()?;
                     let y = r.u8()?;
@@ -481,17 +629,26 @@ impl Legacy {
                     } else {
                         self.specials.remove(&pos);
                     }
-                    records.push((xz, y, global));
+                    let look = chunk::state(global);
+                    let shown = via_guess::block(pos, global, self.dimension).map_or(look, |t| chunk::restyle(t, look));
+                    records.push((xz, y, shown));
+                    spots.push(pos);
                 }
                 for update in chunk::section_update(cx, cz, records) {
                     game(out, update);
                 }
+                for (pos, real) in self.tuff.read(r.rest(), None) {
+                    game(out, chunk::block_update(pos, real));
+                }
+                self.settle(&spots, out);
                 Some(())
             })(),
             cb::UNLOAD_CHUNK => (|| {
                 let x = r.i32()?;
                 let z = r.i32()?;
                 self.specials.retain(|p, _| p.0 >> 4 != x || p.2 >> 4 != z);
+                via_guess::unload(x, z);
+                self.tuff.unload(x, z);
                 game(out, ClientboundForgetLevelChunk { pos: azalea_core::position::ChunkPos::new(x, z) });
                 Some(())
             })(),
@@ -523,6 +680,7 @@ impl Legacy {
     }
 
     fn join_game(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        via_mobs::clear();
         let entity = r.i32()?;
         let mode = r.u8()?;
         let dimension = r.i32()?;
@@ -533,6 +691,9 @@ impl Legacy {
         self.dimension = dimension;
         self.game_mode = mode & 0x7;
         self.entity = entity;
+        via_guess::new_world(dimension, true);
+        self.tuff.reset();
+        self.smith_shift = None;
         let view = self.settings.as_ref().map_or(8, |s| u32::from(s.view_distance)).clamp(2, 32);
         game(out, ClientboundLogin {
             player_id: azalea_core::entity_id::MinecraftEntityId(entity),
@@ -554,12 +715,15 @@ impl Legacy {
     }
 
     fn respawn(&mut self, r: &mut In, out: &mut Vec<Vec<u8>>) -> Option<()> {
+        via_mobs::clear();
         let dimension = r.i32()?;
         let difficulty_byte = r.u8()?;
         let mode = r.u8()?;
         let level_type = r.string()?;
         self.dimension = dimension;
         self.game_mode = mode & 0x7;
+        via_guess::new_world(dimension, false);
+        self.tuff.respawn(&mut self.to_server);
         game(out, ClientboundRespawn {
             common: self.spawn_info(self.game_mode, dimension, &level_type),
             data_to_keep: 0,
@@ -633,6 +797,8 @@ impl Legacy {
             below,
             |id| biomes.get(usize::from(id)).copied().unwrap_or(plains),
             &mut self.specials,
+            self.dimension,
+            &mut self.tuff,
         )?;
         for packet in column.packets {
             game(out, packet);
@@ -651,6 +817,7 @@ impl Legacy {
         let Ok(packet) = azalea_protocol::read::deserialize_packet::<ServerboundGamePacket>(&mut cursor) else {
             return;
         };
+        self.settle_old(&mut moved.to_game);
         let to = &mut moved.to_server;
         let back = &mut moved.to_game;
         // Modern clients wait for the server to confirm block predictions; 1.12 servers
@@ -661,6 +828,13 @@ impl Legacy {
         match packet {
             ServerboundGamePacket::ContainerClick(p) => {
                 let window = p.container_id;
+                let mut p = p;
+                if self.smith_shift == Some(window) && p.slot_num >= 0 {
+                    if p.slot_num == 0 {
+                        return; // the template slot: the old smithing menu has none
+                    }
+                    p.slot_num -= 1;
+                }
                 let clicked = usize::try_from(p.slot_num)
                     .ok()
                     .and_then(|at| self.windows.get(&window)?.get(at).cloned())
@@ -687,6 +861,9 @@ impl Legacy {
             ServerboundGamePacket::ContainerClose(p) => {
                 if p.container_id != 0 {
                     self.windows.remove(&p.container_id);
+                }
+                if self.smith_shift == Some(p.container_id) {
+                    self.smith_shift = None;
                 }
                 to.push(Out::new(sb::CLOSE_WINDOW).u8(p.container_id as u8).done());
             }
@@ -747,11 +924,32 @@ impl Legacy {
                             .done(),
                     );
                 }
-                ack(p.seq);
+                // breaking: wait for the server to send the block back (it does when a
+                // block breaks or the break is refused)
+                if matches!(status, 0 | 2) {
+                    self.pending_acks.push((p.seq, (p.pos.x, p.pos.y, p.pos.z), crate::platform::time::Instant::now()));
+                } else {
+                    ack(p.seq);
+                }
             }
             ServerboundGamePacket::UseItemOn(p) => {
                 let b = &p.block_hit;
                 let pos = b.block_pos;
+                // Treasure Client: what you place is remembered (Modern Block Guessing),
+                // and a block you use may be a smithing table
+                if !self.sneaking {
+                    via_guess::clicked((pos.x, pos.y, pos.z));
+                }
+                let (dx, dy, dz) = match b.direction as i32 {
+                    0 => (0, -1, 0),
+                    1 => (0, 1, 0),
+                    2 => (0, 0, -1),
+                    3 => (0, 0, 1),
+                    4 => (-1, 0, 0),
+                    _ => (1, 0, 0),
+                };
+                let hand = if p.hand as i32 == 0 { usize::from(self.carried) } else { 9 };
+                via_guess::placed((pos.x + dx, pos.y + dy, pos.z + dz), self.hands[hand]);
                 to.push(
                     Out::new(sb::PLACE_BLOCK)
                         .position(pos.x, pos.y, pos.z)
@@ -762,7 +960,9 @@ impl Legacy {
                         .f32((b.location.z - f64::from(pos.z)) as f32)
                         .done(),
                 );
-                ack(p.seq);
+                // placing: 1.12 (and modern) servers always send back the clicked block and
+                // the one next to it; confirm once that second one arrives
+                self.pending_acks.push((p.seq, (pos.x + dx, pos.y + dy, pos.z + dz), crate::platform::time::Instant::now()));
             }
             ServerboundGamePacket::UseItem(p) => {
                 to.push(Out::new(sb::USE_ITEM).varint(p.hand as i32).done());
@@ -827,6 +1027,7 @@ impl Legacy {
                 }
             }
             ServerboundGamePacket::SetCarriedItem(p) => {
+                self.carried = (p.slot as u8).min(8);
                 to.push(Out::new(sb::HELD_SLOT).i16(p.slot as i16).done());
             }
             ServerboundGamePacket::Swing(p) => {

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::platform::time::{Instant, epoch};
 
-fn now_us() -> u64 {
+pub(crate) fn now_us() -> u64 {
     Instant::now().duration_since(epoch()).as_micros() as u64
 }
 
@@ -20,7 +20,43 @@ counted! {
         Poll,
         Hand,
         Post,
+        // Treasure Client (.lag): more parts of a frame
+        Entities,
+        BlockEnts,
+        Particles,
+        MeshOut,
+        // these run between frames (network, web workers, the game tick)
+        Net,
+        MeshIn,
+        Tick,
+        Packets,
     }
+}
+
+pub(crate) const SLOTS_N: usize = SLOT_COUNT;
+pub(crate) const PHASES_N: usize = PHASE_COUNT;
+
+/// The timers' running totals (µs), for the `.lag` monitor.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct Totals {
+    pub ours: u64,
+    pub bot: u64,
+    pub phases: [u64; PHASES_N],
+    pub slots: [u64; SLOTS_N],
+}
+
+fn totals() -> Totals {
+    Totals {
+        ours: OURS.load(Relaxed),
+        bot: BOT.load(Relaxed),
+        phases: std::array::from_fn(|i| PHASES[i].load(Relaxed)),
+        slots: std::array::from_fn(|i| SLOTS[i].load(Relaxed)),
+    }
+}
+
+/// Sections reached by cave culling, entities drawn, draw calls (the latest frame).
+pub(crate) fn scene_counts() -> (u64, u64, u64) {
+    (VISIBLE_COLUMNS.load(Relaxed), DRAWN_ENTITIES.load(Relaxed), DRAWS.load(Relaxed))
 }
 
 static SLOTS: [AtomicU64; SLOT_COUNT] = [const { AtomicU64::new(0) }; SLOT_COUNT];
@@ -57,10 +93,13 @@ static WINDOW_AT: AtomicU64 = AtomicU64::new(0);
 const WINDOW: Duration = Duration::from_millis(500);
 
 pub fn frame_start() {
-    OURS_AT.store(now_us(), Relaxed);
+    let now = now_us();
+    super::lag::frame(now, totals());
+    OURS_AT.store(now, Relaxed);
 }
 
 pub fn frame_end(rendered: bool) {
+    super::lag::note_rendered(rendered);
     close(&OURS_AT, &OURS);
     FRAMES.fetch_add(1, Relaxed);
     if rendered {

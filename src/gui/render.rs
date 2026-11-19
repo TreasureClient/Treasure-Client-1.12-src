@@ -881,7 +881,6 @@ pub(crate) fn draw_gui(
     camera_view: Option<Res<crate::renderer::input::CameraView>>,
     item_assets: Option<Res<crate::renderer::item_assets::ItemAssets>>,
 ) {
-    #[cfg(feature = "budget")]
     let _t = crate::diag::budget::timed(crate::diag::budget::Slot::Gui);
     let Some(assets) = assets else { return };
     let Ok(window) = primary.single() else { return };

@@ -1183,6 +1183,7 @@ fn sync_player_models(
     origin: Res<crate::renderer::RenderOrigin>,
     armor_glint: Option<Res<super::glint::ArmorGlintTexture>>,
 ) {
+    let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Entities);
     crate::prof_span!("render:sync_player_models");
     let Some(assets) = assets else { return };
     let mut items = ItemCtx {

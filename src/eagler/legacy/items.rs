@@ -112,10 +112,15 @@ pub(super) fn read(r: &mut In, ctx: &Ctx) -> Option<Read> {
     Some(Read { raw, item: modern(id, count, damage, nbt.as_ref(), ctx) })
 }
 
+/// Every modern item a 1.12 item can turn into (for ViaItems: everything else is "modern").
+pub(super) fn old_kinds() -> std::collections::HashSet<ItemKind> {
+    table().values().copied().collect()
+}
+
 fn modern(id: i16, count: i8, damage: i16, nbt: Option<&Tag>, ctx: &Ctx) -> ItemStack {
     let table = table();
     let id = id as u16 as u32;
-    let (kind, durability) = match table.get(&(id << 16 | damage as u16 as u32)) {
+    let (mut kind, durability) = match table.get(&(id << 16 | damage as u16 as u32)) {
         Some(kind) => (*kind, 0),
         // Not a variant: the damage is wear (tools, armor), on the item's first entry.
         None => match table.get(&(id << 16)) {
@@ -123,6 +128,10 @@ fn modern(id: i16, count: i8, damage: i16, nbt: Option<&Tag>, ctx: &Ctx) -> Item
             None => (ItemKind::Barrier, 0),
         },
     };
+    // Treasure Client: ViaItems, a look-alike from ViaBackwards becomes the real modern item.
+    if let Some(real) = super::via_items::remap(kind, nbt) {
+        kind = real;
+    }
     let mut stack = ItemStack::new(kind, i32::from(count.max(1)));
     if durability > 0 {
         stack = stack.with_component(Damage { amount: durability });

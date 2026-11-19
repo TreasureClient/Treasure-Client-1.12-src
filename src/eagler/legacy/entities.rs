@@ -123,8 +123,14 @@ pub(super) fn translate(
             let motion = velocity(r)?;
             if let Some(kind) = kind {
                 crate::log_info!("net", "1.12: {kind:?} #{raw} at {:.1} {:.1} {:.1}", pos.x, pos.y, pos.z);
-                add(out, raw, uuid, kind, pos, (yaw, pitch, head), motion, 0);
-                metadata(raw, r, out, items);
+                let (mut meta, name) = read_metadata(r, items);
+                // Treasure Client: ViaMobs, a ViaBackwards stand-in spawns as the real mob.
+                let real = super::via_mobs::on_spawn(raw, kind, uuid, pos, (yaw, pitch, head), name.as_deref());
+                if real.is_some() {
+                    without_name(&mut meta);
+                }
+                add(out, raw, uuid, real.unwrap_or(kind), pos, (yaw, pitch, head), motion, 0);
+                emit_metadata(raw, meta, out);
             }
         }
         cb::SPAWN_OBJECT => {
@@ -143,12 +149,14 @@ pub(super) fn translate(
         cb::REL_MOVE => {
             let raw = r.varint()?;
             let delta = PositionDelta8 { xa: r.i16()?, ya: r.i16()?, za: r.i16()? };
+            super::via_mobs::moved(raw, (delta.xa, delta.ya, delta.za));
             let on_ground = r.bool()?;
             game(out, ClientboundMoveEntityPos { entity_id: id(raw), delta, on_ground });
         }
         cb::LOOK_REL_MOVE => {
             let raw = r.varint()?;
             let delta = PositionDelta8 { xa: r.i16()?, ya: r.i16()?, za: r.i16()? };
+            super::via_mobs::moved(raw, (delta.xa, delta.ya, delta.za));
             let yaw = r.i8()?;
             let pitch = r.i8()?;
             let on_ground = r.bool()?;
@@ -175,6 +183,7 @@ pub(super) fn translate(
             let pos = Vec3::new(r.f64()?, r.f64()?, r.f64()?);
             let yaw = r.i8()?;
             let pitch = r.i8()?;
+            super::via_mobs::teleported(raw, pos, yaw, pitch);
             let on_ground = r.bool()?;
             game(out, ClientboundEntityPositionSync {
                 id: id(raw),
@@ -195,7 +204,9 @@ pub(super) fn translate(
             let count = usize::try_from(r.varint()?).ok()?;
             let mut ids = Vec::with_capacity(count.min(1024));
             for _ in 0..count {
-                ids.push(id(r.varint()?));
+                let raw = r.varint()?;
+                super::via_mobs::removed(raw);
+                ids.push(id(raw));
             }
             game(out, ClientboundRemoveEntities { entity_ids: ids });
         }
@@ -224,7 +235,19 @@ pub(super) fn translate(
         }
         cb::METADATA => {
             let raw = r.varint()?;
-            metadata(raw, r, out, items);
+            let (mut meta, name) = read_metadata(r, items);
+            match super::via_mobs::on_metadata(raw, name.as_deref()) {
+                super::via_mobs::Update::Keep => {}
+                super::via_mobs::Update::HideName => without_name(&mut meta),
+                super::via_mobs::Update::Swap(tr) => {
+                    // its name only came now: replace the stand-in with the real mob
+                    without_name(&mut meta);
+                    game(out, ClientboundRemoveEntities { entity_ids: vec![id(raw)] });
+                    let real = tr.real.unwrap_or(tr.kind);
+                    add(out, raw, tr.uuid, real, tr.pos, tr.rot, LpVec3::default(), 0);
+                }
+            }
+            emit_metadata(raw, meta, out);
         }
         cb::PLAYER_LIST => player_list(r, out)?,
         cb::EQUIPMENT => {
@@ -249,6 +272,26 @@ pub(super) fn translate(
 /// 1.12 metadata: the shared part (indices 0-5 are the same in both versions), and the
 /// item of item entities, item frames, potions and fireworks (1.12 index 6, modern 8).
 fn metadata(raw: i32, r: &mut In, out: &mut Vec<Vec<u8>>, ctx: &super::items::Ctx) {
+    let (items, _) = read_metadata(r, ctx);
+    emit_metadata(raw, items, out);
+}
+
+/// Sends translated metadata, if there is any.
+fn emit_metadata(raw: i32, items: Vec<EntityDataItem>, out: &mut Vec<Vec<u8>>) {
+    if !items.is_empty() {
+        game(out, ClientboundSetEntityData { id: id(raw), packed_items: EntityMetadataItems(items) });
+    }
+}
+
+/// The custom name (index 2) and whether it shows (index 3) are left out: ViaMobs hides
+/// the name of a mob it turned into its modern self.
+fn without_name(items: &mut Vec<EntityDataItem>) {
+    items.retain(|i| i.index != 2 && i.index != 3);
+}
+
+/// Reads 1.12 metadata: the translated items and the raw custom name, if one was sent.
+fn read_metadata(r: &mut In, ctx: &super::items::Ctx) -> (Vec<EntityDataItem>, Option<String>) {
+    let mut name_raw = None;
     let mut items = Vec::new();
     loop {
         let Some(index) = r.u8() else { break };
@@ -269,6 +312,7 @@ fn metadata(raw: i32, r: &mut In, out: &mut Vec<Vec<u8>>, ctx: &super::items::Ct
             (0, 0) => r.u8().map(EntityDataValue::Byte),
             (1, 1) => r.varint().map(EntityDataValue::Int),
             (2, 3) => r.string().map(|name| {
+                name_raw = Some(name.clone());
                 EntityDataValue::OptionalFormattedText(
                     (!name.is_empty()).then(|| Box::new(FormattedText::Text(TextComponent::new(name)))),
                 )
@@ -279,9 +323,7 @@ fn metadata(raw: i32, r: &mut In, out: &mut Vec<Vec<u8>>, ctx: &super::items::Ct
         let Some(value) = value else { break };
         items.push(EntityDataItem { index, value });
     }
-    if !items.is_empty() {
-        game(out, ClientboundSetEntityData { id: id(raw), packed_items: EntityMetadataItems(items) });
-    }
+    (items, name_raw)
 }
 
 /// Steps over a 1.12 metadata value this translator does not use.
@@ -564,4 +606,70 @@ fn object(kind: u8, data: i32) -> Option<(EntityKind, i32)> {
         93 => (E::DragonFireball, 0),
         _ => return None,
     })
+}
+
+/// Treasure Client: TuffX+ "ViaEntities" (`viaentities:data`), the same messages as the JS
+/// and WASM editions. This engine has every modern mob, so each one the server streams is
+/// shown as itself. `INIT_PALETTE` (int n, n x UTF type), `SPAWN_ENTITY` (int id, short
+/// palette index, double x/y/z, float yaw/pitch), `DESTROY_ENTITY` (int id).
+pub(super) fn tuff_entities(data: &[u8], out: &mut Vec<Vec<u8>>) {
+    use std::str::FromStr as _;
+    static PALETTE: std::sync::Mutex<Vec<Option<EntityKind>>> = std::sync::Mutex::new(Vec::new());
+
+    struct Buf<'a>(&'a [u8], usize);
+    impl Buf<'_> {
+        fn take<const N: usize>(&mut self) -> Option<[u8; N]> {
+            let s = self.0.get(self.1..self.1 + N)?;
+            self.1 += N;
+            s.try_into().ok()
+        }
+        fn utf(&mut self) -> Option<String> {
+            let n = usize::from(u16::from_be_bytes(self.take::<2>()?));
+            let s = self.0.get(self.1..self.1 + n)?;
+            self.1 += n;
+            Some(String::from_utf8_lossy(s).into_owned())
+        }
+        fn int(&mut self) -> Option<i32> {
+            self.take::<4>().map(i32::from_be_bytes)
+        }
+        fn f64(&mut self) -> Option<f64> {
+            self.take::<8>().map(f64::from_be_bytes)
+        }
+        fn f32(&mut self) -> Option<f32> {
+            self.take::<4>().map(f32::from_be_bytes)
+        }
+    }
+
+    if !crate::tc_mods::get().via {
+        return;
+    }
+    let mut b = Buf(data, 0);
+    let _ = (|| -> Option<()> {
+        match b.utf()?.as_str() {
+            "INIT_PALETTE" => {
+                let n = b.int()?.max(0);
+                let mut list = Vec::new();
+                for _ in 0..n {
+                    list.push(EntityKind::from_str(&b.utf()?).ok());
+                }
+                *PALETTE.lock().unwrap() = list;
+            }
+            "SPAWN_ENTITY" => {
+                let raw = b.int()?;
+                let index = i16::from_be_bytes(b.take::<2>()?);
+                let pos = Vec3::new(b.f64()?, b.f64()?, b.f64()?);
+                let (yaw, pitch) = (b.f32()?, b.f32()?);
+                let kind = usize::try_from(index).ok().and_then(|i| PALETTE.lock().unwrap().get(i).copied().flatten())?;
+                let angle = |a: f32| (a * 256.0 / 360.0).round() as i32 as i8;
+                let uuid = Uuid::from_u128(0x7463_u128 << 112 | u128::from(raw as u32));
+                add(out, raw, uuid, kind, pos, (angle(yaw), angle(pitch), angle(yaw)), LpVec3::default(), 0);
+            }
+            "DESTROY_ENTITY" => {
+                let raw = b.int()?;
+                game(out, ClientboundRemoveEntities { entity_ids: vec![id(raw)] });
+            }
+            _ => {} // metadata and animations: ignored, as in the WASM edition
+        }
+        Some(())
+    })();
 }

@@ -68,6 +68,10 @@ pub struct TcMods {
     pub entity_culling: bool,
     /// Performance: Leaf Culling (0 off, 1 hollow, 2 aggressive, 3 solid).
     pub leaf_cull: u8,
+    /// ViaVersion: the master switch for ViaItems, ViaMobs and ViaBlocks.
+    pub via: bool,
+    /// Modern Block Guessing (ViaBlocks without a plugin).
+    pub via_guess: bool,
     pub tier_tagger: bool,
     /// The gamemode to show ("highest" = overall).
     pub tt_mode: String,
@@ -134,6 +138,8 @@ impl Default for TcMods {
             particle_core: true,
             entity_culling: true,
             leaf_cull: 3,
+            via: true,
+            via_guess: true,
             tier_tagger: false,
             tt_mode: "highest".to_owned(),
             ch_addons: false,
@@ -227,6 +233,8 @@ fn parse(text: &str) -> TcMods {
                     _ => 3,
                 }
             }
+            "via" => m.via = on,
+            "viaguess" => m.via_guess = on,
             "tierTagger" => m.tier_tagger = on,
             "ttMode" => m.tt_mode = v.to_owned(),
             "chAddons" => m.ch_addons = on,

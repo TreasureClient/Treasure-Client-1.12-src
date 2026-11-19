@@ -143,7 +143,10 @@ async fn pump(
                     return Ok(());
                 };
                 if let Some(legacy) = legacy.as_mut() {
-                    let moved = legacy.from_game(&body);
+                    let moved = {
+                        let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Net);
+                        legacy.from_game(&body)
+                    };
                     for body in moved.to_server {
                         tx.send_binary(body).await?;
                     }
@@ -179,17 +182,27 @@ async fn pump(
                         super::skins::receive_injected(&payload);
                     }
                     Frame::Binary(payload) => {
+                        crate::diag::lag::note_net_in(payload.len());
                         let bodies = match legacy.as_mut() {
-                            Some(legacy) => unprefixed(payload)
-                                .into_iter()
-                                .flat_map(|body| legacy.from_server(body))
-                                .collect(),
+                            Some(legacy) => {
+                                let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Net);
+                                unprefixed(payload)
+                                    .into_iter()
+                                    .flat_map(|body| legacy.from_server(body))
+                                    .collect()
+                            }
                             None => unprefixed(payload),
                         };
                         for body in bodies {
                             if incoming.send(FromServer::Bytes(body)).is_err() {
                                 log_info!("net", "eagler: azalea dropped the connection");
                                 return Ok(());
+                            }
+                        }
+                        // replies the translator made itself (the TuffX+ handshake)
+                        if let Some(legacy) = legacy.as_mut() {
+                            for body in legacy.take_to_server() {
+                                tx.send_binary(body).await?;
                             }
                         }
                     }

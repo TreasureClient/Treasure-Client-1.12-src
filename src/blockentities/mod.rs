@@ -665,6 +665,7 @@ fn sync_block_entities(
     mut carried: ResMut<CarriedEntities>,
     #[cfg(feature = "skins")] skins: Res<crate::renderer::skin::SkinTextures>,
 ) {
+    let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::BlockEnts);
     crate::prof_span!("render:sync_block_entities");
     let Some(gui) = gui else { return };
     let origin = *origin;

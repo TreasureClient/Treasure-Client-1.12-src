@@ -478,7 +478,6 @@ pub fn update_occlusion(
     mut disabled_pushed: Local<bool>,
 ) {
     crate::prof_span!("render:update_occlusion");
-    #[cfg(feature = "budget")]
     let _t = crate::diag::budget::timed(crate::diag::budget::Slot::Occlusion);
     if disabled() {
         if !*disabled_pushed && index.next_slot() > 0 {
@@ -585,7 +584,6 @@ pub fn update_occlusion(
         }
     }
 
-    #[cfg(feature = "budget")]
     crate::diag::budget::note_visible_columns(reached_sections);
 }
 

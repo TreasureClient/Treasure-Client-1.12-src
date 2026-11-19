@@ -14,6 +14,7 @@ macro_rules! counted {
 
 pub(crate) mod alloc;
 pub(crate) mod budget;
+pub(crate) mod lag;
 mod layer;
 pub(crate) mod panic_report;
 #[cfg(feature = "profiling")]

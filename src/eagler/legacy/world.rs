@@ -246,7 +246,7 @@ pub(super) fn translate(
             for _ in 0..count {
                 let (dx, dy, dz) = (r.i8()?, r.i8()?, r.i8()?);
                 let pos = (bx + i32::from(dx), by + i32::from(dy), bz + i32::from(dz));
-                game(out, chunk::block_update(pos, 0));
+                game(out, chunk::block_update(pos, chunk::state(0)));
             }
             let push = Vec3::new(f64::from(r.f32()?), f64::from(r.f32()?), f64::from(r.f32()?));
             let player_knockback = (push != Vec3::ZERO).then_some(push);

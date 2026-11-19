@@ -235,24 +235,20 @@ pub struct BotHeartbeatPlugin;
 impl azalea::app::Plugin for BotHeartbeatPlugin {
     fn build(&self, app: &mut azalea::app::App) {
         app.add_systems(azalea::app::Update, bot_heartbeat);
-        #[cfg(feature = "budget")]
         app.add_systems(azalea::app::First, bot_budget_start)
             .add_systems(azalea::app::Last, bot_budget_end)
             .add_systems(azalea_core::tick::GameTick, bot_budget_tick);
     }
 }
 
-#[cfg(feature = "budget")]
 fn bot_budget_start() {
     crate::diag::budget::bot_start();
 }
 
-#[cfg(feature = "budget")]
 fn bot_budget_end() {
     crate::diag::budget::bot_end();
 }
 
-#[cfg(feature = "budget")]
 fn bot_budget_tick() {
     crate::diag::budget::note_tick();
 }
@@ -297,6 +293,7 @@ pub(crate) fn start_bot(address: String) {
         let mut s = shared.lock().unwrap();
         s.session.status = Some(format!("Connecting to {address}...").into());
         s.session.current_address = Some(address.clone());
+        crate::eagler::legacy::set_server(&address);
         s.session
             .server_packs
             .begin(crate::gui::serverlist::pack_policy(&address));
@@ -517,7 +514,10 @@ async fn handle_event(
                     Some(format!("Spawned at ({:.1},{:.1},{:.1})", pos.x, pos.y, pos.z).into());
             }
         }
-        Event::Tick => tick::handle_tick(&bot, shared),
+        Event::Tick => {
+            let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Tick);
+            tick::handle_tick(&bot, shared);
+        }
         Event::ReceiveChunk(_) => {}
         Event::Chat(m) => chat_recv::handle_chat(&bot, shared, m),
         Event::Death(packet) => {

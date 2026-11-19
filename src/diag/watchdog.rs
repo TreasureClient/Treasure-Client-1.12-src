@@ -66,6 +66,7 @@ pub fn on_disconnected() {
 }
 
 pub fn on_chunk_received() {
+    super::lag::note_chunk();
     bump(Stat::ChunksReceived);
     if FIRST_CHUNK_MS.load(Ordering::Relaxed) == 0 {
         let _ = FIRST_CHUNK_MS.compare_exchange(
@@ -281,6 +282,9 @@ pub fn timed(phase: Phase) -> Timed {
 }
 
 pub fn note_event(nanos: u64, is_packet: bool) {
+    if is_packet {
+        super::budget::add(super::budget::Slot::Packets, std::time::Duration::from_nanos(nanos));
+    }
     EVENT_COUNT.fetch_add(1, Ordering::Relaxed);
     EVENT_NANOS.fetch_add(nanos, Ordering::Relaxed);
     if is_packet {

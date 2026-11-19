@@ -167,6 +167,24 @@ fn modern(text: &str, by_name: &HashMap<&'static str, BlockState>) -> Option<Blo
     Some(block.as_block_state())
 }
 
+/// A modern block's default state, by name ("cherry_log"), if this engine has it.
+pub(super) fn block_default(name: &str) -> Option<BlockState> {
+    tables().by_name.get(name).copied()
+}
+
+/// `target` with the direction and shape of `look` (the look-alike it replaces): a stair
+/// keeps its facing, a log its axis, a slab its half.
+pub(super) fn restyle(target: BlockState, look: BlockState) -> BlockState {
+    let look: Box<dyn BlockTrait> = look.into();
+    let mut block: Box<dyn BlockTrait> = target.into();
+    for key in ["axis", "facing", "half", "shape", "type", "waterlogged"] {
+        if let Some(value) = look.get_property(key) {
+            let _ = block.set_property(key, value);
+        }
+    }
+    block.as_block_state()
+}
+
 /// A 1.12 global block id (`id << 4 | meta`) as a modern state.
 pub(super) fn state(global: u32) -> BlockState {
     let id = tables()
@@ -178,7 +196,7 @@ pub(super) fn state(global: u32) -> BlockState {
 }
 
 /// Reads one 1.12 section's blocks into `out` (4096 modern ids, y-z-x order).
-fn read_section(r: &mut In, out: &mut [u16], special: &mut Vec<(usize, u32)>) -> Option<()> {
+fn read_section(r: &mut In, out: &mut [u16], old: &mut [u16], special: &mut Vec<(usize, u32)>) -> Option<()> {
     let bits = usize::from(r.u8()?);
     let palette_len = usize::try_from(r.varint()?).ok()?;
     let mut palette = Vec::with_capacity(palette_len);
@@ -192,6 +210,7 @@ fn read_section(r: &mut In, out: &mut [u16], special: &mut Vec<(usize, u32)>) ->
     }
     if bits == 0 || bits > 32 {
         out.fill(0);
+        old.fill(0);
         return Some(());
     }
     let legacy = &tables().legacy;
@@ -211,6 +230,7 @@ fn read_section(r: &mut In, out: &mut [u16], special: &mut Vec<(usize, u32)>) ->
             value
         };
         *slot = legacy.get(global).copied().unwrap_or(0);
+        old[i] = if global < 4096 { global as u16 } else { 0 };
         if super::blockents::is_special(global as u32) {
             special.push((i, global as u32));
         }
@@ -311,12 +331,16 @@ pub(super) fn chunk(
     below: usize,
     biome_of: impl Fn(u8) -> u32,
     specials: &mut HashMap<(i32, i32, i32), u32>,
+    dim: i32,
+    tuff: &mut super::via_tuff::Tuff,
 ) -> Option<Column> {
     let mask = r.varint()? as u32;
     let size = usize::try_from(r.varint()?).ok()?;
     let mut d = In::new(r.bytes(size)?);
 
     let mut blocks = vec![0u16; SECTIONS * 4096];
+    // the same blocks as 1.12 codes, for Modern Block Guessing
+    let mut old = vec![0u16; SECTIONS * 4096];
     let mut block_light: Vec<Option<&[u8]>> = vec![None; SECTIONS];
     let mut sky_light: Vec<Option<&[u8]>> = vec![None; SECTIONS];
     for s in 0..SECTIONS {
@@ -324,7 +348,7 @@ pub(super) fn chunk(
             continue;
         }
         let mut special = Vec::new();
-        read_section(&mut d, &mut blocks[s * 4096..(s + 1) * 4096], &mut special)?;
+        read_section(&mut d, &mut blocks[s * 4096..(s + 1) * 4096], &mut old[s * 4096..(s + 1) * 4096], &mut special)?;
         let base_y = s as i32 * 16;
         specials.retain(|p, _| p.0 >> 4 != x || p.2 >> 4 != z || p.1 >> 4 != s as i32);
         for (i, global) in special {
@@ -339,6 +363,7 @@ pub(super) fn chunk(
 
     if !full {
         let entities = block_entities(r, x, z, &mut blocks, specials);
+        modern_blocks(r, x, z, dim, None, &mut blocks, &mut old, &block_light, &sky_light, tuff);
         let entity_data = entities
             .into_iter()
             .filter_map(|e| {
@@ -367,8 +392,9 @@ pub(super) fn chunk(
     }
 
     let biomes = d.bytes(256)?;
-    fix_neighbours(&mut blocks);
     let entities = block_entities(r, x, z, &mut blocks, specials);
+    modern_blocks(r, x, z, dim, Some(biomes), &mut blocks, &mut old, &block_light, &sky_light, tuff);
+    fix_neighbours(&mut blocks);
     let block_entities: Vec<_> = entities
         .into_iter()
         .filter_map(|e| {
@@ -518,24 +544,71 @@ fn is_leaves(id: u16) -> bool {
     table.get(usize::from(id)).copied().unwrap_or(false)
 }
 
-pub(super) fn block_update(pos: (i32, i32, i32), global: u32) -> ClientboundBlockUpdate {
+/// Treasure Client: the real modern blocks in a chunk, before its looks are worked out:
+/// those a TuffX+ server sent (appended to the packet, or waiting for this chunk), and
+/// Modern Block Guessing.
+#[allow(clippy::too_many_arguments)]
+fn modern_blocks(
+    r: &mut In,
+    x: i32,
+    z: i32,
+    dim: i32,
+    biomes: Option<&[u8]>,
+    blocks: &mut [u16],
+    old: &mut [u16],
+    block_light: &[Option<&[u8]>],
+    sky_light: &[Option<&[u8]>],
+    tuff: &mut super::via_tuff::Tuff,
+) {
+    let mut sent = tuff.read(r.rest(), Some((x, z)));
+    sent.extend(tuff.chunk_loaded(x, z));
+    let t = tables();
+    let mut heights = [0u16; 256];
+    for (column, h) in heights.iter_mut().enumerate() {
+        *h = (0..256usize)
+            .rev()
+            .find(|y| t.blocking.get(usize::from(blocks[y << 8 | column])).copied().unwrap_or(false))
+            .map_or(0, |y| y as u16 + 1);
+    }
+    let guessed = super::via_guess::chunk(super::via_guess::ChunkIn {
+        cx: x,
+        cz: z,
+        dim,
+        old,
+        biomes,
+        heights,
+        sky: sky_light,
+        light: block_light,
+    });
+    let state = |id: u16| BlockState::try_from(u32::from(id)).unwrap_or(BlockState::AIR);
+    for (i, target) in guessed {
+        blocks[i] = restyle(target, state(blocks[i])).id();
+    }
+    for (pos, real) in sent {
+        if let Some(i) = at(pos.0 & 15, pos.1, pos.2 & 15) {
+            blocks[i] = real.id();
+        }
+    }
+}
+
+pub(super) fn block_update(pos: (i32, i32, i32), state: BlockState) -> ClientboundBlockUpdate {
     ClientboundBlockUpdate {
         pos: BlockPos::new(pos.0, pos.1, pos.2),
-        block_state: state(global),
+        block_state: state,
     }
 }
 
 pub(super) fn section_update(
     cx: i32,
     cz: i32,
-    records: Vec<(u8, u8, u32)>,
+    records: Vec<(u8, u8, BlockState)>,
 ) -> Vec<ClientboundSectionBlocksUpdate> {
     let mut by_section: Vec<ClientboundSectionBlocksUpdate> = Vec::new();
-    for (xz, y, global) in records {
+    for (xz, y, state) in records {
         let sy = i32::from(y >> 4);
         let entry = BlockStateWithPosition {
             pos: ChunkSectionBlockPos::new(xz >> 4, y & 15, xz & 15),
-            state: state(global),
+            state,
         };
         match by_section.iter_mut().find(|u| u.section_pos.y == sy) {
             Some(update) => update.states.push(entry),

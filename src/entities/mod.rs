@@ -1841,6 +1841,7 @@ fn sync_entities(
         Local<HashMap<i32, u32>>,
     ),
 ) {
+    let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Entities);
     crate::prof_span!("render:sync_entities");
     *variant_tick = variant_tick.wrapping_add(1);
     let recompute_variants = *variant_tick % 4 == 0;

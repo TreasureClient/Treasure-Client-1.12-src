@@ -112,6 +112,8 @@ pub fn spawn(assets: &[u8]) -> bool {
 }
 
 pub fn send(msg: &ToWorker) {
+    let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::MeshOut);
+    crate::diag::lag::note_mesh_out();
     WORKER.with(|slot| {
         let slot = slot.borrow();
         let Some(handle) = slot.as_ref() else { return };
@@ -141,6 +143,8 @@ pub(crate) fn to_buffer(bytes: &[u8]) -> js_sys::ArrayBuffer {
 }
 
 fn on_message(event: web_sys::MessageEvent) {
+    let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::MeshIn);
+    crate::diag::lag::note_mesh_in();
     let data = event.data();
     if let Some(text) = data.as_string() {
         deactivate();

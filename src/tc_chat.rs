@@ -41,6 +41,8 @@ struct State {
     pending: Vec<(String, f64)>,
     /// Lines to show in chat (from Auto Login).
     notes: Vec<String>,
+    /// Lines shown as they are (the .lag report).
+    lines: Vec<String>,
     saved: Option<BTreeMap<String, String>>,
     prompted_for: Option<String>,
     sent: Option<(String, f64)>,
@@ -204,6 +206,12 @@ fn game_ended(st: &mut State, mods: &crate::tc_mods::TcMods, now: f64) {
 pub fn on_typed(session: &mut SessionState, line: &str) -> bool {
     let trimmed = line.trim();
     let lower = trimmed.to_lowercase();
+    if lower == ".lag" || lower == ".lag full" {
+        // Treasure Client: what slows the game (diag/lag.rs)
+        let lines = crate::diag::lag::report(lower == ".lag full");
+        with(|st| st.lines.extend(lines));
+        return false;
+    }
     if lower == ".autologin" || lower.starts_with(".autologin ") {
         command(session, lower.trim_start_matches(".autologin").trim());
         return false;
@@ -278,7 +286,7 @@ fn command(session: &SessionState, args: &str) {
 
 /// Every client tick: send what is due and show notes in chat.
 pub fn tick(session: &mut SessionState) {
-    let (due, notes) = with(|st| {
+    let (due, notes, lines) = with(|st| {
         let now = now_ms();
         let mut due = Vec::new();
         st.pending.retain(|(msg, at)| {
@@ -294,7 +302,7 @@ pub fn tick(session: &mut SessionState) {
         {
             *at = now; // the server's answer counts from when it was really sent
         }
-        (due, std::mem::take(&mut st.notes))
+        (due, std::mem::take(&mut st.notes), std::mem::take(&mut st.lines))
     });
     if session.current_address.is_none() {
         with(|st| st.prompted_for = None);
@@ -303,6 +311,14 @@ pub fn tick(session: &mut SessionState) {
         if !msg.is_empty() {
             session.outgoing_chat.push(msg);
         }
+    }
+    for line in lines {
+        session.chat_incoming.push(crate::session::ChatEntry {
+            spans: crate::text::parse_formatted(&line),
+            events: None,
+            tag: crate::session::ChatTag::System,
+            original: None,
+        });
     }
     for note in notes {
         let mut spans = crate::text::parse_formatted("\u{00A7}6[Treasure Client] ");

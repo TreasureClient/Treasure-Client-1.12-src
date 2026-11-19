@@ -761,14 +761,12 @@ fn mesh_on_render_thread(mut scratch: Local<crate::client::worker::Scratch>) {
         return;
     }
     {
-        #[cfg(feature = "budget")]
         let _t = crate::diag::budget::timed(crate::diag::budget::Slot::Light);
         crate::lighting::level::pump();
     }
     let Some(queue) = crate::CHUNK_Q.get() else {
         return;
     };
-    #[cfg(feature = "budget")]
     let _t = crate::diag::budget::timed(crate::diag::budget::Slot::Mesh);
     crate::client::worker::drain_on_caller(queue, &mut scratch);
 }
@@ -892,7 +890,6 @@ fn poll_shared_state(
     mut pacer: Local<UploadPacer>,
 ) {
     crate::prof_span!("render:poll_shared_state");
-    #[cfg(feature = "budget")]
     let _t = crate::diag::budget::timed(crate::diag::budget::Slot::Poll);
     let poll_start = Instant::now();
     pacer.observe(real_time.delta_secs() * 1000.0, frame_gate.render);
@@ -1531,7 +1528,6 @@ fn collect_hud_info(
         );
     }
 
-    #[cfg(feature = "budget")]
     crate::diag::budget::note_drawn_entities(rig_node_q.iter().count());
     #[cfg(feature = "budget")]
     if let Some(sampled) = crate::diag::budget::sample() {
@@ -2082,6 +2078,7 @@ fn web_frame_gate(
         !gui.options.vsync && tc_limit.is_none(),
         std::sync::atomic::Ordering::Relaxed,
     );
+    crate::diag::lag::note_capped(tc_limit.is_some());
     let target = tc_limit.map_or(gui.options.max_fps, |l| gui.options.max_fps.min(l));
     if target >= crate::gui::MAX_FPS_UNLIMITED {
         *next_frame = None;
@@ -2149,12 +2146,10 @@ fn gate_cameras(
     }
 }
 
-#[cfg(feature = "budget")]
 fn budget_frame_start() {
     crate::diag::budget::frame_start();
 }
 
-#[cfg(feature = "budget")]
 fn budget_frame_end(gate: Res<FrameGate>) {
     crate::diag::budget::frame_end(gate.render);
 }
@@ -2194,52 +2189,42 @@ fn report_render_spans(
     }
 }
 
-#[cfg(feature = "budget")]
 fn budget_post_start() {
     crate::diag::budget::post_start();
 }
 
-#[cfg(feature = "budget")]
 fn budget_post_end() {
     crate::diag::budget::post_end();
 }
 
-#[cfg(feature = "budget")]
 fn budget_render_begin() {
     crate::diag::budget::render_begin();
 }
 
-#[cfg(feature = "budget")]
 fn budget_mark_upload() {
     crate::diag::budget::render_mark(crate::diag::budget::Phase::Upload);
 }
 
-#[cfg(feature = "budget")]
 fn budget_mark_views() {
     crate::diag::budget::render_mark(crate::diag::budget::Phase::Views);
 }
 
-#[cfg(feature = "budget")]
 fn budget_mark_views_after() {
     crate::diag::budget::render_mark(crate::diag::budget::Phase::Views);
 }
 
-#[cfg(feature = "budget")]
 fn budget_mark_acquire() {
     crate::diag::budget::render_mark(crate::diag::budget::Phase::Acquire);
 }
 
-#[cfg(feature = "budget")]
 fn budget_mark_prepare() {
     crate::diag::budget::render_mark(crate::diag::budget::Phase::Prepare);
 }
 
-#[cfg(feature = "budget")]
 fn budget_mark_draw() {
     crate::diag::budget::render_mark(crate::diag::budget::Phase::Draw);
 }
 
-#[cfg(feature = "budget")]
 fn budget_count_render_work(
     opaque: Res<
         bevy::render::render_phase::ViewBinnedRenderPhases<bevy::core_pipeline::core_3d::Opaque3d>,
@@ -2287,6 +2272,30 @@ fn budget_count_render_work(
 
 fn note_frame() {
     crate::diag::note_frame();
+}
+
+/// Treasure Client (.lag): in a world, moving or turning, and the settings.
+fn lag_note_view(view: Res<FrameView>, gui: Res<crate::gui::GuiState>, mut last: Local<Option<(DVec3, f32, f32)>>) {
+    let now = (view.camera_world, view.camera_yaw, view.camera_pitch);
+    let moving = last.is_some_and(|(p, y, x)| {
+        p.distance_squared(now.0) > 1e-6 || (y - now.1).abs() > 0.01 || (x - now.2).abs() > 0.01
+    });
+    *last = Some(now);
+    let in_world = view.in_world && !matches!(gui.screen, crate::gui::Screen::Pause);
+    crate::diag::lag::note_view(in_world, moving, || {
+        let o = &gui.options;
+        crate::diag::lag::Settings {
+            render_distance: o.render_distance,
+            render_scale: crate::gui::render_scale_percent(o.render_scale_step),
+            max_fps: o.max_fps,
+            vsync: o.vsync,
+            shaders: o.shaders_enabled,
+            smooth_lighting: o.smooth_lighting,
+            fancy_leaves: o.cutout_leaves,
+            particles: format!("{:?}", o.particles),
+            clouds: format!("{:?}", o.clouds),
+        }
+    });
 }
 
 fn sync_app_state(
@@ -2959,6 +2968,7 @@ pub fn run(
     .add_systems(Update, update_lightmap.after(FrameViewSystems))
     .add_systems(Update, sync_app_state.after(FrameViewSystems))
     .add_systems(Update, note_frame)
+    .add_systems(Update, lag_note_view.after(FrameViewSystems))
     .add_systems(
         Update,
         super::screenshot::warm_up.run_if(resource_added::<AssetsReady>),
@@ -3203,8 +3213,8 @@ pub fn run(
     }
 
     #[cfg(feature = "budget")]
+    app.add_systems(Update, report_render_spans);
     app.add_systems(First, budget_frame_start.after(limit_framerate))
-        .add_systems(Update, report_render_spans)
         .add_systems(Last, budget_frame_end)
         .add_systems(
             PostUpdate,
@@ -3215,7 +3225,6 @@ pub fn run(
                 budget_post_end.after(bevy::camera::visibility::VisibilitySystems::CheckVisibility),
             ),
         );
-    #[cfg(feature = "budget")]
     if let Some(render_app) = app.get_sub_app_mut(bevy::render::RenderApp) {
         use bevy::render::RenderSystems as Set;
         render_app.add_systems(

@@ -3869,6 +3869,7 @@ fn tick_particles(
     mut particle_rng: ResMut<ParticleRng>,
     mut live: ResMut<LiveParticles>,
 ) {
+    let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Particles);
     if live.0.is_empty() {
         return;
     }
