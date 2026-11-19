@@ -809,6 +809,9 @@ impl Legacy {
         for data in column.entity_data {
             game(out, data);
         }
+        for (pos, real) in self.tuff.take_elsewhere() {
+            game(out, chunk::block_update(pos, real));
+        }
         Some(())
     }
 

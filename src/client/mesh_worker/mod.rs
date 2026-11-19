@@ -3,6 +3,12 @@ mod host;
 #[cfg(all(target_arch = "wasm32", feature = "seed_cracker"))]
 pub(crate) use host::{error_text, page_url, to_buffer};
 #[cfg(target_arch = "wasm32")]
+pub(crate) use host::status;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn status() -> String {
+    "off (desktop)".into()
+}
+#[cfg(target_arch = "wasm32")]
 pub(crate) mod mirror;
 #[cfg(target_arch = "wasm32")]
 mod msg;

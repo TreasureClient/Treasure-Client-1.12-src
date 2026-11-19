@@ -266,6 +266,7 @@ getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 [patch.crates-io]
 bevy_camera = { path = "vendor/bevy_camera" }
 bevy_winit = { path = "vendor/bevy_winit" }
+winit = { path = "vendor/winit" }
 simdnbt = { path = "vendor/simdnbt" }
 mlua-sys = { path = "vendor/mlua-sys" }
 mlua = { path = "vendor/mlua" }

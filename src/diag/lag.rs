@@ -60,6 +60,10 @@ static BYTES: AtomicU64 = AtomicU64::new(0);
 static CHUNKS: AtomicU64 = AtomicU64::new(0);
 static MESH_IN: AtomicU64 = AtomicU64::new(0);
 static MESH_OUT: AtomicU64 = AtomicU64::new(0);
+static VIA_GUESSED: AtomicU64 = AtomicU64::new(0);
+static VIA_TUFF: AtomicU64 = AtomicU64::new(0);
+static TUFF_PALETTE: AtomicU64 = AtomicU64::new(0);
+static TUFF_ON: AtomicBool = AtomicBool::new(false);
 
 /// Settings worth knowing, as the game last reported them.
 #[derive(Clone, Default)]
@@ -73,6 +77,10 @@ pub(crate) struct Settings {
     pub fancy_leaves: bool,
     pub particles: String,
     pub clouds: String,
+    /// Objects in the game: all, with a position, cameras drawing.
+    pub entities: u32,
+    pub placed: u32,
+    pub cameras: u32,
 }
 
 static SETTINGS: Mutex<Option<Settings>> = Mutex::new(None);
@@ -113,6 +121,17 @@ pub(crate) fn note_chunk() {
 
 pub(crate) fn note_mesh_in() {
     MESH_IN.fetch_add(1, Relaxed);
+}
+
+/// Blocks changed in a chunk by Modern Block Guessing and by a TuffX+ server.
+pub(crate) fn note_via_blocks(guessed: usize, tuff: usize) {
+    VIA_GUESSED.fetch_add(guessed as u64, Relaxed);
+    VIA_TUFF.fetch_add(tuff as u64, Relaxed);
+}
+
+pub(crate) fn note_tuff(on: bool, palette: usize) {
+    TUFF_ON.store(on, Relaxed);
+    TUFF_PALETTE.store(palette as u64, Relaxed);
 }
 
 pub(crate) fn note_mesh_out() {
@@ -628,7 +647,26 @@ fn full_extra(st: &Lag, w: &Sum, out: &mut Vec<String>) {
         device()
     ));
     let s = SETTINGS.lock().unwrap().clone().unwrap_or_default();
+    let received = crate::client::tracking::received_chunks().lock().map_or(0, |c| c.len());
+    let meshed = crate::client::tracking::meshed_chunks().lock().map_or(0, |c| c.len());
+    out.push(format!(
+        "§7Mesh worker §f{}§7 · objects §f{}§7 ({} placed), cameras §f{}§7 · columns §f{received}§7 loaded, {meshed} meshed, server distance §f{}",
+        crate::client::mesh_worker::status(),
+        s.entities,
+        s.placed,
+        s.cameras,
+        azalea_world::retain::server_radius(),
+    ));
     let tc = crate::tc_mods::get();
+    out.push(format!(
+        "§7Via: §f{}§7, guessing §f{}§7 ({} blocks), TuffX+ §f{}§7 (palette {}, {} blocks)",
+        on(tc.via),
+        on(tc.via_guess),
+        VIA_GUESSED.load(Relaxed),
+        on(TUFF_ON.load(Relaxed)),
+        TUFF_PALETTE.load(Relaxed),
+        VIA_TUFF.load(Relaxed),
+    ));
     out.push(format!(
         "§7Settings: render distance §f{}§7, scale §f{}%§7, max fps §f{}§7, vsync §f{}§7, shaders §f{}§7, smooth light §f{}§7, fancy leaves §f{}§7, particles §f{}§7, clouds §f{}§7 · leaf cull §f{}§7, entity cull §f{}§7, particle core §f{}§7, perf pack §f{}",
         s.render_distance,

@@ -2275,7 +2275,15 @@ fn note_frame() {
 }
 
 /// Treasure Client (.lag): in a world, moving or turning, and the settings.
-fn lag_note_view(view: Res<FrameView>, gui: Res<crate::gui::GuiState>, mut last: Local<Option<(DVec3, f32, f32)>>) {
+#[allow(clippy::type_complexity)]
+fn lag_note_view(
+    view: Res<FrameView>,
+    gui: Res<crate::gui::GuiState>,
+    mut last: Local<Option<(DVec3, f32, f32)>>,
+    all: Query<()>,
+    placed: Query<(), With<GlobalTransform>>,
+    cameras: Query<&Camera>,
+) {
     let now = (view.camera_world, view.camera_yaw, view.camera_pitch);
     let moving = last.is_some_and(|(p, y, x)| {
         p.distance_squared(now.0) > 1e-6 || (y - now.1).abs() > 0.01 || (x - now.2).abs() > 0.01
@@ -2294,6 +2302,9 @@ fn lag_note_view(view: Res<FrameView>, gui: Res<crate::gui::GuiState>, mut last:
             fancy_leaves: o.cutout_leaves,
             particles: format!("{:?}", o.particles),
             clouds: format!("{:?}", o.clouds),
+            entities: all.iter().count() as u32,
+            placed: placed.iter().count() as u32,
+            cameras: cameras.iter().filter(|c| c.is_active).count() as u32,
         }
     });
 }

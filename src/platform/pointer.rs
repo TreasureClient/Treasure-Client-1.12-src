@@ -22,6 +22,19 @@ pub(crate) fn is_locked() -> bool {
     true
 }
 
+/// Treasure Client: Raw Input (pointer lock without the system's mouse acceleration).
+static RAW: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// The browser said no to Raw Input once; plain pointer lock from then on.
+static RAW_FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub(crate) fn set_raw(on: bool) {
+    RAW.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub(crate) fn raw_unsupported() -> bool {
+    RAW_FAILED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 #[cfg(target_arch = "wasm32")]
 mod web {
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -52,9 +65,29 @@ mod web {
         let Ok(method) = method.dyn_into::<js_sys::Function>() else {
             return;
         };
-        let Ok(promise) = method.call0(canvas) else {
+        let raw = super::RAW.load(Ordering::Relaxed) && !super::RAW_FAILED.load(Ordering::Relaxed);
+        let promise = if raw {
+            let options = js_sys::Object::new();
+            let _ = Reflect::set(&options, &"unadjustedMovement".into(), &JsValue::TRUE);
+            method.call1(canvas, &options)
+        } else {
+            method.call0(canvas)
+        };
+        let Ok(promise) = promise else {
             return;
         };
+        if raw {
+            // not supported here (or no promise at all): remember, and lock normally next click
+            if !promise.is_instance_of::<js_sys::Promise>() {
+                return;
+            }
+            let failed = Closure::<dyn FnMut(JsValue)>::new(|_: JsValue| {
+                super::RAW_FAILED.store(true, Ordering::Relaxed);
+            });
+            let _ = promise.unchecked_ref::<js_sys::Promise>().catch(&failed);
+            failed.forget(); // once per click, only while Raw Input is on
+            return;
+        }
         let Ok(catch) = Reflect::get(&promise, &JsValue::from_str("catch")) else {
             return;
         };

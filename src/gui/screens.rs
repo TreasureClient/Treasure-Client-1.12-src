@@ -469,12 +469,14 @@ pub fn draw(
         Screen::Options
         | Screen::VideoSettings
         | Screen::Controls
+        | Screen::MouseSettings
         | Screen::GameSettings
         | Screen::ManageStorage => {
             backdrop(p, state, &ctx);
             match state.screen {
                 Screen::VideoSettings => options::draw_video(p, state, &ctx),
                 Screen::Controls => options::draw_controls(p, state, &ctx),
+                Screen::MouseSettings => options::draw_mouse(p, state, &ctx),
                 Screen::GameSettings => options::draw_game(p, state, &ctx),
                 Screen::ManageStorage => options::draw_manage_storage(p, state, &ctx),
                 _ => options::draw(p, state, &ctx),

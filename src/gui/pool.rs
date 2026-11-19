@@ -113,6 +113,10 @@ pub struct GuiPool {
     pub index_capacity: usize,
     pub ranges: Vec<GuiRange>,
     pub glint: Option<Buffer>,
+    /// Treasure Client: what the buffers hold now, so an unchanged HUD isn't sent again.
+    sent_vertices: Vec<u8>,
+    sent_indices: Vec<u8>,
+    sent_glint: Vec<u8>,
 }
 
 const INITIAL_VERTICES: usize = 16384;
@@ -121,6 +125,7 @@ const INITIAL_INDICES: usize = INITIAL_VERTICES / 4 * 6;
 impl GuiPool {
     fn ensure(&mut self, device: &RenderDevice, verts: usize, indices: usize) {
         if self.vertices.is_none() || self.vertex_capacity < verts {
+            self.sent_vertices.clear();
             let mut cap = self.vertex_capacity.max(INITIAL_VERTICES);
             while cap < verts {
                 cap *= 2;
@@ -134,6 +139,7 @@ impl GuiPool {
             self.vertex_capacity = cap;
         }
         if self.indices.is_none() || self.index_capacity < indices {
+            self.sent_indices.clear();
             let mut cap = self.index_capacity.max(INITIAL_INDICES);
             while cap < indices {
                 cap *= 2;
@@ -157,14 +163,25 @@ pub fn extract_gui(
     mut pool: ResMut<GuiPool>,
 ) {
     let mut frame = frames.0.lock();
+    let pool = &mut *pool;
     pool.ranges.clear();
     let render = gate.as_ref().is_none_or(|g| g.render);
 
     if render && !frame.indices.is_empty() {
         pool.ensure(&device, frame.vertices.len(), frame.indices.len());
         if let (Some(vertices), Some(indices)) = (&pool.vertices, &pool.indices) {
-            queue.write_buffer(vertices, 0, bytemuck::cast_slice(&frame.vertices));
-            queue.write_buffer(indices, 0, bytemuck::cast_slice(&frame.indices));
+            let v: &[u8] = bytemuck::cast_slice(&frame.vertices);
+            let i: &[u8] = bytemuck::cast_slice(&frame.indices);
+            if pool.sent_vertices != v {
+                queue.write_buffer(vertices, 0, v);
+                pool.sent_vertices.clear();
+                pool.sent_vertices.extend_from_slice(v);
+            }
+            if pool.sent_indices != i {
+                queue.write_buffer(indices, 0, i);
+                pool.sent_indices.clear();
+                pool.sent_indices.extend_from_slice(i);
+            }
             pool.ranges.extend_from_slice(&frame.ranges);
         }
     }
@@ -177,8 +194,11 @@ pub fn extract_gui(
             mapped_at_creation: false,
         })
     });
-    if render {
-        queue.write_buffer(glint, 0, bytemuck::bytes_of(&frame.glint));
+    let g = bytemuck::bytes_of(&frame.glint);
+    if render && pool.sent_glint != g {
+        queue.write_buffer(glint, 0, g);
+        pool.sent_glint.clear();
+        pool.sent_glint.extend_from_slice(g);
     }
 
     frame.vertices.clear();

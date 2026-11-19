@@ -256,6 +256,9 @@ const VOLUME_SLIDER_ID_BASE: u32 = 7;
 const SCREEN_EFFECTS_SLIDER_ID: u32 = 30;
 
 const MAX_FRAMERATE_SLIDER_ID: u32 = 31;
+/// Treasure Client: Mouse Settings sliders.
+const MOUSE_SENSITIVITY_SLIDER_ID: u32 = 40;
+const SCROLL_SENSITIVITY_SLIDER_ID: u32 = 41;
 
 const FRAMERATE_STEP: u32 = 10;
 
@@ -1649,6 +1652,49 @@ const BIND_NAME_GAP: f32 = 8.0;
 const COLLISION_COLOR: u32 = 0xFFFF_FF00;
 const COLLISION_W: f32 = 3.0;
 
+/// Treasure Client: Controls > Mouse Settings.
+pub fn draw_mouse(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
+    draw_title(p, ctx, "Mouse Settings");
+    let left = (ctx.vw / 2.0 - GRID_LEFT_OFFSET).floor();
+    let top = (ctx.vh / 6.0).floor() + 24.0;
+    let cell = |column: f32, row: f32| (left + column * COLUMN_STEP, top + row * 24.0);
+
+    let (x, y) = cell(0.0, 0.0);
+    opt_slider!(p, ctx, state; x, y, MOUSE_SENSITIVITY_SLIDER_ID, mouse_sensitivity, 0,
+        crate::gui::MOUSE_SENSITIVITY_MAX, sensitivity_label);
+    let (x, y) = cell(1.0, 0.0);
+    opt_toggle!(p, ctx, state; x, y, "Invert Mouse", invert_mouse);
+
+    let (x, y) = cell(0.0, 1.0);
+    opt_slider!(p, ctx, state; x, y, SCROLL_SENSITIVITY_SLIDER_ID, scroll_sensitivity,
+        crate::gui::SCROLL_SENSITIVITY_MIN, crate::gui::SCROLL_SENSITIVITY_MAX, scroll_label);
+    let (x, y) = cell(1.0, 1.0);
+    opt_toggle!(p, ctx, state; x, y, "Raw Input", raw_input);
+
+    let note = if state.options.raw_input && crate::platform::pointer::raw_unsupported() {
+        "This browser can't turn off mouse acceleration"
+    } else {
+        "Raw Input turns off the system's mouse acceleration"
+    };
+    p.text_centered(note, ctx.vw / 2.0, top + 2.0 * 24.0 + 8.0, 0xA0A0A0, true);
+
+    if draw_done(p, ctx) {
+        state.nav = Some(Screen::Controls);
+    }
+}
+
+fn sensitivity_label(value: i32) -> String {
+    match value {
+        0 => generic_value("Sensitivity", "*yawn*"),
+        crate::gui::MOUSE_SENSITIVITY_MAX => generic_value("Sensitivity", "HYPERSPEED!!!"),
+        v => generic_value("Sensitivity", &format!("{v}%")),
+    }
+}
+
+fn scroll_label(value: i32) -> String {
+    generic_value("Scroll Sensitivity", &format!("{:.1}x", value as f32 / 10.0))
+}
+
 pub fn draw_controls(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     draw_title(p, ctx, tr::controls_title());
 
@@ -1674,6 +1720,24 @@ pub fn draw_controls(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     let bar_x = left + row_w + SCROLLBAR_GAP;
     let reset_x = bar_x - RESET_W - BIND_PADDING;
     let change_x = reset_x - BIND_BUTTON_GAP - CHANGE_W;
+
+    // Treasure Client: Mouse Settings, like modern Minecraft's Controls screen
+    #[cfg(not(feature = "mobile_ui"))]
+    let (list_y, list_h) = {
+        let mouse = Button::new(
+            centered_x(ctx.vw),
+            list_y,
+            WIDGET_WIDTH_BIG,
+            WIDGET_HEIGHT,
+            "Mouse Settings...",
+        );
+        if mouse.draw(p, screen_ctx) {
+            state.keybinds.capturing = None;
+            state.nav = Some(Screen::MouseSettings);
+        }
+        let advance = WIDGET_HEIGHT + ROW_SPACING;
+        (list_y + advance, (list_h - advance).max(0.0))
+    };
 
     #[cfg(feature = "mobile_ui")]
     let (list_y, list_h) = {

@@ -28,6 +28,10 @@ pub(super) struct Tuff {
     /// Blocks for chunks that haven't arrived yet.
     pending: HashMap<(i32, i32), Vec<((i32, i32, i32), BlockState)>>,
     loaded: HashSet<(i32, i32)>,
+    /// Blocks for other, already loaded chunks that came with an arriving chunk: they
+    /// are sent as block updates after it (writing them into the arriving chunk put them
+    /// in the wrong place and broke its terrain).
+    elsewhere: Vec<((i32, i32, i32), BlockState)>,
     /// The server has the plugin and we opted in.
     pub(super) on: bool,
 }
@@ -75,6 +79,7 @@ impl Tuff {
     /// A new connection: forget the old server.
     pub(super) fn reset(&mut self) {
         *self = Self::default();
+        crate::diag::lag::note_tuff(false, 0);
     }
 
     /// A respawn (a proxy server switch only sends a respawn): opt in again.
@@ -89,6 +94,11 @@ impl Tuff {
     pub(super) fn chunk_loaded(&mut self, cx: i32, cz: i32) -> Vec<((i32, i32, i32), BlockState)> {
         self.loaded.insert((cx, cz));
         self.pending.remove(&(cx, cz)).unwrap_or_default()
+    }
+
+    /// Blocks for other loaded chunks that came with the last chunk.
+    pub(super) fn take_elsewhere(&mut self) -> Vec<((i32, i32, i32), BlockState)> {
+        std::mem::take(&mut self.elsewhere)
     }
 
     pub(super) fn unload(&mut self, cx: i32, cz: i32) {
@@ -162,6 +172,7 @@ impl Tuff {
             _ => return None,
         }
         self.on = true;
+        crate::diag::lag::note_tuff(true, self.palette.len());
         Some(())
     }
 
@@ -177,8 +188,12 @@ impl Tuff {
             return;
         };
         let chunk = (pos.0 >> 4, pos.2 >> 4);
-        if arriving == Some(chunk) || self.loaded.contains(&chunk) {
+        if arriving == Some(chunk) || (arriving.is_none() && self.loaded.contains(&chunk)) {
             out.push((pos, state));
+            return;
+        }
+        if self.loaded.contains(&chunk) {
+            self.elsewhere.push((pos, state));
             return;
         }
         if !self.pending.contains_key(&chunk) && self.pending.len() >= MAX_PENDING_CHUNKS {

@@ -460,10 +460,13 @@ pub(super) fn mouse_look(
     }
     #[cfg(not(feature = "mobile_ui"))]
     {
+        crate::platform::pointer::set_raw(state.options.raw_input);
         let hand = if state.screen.is_open() || !crate::platform::pointer::is_locked() {
             Vec2::ZERO
         } else {
-            motion.delta * LOOK_SCALE
+            // Treasure Client: Mouse Settings (sensitivity, invert)
+            let invert = if state.options.invert_mouse { -1.0 } else { 1.0 };
+            motion.delta * Vec2::new(1.0, invert) * state.options.look_scale()
         };
         if hand == Vec2::ZERO && !crate::modules::hooks::drives_look() {
             return;
@@ -1117,6 +1120,11 @@ pub(crate) fn wheel_notches(wheel: &AccumulatedMouseScroll) -> Vec2 {
     wheel.delta / per
 }
 
+/// Treasure Client: hotbar scrolling with the Scroll Sensitivity setting.
+fn hotbar_notches(wheel: &AccumulatedMouseScroll, options: &crate::gui::GuiOptions) -> Vec2 {
+    wheel_notches(wheel) * (options.scroll_sensitivity as f32 / 10.0)
+}
+
 pub(crate) fn accumulate_scroll(acc: &mut (f64, f64), dx: f64, dy: f64) -> (i32, i32) {
     if acc.0 != 0.0 && dx.signum() != acc.0.signum() {
         acc.0 = 0.0;
@@ -1162,7 +1170,7 @@ pub(super) fn handle_hotbar_scroll(
     if state.screen.is_open() {
         return;
     }
-    let notches = wheel_notches(&wheel);
+    let notches = hotbar_notches(&wheel, &state.options);
     let (dx, dy) = (notches.x as f64, notches.y as f64);
     if dx == 0.0 && dy == 0.0 {
         return;
@@ -1417,6 +1425,7 @@ pub(super) fn toggle_screen(
                     Screen::ExplorePacks => Screen::ResourcePacks,
                     #[cfg(feature = "mobile_ui")]
                     Screen::TouchLayout => Screen::Controls,
+                    Screen::MouseSettings => Screen::Controls,
                     #[cfg(all(target_arch = "wasm32", feature = "asset_download"))]
                     Screen::ExportAssets => Screen::ManageStorage,
                     s if s.is_options() => Screen::Options,

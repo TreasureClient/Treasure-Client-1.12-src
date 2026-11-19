@@ -15,6 +15,25 @@ pub fn active() -> bool {
 
 static DIED: AtomicBool = AtomicBool::new(false);
 
+/// Treasure Client (.lag full): why the worker isn't running, if it isn't.
+static WHY: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+static READY: AtomicBool = AtomicBool::new(false);
+
+fn note_why(text: &str) {
+    if let Ok(mut why) = WHY.lock() {
+        *why = text.chars().take(120).collect();
+    }
+}
+
+/// "on", "starting" or "off (reason)".
+pub(crate) fn status() -> String {
+    if active() {
+        return if READY.load(Ordering::Relaxed) { "on".into() } else { "starting".into() };
+    }
+    let why = WHY.lock().map(|w| w.clone()).unwrap_or_default();
+    if why.is_empty() { "off (never started)".into() } else { format!("off ({why})") }
+}
+
 fn deactivate() {
     if ACTIVE.swap(false, Ordering::Relaxed) {
         DIED.store(true, Ordering::Relaxed);
@@ -62,6 +81,7 @@ pub fn spawn(assets: &[u8]) -> bool {
     let worker = match web_sys::Worker::new_with_options(&worker_url(), &options) {
         Ok(worker) => worker,
         Err(e) => {
+            note_why(&format!("no worker: {}", describe(&e)));
             log_warn!(
                 "mesh",
                 "no mesh worker ({}); meshing and lighting stay in the frame",
@@ -78,6 +98,7 @@ pub fn spawn(assets: &[u8]) -> bool {
     let error = Closure::<dyn FnMut(web_sys::Event)>::new(|e: web_sys::Event| {
         deactivate();
         let message = error_text(&e);
+        note_why(&format!("failed: {message}"));
         log_error!(
             "mesh",
             "the mesh worker failed ({message}); meshing falls back to the frame"
@@ -94,6 +115,7 @@ pub fn spawn(assets: &[u8]) -> bool {
             .post_message_with_transfer(&init, &js_sys::Array::of1(&assets))
             .is_ok();
     if !ok {
+        note_why("could not be handed the game");
         log_warn!("mesh", "the mesh worker could not be handed the module");
         return false;
     }
@@ -131,6 +153,7 @@ pub fn send(msg: &ToWorker) {
         );
         if !posted.0 {
             deactivate();
+            note_why("stopped accepting messages");
             log_error!("mesh", "the mesh worker stopped accepting messages");
         }
     });
@@ -148,6 +171,7 @@ fn on_message(event: web_sys::MessageEvent) {
     let data = event.data();
     if let Some(text) = data.as_string() {
         deactivate();
+        note_why(&format!("could not start: {text}"));
         log_error!("mesh", "the mesh worker could not start: {text}");
         return;
     }
@@ -177,9 +201,13 @@ fn on_message(event: web_sys::MessageEvent) {
 
 fn apply(msg: FromWorker) {
     match msg {
-        FromWorker::Ready => log_info!("mesh", "the mesh worker is ready"),
+        FromWorker::Ready => {
+            READY.store(true, Ordering::Relaxed);
+            log_info!("mesh", "the mesh worker is ready");
+        }
         FromWorker::Failed(message) => {
             deactivate();
+            note_why(&format!("gave up: {message}"));
             log_error!("mesh", "the mesh worker gave up: {message}");
         }
         FromWorker::Sections {

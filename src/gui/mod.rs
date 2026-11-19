@@ -141,6 +141,8 @@ pub enum Screen {
     Options,
     VideoSettings,
     Controls,
+    /// Treasure Client: Controls > Mouse Settings.
+    MouseSettings,
     #[cfg(feature = "mobile_ui")]
     TouchLayout,
     GameSettings,
@@ -313,6 +315,7 @@ impl Screen {
             Screen::Options
                 | Screen::VideoSettings
                 | Screen::Controls
+                | Screen::MouseSettings
                 | Screen::GameSettings
                 | Screen::ManageStorage
         )
@@ -551,6 +554,13 @@ pub struct GuiOptions {
     pub inactivity_fps_limit: InactivityFpsLimit,
     pub auto_jump: bool,
     pub toggle_sprint: bool,
+    /// Treasure Client: Mouse Settings (0-200%, 100 = vanilla's default).
+    pub mouse_sensitivity: u32,
+    pub invert_mouse: bool,
+    /// Tenths: 10 = 1.0x.
+    pub scroll_sensitivity: u32,
+    /// Mouse movement without the system's pointer acceleration.
+    pub raw_input: bool,
     pub main_hand_left: bool,
     #[cfg(feature = "skins")]
     pub skin_parts: u8,
@@ -590,6 +600,22 @@ pub const TOAST_TIME_MIN: i32 = 5;
 pub const TOAST_TIME_MAX: i32 = 100;
 
 pub const AUTO_JUMP_DEFAULT: bool = cfg!(feature = "mobile_ui");
+
+pub const MOUSE_SENSITIVITY_DEFAULT: u32 = 100;
+pub const MOUSE_SENSITIVITY_MAX: i32 = 200;
+pub const SCROLL_SENSITIVITY_DEFAULT: u32 = 10;
+pub const SCROLL_SENSITIVITY_MIN: i32 = 1;
+pub const SCROLL_SENSITIVITY_MAX: i32 = 100;
+
+impl GuiOptions {
+    /// Degrees turned per pixel of mouse movement, the same curve as Minecraft's
+    /// sensitivity slider (100% = 0.15, the old fixed value).
+    pub fn look_scale(&self) -> f32 {
+        let s = self.mouse_sensitivity.min(MOUSE_SENSITIVITY_MAX as u32) as f32 / 200.0;
+        let f = s * 0.6 + 0.2;
+        f * f * f * 8.0 * 0.15
+    }
+}
 
 pub const TOGGLE_SPRINT_DEFAULT: bool = cfg!(target_arch = "wasm32");
 
@@ -775,6 +801,16 @@ impl GuiOptions {
             toggle_sprint: value("toggleSprint")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(TOGGLE_SPRINT_DEFAULT),
+            mouse_sensitivity: value("mouseSensitivity")
+                .and_then(|v| v.as_u64())
+                .map_or(MOUSE_SENSITIVITY_DEFAULT, |v| v.min(MOUSE_SENSITIVITY_MAX as u64) as u32),
+            invert_mouse: value("invertMouse").and_then(|v| v.as_bool()).unwrap_or(false),
+            scroll_sensitivity: value("scrollSensitivity")
+                .and_then(|v| v.as_u64())
+                .map_or(SCROLL_SENSITIVITY_DEFAULT, |v| {
+                    v.clamp(SCROLL_SENSITIVITY_MIN as u64, SCROLL_SENSITIVITY_MAX as u64) as u32
+                }),
+            raw_input: value("rawMouseInput").and_then(|v| v.as_bool()).unwrap_or(false),
             main_hand_left: value("mainHand").and_then(|v| v.as_str().map(|s| s == "left"))
                 == Some(true),
             #[cfg(feature = "skins")]
@@ -1019,6 +1055,10 @@ fn options_json(options: &GuiOptions) -> serde_json::Value {
         "inactivityFpsLimit": options.inactivity_fps_limit.name(),
         "autoJump": options.auto_jump,
         "toggleSprint": options.toggle_sprint,
+        "mouseSensitivity": options.mouse_sensitivity,
+        "invertMouse": options.invert_mouse,
+        "scrollSensitivity": options.scroll_sensitivity,
+        "rawMouseInput": options.raw_input,
         "mainHand": if options.main_hand_left { "left" } else { "right" },
         "fpsCounter": options.fps_counter,
         "shaders": options.shaders_enabled,

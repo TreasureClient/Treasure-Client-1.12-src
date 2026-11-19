@@ -47,6 +47,9 @@ enum Kind {
     DoublePlant,
     Grassy,
     Snow,
+    /// Treasure Client: 1.12 worked out stair corners and double chests while drawing.
+    Stairs,
+    Chest,
 }
 
 struct Tables {
@@ -97,6 +100,8 @@ fn build() -> Tables {
                 Kind::DoublePlant
             }
             "grass_block" | "podzol" | "mycelium" => Kind::Grassy,
+            n if n.ends_with("_stairs") => Kind::Stairs,
+            "chest" | "trapped_chest" => Kind::Chest,
             "snow" | "snow_block" => Kind::Snow,
             _ => Kind::Other,
         };
@@ -581,10 +586,15 @@ fn modern_blocks(
         light: block_light,
     });
     let state = |id: u16| BlockState::try_from(u32::from(id)).unwrap_or(BlockState::AIR);
+    crate::diag::lag::note_via_blocks(guessed.len(), sent.len());
     for (i, target) in guessed {
         blocks[i] = restyle(target, state(blocks[i])).id();
     }
     for (pos, real) in sent {
+        // only this chunk's own blocks (others go out as block updates)
+        if pos.0 >> 4 != x || pos.2 >> 4 != z {
+            continue;
+        }
         if let Some(i) = at(pos.0 & 15, pos.1, pos.2 & 15) {
             blocks[i] = real.id();
         }
@@ -707,10 +717,95 @@ fn fix_neighbours(blocks: &mut [u16]) {
                 let snowy = kind(get(x, y + 1, z)) == Kind::Snow;
                 let _ = block.set_property("snowy", if snowy { "true" } else { "false" });
             }
+            Kind::Stairs => {
+                let Some(shape) = stair_shape(&*block, |dx, dz| {
+                    let n = get(x + dx, y, z + dz);
+                    (kind(n) == Kind::Stairs).then(|| state(n).into())
+                }) else {
+                    continue;
+                };
+                let _ = block.set_property("shape", shape);
+            }
+            Kind::Chest => {
+                let Some(facing) = block.get_property("facing").and_then(dir) else { continue };
+                let name = block.id();
+                let partner = |d: (i32, i32)| {
+                    let n = get(x + d.0, y, z + d.1);
+                    if kind(n) != Kind::Chest {
+                        return false;
+                    }
+                    let other: Box<dyn BlockTrait> = state(n).into();
+                    other.id() == name && other.get_property("facing").and_then(dir) == Some(facing)
+                };
+                let ty = if partner(clockwise(facing)) {
+                    "left"
+                } else if partner(counter_clockwise(facing)) {
+                    "right"
+                } else {
+                    "single"
+                };
+                let _ = block.set_property("type", ty);
+            }
             Kind::Gate | Kind::Snow | Kind::Other => continue,
         }
         blocks[i] = block.as_block_state().id();
     }
+}
+
+/// "north" -> (dx, dz).
+fn dir(name: &str) -> Option<(i32, i32)> {
+    match name {
+        "north" => Some((0, -1)),
+        "south" => Some((0, 1)),
+        "west" => Some((-1, 0)),
+        "east" => Some((1, 0)),
+        _ => None,
+    }
+}
+
+/// Seen from above: north -> east -> south -> west.
+fn clockwise((dx, dz): (i32, i32)) -> (i32, i32) {
+    (-dz, dx)
+}
+
+fn counter_clockwise((dx, dz): (i32, i32)) -> (i32, i32) {
+    (dz, -dx)
+}
+
+/// The corner shape of a stair from the stairs in front of and behind it, the same rule
+/// as Minecraft's (StairBlock.getStairsShape). `stairs_at(dx, dz)` gives a neighbouring
+/// stair on the same level, if there is one.
+fn stair_shape(
+    block: &dyn BlockTrait,
+    stairs_at: impl Fn(i32, i32) -> Option<Box<dyn BlockTrait>>,
+) -> Option<&'static str> {
+    let facing = dir(block.get_property("facing")?)?;
+    let half = block.get_property("half")?;
+    let look = |d: (i32, i32)| {
+        let n = stairs_at(d.0, d.1)?;
+        let f = dir(n.get_property("facing")?)?;
+        (n.get_property("half")? == half).then_some(f)
+    };
+    // a side can take a corner unless a matching stair is there
+    let can_take = |d: (i32, i32)| {
+        stairs_at(d.0, d.1).is_none_or(|n| {
+            n.get_property("facing").and_then(dir) != Some(facing) || n.get_property("half") != Some(half)
+        })
+    };
+    let axis = |d: (i32, i32)| d.0 != 0;
+    if let Some(front) = look(facing)
+        && axis(front) != axis(facing)
+        && can_take((-front.0, -front.1))
+    {
+        return Some(if front == counter_clockwise(facing) { "outer_left" } else { "outer_right" });
+    }
+    if let Some(back) = look((-facing.0, -facing.1))
+        && axis(back) != axis(facing)
+        && can_take(back)
+    {
+        return Some(if back == counter_clockwise(facing) { "inner_left" } else { "inner_right" });
+    }
+    Some("straight")
 }
 
 /// 1.12 biome id -> modern biome name.
