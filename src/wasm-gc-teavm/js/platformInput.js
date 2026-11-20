@@ -350,6 +350,8 @@ async function initPlatformInput(inputImports) {
 	}));
 
 	var tcLastMouseX = 0, tcLastMouseY = 0;
+	/** when the mouse was last captured: the first moves after that can be one big jump */
+	var tcLockedAt = -1000;
 	/** @type {Object} */
 	var tcQueuedMove = null;
 	canvasElement.addEventListener("mousemove", /** @type {function(Event)} */ (currentEventListeners.mousemove = function(/** MouseEvent */ evt) {
@@ -359,6 +361,11 @@ async function initPlatformInput(inputImports) {
 		// offsetX/offsetY can make the browser lay out the page again on every mouse move
 		const locked = (document.pointerLockElement === canvasElement);
 		const mx = evt.movementX, my = evt.movementY;
+		// Treasure Client: just after the mouse is captured (clicking back in, closing a menu or chat)
+		// the browser can report the whole way to the middle of the screen as one move: drop it
+		if(locked && (mx > 40 || mx < -40 || my > 40 || my < -40) && performance.now() - tcLockedAt < 100) {
+			return;
+		}
 		// Treasure Client (Ixeris-style): while aiming, a move that arrives before the game read the last one
 		// is added onto it instead of queued as its own event, so fast mouse movement never piles up work for
 		// the game. Big jumps stay separate so the pointer-lock jump filter still sees them.
@@ -536,6 +543,7 @@ async function initPlatformInput(inputImports) {
 
 	if(pointerLockSupported) {
 		document.addEventListener("pointerlockchange", /** @type {function(Event)} */ (currentEventListeners.pointerlock = function(evt) {
+			if(document.pointerLockElement === canvasElement) tcLockedAt = performance.now();
 			window.setTimeout(function() {
 				const grab = (document.pointerLockElement === canvasElement);
 				if(!grab) {
@@ -1031,6 +1039,34 @@ async function initPlatformInput(inputImports) {
 	/**
 	 * @param {number} grab
 	 */
+	// Treasure Client: ask the browser for raw mouse movement (unadjustedMovement). Without it
+	// Chrome on Windows and ChromeOS sometimes reports big made-up jumps that throw your view
+	// somewhere random. If the browser can't do raw movement, lock normally from then on.
+	var tcRawFailed = false;
+	function tcRequestLock() {
+		if(tcRawFailed) {
+			const q = canvasElement.requestPointerLock();
+			if(q && q.catch) q.catch(function() {});
+			return;
+		}
+		try {
+			const p = canvasElement.requestPointerLock({ "unadjustedMovement": true });
+			if(p && p.catch) p.catch(function(e) {
+				if(e && e.name === "NotSupportedError") {
+					tcRawFailed = true;
+					try {
+						const q = canvasElement.requestPointerLock();
+						if(q && q.catch) q.catch(function() {});
+					}catch(ex) {
+					}
+				}
+			});
+		}catch(ex) {
+			tcRawFailed = true;
+			canvasElement.requestPointerLock();
+		}
+	}
+
 	function mouseSetGrabbed(grab) {
 		if(!pointerLockSupported) return;
 		pointerLockFlag = !!grab;
@@ -1039,7 +1075,7 @@ async function initPlatformInput(inputImports) {
 		if(grab) {
 			pointerLockWaiting = true;
 			try {
-				canvasElement.requestPointerLock();
+				tcRequestLock();
 			}catch(ex) {
 			}
 			if(mouseUngrabTimeout !== -1) window.clearTimeout(mouseUngrabTimeout);
@@ -1047,7 +1083,7 @@ async function initPlatformInput(inputImports) {
 			if(t - mouseUngrabTimer < 3000) {
 				mouseUngrabTimeout = window.setTimeout(function() {
 					try {
-						canvasElement.requestPointerLock();
+						tcRequestLock();
 					}catch(ex) {
 					}
 				}, 3100 - (t - mouseUngrabTimer));
