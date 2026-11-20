@@ -8,7 +8,7 @@
 //!
 //! - `tchud`: the game writes what the HUD shows (`active`, `x`, `y`, `z`, `yaw`,
 //!   `ping`, `armor`, `potions`, `held`, `sprintmode`, `sneakmode`).
-//! - `tcinworld`: 1 while in a world.
+//! - `tcinworld`: 1 while in a world, then 1 while playing (no menu, chat or inventory open).
 //! - `tcpause`: the overlay writes 3 to freeze the game (an empty screen that frees the
 //!   mouse) and 2 to go back; the game answers 0, or 4 when Escape closed it.
 //! - `tczoom`: 1 while the Zoom key is held. `tcmods`: the mod settings.
@@ -97,6 +97,8 @@ pub(crate) fn set_own_uuid(uuid: u128) {
 
 static LAST_HUD: AtomicU64 = AtomicU64::new(0);
 static IN_WORLD: AtomicBool = AtomicBool::new(false);
+/// In a world with no menu, chat or inventory open (the Mod Menu key only works then).
+static PLAYING: AtomicBool = AtomicBool::new(false);
 static WROTE_IN_WORLD: AtomicBool = AtomicBool::new(false);
 
 /// Called every frame with the published game state; writes `tchud` ten times a second.
@@ -112,8 +114,11 @@ fn set_hud(out: String) {
 
 pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
     let in_world = state.hud.in_world;
-    if in_world != IN_WORLD.swap(in_world, Ordering::Relaxed) || !WROTE_IN_WORLD.swap(true, Ordering::Relaxed) {
-        set("tcinworld", &[u8::from(in_world)]);
+    let playing = in_world && !state.screen.is_open();
+    let changed = in_world != IN_WORLD.swap(in_world, Ordering::Relaxed);
+    let changed = playing != PLAYING.swap(playing, Ordering::Relaxed) || changed;
+    if changed || !WROTE_IN_WORLD.swap(true, Ordering::Relaxed) {
+        set("tcinworld", &[u8::from(in_world), u8::from(playing)]);
     }
     let now = (time * 1000.0) as u64;
     if now.saturating_sub(LAST_HUD.load(Ordering::Relaxed)) < 100 {
