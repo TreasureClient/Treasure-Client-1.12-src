@@ -3450,8 +3450,20 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
     /* ---------- FPS (real: page rAF) + CPS + data-HUD readout loop ---------- */
     var frames = 0, lastFpsT = performance.now(), fpsVal = 0, lastData = 0, lastHudRead = 0, lastModePoll = 0, lastHeapWrite = 0;
+    // Treasure Client: the game counts its own frames (window.__tcFrames, every frame including
+    // menus), so this loop runs 10 times a second instead of on every frame (one less browser
+    // callback per frame). Before the game starts it counts the page's frames itself.
+    var tcLastGameFrames = -1;
+    function tcLoopTimer() { loop(performance.now()); }
     function loop(now) {
-      frames++;
+      var gf = window.__tcFrames;
+      if (typeof gf === 'number') {
+        if (tcLastGameFrames >= 0 && gf >= tcLastGameFrames) frames += gf - tcLastGameFrames;
+        tcLastGameFrames = gf;
+      } else {
+        frames++;
+        tcLastGameFrames = -1;
+      }
       if (now - lastFpsT >= 500) {
         fpsVal = Math.round(frames * 1000 / (now - lastFpsT)); frames = 0; lastFpsT = now;
         if (state.fps) tcSetText(fpsEl, fpsVal + ' FPS');
@@ -3471,7 +3483,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         lastHeapWrite = now;
         try { var pm = performance.memory; if (pm) localStorage.setItem('_eaglercraft_1.12.tcheap', btoa(Math.round(pm.usedJSHeapSize / 1048576) + ',' + Math.round(pm.jsHeapSizeLimit / 1048576))); } catch (e) {}
       }
-      requestAnimationFrame(loop);
+      if (typeof window.__tcFrames === 'number') setTimeout(tcLoopTimer, 100); else requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
 

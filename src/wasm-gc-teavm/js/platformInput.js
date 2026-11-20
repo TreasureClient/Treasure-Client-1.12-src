@@ -160,7 +160,14 @@ async function initPlatformInput(inputImports) {
 	touchKeyboardOpenZone.style.setProperty("-webkit-tap-highlight-color", "rgba(255, 255, 255, 0)");
 	parentElement.appendChild(touchKeyboardOpenZone);
 
+	// Treasure Client: the touch offset reads the page layout (offsetLeft), which makes Chrome
+	// lay the page out again. It's only needed for touches, so it's worked out on the next touch.
+	var tcTouchOffsetDirty = true;
 	function updateTouchOffset() {
+		tcTouchOffsetDirty = true;
+	}
+	function tcUpdateTouchOffsetNow() {
+		tcTouchOffsetDirty = false;
 		touchOffsetX = 0;
 		touchOffsetY = 0;
 		var el = canvasElement;
@@ -299,7 +306,9 @@ async function initPlatformInput(inputImports) {
 			}
 		}
 		const dpr = window.devicePixelRatio;
-		if(!tcSizeDirty && dpr === tcSizeDpr && now - tcSizeCheckAt < 1000.0) {
+		// (the page-size events above catch every real change; the safety check reads the layout,
+		// so it only runs every 10 seconds)
+		if(!tcSizeDirty && dpr === tcSizeDpr && now - tcSizeCheckAt < 10000.0) {
 			return;
 		}
 		tcSizeDirty = false;
@@ -386,6 +395,7 @@ async function initPlatformInput(inputImports) {
 	 * @return {Array}
 	 */
 	function createTouchList(lstIn) {
+		if(tcTouchOffsetDirty) tcUpdateTouchOffsetNow();
 		const len = lstIn.length;
 		const ret = new Array(len);
 		for(var i = 0; i < len; ++i) {
@@ -579,29 +589,35 @@ async function initPlatformInput(inputImports) {
 		eagInfo("Note: Detected game is embedded in body, some screens may be resized to window.visualViewport instead for a better mobile experience");
 	}
 
+	// Treasure Client: waiting for the screen refresh used to start a 20 ms backup timer and cancel
+	// it again on every frame (both cost time in the browser, ~2% of the game's CPU time). Now one
+	// repeating check every 50 ms is the backup in case the browser stops sending refreshes.
+	var tcVsyncResolve = null;
+	var tcVsyncAskedAt = 0;
+	var tcVsyncBackup = -1;
+	function tcVsyncDone() {
+		const r = tcVsyncResolve;
+		if(r !== null) {
+			tcVsyncResolve = null;
+			r();
+		}
+	}
+	function tcVsyncBackupCheck() {
+		if(tcVsyncResolve !== null && performance.now() - tcVsyncAskedAt >= 20.0) {
+			tcVsyncDone();
+		}
+	}
 	function asyncRequestAnimationFrame() {
 		return new Promise(function(resolve) {
-			if(vsyncTimeout !== -1) {
+			if(tcVsyncResolve !== null) {
 				throw new Error("Main thread is already waiting for VSync!");
 			}
-			const hasCompleted = [ false ];
-			window.requestAnimationFrame(function() {
-				if(!hasCompleted[0]) {
-					hasCompleted[0] = true;
-					if(vsyncTimeout !== -1) {
-						window.clearTimeout(vsyncTimeout);
-						vsyncTimeout = -1;
-					}
-					resolve();
-				}
-			});
-			vsyncTimeout = window.setTimeout(function() {
-				if(!hasCompleted[0]) {
-					hasCompleted[0] = true;
-					vsyncTimeout = -1;
-					resolve();
-				}
-			}, 20);
+			tcVsyncResolve = resolve;
+			tcVsyncAskedAt = performance.now();
+			window.requestAnimationFrame(tcVsyncDone);
+			if(tcVsyncBackup === -1) {
+				tcVsyncBackup = window.setInterval(tcVsyncBackupCheck, 50);
+			}
 		});
 	}
 
@@ -954,6 +970,7 @@ async function initPlatformInput(inputImports) {
 	}
 
 	function updatePlatformAndSleepImpl0(fpsLimit, vsync) {
+		window.__tcFrames = (window.__tcFrames | 0) + 1; // Treasure Client: frame count for the overlay's FPS
 		tcReportWindowSizeIfChanged();
 		if((typeof document.visibilityState !== "string") || (document.visibilityState === "visible")) {
 			if(vsyncSupport && vsync) {

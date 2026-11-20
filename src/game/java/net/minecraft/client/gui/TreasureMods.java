@@ -877,11 +877,8 @@ public class TreasureMods {
 				byte[] data = EagRuntime.getStorage("tcmods");
 				pauseCache = false;
 				if (data != null && data.length > 0) {
-					String s = new String(data, java.nio.charset.StandardCharsets.UTF_8);
-					String[] parts = s.split(",");
-					for (int i = 0; i < parts.length; i++) {
-						if (parts[i].equals("pauseUnfocused=1")) { pauseCache = true; break; }
-					}
+					String s = "," + new String(data, java.nio.charset.StandardCharsets.UTF_8) + ",";
+					pauseCache = s.indexOf(",pauseUnfocused=1,") >= 0; // (no regex split)
 				}
 			}
 		} catch (Throwable t) { pauseCache = false; }
