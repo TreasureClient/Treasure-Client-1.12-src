@@ -336,7 +336,12 @@ public class PlatformInput {
 				evt.stopPropagation();
 				mouseX = (int)(getOffsetX(evt, touchOffsetXTeaVM) * windowDPI);
 				mouseY = windowHeight - (int)(getOffsetY(evt, touchOffsetYTeaVM) * windowDPI) - 1;
-				if(pointerLockFlag && tcAcceptMove(evt.getMovementX(), evt.getMovementY())) {
+				// Treasure Client: just after the mouse is captured (clicking back in, closing a menu or
+				// chat) the browser can report the whole way to the middle of the screen as one move
+				boolean tcFreshJump = Math.abs(evt.getMovementX()) > 40 || Math.abs(evt.getMovementY()) > 40;
+				if(tcFreshJump && PlatformRuntime.steadyTimeMillis() - tcLockedAt < 100L) {
+					// dropped
+				}else if(pointerLockFlag && tcAcceptMove(evt.getMovementX(), evt.getMovementY())) {
 					mouseDX += evt.getMovementX();
 					mouseDY += -evt.getMovementY();
 				}
@@ -544,6 +549,7 @@ public class PlatformInput {
 			win.getDocument().addEventListener(pointerLockSupported == POINTER_LOCK_MOZ ? "mozpointerlockchange" : "pointerlockchange", pointerlock = new EventListener<Event>() {
 				@Override
 				public void handleEvent(Event evt) {
+					if(isPointerLockedImpl()) tcLockedAt = PlatformRuntime.steadyTimeMillis();
 					Window.setTimeout(new TimerHandler() {
 						@Override
 						public void onTimer() {
@@ -1286,12 +1292,30 @@ public class PlatformInput {
 		return false;
 	}
 
+	// Treasure Client: ask the browser for raw mouse movement (unadjustedMovement). Without it
+	// Chrome on Windows and ChromeOS sometimes reports big made-up jumps that throw your view
+	// somewhere random. If the browser can't do raw movement, lock normally from then on.
+	@JSBody(params = { "el" }, script = "var w = window;"
+			+ "if (w.__tcRawFailed) { var q0 = el.requestPointerLock(); if (q0 && q0.catch) q0.catch(function () {}); return; }"
+			+ "try { var p = el.requestPointerLock({ unadjustedMovement: true });"
+			+ " if (p && p.catch) p.catch(function (e) { if (e && e.name === 'NotSupportedError') { w.__tcRawFailed = true;"
+			+ " try { var q = el.requestPointerLock(); if (q && q.catch) q.catch(function () {}); } catch (e2) {} } });"
+			+ "} catch (e) { w.__tcRawFailed = true; el.requestPointerLock(); }")
+	private static native void tcRequestRawLock(HTMLElement el);
+
+	/** When the mouse was last captured: the first moves after that can be one big jump. */
+	private static long tcLockedAt = -1000L;
+
 	private static void callRequestPointerLock(HTMLElement el) {
 		switch(pointerLockSupported) {
 		case POINTER_LOCK_CORE:
 			try {
-				el.requestPointerLock();
+				tcRequestRawLock(el);
 			}catch(Throwable t) {
+				try {
+					el.requestPointerLock();
+				}catch(Throwable t2) {
+				}
 			}
 			break;
 		case POINTER_LOCK_MOZ:
