@@ -718,15 +718,18 @@ public class TreasureMods {
 			// Treasure Client — tell the overlay whether we're in a world, so the
 			// out-of-game Mod Menu can show the theme background (and the in-game Mod
 			// Menu is left untouched, showing the paused world behind it).
-			if (now - lastInWorldWrite > 250L) {
+			if (now - lastInWorldWrite >= 40L) {
 				lastInWorldWrite = now;
 				try {
 					boolean inWorld = (mc.world != null && mc.player != null);
-					int iw = inWorld ? 1 : 0;
+					// second byte: playing (in a world with no menu, chat or inventory open), so the
+					// Mod Menu key only works in-game
+					boolean playing = inWorld && mc.currentScreen == null;
+					int iw = (inWorld ? 1 : 0) | (playing ? 2 : 0);
 					if (iw != tcInWorldWritten || now - tcInWorldWriteAt > 5000L) { // only on change (plus a slow refresh)
 						tcInWorldWritten = iw;
 						tcInWorldWriteAt = now;
-						EagRuntime.setStorage("tcinworld", new byte[] { (byte) iw });
+						EagRuntime.setStorage("tcinworld", new byte[] { (byte) (iw & 1), (byte) (iw >> 1) });
 					}
 				} catch (Throwable t) {}
 			}

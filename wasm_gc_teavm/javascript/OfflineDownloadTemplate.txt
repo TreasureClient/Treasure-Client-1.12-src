@@ -3603,7 +3603,11 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       // key doesn't close the menu, and letters aren't eaten).
       // Mod Menu open/close. Works even while the search box has focus, unless the
       // menu key types a character (then it belongs in the box).
-      if (state.menuKeyCode && e.code === state.menuKeyCode && (!tcIsTypingTarget(e) || !e.key || e.key.length !== 1)) {
+      // Treasure Client: the key only opens the Mod Menu while you're playing (in a world with no
+      // menu, chat or inventory open); it can always close it. Otherwise the key goes to the game.
+      var tcMenuShown = gui.classList.contains('open') || (window.__tcHudScreen && window.__tcHudScreen.isOpen());
+      if (state.menuKeyCode && e.code === state.menuKeyCode && (!tcIsTypingTarget(e) || !e.key || e.key.length !== 1)
+          && (tcMenuShown || tcPlaying())) {
         e.preventDefault(); e.stopImmediatePropagation();
         if (tcIsTypingTarget(e)) { try { e.target.blur(); } catch (er) {} }
         // Treasure Client: in a world the key opens the Right Shift screen (logo, Mods, drag the HUD)
@@ -3830,6 +3834,15 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     // Treasure Client: the Java side writes tcinworld=1 while in a world, so the
     // Mod Menu paints the active theme's background ONLY from the main menu (never
     // in-game, where the paused world shows through unchanged).
+    // In a world with no menu, chat or inventory open (second byte of tcinworld, from the game)
+    function tcPlaying() {
+      try {
+        var r = localStorage.getItem('_eaglercraft_1.12.tcinworld');
+        if (!r) return false;
+        var b = atob(r);
+        return b.length > 1 && b.charCodeAt(0) === 1 && b.charCodeAt(1) === 1;
+      } catch (e) { return false; }
+    }
     function tcInWorld() {
       try {
         var r = localStorage.getItem('_eaglercraft_1.12.tcinworld');
