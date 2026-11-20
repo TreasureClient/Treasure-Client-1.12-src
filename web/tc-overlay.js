@@ -2094,6 +2094,9 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
 
     /* ---------- FPS (real: page rAF) + CPS + data-HUD readout loop ---------- */
     var frames = 0, lastFpsT = performance.now(), fpsVal = 0, lastData = 0, lastHudRead = 0, lastModePoll = 0, lastHeapWrite = 0;
+    // Treasure Client: in a world the game reports its own frame rate, so this loop runs 10 times
+    // a second instead of on every frame (one less browser callback per frame)
+    function tcLoopTimer() { loop(performance.now()); }
     function loop(now) {
       frames++;
       if (now - lastFpsT >= 500) {
@@ -2117,7 +2120,7 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
         lastHeapWrite = now;
         try { var pm = performance.memory; if (pm) localStorage.setItem('_eaglercraft_1.12.tcheap', btoa(Math.round(pm.usedJSHeapSize / 1048576) + ',' + Math.round(pm.jsHeapSizeLimit / 1048576))); } catch (e) {}
       }
-      requestAnimationFrame(loop);
+      if (hud && hud.active && hud.fps) setTimeout(tcLoopTimer, 100); else requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
 
