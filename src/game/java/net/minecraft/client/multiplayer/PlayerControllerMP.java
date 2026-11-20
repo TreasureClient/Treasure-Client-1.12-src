@@ -496,6 +496,7 @@ public class PlayerControllerMP {
 		net.minecraft.client.renderer.TCTreasureAnimations.onHit(); // Treasure Animations: hit punch (visual)
 		net.minecraft.client.particle.TCTreasureParticles.hit(targetEntity); // Treasure Animations: hit sparkles (visual)
 		net.minecraft.client.gui.TCCrosshairAddons.onAttack(targetEntity); // Crosshair Addons
+		net.minecraft.client.gui.TCPvpMods.onAttack(this.mc, targetEntity); // Reach Display / Combo Counter
 		this.syncCurrentPlayItem();
 		this.connection.sendPacket(new CPacketUseEntity(targetEntity));
 

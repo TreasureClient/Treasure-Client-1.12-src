@@ -132,6 +132,8 @@ public class TreasureHud {
 				}
 			} catch (Throwable t) { sb.append("held=-\n"); }
 
+			TCPvpMods.hud(player, sb); // Reach Display, Combo Counter, Item Counter
+
 			push(sb.toString());
 		} catch (Throwable t) {
 			// never let HUD reporting break the game loop

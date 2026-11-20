@@ -508,6 +508,7 @@ public class TreasureMods {
 			lowFire = false; lowFireH = 0.40f;
 			lowShield = false; lowShieldAmt = 0.30f;
 			smallTotem = false; totemScaleV = 0.40f;
+			TCPvpMods.reset();
 			net.minecraft.client.renderer.TCExtra.reset();
 			vs.clear();
 			leafCull = net.minecraft.block.TCLeafCulling.SOLID;
@@ -603,6 +604,7 @@ public class TreasureMods {
 				else if (k.equals("totemScale")) { try { totemScaleV = clamp01(Integer.parseInt(v) / 100.0f, 0.1f, 1.0f); } catch (Throwable t) {} }
 				else if (k.equals("leafCull")) leafCull = net.minecraft.block.TCLeafCulling.parseMode(v);
 				else if (k.startsWith("vs")) vs.put(k, v);
+				else if (TCPvpMods.parse(k, v)) {} // Reach, Combo, Item Counter, Scoreboard, Block Outline
 				else net.minecraft.client.renderer.TCExtra.parse(k, v);
 				}
 			}
