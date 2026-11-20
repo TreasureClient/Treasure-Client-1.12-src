@@ -452,22 +452,27 @@ pub(super) fn mouse_look(
     camera: Res<CameraView>,
     state: Res<crate::gui::GuiState>,
     time: Res<Time>,
+    mut jump: Local<LookJumpFilter>,
 ) {
     #[cfg(feature = "mobile_ui")]
     {
-        let _ = (motion, angles, shared, camera, state, time);
+        let _ = (motion, angles, shared, camera, state, time, jump);
         return;
     }
     #[cfg(not(feature = "mobile_ui"))]
     {
         crate::platform::pointer::set_raw(state.options.raw_input);
-        let hand = if state.screen.is_open() || !crate::platform::pointer::is_locked() {
+        let locked = crate::platform::pointer::is_locked();
+        let hand = if state.screen.is_open() || !locked {
             Vec2::ZERO
+        } else if !jump.accept(motion.delta, time.elapsed_secs_f64()) {
+            Vec2::ZERO // a made-up jump from the browser: the view stays put
         } else {
             // Treasure Client: Mouse Settings (sensitivity, invert)
             let invert = if state.options.invert_mouse { -1.0 } else { 1.0 };
             motion.delta * Vec2::new(1.0, invert) * state.options.look_scale()
         };
+        jump.was_locked = locked;
         if hand == Vec2::ZERO && !crate::modules::hooks::drives_look() {
             return;
         }
@@ -479,6 +484,38 @@ pub(super) fn mouse_look(
             camera.free(),
             time.delta_secs(),
         );
+    }
+}
+
+/// Treasure Client: the browser sometimes reports one big made-up mouse move (the view snaps
+/// somewhere random), most of all right after the mouse is captured again. Same rules as the
+/// JS and WASM editions: right after capturing, a big move is dropped; at other times a single
+/// move far bigger than the recent ones is dropped, but a second big one in a row is kept so
+/// real fast flicks still work.
+#[derive(Default)]
+pub(super) struct LookJumpFilter {
+    was_locked: bool,
+    locked_at: f64,
+    recent: f32,
+    dropped: bool,
+}
+
+impl LookJumpFilter {
+    fn accept(&mut self, d: Vec2, now: f64) -> bool {
+        if !self.was_locked {
+            self.locked_at = now;
+        }
+        let m = d.x.abs().max(d.y.abs());
+        if m > 40.0 && now - self.locked_at < 0.1 {
+            return false;
+        }
+        if m > 200.0 && m > 12.0 * (self.recent + 5.0) && !self.dropped {
+            self.dropped = true;
+            return false;
+        }
+        self.dropped = false;
+        self.recent = self.recent * 0.6 + m * 0.4;
+        true
     }
 }
 

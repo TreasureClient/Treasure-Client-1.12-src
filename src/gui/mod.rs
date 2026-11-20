@@ -810,7 +810,7 @@ impl GuiOptions {
                 .map_or(SCROLL_SENSITIVITY_DEFAULT, |v| {
                     v.clamp(SCROLL_SENSITIVITY_MIN as u64, SCROLL_SENSITIVITY_MAX as u64) as u32
                 }),
-            raw_input: value("rawMouseInput").and_then(|v| v.as_bool()).unwrap_or(false),
+            raw_input: value("rawMouseInput").and_then(|v| v.as_bool()).unwrap_or(true),
             main_hand_left: value("mainHand").and_then(|v| v.as_str().map(|s| s == "left"))
                 == Some(true),
             #[cfg(feature = "skins")]
