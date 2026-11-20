@@ -489,7 +489,18 @@ public class EaglerProfile {
 	}
 
 	public static boolean isDefaultUsername(String str) {
-		return str.toLowerCase().matches("^unknown\\d{7}$");
+		// Treasure Client: same as matching "^unknown\\d{7}$" (case-insensitive), without building
+		// a regular expression every game tick
+		if (str == null || str.length() != 14 || !str.regionMatches(true, 0, "unknown", 0, 7)) {
+			return false;
+		}
+		for (int i = 7; i < 14; i++) {
+			char c = str.charAt(i);
+			if (c < '0' || c > '9') {
+				return false;
+			}
+		}
+		return true;
 	}
 
 }

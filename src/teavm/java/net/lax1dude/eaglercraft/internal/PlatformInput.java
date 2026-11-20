@@ -849,7 +849,12 @@ public class PlatformInput {
 		}
 	}
 
+	/** Treasure Client: frame count for the overlay's FPS readout (it no longer runs every frame). */
+	@JSBody(params = { }, script = "window.__tcFrames = (window.__tcFrames | 0) + 1;")
+	private static native void tcCountFrame();
+
 	public static void update(int fpsLimit) {
+		tcCountFrame();
 		double r = getDevicePixelRatio(win);
 		if(r < 0.01) r = 1.0;
 		double resScale = getTreasureResScale();
