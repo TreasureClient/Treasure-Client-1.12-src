@@ -1643,8 +1643,13 @@ public class RenderGlobal implements IWorldEventListener, IResourceManagerReload
 				double d3 = player.lastTickPosX + (player.posX - player.lastTickPosX) * (double) partialTicks;
 				double d4 = player.lastTickPosY + (player.posY - player.lastTickPosY) * (double) partialTicks;
 				double d5 = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * (double) partialTicks;
-				func_181561_a(iblockstate.getSelectedBoundingBox(this.theWorld, blockpos)
-						.expandXyz(0.0020000000949949026D).offset(-d3, -d4, -d5));
+				AxisAlignedBB tcBox = iblockstate.getSelectedBoundingBox(this.theWorld, blockpos)
+						.expandXyz(0.0020000000949949026D).offset(-d3, -d4, -d5);
+				if (net.minecraft.client.gui.TCPvpMods.boOn) {
+					net.minecraft.client.gui.TCPvpMods.drawOutline(this.mc, tcBox); // Block Outline mod
+				} else {
+					func_181561_a(tcBox);
+				}
 			}
 
 			GlStateManager.depthMask(true);

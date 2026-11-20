@@ -971,7 +971,7 @@ public class GuiIngame extends Gui {
 	private FontRenderer tcSbFont;
 	private boolean tcSbUni;
 	private long tcSbAt;
-	private int tcSbN, tcSbLinesW;
+	private int tcSbN, tcSbLinesW, tcSbNamesW;
 	private final String[] tcSbNames = new String[15], tcSbPts = new String[15];
 	private final int[] tcSbPtsW = new int[15];
 
@@ -1000,7 +1000,7 @@ public class GuiIngame extends Gui {
 			collection = list;
 		}
 
-		int w = 0, k = 0;
+		int w = 0, wn = 0, k = 0;
 		for (Score score : collection) {
 			if (k >= 15) {
 				break;
@@ -1009,6 +1009,7 @@ public class GuiIngame extends Gui {
 			String name = ScorePlayerTeam.formatPlayerName(scoreplayerteam, score.getPlayerName());
 			int pts = score.getScorePoints();
 			w = Math.max(w, fr.getStringWidth(name + ": " + TextFormatting.RED + pts));
+			wn = Math.max(wn, fr.getStringWidth(name)); // Scoreboard mod: width without the red numbers
 			String s2 = TextFormatting.RED + "" + pts;
 			this.tcSbNames[k] = name;
 			this.tcSbPts[k] = s2;
@@ -1017,6 +1018,7 @@ public class GuiIngame extends Gui {
 		}
 		this.tcSbN = k;
 		this.tcSbLinesW = w;
+		this.tcSbNamesW = wn;
 	}
 
 	private void renderScoreboard(ScoreObjective objective, ScaledResolution scaledRes) {
@@ -1025,7 +1027,12 @@ public class GuiIngame extends Gui {
 
 		String tcTitle = objective.getDisplayName();
 		int tcTitleW = this.getFontRenderer().getStringWidth(tcTitle);
-		int i = Math.max(tcTitleW, this.tcSbLinesW);
+		// Treasure Client: Scoreboard mod (hide the red numbers, size, background)
+		boolean tcMod = TCPvpMods.sbOn;
+		boolean tcNoNums = tcMod && TCPvpMods.sbNoNums;
+		int tcBg = tcMod ? TCPvpMods.sbBg : 0;
+		float tcScale = tcMod ? TCPvpMods.sbScale : 1.0F;
+		int i = Math.max(tcTitleW, tcNoNums ? this.tcSbNamesW : this.tcSbLinesW);
 
 		int i1 = this.tcSbN * this.getFontRenderer().FONT_HEIGHT;
 		int j1 = scaledRes.getScaledHeight() / 2 + i1 / 3;
@@ -1041,31 +1048,51 @@ public class GuiIngame extends Gui {
 		// Treasure Client: all backgrounds in one draw, then all text, instead of switching
 		// between untextured boxes and font text three times per line (same picture: the
 		// boxes don't overlap each other or another line's text).
-		Tessellator tessellator = Tessellator.getInstance();
-		WorldRenderer wr = tessellator.getBuffer();
-		GlStateManager.enableBlend();
-		GlStateManager.disableTexture2D();
-		GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
-				RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
-		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		wr.begin(7, DefaultVertexFormats.POSITION_COLOR);
 		int top = j1 - n * fh;
-		tcRect(wr, l1 - 2, top, l, j1, 1342177280); // every score line
-		tcRect(wr, l1 - 2, top - fh - 1, l, top - 1, 1610612736); // title
-		tcSrvAdd(l1 - 6, top - fh - 4, scaledRes.getScaledWidth(), j1 + 3);
-		tcRect(wr, l1 - 2, top - 1, l, top, 1342177280); // line under the title
-		tessellator.draw();
-		GlStateManager.enableTexture2D();
-		GlStateManager.disableBlend();
+		float tcAx = scaledRes.getScaledWidth(), tcAy = scaledRes.getScaledHeight() / 2.0F;
+		boolean tcScaled = tcScale != 1.0F;
+		if (tcScaled) {
+			// grow or shrink from the middle of the right edge, where the scoreboard sits
+			GlStateManager.pushMatrix();
+			GlStateManager.translate(tcAx, tcAy, 0.0F);
+			GlStateManager.scale(tcScale, tcScale, 1.0F);
+			GlStateManager.translate(-tcAx, -tcAy, 0.0F);
+		}
+		tcSrvAdd((int) Math.floor(tcAx + (l1 - 6 - tcAx) * tcScale), (int) Math.floor(tcAy + (top - fh - 4 - tcAy) * tcScale),
+				scaledRes.getScaledWidth(), (int) Math.ceil(tcAy + (j1 + 3 - tcAy) * tcScale));
+		if (tcBg != 2) {
+			Tessellator tessellator = Tessellator.getInstance();
+			WorldRenderer wr = tessellator.getBuffer();
+			GlStateManager.enableBlend();
+			GlStateManager.disableTexture2D();
+			GlStateManager.tryBlendFuncSeparate(RealOpenGLEnums.GL_SRC_ALPHA, RealOpenGLEnums.GL_ONE_MINUS_SRC_ALPHA,
+					RealOpenGLEnums.GL_ONE, RealOpenGLEnums.GL_ZERO);
+			GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+			wr.begin(7, DefaultVertexFormats.POSITION_COLOR);
+			int lines = tcBg == 1 ? 0x28000000 : 1342177280, title = tcBg == 1 ? 0x38000000 : 1610612736;
+			tcRect(wr, l1 - 2, top, l, j1, lines); // every score line
+			tcRect(wr, l1 - 2, top - fh - 1, l, top - 1, title); // title
+			tcRect(wr, l1 - 2, top - 1, l, top, lines); // line under the title
+			tessellator.draw();
+			GlStateManager.enableTexture2D();
+			GlStateManager.disableBlend();
+		}
 
+		FontRenderer fr = this.getFontRenderer();
+		boolean shadow = tcBg == 2; // no background: a shadow keeps the text readable
 		for (int j = 1; j <= n; ++j) {
 			int k = j1 - j * fh;
-			this.getFontRenderer().drawString(this.tcSbNames[j - 1], l1, k, 553648127);
-			this.getFontRenderer().drawString(this.tcSbPts[j - 1], l - this.tcSbPtsW[j - 1], k, 553648127);
+			fr.drawString(this.tcSbNames[j - 1], (float) l1, (float) k, 553648127, shadow);
+			if (!tcNoNums) {
+				fr.drawString(this.tcSbPts[j - 1], (float) (l - this.tcSbPtsW[j - 1]), (float) k, 553648127, shadow);
+			}
 
 			if (j == n) {
-				this.getFontRenderer().drawString(tcTitle, l1 + i / 2 - tcTitleW / 2, k - fh, 553648127);
+				fr.drawString(tcTitle, (float) (l1 + i / 2 - tcTitleW / 2), (float) (k - fh), 553648127, shadow);
 			}
+		}
+		if (tcScaled) {
+			GlStateManager.popMatrix();
 		}
 	}
 

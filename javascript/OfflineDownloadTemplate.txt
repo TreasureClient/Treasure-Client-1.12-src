@@ -792,6 +792,16 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.hud-right #tc-coords { left: auto; right: 18px; }
 #tc-root.hud-right #tc-armor { right: auto; left: 18px; }
 #tc-root.hud-right #tc-potions { right: auto; left: 18px; align-items: flex-start; }
+#tc-reach { top: 112px; left: 18px; }
+#tc-root.hud-right #tc-reach { left: auto; right: 18px; }
+#tc-combo { top: 140px; left: 18px; }
+#tc-root.hud-right #tc-combo { left: auto; right: 18px; }
+#tc-items { top: 168px; left: 18px; display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
+#tc-root.hud-right #tc-items { left: auto; right: 18px; }
+#tc-items .tc-ic-row { display: flex; align-items: center; gap: 7px; }
+#tc-items .tc-ic-row b { margin-left: auto; padding-left: 10px; color: var(--txt); font-variant-numeric: tabular-nums; }
+#tc-items .tc-ic-row.zero { opacity: .45; }
+#tc-items .tc-ic-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
 #tc-fpsgraph { bottom: 18px; left: 50%; transform: translateX(-50%); padding: 6px; }
 #tc-fpsgraph canvas { display: block; }
 #tc-perfmon { top: 60px; left: 18px; display: flex; flex-direction: column; gap: 2px; min-width: 108px; }
@@ -1003,6 +1013,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     <div id="tc-helditem" class="tc-hud-box tc-hidden">—</div>
     <div id="tc-sprint" class="tc-hud-box tc-hidden">Sprint [OFF]</div>
     <div id="tc-sneak" class="tc-hud-box tc-hidden">Sneak [OFF]</div>
+    <div id="tc-reach" class="tc-hud-box tc-hidden">— blocks</div>
+    <div id="tc-combo" class="tc-hud-box tc-hidden">No combo</div>
+    <div id="tc-items" class="tc-hud-box tc-hidden"></div>
     <div id="tc-fpsgraph" class="tc-hud-box tc-hidden"><canvas id="tc-fpsgraph-cv" width="140" height="34"></canvas></div>
     <div id="tc-perfmon" class="tc-hud-box tc-hidden"></div>
   </div>
@@ -1097,6 +1110,38 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
               <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
             </div>
             <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Reach Display</b><i>How far away your last hit landed, in blocks</i></div><div class="tc-sw" data-mod="reachDisp"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Combo Counter</b><i>Hits in a row before you get hit back</i></div><div class="tc-sw" data-mod="combo"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Item Counter</b><i>How many arrows, pearls, golden apples and more you have</i></div><button class="tc-gear" data-gear="iccfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="itemCount"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="iccfg">
+                <div class="tc-cfg-row"><span>Arrows</span><div class="tc-sw on" data-mod="icArrow" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Ender pearls</span><div class="tc-sw on" data-mod="icPearl" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Golden apples</span><div class="tc-sw on" data-mod="icGapple" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Totems</span><div class="tc-sw on" data-mod="icTotem" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Splash potions</span><div class="tc-sw on" data-mod="icPotion" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Blocks</span><div class="tc-sw" data-mod="icBlocks" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Hide items you don't have</span><div class="tc-sw on" data-mod="icHideZero" style="margin-left:auto;"><i></i></div></div>
+              </div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Scoreboard</b><i>Hide the red numbers, change the size and background of the sidebar</i></div><button class="tc-gear" data-gear="sbcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="sbOn"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="sbcfg">
+                <div class="tc-cfg-row"><span>Hide the red numbers</span><div class="tc-sw on" data-mod="sbNoNums" style="margin-left:auto;"><i></i></div></div>
+                <div class="tc-cfg-row"><span>Size</span><div class="tc-slider"><input type="range" min="50" max="150" step="5" value="100" data-mod="sbScale"><span class="tc-val">100</span></div></div>
+                <div class="tc-cfg-row"><span>Background</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="sbBg">
+                    <button data-val="normal">Normal</button>
+                    <button data-val="light">Lighter</button>
+                    <button data-val="none">None</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Potion Effects</b><i>Active effects, level &amp; duration</i></div><div class="tc-sw" data-mod="potionEffects"><i></i></div></div>
             </div>
             <div class="tc-mod">
@@ -1151,6 +1196,28 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>TNT Timer</b><i>Show the fuse countdown above primed TNT</i></div><div class="tc-sw" data-mod="tntTimer"><i></i></div></div>
+            </div>
+            <div class="tc-mod">
+              <div class="tc-row"><div class="tc-lab"><b>Block Outline</b><i>Colour and thickness of the box around the block you're looking at</i></div><button class="tc-gear" data-gear="bocfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="boOn"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="bocfg">
+                <div class="tc-cfg-row"><span>Colour</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="boColor">
+                    <button data-val="black">Black</button>
+                    <button data-val="white">White</button>
+                    <button data-val="red">Red</button>
+                    <button data-val="orange">Orange</button>
+                    <button data-val="yellow">Yellow</button>
+                    <button data-val="green">Green</button>
+                    <button data-val="cyan">Cyan</button>
+                    <button data-val="blue">Blue</button>
+                    <button data-val="purple">Purple</button>
+                    <button data-val="pink">Pink</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span>Thickness</span><div class="tc-slider"><input type="range" min="1" max="6" step="1" value="2" data-mod="boWidth"><span class="tc-val">2</span></div></div>
+                <div class="tc-cfg-row"><span>Opacity</span><div class="tc-slider"><input type="range" min="10" max="100" step="5" value="40" data-mod="boAlpha"><span class="tc-val">40</span></div></div>
+                <div class="tc-cfg-row"><span>Fill the sides too</span><div class="tc-sw" data-mod="boFill" style="margin-left:auto;"><i></i></div></div>
+              </div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Custom Crosshair</b><i>Themed crosshair overlay</i></div><button class="tc-gear" data-gear="chcfg" aria-label="Settings">⚙</button><div class="tc-sw on" data-mod="crosshair"><i></i></div></div>
@@ -1488,6 +1555,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
       noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, clearLiquids:false, hitColorOn:false, hitColor:'red', hitAlpha:30, chAddons:false, chTarget:true, chMobs:false, chElytra:true, chRocket:true, chHit:true, chHitMelee:false, chShieldBreak:false, chShieldUp:false, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
       pauseUnfocused:false,
+      reachDisp:false, combo:false, itemCount:false, icArrow:true, icPearl:true, icGapple:true, icTotem:true, icPotion:true, icBlocks:false, icHideZero:true,
+      sbOn:false, sbNoNums:true, sbScale:100, sbBg:'normal', boOn:false, boColor:'black', boWidth:2, boAlpha:40, boFill:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
       theme:'normal', themeTitles:{}, themeBg:{}, titleFont:"'Outfit', system-ui, sans-serif",
@@ -1689,7 +1758,25 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           'lowShield=' + (state.lowShield ? 1 : 0),
           'lowShieldA=' + (state.lowShieldA || 30),
           'smallTotem=' + (state.smallTotem ? 1 : 0),
-          'totemScale=' + (state.totemScale || 40)
+          'totemScale=' + (state.totemScale || 40),
+          'reachDisp=' + (state.reachDisp ? 1 : 0),
+          'combo=' + (state.combo ? 1 : 0),
+          'itemCount=' + (state.itemCount ? 1 : 0),
+          'icArrow=' + (state.icArrow === false ? 0 : 1),
+          'icPearl=' + (state.icPearl === false ? 0 : 1),
+          'icGapple=' + (state.icGapple === false ? 0 : 1),
+          'icTotem=' + (state.icTotem === false ? 0 : 1),
+          'icPotion=' + (state.icPotion === false ? 0 : 1),
+          'icBlocks=' + (state.icBlocks ? 1 : 0),
+          'sbOn=' + (state.sbOn ? 1 : 0),
+          'sbNoNums=' + (state.sbNoNums === false ? 0 : 1),
+          'sbScale=' + (state.sbScale || 100),
+          'sbBg=' + (state.sbBg || 'normal'),
+          'boOn=' + (state.boOn ? 1 : 0),
+          'boColor=' + ({black:'000000', white:'ffffff', red:'ff3333', orange:'ff8800', yellow:'ffee00', green:'33ff66', cyan:'00ffff', blue:'3377ff', purple:'aa44ff', pink:'ff55cc'}[state.boColor] || '000000'),
+          'boWidth=' + (state.boWidth || 2),
+          'boAlpha=' + (state.boAlpha || 40),
+          'boFill=' + (state.boFill ? 1 : 0)
         ];
         // mod settings from the game's Video Settings ("vs" keys)
         if (state.vs && typeof state.vs === 'object') Object.keys(state.vs).forEach(function (k) { parts.push(k + '=' + state.vs[k]); });
@@ -1972,6 +2059,11 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         chAddons: '<circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
         satDisplay: '<path d="M15 4a5 5 0 0 1 0 10l-4 .5-3.5 3.5a1.8 1.8 0 1 1-2.5-2.5L8.5 12 9 8a5 5 0 0 1 6-4z"/>',
         clearLiquids: '<path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>',
+        reachDisp: '<path d="M3 12h18"/><path d="M6 9l-3 3 3 3"/><path d="M18 9l3 3-3 3"/>',
+        combo: '<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>',
+        itemCount: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14 16.5h5M16.5 14v5"/>',
+        sbOn: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+        boOn: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
         armorStatus: '<path d="M8 3L4 5v5h3v11h10V10h3V5l-4-2c-.6 1.5-2 2.5-4 2.5S8.6 4.5 8 3z"/>',
         potionEffects: '<path d="M10 3h4M10.5 3v5l-5 9a2.5 2.5 0 0 0 2.2 4h8.6a2.5 2.5 0 0 0 2.2-4l-5-9V3"/><path d="M7.5 14h9"/>',
         heldItem: '<path d="M19 3l2 2-11 11-3-3z"/><path d="M5 15l4 4M3 21l3-3"/>',
@@ -2122,7 +2214,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       sl.addEventListener('input', function () {
         showVal();
         state[key] = parseInt(sl.value, 10); save();
-        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale' || key === 'taSpeed' || key === 'agDelay') writeModsToEngine(); // engine-backed sliders
+        if (key === 'hitAlpha' || key === 'entDist' || key === 'zoomLevel' || key === 'zoomSpeed' || key === 'lowFireH' || key === 'lowShieldA' || key === 'totemScale' || key === 'taSpeed' || key === 'agDelay' || key === 'sbScale' || key === 'boWidth' || key === 'boAlpha') writeModsToEngine(); // engine-backed sliders
         else if (key === 'resolutionScale') { dynScale = 100; applyResolutionScale(); }
         else applyHud();
       });
@@ -2241,7 +2333,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     var crosshair = $('#tc-crosshair'), keystrokes = $('#tc-keystrokes'), cpsEl = $('#tc-cps'), fpsEl = $('#tc-fps');
     var coordsEl = $('#tc-coords'), dirEl = $('#tc-direction'), pingEl = $('#tc-ping'),
         armorEl = $('#tc-armor'), potionsEl = $('#tc-potions'), heldEl = $('#tc-helditem'),
-        fpsGraphEl = $('#tc-fpsgraph'), perfMonEl = $('#tc-perfmon'), sprintEl = $('#tc-sprint'), sneakEl = $('#tc-sneak');
+        fpsGraphEl = $('#tc-fpsgraph'), perfMonEl = $('#tc-perfmon'), sprintEl = $('#tc-sprint'), sneakEl = $('#tc-sneak'),
+        reachEl = $('#tc-reach'), comboEl = $('#tc-combo'), itemsEl = $('#tc-items');
     function crosshairShouldShow() {
       // Only during actual gameplay (pointer locked to the canvas), never on menus.
       var locked = !!(document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement);
@@ -2322,6 +2415,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       perfMonEl.classList.toggle('tc-hidden', !state.perfMonitor);
       sprintEl.classList.toggle('tc-hidden', !state.sprintStatus);
       sneakEl.classList.toggle('tc-hidden', !state.sneakStatus);
+      reachEl.classList.toggle('tc-hidden', !state.reachDisp);
+      comboEl.classList.toggle('tc-hidden', !state.combo);
+      itemsEl.classList.toggle('tc-hidden', !state.itemCount);
       applyHudPositions();
     }
     // re-evaluate crosshair whenever pointer-lock changes (entering/leaving gameplay)
@@ -2330,7 +2426,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     });
 
     /* ---------- custom HUD positions (persisted; applied over CSS defaults) ---------- */
-    var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps','tc-sprint','tc-sneak'];
+    var HUD_ELS = ['tc-coords','tc-direction','tc-ping','tc-armor','tc-potions','tc-helditem','tc-fpsgraph','tc-perfmon','tc-keystrokes','tc-cps','tc-fps','tc-sprint','tc-sneak','tc-reach','tc-combo','tc-items'];
     function applyHudPositions() {
       HUD_ELS.forEach(function (id) {
         var el = document.getElementById(id); if (!el) return;
@@ -2468,6 +2564,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (state.perfMonitor) renderPerfMon();
       if (state.sprintStatus) renderSprint();
       if (state.sneakStatus) renderSneak();
+      if (state.reachDisp) renderReach();
+      if (state.combo) renderCombo();
+      if (state.itemCount) renderItems();
     }
     function barColor(frac) { return frac < 0.25 ? 'low' : ''; }
     function renderArmor() {
@@ -2501,6 +2600,28 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       var txt = name + (count > 1 ? ' ×' + count : '');
       if (frac >= 0) txt += '  ' + Math.round(frac * 100) + '%';
       tcSetText(heldEl, txt);
+    }
+    // Reach Display / Combo Counter / Item Counter: only hits the server confirmed (TCPvpMods.java)
+    function renderReach() {
+      var r = hud.active ? parseFloat(hud.reach) : NaN;
+      tcSetText(reachEl, isNaN(r) ? '— blocks' : r.toFixed(2) + ' blocks');
+    }
+    function renderCombo() {
+      var c = hud.active ? (parseInt(hud.combo, 10) || 0) : 0;
+      tcSetText(comboEl, c > 0 ? c + ' combo' : 'No combo');
+    }
+    var IC_NAMES = { arrow:['Arrows','#cfd3d6'], pearl:['Ender Pearls','#2fb39a'], gapple:['Golden Apples','#f2c94c'],
+      totem:['Totems','#e3b341'], potion:['Splash Potions','#e0715a'], blocks:['Blocks','#b08155'] };
+    function renderItems() {
+      var raw = hud.active && hud.items ? hud.items.split('~') : [];
+      var html = '';
+      for (var i = 0; i < raw.length; i++) {
+        var kv = raw[i].split(':'); var nm = IC_NAMES[kv[0]]; if (!nm) continue;
+        var n = parseInt(kv[1], 10) || 0;
+        if (n === 0 && state.icHideZero !== false) continue;
+        html += '<div class="tc-ic-row' + (n === 0 ? ' zero' : '') + '"><span class="tc-ic-dot" style="background:' + nm[1] + '"></span><span>' + nm[0] + '</span><b>' + n + '</b></div>';
+      }
+      tcSetHTML(itemsEl, html || '<div class="tc-ic-row" style="color:var(--dim)">No items</div>');
     }
     function renderSprint() {
       var on = (hud.sprintmode === 'toggled');
@@ -2795,7 +2916,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         'tc-armor':'armorStatus', 'tc-potions':'potionEffects', 'tc-helditem':'heldItem',
         'tc-fpsgraph':'fpsGraph', 'tc-perfmon':'perfMonitor',
         'tc-keystrokes':'keystrokes', 'tc-cps':'cps', 'tc-fps':'fps',
-        'tc-sprint':'sprintStatus', 'tc-sneak':'sneakStatus'
+        'tc-sprint':'sprintStatus', 'tc-sneak':'sneakStatus',
+        'tc-reach':'reachDisp', 'tc-combo':'combo', 'tc-items':'itemCount'
       };
       function enabledHudEls() { return HUD_ELS.filter(function (id) { var k = HUD_ENABLE[id]; return k ? !!state[k] : false; }); }
       function enter() {

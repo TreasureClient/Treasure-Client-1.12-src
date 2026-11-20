@@ -541,6 +541,11 @@ public class GlStateManager {
 		++stateFogSerial;
 	}
 
+	/** Treasure Client: whether face culling is on (to put it back after a draw). */
+	public static boolean isCullEnabled() {
+		return stateCull;
+	}
+
 	public static void enableCull() {
 		if(!stateCull) {
 			TCHudBatch.flushIfPending(); _wglEnable(GL_CULL_FACE);

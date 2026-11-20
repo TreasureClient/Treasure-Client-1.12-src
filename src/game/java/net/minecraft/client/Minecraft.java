@@ -1443,6 +1443,7 @@ public class Minecraft implements IThreadListener {
 				&& net.minecraft.tcpvp.TCPractice.isPractice(this.world); // Treasure Client: TNT carts stack in Practice
 		net.minecraft.item.ItemArmor.tcClientSwap = this.isSingleplayer(); // Treasure Client: modern armor swap
 		net.minecraft.client.gui.TreasureMods.tick(this); // Treasure Client mods
+		net.minecraft.client.gui.TCPvpMods.tick(this); // Reach Display / Combo Counter
 		net.minecraft.client.gui.TreasureHud.tick(this); // Treasure Client HUD data bridge
 		net.minecraft.client.renderer.texture.TCTexturePreload.tick(this); // menus only: mob/menu pictures early
 		TCLagMonitor.addLogic(TCLagMonitor.L_MODS, tcM);
