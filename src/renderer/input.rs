@@ -233,6 +233,7 @@ pub(super) fn apply_gui_nav(
         state.disconnect_reason = reason;
     }
     if let Some(address) = state.connect.take() {
+        crate::gui::disconnected::note_address(&address);
         crate::client::bot::start_bot(address);
         let mut s = shared.0.lock().unwrap();
         s.render_distance_sent = None;
