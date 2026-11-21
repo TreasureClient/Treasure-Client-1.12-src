@@ -495,8 +495,22 @@ public final class ViaItemRemap {
 				r.setTagCompound(st.getTagCompound()); // share it rather than lose the swap
 			}
 		}
+		// Remember what the server really sent: when this item goes back to the server (clicking it
+		// into a crafting grid, moving it, creative), PacketBuffer writes the server's item instead
+		// of ours, so the server's ViaVersion doesn't get an id it doesn't know.
+		try {
+			net.minecraft.nbt.NBTTagCompound t = r.getTagCompound();
+			if (t == null) {
+				t = new net.minecraft.nbt.NBTTagCompound();
+				r.setTagCompound(t);
+			}
+			t.setInteger(ORIG_TAG, Item.getIdFromItem(st.getItem()) << 16 | (st.getMetadata() & 0xFFFF));
+		} catch (Throwable t) {}
 		return r;
 	}
+
+	/** NBT key on a swapped item: (server's item id << 16) | its metadata. Never sent to the server. */
+	public static final String ORIG_TAG = "TCViaOrig";
 
 	/** Lowercase, without § formatting codes, trimmed. */
 	private static String clean(String s) {

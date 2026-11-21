@@ -1039,10 +1039,10 @@ async function initPlatformInput(inputImports) {
 	/**
 	 * @param {number} grab
 	 */
-	// Treasure Client: ask the browser for raw mouse movement (unadjustedMovement). Without it
-	// Chrome on Windows and ChromeOS sometimes reports big made-up jumps that throw your view
-	// somewhere random. If the browser can't do raw movement, lock normally from then on.
-	var tcRawFailed = false;
+	// Treasure Client: raw mouse movement (unadjustedMovement) is turned off: on Chromebooks it sends
+	// the touchpad's unsmoothed movement, which made the random view jumps worse (2026-11-20).
+	// tcRequestLock() still works if this is set back to false.
+	var tcRawFailed = true;
 	function tcRequestLock() {
 		if(tcRawFailed) {
 			const q = canvasElement.requestPointerLock();

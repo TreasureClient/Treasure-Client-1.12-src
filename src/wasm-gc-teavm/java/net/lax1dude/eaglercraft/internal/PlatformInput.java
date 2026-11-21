@@ -100,11 +100,30 @@ public class PlatformInput {
 	private static float tcRecentMove = 0.0f;
 	private static boolean tcDroppedMove = false;
 
+	// for .lag full: mouse jumps dropped, and big moves let through, since the last .lag
+	private static int tcJumpsDropped, tcJumpBiggest, tcBigKept, tcBigKeptBiggest;
+
+	/** ".lag full" line about the mouse jump filter; resets the counts. */
+	public static String tcMouseLine() {
+		String s = "\u00a77  mouse: \u00a7f" + tcJumpsDropped + "\u00a77 jumps dropped"
+				+ (tcJumpsDropped > 0 ? " (biggest \u00a7f" + tcJumpBiggest + "\u00a77)" : "")
+				+ ", \u00a7f" + tcBigKept + "\u00a77 big moves let through"
+				+ (tcBigKept > 0 ? " (biggest \u00a7f" + tcBigKeptBiggest + "\u00a77)" : "");
+		tcJumpsDropped = tcJumpBiggest = tcBigKept = tcBigKeptBiggest = 0;
+		return s;
+	}
+
 	private static boolean tcAcceptMove(double dx, double dy) {
 		float m = (float) Math.max(Math.abs(dx), Math.abs(dy));
 		if (m > 200.0f && m > 12.0f * (tcRecentMove + 5.0f) && !tcDroppedMove) {
 			tcDroppedMove = true;
+			++tcJumpsDropped;
+			tcJumpBiggest = Math.max(tcJumpBiggest, (int) m);
 			return false;
+		}
+		if (m > 200.0f) {
+			++tcBigKept; // a big move let through: a fast flick, or a jump the filter missed
+			tcBigKeptBiggest = Math.max(tcBigKeptBiggest, (int) m);
 		}
 		tcDroppedMove = false;
 		tcRecentMove = tcRecentMove * 0.6f + m * 0.4f;
