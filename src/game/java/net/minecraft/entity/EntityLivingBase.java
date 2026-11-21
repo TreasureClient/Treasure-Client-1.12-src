@@ -1533,6 +1533,9 @@ public abstract class EntityLivingBase extends Entity {
 				super.handleStatusUpdate(id);
 			}
 		} else {
+			if (id == 2 || flag) {
+				net.minecraft.client.gui.TCPvpMods.onHurt(this); // Reach Display / Combo Counter
+			}
 			this.limbSwingAmount = 1.5F;
 			this.hurtResistantTime = this.maxHurtResistantTime;
 			this.maxHurtTime = 10;

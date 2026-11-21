@@ -1426,6 +1426,8 @@ public class TCLagMonitor {
 				}
 			}
 			say(mc, net.lax1dude.eaglercraft.internal.PlatformInput.tcMouseLine()); // the mouse jump filter
+			String pvp = net.minecraft.client.gui.TCPvpMods.lagLine(); // Reach Display / Combo Counter
+			if (pvp != null) say(mc, pvp);
 			String gl = glLine();
 			if (gl != null) say(mc, gl);
 			say(mc, gpuLine());
