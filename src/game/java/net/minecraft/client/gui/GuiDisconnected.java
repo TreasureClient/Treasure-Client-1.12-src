@@ -23,7 +23,13 @@ public class GuiDisconnected extends GuiScreen {
 		this.parentScreen = screen;
 		this.reason = I18n.format(reasonLocalizationKey);
 		this.message = chatComp;
+		this.tcVpn = chatComp != null && TCJavaNames.isVpnKick(chatComp.getUnformattedText());
 	}
+
+	// Treasure Client: a Java server (java://) kicked us as a VPN. Explain why and offer the
+	// Java Servers settings, where a different Wisp relay can be set.
+	private final boolean tcVpn;
+	private static final int TC_ID_JAVA_SETTINGS = 1;
 
 	/**
 	 * Fired when a key is typed (except F11 which toggles full screen). This is the
@@ -42,10 +48,31 @@ public class GuiDisconnected extends GuiScreen {
 		this.buttonList.clear();
 		this.multilineMessage = this.fontRendererObj.listFormattedStringToWidth(this.message.getFormattedText(),
 				this.width - 50);
+		if (this.tcVpn) {
+			this.multilineMessage = new java.util.ArrayList<String>(this.multilineMessage);
+			this.multilineMessage.add("");
+			String[] help = {
+					"\u00a7eWhy this happens: \u00a77Java servers see the address of the relay that connects",
+					"\u00a77your browser to them, not your own. Lots of players share that relay,",
+					"\u00a77so some servers' anti-VPN checks block it. You are not on a VPN.",
+					"\u00a7eWhat you can do: \u00a77open Java Servers and change the Wisp relay to a",
+					"\u00a77different one (or your own), or play the server's Eaglercraft address if it has one." };
+			for (String h : help) {
+				this.multilineMessage.addAll(this.fontRendererObj.listFormattedStringToWidth(h, this.width - 50));
+			}
+		}
 		this.textHeight = this.multilineMessage.size() * this.fontRendererObj.FONT_HEIGHT;
 		this.buttonList.add(new GuiButton(0, this.width / 2 - 100,
 				Math.min(this.height / 2 + this.textHeight / 2 + this.fontRendererObj.FONT_HEIGHT, this.height - 30),
 				I18n.format("gui.toMenu")));
+		if (this.tcVpn) {
+			GuiButton back = this.buttonList.get(0);
+			this.buttonList.add(new GuiButton(TC_ID_JAVA_SETTINGS, this.width / 2 - 100,
+					Math.min(back.yPosition + 24, this.height - 6 - 20), "Java Servers settings"));
+			if (back.yPosition + 24 > this.height - 26) {
+				back.yPosition = this.height - 26 - 24;
+			}
+		}
 	}
 
 	/**
@@ -55,6 +82,10 @@ public class GuiDisconnected extends GuiScreen {
 	protected void actionPerformed(GuiButton button) throws IOException {
 		if (button.id == 0) {
 			this.mc.displayGuiScreen(this.parentScreen);
+		} else if (button.id == TC_ID_JAVA_SETTINGS) {
+			// Wispcraft's own settings window opens when you "join" its settings entry
+			this.mc.displayGuiScreen(new net.minecraft.client.multiplayer.GuiConnecting(this.parentScreen, this.mc,
+					new net.minecraft.client.multiplayer.ServerData("Java Servers", "settings://", false)));
 		}
 	}
 
