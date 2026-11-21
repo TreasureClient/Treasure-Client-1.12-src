@@ -215,6 +215,23 @@ fn read_tick_snapshot(bot: &Client, shared: &SharedMutex) -> Option<TickSnapshot
             .as_ref()
             .map(|inv| inv.inventory_menu.slots())
             .unwrap_or_default();
+        // Treasure Client: Item Counter (main inventory, hotbar and offhand), 5 times a second
+        if crate::tc_mods::get().item_count {
+            static LAST: std::sync::Mutex<Option<crate::platform::time::Instant>> = std::sync::Mutex::new(None);
+            let mut last = LAST.lock().unwrap();
+            if last.is_none_or(|t| t.elapsed().as_millis() >= 200) {
+                *last = Some(crate::platform::time::Instant::now());
+                let mut items = [0u32; 6];
+                for slot in player_slots.get(9..46).unwrap_or_default() {
+                    if let ItemStack::Present(data) = slot
+                        && let Some(g) = crate::gui::tc_pvp::item_group(data.kind)
+                    {
+                        items[g] += data.count.max(0) as u32;
+                    }
+                }
+                crate::gui::tc_pvp::set_items(items);
+            }
+        }
         let hotbar: Arc<[SlotStack]> = player_slots
             .get(36..46)
             .map(|slots| cached_slots(1, slots, |s| slot_stack(s, registries, advanced_tooltips)))

@@ -676,9 +676,11 @@ fn animations(packet: &ClientboundGamePacket) {
             }
         }
         ClientboundGamePacket::HurtAnimation(p) => {
+            crate::gui::tc_pvp::on_hurt(p.id.0); // Reach Display / Combo Counter
             on_living_anim(p.id.0, |anim| anim.hurt_from(p.yaw), EntityAnim::hurt);
         }
         ClientboundGamePacket::DamageEvent(p) => {
+            crate::gui::tc_pvp::on_hurt(p.entity_id.0); // Reach Display / Combo Counter
             on_living_anim(p.entity_id.0, HumanoidAnim::damage, EntityAnim::damage);
         }
         ClientboundGamePacket::EntityEvent(p) if p.event_id == entity_event::KINETIC_HIT => {

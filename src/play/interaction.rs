@@ -326,6 +326,11 @@ pub fn handle_interaction(bot: &Client, shared: &SharedMutex) {
                         .entity_component::<azalea::entity::metadata::Player>(e.entity)
                         .is_ok();
                     crate::gui::tc_crosshair::on_attack(id, is_player);
+                    // Reach Display: from your eyes to where the crosshair touched it
+                    if let Ok(eye) = bot.eye_position() {
+                        let (dx, dy, dz) = (e.location.x - eye.x, e.location.y - eye.y, e.location.z - eye.z);
+                        crate::gui::tc_pvp::on_attack(id, (dx * dx + dy * dy + dz * dz).sqrt());
+                    }
                 }
                 crate::renderer::tc_anim::on_hit();
                 bot.attack(e.entity);

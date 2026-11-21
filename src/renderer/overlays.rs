@@ -11,6 +11,8 @@ pub(super) struct BlockOutline {
     pub(super) entity: Entity,
     pub(super) mesh: Handle<Mesh>,
     pub(super) shown: Option<TargetedBlock>,
+    /// Treasure Client: the Block Outline mod changes its colour.
+    pub(super) material: Handle<StandardMaterial>,
 }
 
 #[derive(Component)]
@@ -187,6 +189,65 @@ pub(super) fn chunk_border_mesh(ymin: f32, ymax: f32, sec_y0: f32) -> Mesh {
     }
 
     line_mesh(positions, Some(colors))
+}
+
+/// Treasure Client: the Block Outline mod. Each edge is a flat strip facing the camera (`cam`,
+/// in the box's coordinates), `hw` wide per block of distance, so any thickness works; the
+/// strips run a little past the ends to fill the corners. `fill` adds see-through sides.
+pub(super) fn strip_mesh(boxes: &[[f32; 6]], cam: Vec3, hw: f32, fill: bool, rgb: [f32; 3], alpha: f32) -> Mesh {
+    let mut edges = Vec::with_capacity(boxes.len() * 24);
+    outline_edges(boxes.iter().copied(), &mut edges);
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(edges.len() * 2 + boxes.len() * 24);
+    let mut colors: Vec<[f32; 4]> = Vec::with_capacity(positions.capacity());
+    let mut indices: Vec<u32> = Vec::new();
+    let line = [rgb[0], rgb[1], rgb[2], alpha];
+    let mut quad = |q: [Vec3; 4], col: [f32; 4], positions: &mut Vec<[f32; 3]>, colors: &mut Vec<[f32; 4]>| {
+        let at = positions.len() as u32;
+        for v in q {
+            positions.push(v.to_array());
+            colors.push(col);
+        }
+        indices.extend_from_slice(&[at, at + 1, at + 2, at, at + 2, at + 3]);
+    };
+    if fill {
+        let side = [rgb[0], rgb[1], rgb[2], alpha * 0.35];
+        for b in boxes {
+            let i = OUTLINE_INFLATE;
+            let (x0, y0, z0, x1, y1, z1) = (b[0] - i, b[1] - i, b[2] - i, b[3] + i, b[4] + i, b[5] + i);
+            let v = |x, y, z| Vec3::new(x, y, z);
+            for q in [
+                [v(x0, y0, z0), v(x1, y0, z0), v(x1, y0, z1), v(x0, y0, z1)],
+                [v(x0, y1, z0), v(x0, y1, z1), v(x1, y1, z1), v(x1, y1, z0)],
+                [v(x0, y0, z0), v(x0, y1, z0), v(x1, y1, z0), v(x1, y0, z0)],
+                [v(x0, y0, z1), v(x1, y0, z1), v(x1, y1, z1), v(x0, y1, z1)],
+                [v(x0, y0, z0), v(x0, y0, z1), v(x0, y1, z1), v(x0, y1, z0)],
+                [v(x1, y0, z0), v(x1, y1, z0), v(x1, y1, z1), v(x1, y0, z1)],
+            ] {
+                quad(q, side, &mut positions, &mut colors);
+            }
+        }
+    }
+    for pair in edges.chunks_exact(2) {
+        let (a, b) = (Vec3::from(pair[0]), Vec3::from(pair[1]));
+        let Some(d) = (b - a).try_normalize() else { continue };
+        let view = (a + b) * 0.5 - cam;
+        let w = hw * view.length().max(0.05);
+        let Some(side) = d.cross(view).try_normalize() else { continue }; // looking along the edge
+        let s = side * w;
+        let (a, b) = (a - d * w, b + d * w);
+        quad([a - s, b - s, b + s, a + s], line, &mut positions, &mut colors);
+    }
+    let n = positions.len();
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0f32, 1.0, 0.0]; n]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0f32, 0.0]; n]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    mesh.insert_indices(Indices::U32(indices));
+    mesh
 }
 
 pub(super) fn outline_mesh(boxes: &[[f32; 6]]) -> Mesh {
@@ -493,6 +554,7 @@ pub(super) fn update_break_overlay(
     overlay.shown = Some(view.breaking.clone());
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn update_block_outline(
     view: Res<FrameView>,
     state: Res<crate::gui::GuiState>,
@@ -501,7 +563,55 @@ pub(super) fn update_block_outline(
     mut targets: Query<(&mut Transform, &mut Visibility), With<BlockOutlineMarker>>,
     origin: Res<RenderOrigin>,
     mut shown_origin: Local<RenderOrigin>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    camera: Query<(&GlobalTransform, &Projection), With<super::systems::WorldCamera>>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    mut custom: Local<Option<(u32, u32, u32, bool)>>,
 ) {
+    // Treasure Client: the Block Outline mod (colour, thickness, opacity, fill)
+    let m = crate::tc_mods::get();
+    let key = m.bo_on.then(|| (m.bo_color, m.bo_alpha.to_bits(), m.bo_width.to_bits(), m.bo_fill));
+    if key != *custom {
+        if let Some(mut mat) = materials.get_mut(&outline.material) {
+            // the mod's colour rides on the strips' vertex colours
+            mat.base_color = if key.is_some() { Color::WHITE } else { Color::srgba(0.0, 0.0, 0.0, 0.4) };
+        }
+        *custom = key;
+        outline.shown = None; // build the outline again in its new look
+    }
+    if m.bo_on {
+        let target = if state.hide_gui { None } else { view.targeted_block.clone() };
+        let Ok((mut transform, mut visibility)) = targets.get_mut(outline.entity) else {
+            return;
+        };
+        *shown_origin = *origin;
+        outline.shown = None;
+        let Some(t) = target else {
+            *visibility = Visibility::Hidden;
+            return;
+        };
+        let base = origin.block_to_render(t.pos);
+        let Ok((cam, proj)) = camera.single() else { return };
+        let fov = match proj {
+            Projection::Perspective(p) => p.fov,
+            _ => 1.2,
+        };
+        let height = windows.single().map_or(720.0, |w| w.physical_height().max(1) as f32);
+        // half the strip's width at distance 1: the strip is bo_width screen pixels wide
+        let hw = m.bo_width * (fov * 0.5).tan() / height;
+        let c = bevy::color::LinearRgba::from(bevy::color::Srgba::rgb_u8(
+            (m.bo_color >> 16) as u8,
+            (m.bo_color >> 8) as u8,
+            m.bo_color as u8,
+        ));
+        let mesh = strip_mesh(&t.boxes, cam.translation() - base, hw, m.bo_fill, [c.red, c.green, c.blue], m.bo_alpha);
+        if let Some(mut handle) = meshes.get_mut(&outline.mesh) {
+            *handle = mesh;
+        }
+        transform.translation = base;
+        *visibility = Visibility::Visible;
+        return;
+    }
     let moved = *shown_origin != *origin;
     let target = if state.hide_gui {
         None

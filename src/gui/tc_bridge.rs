@@ -141,6 +141,7 @@ pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
         }
     }
     if !in_world {
+        crate::gui::tc_pvp::reset();
         set_hud("active=0\n".to_owned());
         return;
     }
@@ -189,6 +190,7 @@ pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
     let (sprint, sneak) = crate::tc_mods::toggled();
     let mode = |on: bool| if on { "toggled" } else { "vanilla" };
     out.push_str(&format!("sprintmode={}\nsneakmode={}\n", mode(sprint), mode(sneak)));
+    crate::gui::tc_pvp::hud(&mut out); // Reach Display, Combo Counter, Item Counter
     set_hud(out);
 }
 

@@ -507,11 +507,16 @@ impl LookJumpFilter {
         }
         let m = d.x.abs().max(d.y.abs());
         if m > 40.0 && now - self.locked_at < 0.1 {
+            crate::diag::lag::note_mouse_jump(true, m);
             return false;
         }
         if m > 200.0 && m > 12.0 * (self.recent + 5.0) && !self.dropped {
             self.dropped = true;
+            crate::diag::lag::note_mouse_jump(true, m);
             return false;
+        }
+        if m > 200.0 {
+            crate::diag::lag::note_mouse_jump(false, m);
         }
         self.dropped = false;
         self.recent = self.recent * 0.6 + m * 0.4;

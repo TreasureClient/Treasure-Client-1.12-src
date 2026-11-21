@@ -1697,6 +1697,27 @@ pub fn draw_sidebar(p: &mut Painter, ctx: &ScreenCtx, sidebar: &crate::client::t
     if !sidebar.active {
         return;
     }
+    // Treasure Client: the Scoreboard mod (hide the red numbers, size, background)
+    let m = crate::tc_mods::get();
+    let (no_nums, bg, scale) = if m.sb_on { (m.sb_no_nums, m.sb_bg, m.sb_scale) } else { (false, 0, 1.0) };
+    if (scale - 1.0).abs() > 1e-3 {
+        // grow or shrink from the middle of the right edge, where the scoreboard sits
+        let (ax, ay) = (gui_width(ctx), gui_height(ctx) / 2.0);
+        p.scaled_in(scale, ax * (1.0 - scale), ay * (1.0 - scale), |p| {
+            draw_sidebar_inner(p, ctx, sidebar, no_nums, bg);
+        });
+    } else {
+        draw_sidebar_inner(p, ctx, sidebar, no_nums, bg);
+    }
+}
+
+fn draw_sidebar_inner(
+    p: &mut Painter,
+    ctx: &ScreenCtx,
+    sidebar: &crate::client::tablist::Sidebar,
+    no_nums: bool,
+    bg: u8,
+) {
     let atlas = p.atlas;
     let font = &atlas.font;
     let rows = &sidebar.rows;
@@ -1706,7 +1727,7 @@ pub fn draw_sidebar(p: &mut Painter, ctx: &ScreenCtx, sidebar: &crate::client::t
     let mut score_widths = [0.0f32; crate::client::tablist::MAX_SIDEBAR_ROWS];
     let mut biggest = header_width;
     for (row, width) in rows.iter().zip(&mut score_widths) {
-        *width = font.width(&row.score).ceil();
+        *width = if no_nums { 0.0 } else { font.width(&row.score).ceil() };
         let score = if *width > 0.0 { spacer + *width } else { 0.0 };
         biggest = biggest.max(font.width(&row.name).ceil() + score);
     }
@@ -1720,27 +1741,21 @@ pub fn draw_sidebar(p: &mut Painter, ctx: &ScreenCtx, sidebar: &crate::client::t
     let header_y = bottom - height;
 
     let plate_width = right - (left - 2.0);
-    p.fill(
-        left - 2.0,
-        header_y - LINE_HEIGHT - 1.0,
-        plate_width,
-        LINE_HEIGHT,
-        SIDEBAR_HEADER_BG,
-    );
-    p.fill(
-        left - 2.0,
-        header_y - 1.0,
-        plate_width,
-        bottom - (header_y - 1.0),
-        SIDEBAR_BG,
-    );
+    if bg != 2 {
+        let (header_bg, rows_bg) = if bg == 1 { (0x3800_0000, 0x2800_0000) } else { (SIDEBAR_HEADER_BG, SIDEBAR_BG) };
+        p.fill(left - 2.0, header_y - LINE_HEIGHT - 1.0, plate_width, LINE_HEIGHT, header_bg);
+        p.fill(left - 2.0, header_y - 1.0, plate_width, bottom - (header_y - 1.0), rows_bg);
+    }
+    let shadow = bg == 2; // no background: a shadow keeps the text readable
 
     let header_x = left + (biggest / 2.0).floor() - (header_width / 2.0).floor();
-    p.text(&sidebar.title, header_x, header_y - LINE_HEIGHT, false);
+    p.text(&sidebar.title, header_x, header_y - LINE_HEIGHT, shadow);
     for (i, (row, score_width)) in rows.iter().zip(&score_widths).enumerate() {
         let y = bottom - (count - i as f32) * LINE_HEIGHT;
-        p.text(&row.name, left, y, false);
-        p.text(&row.score, right - *score_width, y, false);
+        p.text(&row.name, left, y, shadow);
+        if !no_nums {
+            p.text(&row.score, right - *score_width, y, shadow);
+        }
     }
 }
 

@@ -60,6 +60,18 @@ static BYTES: AtomicU64 = AtomicU64::new(0);
 static CHUNKS: AtomicU64 = AtomicU64::new(0);
 static MESH_IN: AtomicU64 = AtomicU64::new(0);
 static MESH_OUT: AtomicU64 = AtomicU64::new(0);
+// the mouse jump filter (renderer/input.rs): jumps dropped and big moves let through, with the biggest
+static MOUSE_DROPPED: AtomicU64 = AtomicU64::new(0);
+static MOUSE_DROPPED_MAX: AtomicU64 = AtomicU64::new(0);
+static MOUSE_KEPT: AtomicU64 = AtomicU64::new(0);
+static MOUSE_KEPT_MAX: AtomicU64 = AtomicU64::new(0);
+
+/// A mouse move over 200 pixels: dropped as a made-up jump, or let through.
+pub(crate) fn note_mouse_jump(dropped: bool, size: f32) {
+    let (n, max) = if dropped { (&MOUSE_DROPPED, &MOUSE_DROPPED_MAX) } else { (&MOUSE_KEPT, &MOUSE_KEPT_MAX) };
+    n.fetch_add(1, Relaxed);
+    max.fetch_max(size as u64, Relaxed);
+}
 static VIA_GUESSED: AtomicU64 = AtomicU64::new(0);
 static VIA_TUFF: AtomicU64 = AtomicU64::new(0);
 static TUFF_PALETTE: AtomicU64 = AtomicU64::new(0);
@@ -656,6 +668,14 @@ fn full_extra(st: &Lag, w: &Sum, out: &mut Vec<String>) {
         s.placed,
         s.cameras,
         azalea_world::retain::server_radius(),
+    ));
+    out.push(format!(
+        "§7Mouse: §f{}§7 jumps dropped (biggest {}), §f{}§7 big moves let through (biggest {}), raw input §f{}",
+        MOUSE_DROPPED.swap(0, Relaxed),
+        MOUSE_DROPPED_MAX.swap(0, Relaxed),
+        MOUSE_KEPT.swap(0, Relaxed),
+        MOUSE_KEPT_MAX.swap(0, Relaxed),
+        on(crate::platform::pointer::raw_on()),
     ));
     let tc = crate::tc_mods::get();
     out.push(format!(

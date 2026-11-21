@@ -31,6 +31,11 @@ pub(crate) fn set_raw(on: bool) {
     RAW.store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
+/// Raw Input is on and the browser accepted it (for .lag full).
+pub(crate) fn raw_on() -> bool {
+    RAW.load(std::sync::atomic::Ordering::Relaxed) && !RAW_FAILED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 pub(crate) fn raw_unsupported() -> bool {
     RAW_FAILED.load(std::sync::atomic::Ordering::Relaxed)
 }

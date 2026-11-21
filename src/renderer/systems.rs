@@ -488,19 +488,21 @@ fn setup(
         base_color: Color::srgba(0.0, 0.0, 0.0, 0.4),
         unlit: true,
         alpha_mode: AlphaMode::Blend,
+        cull_mode: None, // the Block Outline mod's strips face the camera from either side
         ..default()
     });
     let (entity, mesh) = spawn_overlay(
         &mut commands,
         &mut meshes,
         outline_mesh(&[[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]),
-        outline_mat,
+        outline_mat.clone(),
         BlockOutlineMarker,
     );
     commands.insert_resource(BlockOutline {
         entity,
         mesh,
         shown: None,
+        material: outline_mat,
     });
 
     let chunk_border_mat = materials.add(StandardMaterial {

@@ -90,6 +90,7 @@ pub mod capepick;
 pub mod tc_style;
 /// Treasure Client: Crosshair Addons.
 pub mod tc_crosshair;
+pub mod tc_pvp;
 pub mod toast;
 pub mod tooltip;
 #[cfg(target_arch = "wasm32")]
@@ -810,7 +811,7 @@ impl GuiOptions {
                 .map_or(SCROLL_SENSITIVITY_DEFAULT, |v| {
                     v.clamp(SCROLL_SENSITIVITY_MIN as u64, SCROLL_SENSITIVITY_MAX as u64) as u32
                 }),
-            raw_input: value("rawMouseInput").and_then(|v| v.as_bool()).unwrap_or(true),
+            raw_input: value("rawMouseInput").and_then(|v| v.as_bool()).unwrap_or(false),
             main_hand_left: value("mainHand").and_then(|v| v.as_str().map(|s| s == "left"))
                 == Some(true),
             #[cfg(feature = "skins")]

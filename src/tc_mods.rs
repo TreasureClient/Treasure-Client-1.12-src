@@ -84,6 +84,23 @@ pub struct TcMods {
     pub ch_hit_melee: bool,
     pub ch_shield_break: bool,
     pub ch_shield_up: bool,
+    /// Reach Display, Combo Counter and Item Counter (HUD boxes in the overlay).
+    pub reach_disp: bool,
+    pub combo: bool,
+    pub item_count: bool,
+    /// Item Counter: arrows, pearls, golden apples, totems, splash potions, blocks.
+    pub ic: [bool; 6],
+    /// Scoreboard: on, hide the red numbers, size (1 = normal), background (0 normal, 1 lighter, 2 none).
+    pub sb_on: bool,
+    pub sb_no_nums: bool,
+    pub sb_scale: f32,
+    pub sb_bg: u8,
+    /// Block Outline: on, colour (0xRRGGBB), thickness in pixels, opacity (0-1), fill the sides.
+    pub bo_on: bool,
+    pub bo_color: u32,
+    pub bo_width: f32,
+    pub bo_alpha: f32,
+    pub bo_fill: bool,
 }
 
 impl Default for TcMods {
@@ -151,6 +168,19 @@ impl Default for TcMods {
             ch_hit_melee: false,
             ch_shield_break: false,
             ch_shield_up: false,
+            reach_disp: false,
+            combo: false,
+            item_count: false,
+            ic: [true, true, true, true, true, false],
+            sb_on: false,
+            sb_no_nums: true,
+            sb_scale: 1.0,
+            sb_bg: 0,
+            bo_on: false,
+            bo_color: 0x000000,
+            bo_width: 2.0,
+            bo_alpha: 0.4,
+            bo_fill: false,
         }
     }
 }
@@ -246,6 +276,30 @@ fn parse(text: &str) -> TcMods {
             "chHitMelee" => m.ch_hit_melee = on,
             "chShieldBreak" => m.ch_shield_break = on,
             "chShieldUp" => m.ch_shield_up = on,
+            "reachDisp" => m.reach_disp = on,
+            "combo" => m.combo = on,
+            "itemCount" => m.item_count = on,
+            "icArrow" => m.ic[0] = on,
+            "icPearl" => m.ic[1] = on,
+            "icGapple" => m.ic[2] = on,
+            "icTotem" => m.ic[3] = on,
+            "icPotion" => m.ic[4] = on,
+            "icBlocks" => m.ic[5] = on,
+            "sbOn" => m.sb_on = on,
+            "sbNoNums" => m.sb_no_nums = on,
+            "sbScale" => m.sb_scale = num.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0,
+            "sbBg" => {
+                m.sb_bg = match v {
+                    "none" => 2,
+                    "light" => 1,
+                    _ => 0,
+                }
+            }
+            "boOn" => m.bo_on = on,
+            "boColor" => m.bo_color = u32::from_str_radix(v, 16).unwrap_or(0) & 0xFF_FFFF,
+            "boWidth" => m.bo_width = num.unwrap_or(2.0).clamp(1.0, 6.0),
+            "boAlpha" => m.bo_alpha = num.unwrap_or(40.0).clamp(10.0, 100.0) / 100.0,
+            "boFill" => m.bo_fill = on,
             _ => {}
         }
     }
