@@ -129,6 +129,7 @@ public class GuiConnecting extends GuiScreen {
 
 	private void connect(String ip, String password, boolean allowPlaintext, boolean allowCookies) {
 		this.currentAddress = ip;
+		net.minecraft.client.gui.TCJavaNames.lastUri = ip; // Treasure Client: for the VPN-kick help
 		this.currentPassword = password;
 		this.allowPlaintext = allowPlaintext;
 		this.allowCookies = allowCookies;

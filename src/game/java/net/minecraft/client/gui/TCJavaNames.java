@@ -28,6 +28,23 @@ public final class TCJavaNames {
 
 	private static Map<String, String> names = null;
 
+	/** The address of the server we last tried to join (set by GuiConnecting). */
+	public static String lastUri = "";
+
+	/**
+	 * True when a kick message from a java:// server looks like an anti-VPN block. Java servers see
+	 * the Wisp relay's address instead of the player's, and many players share that relay.
+	 */
+	public static boolean isVpnKick(String text) {
+		if (!isJava(lastUri) || text == null) {
+			return false;
+		}
+		String t = text.replaceAll("\u00a7.", "").toLowerCase();
+		return t.contains("vpn") || t.contains("proxy detected") || t.contains("using a proxy")
+				|| t.contains("proxies are not") || t.contains("anonymous network") || t.contains("hosting provider")
+				|| t.contains("datacenter") || t.contains("data center");
+	}
+
 	/** "ws://java://Play.Pika-Network.net/" -> "java://play.pika-network.net" */
 	public static String key(String uri) {
 		if (uri == null) {
