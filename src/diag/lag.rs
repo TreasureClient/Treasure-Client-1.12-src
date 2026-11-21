@@ -677,6 +677,9 @@ fn full_extra(st: &Lag, w: &Sum, out: &mut Vec<String>) {
         MOUSE_KEPT_MAX.swap(0, Relaxed),
         on(crate::platform::pointer::raw_on()),
     ));
+    if let Some(line) = crate::gui::tc_pvp::lag_line() {
+        out.push(line);
+    }
     let tc = crate::tc_mods::get();
     out.push(format!(
         "§7Via: §f{}§7, guessing §f{}§7 ({} blocks), TuffX+ §f{}§7 (palette {}, {} blocks)",

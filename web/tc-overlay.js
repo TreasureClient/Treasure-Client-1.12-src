@@ -298,6 +298,11 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
 #tc-root.hud-right #tc-potions { right: auto; left: 18px; align-items: flex-start; }
 #tc-reach { top: 112px; left: 18px; }
 #tc-root.hud-right #tc-reach { left: auto; right: 18px; }
+/* Reach Display "above crosshair": a small white number just over the crosshair (stays centred; the HUD Editor doesn't move it) */
+#tc-root #tc-reach.tc-reach-cross { left: 50% !important; top: calc(50% - 24px) !important; right: auto !important; bottom: auto !important;
+  transform: translateX(-50%) !important; background: none; border: none; border-radius: 0; padding: 0; box-shadow: none; text-shadow: none;
+  color: #fff; font: 600 10px 'JetBrains Mono', monospace; line-height: 1; }
+#tc-root.hud-editing #tc-reach.tc-reach-cross { outline: none; pointer-events: none; }
 #tc-combo { top: 140px; left: 18px; }
 #tc-root.hud-right #tc-combo { left: auto; right: 18px; }
 #tc-items { top: 168px; left: 18px; display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
@@ -517,7 +522,7 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
     <div id="tc-helditem" class="tc-hud-box tc-hidden">—</div>
     <div id="tc-sprint" class="tc-hud-box tc-hidden">Sprint [OFF]</div>
     <div id="tc-sneak" class="tc-hud-box tc-hidden">Sneak [OFF]</div>
-    <div id="tc-reach" class="tc-hud-box tc-hidden">— blocks</div>
+    <div id="tc-reach" class="tc-hud-box tc-hidden">0.00 blocks</div>
     <div id="tc-combo" class="tc-hud-box tc-hidden">No combo</div>
     <div id="tc-items" class="tc-hud-box tc-hidden"></div>
     <div id="tc-fpsgraph" class="tc-hud-box tc-hidden"><canvas id="tc-fpsgraph-cv" width="140" height="34"></canvas></div>
@@ -614,7 +619,16 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
               <div class="tc-row"><div class="tc-lab"><b>Armor Status</b><i>Equipped armor + durability</i></div><div class="tc-sw" data-mod="armorStatus"><i></i></div></div>
             </div>
             <div class="tc-mod">
-              <div class="tc-row"><div class="tc-lab"><b>Reach Display</b><i>How far away your last hit landed, in blocks</i></div><div class="tc-sw" data-mod="reachDisp"><i></i></div></div>
+              <div class="tc-row"><div class="tc-lab"><b>Reach Display</b><i>How far away your last hit landed, in blocks</i></div><button class="tc-gear" data-gear="reachcfg" aria-label="Settings">⚙</button><div class="tc-sw" data-mod="reachDisp"><i></i></div></div>
+              <div class="tc-cfg" data-cfg="reachcfg">
+                <div class="tc-cfg-row"><span>Style</span>
+                  <div class="tc-seg tc-seg-sm" data-seg="reachStyle">
+                    <button data-val="box">Box</button>
+                    <button data-val="cross">Above crosshair</button>
+                  </div>
+                </div>
+                <div class="tc-cfg-row"><span></span><span class="tc-hint">Above crosshair: a small white number with no background or glow</span></div>
+              </div>
             </div>
             <div class="tc-mod">
               <div class="tc-row"><div class="tc-lab"><b>Combo Counter</b><i>Hits in a row before you get hit back</i></div><div class="tc-sw" data-mod="combo"><i></i></div></div>
@@ -1059,7 +1073,7 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
       hitboxes:false, hitboxPlayers:true, hitboxMobs:true, hitboxAnimals:true, hitboxOther:false,
       noParticles:false, noHurtCam:false, tntTimer:false, celeritas:true, via:true, entcull:true, pcull:true, vanillafix:true, ebe:true, lithium:true, ifast:true, dynfps:true, memsaver:true, pcore:true, c2me:true, dynfov:false, dynResOn:false, bfmath:true, badopt:true, xcull:true, viaguess:true, viatrade:true, cextra:true, ceAnim:true, ceAnimWater:true, ceAnimLava:true, ceAnimFire:true, ceAnimPortal:true, ceAnimBlock:true, ceRainSplash:true, ceBreakFx:true, ceHitFx:true, ceSky:true, ceStars:true, ceSunMoon:true, ceWeather:true, ceFrames:true, ceStands:true, cePaintings:true, ceBeacon:true, ceEnchBook:true, cePiston:true, ceToasts:true, leafCull:'solid', entDist:0, oldAnim:false, oaBlock:true, oaNoDip:true, oaUseSwing:true, oaArmor:true, oaHitSwing:true, tAnim:false, taStyle:'treasure', taSpeed:100, taPunch:true, taDraw:true, taSway:true, taBlockHit:true, taParticles:'treasure', taTotemFx:true, taHitFx:true, taEat:true, taThrow:true, perfpack:true, clearWater:true, satDisplay:false, clearLiquids:false, hitColorOn:false, hitColor:'red', hitAlpha:30, chAddons:false, chTarget:true, chMobs:false, chElytra:true, chRocket:true, chHit:true, chHitMelee:false, chShieldBreak:false, chShieldUp:false, tierTagger:false, ttMode:'highest', autoGG:false, agMsg:'gg', agDelay:1000, agGlhf:false,
       pauseUnfocused:false,
-      reachDisp:false, combo:false, itemCount:false, icArrow:true, icPearl:true, icGapple:true, icTotem:true, icPotion:true, icBlocks:false, icHideZero:true,
+      reachDisp:false, reachStyle:'box', combo:false, itemCount:false, icArrow:true, icPearl:true, icGapple:true, icTotem:true, icPotion:true, icBlocks:false, icHideZero:true,
       sbOn:false, sbNoNums:true, sbScale:100, sbBg:'normal', boOn:false, boColor:'black', boWidth:2, boAlpha:40, boFill:false,
       zoom:false, zoomLevel:30, zoomKeyCode:'KeyC', zoomKeyLabel:'C', smoothZoom:false, zoomSpeed:8,
       resolutionScale:100,
@@ -1924,6 +1938,7 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
       sprintEl.classList.toggle('tc-hidden', !state.sprintStatus);
       sneakEl.classList.toggle('tc-hidden', !state.sneakStatus);
       reachEl.classList.toggle('tc-hidden', !state.reachDisp);
+      reachEl.classList.toggle('tc-reach-cross', state.reachStyle === 'cross');
       comboEl.classList.toggle('tc-hidden', !state.combo);
       itemsEl.classList.toggle('tc-hidden', !state.itemCount);
       applyHudPositions();
@@ -2111,8 +2126,9 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
     }
     // Reach Display / Combo Counter / Item Counter: only hits the server confirmed (TCPvpMods.java)
     function renderReach() {
-      var r = hud.active ? parseFloat(hud.reach) : NaN;
-      tcSetText(reachEl, isNaN(r) ? '— blocks' : r.toFixed(2) + ' blocks');
+      var r = hud.active ? parseFloat(hud.reach) : NaN; // NaN until your first hit lands
+      if (state.reachStyle === 'cross') tcSetText(reachEl, isNaN(r) ? '' : r.toFixed(2));
+      else tcSetText(reachEl, (isNaN(r) ? '0.00' : r.toFixed(2)) + ' blocks');
     }
     function renderCombo() {
       var c = hud.active ? (parseInt(hud.combo, 10) || 0) : 0;

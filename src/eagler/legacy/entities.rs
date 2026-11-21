@@ -226,11 +226,17 @@ pub(super) fn translate(
                 5 => AnimationAction::MagicCriticalHit,
                 _ => return Some(true),
             };
+            if matches!(action, AnimationAction::Hurt) {
+                crate::gui::tc_pvp::on_hurt(raw); // Reach Display / Combo Counter
+            }
             game(out, ClientboundAnimate { id: id(raw), action });
         }
         cb::ENTITY_STATUS => {
             let raw = r.i32()?;
             let event_id = r.u8()?;
+            if matches!(event_id, 2 | 33) {
+                crate::gui::tc_pvp::on_hurt(raw); // 1.12 "hurt": Reach Display / Combo Counter
+            }
             game(out, ClientboundEntityEvent { entity_id: id(raw), event_id });
         }
         cb::METADATA => {
