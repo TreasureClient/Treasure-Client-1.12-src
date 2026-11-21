@@ -1425,6 +1425,7 @@ public class TCLagMonitor {
 							+ "§7 waited for a busy GPU" + (waited > 0 ? ", §f" + waited + "§7 waited (no GPU fences)" : ""));
 				}
 			}
+			say(mc, net.lax1dude.eaglercraft.internal.PlatformInput.tcMouseLine()); // the mouse jump filter
 			String gl = glLine();
 			if (gl != null) say(mc, gl);
 			say(mc, gpuLine());

@@ -249,6 +249,25 @@ public class PacketBuffer extends ByteBuf {
 	 * + Writes the ItemStack's ID (short), then size (byte), then damage. (short)
 	 */
 	public void writeItemStackToBuffer(ItemStack stack) {
+		// Treasure Client: a modern item we show as our own copy (ViaItemRemap) goes back to the
+		// server as the item the server sent. Our copy's id means nothing to the server's
+		// ViaVersion, so clicks with it (putting cherry planks in a crafting grid) went nowhere.
+		if (stack != null && !stack.func_190926_b()) {
+			NBTTagCompound vt = stack.getTagCompound();
+			if (vt != null && vt.hasKey(net.minecraft.item.ViaItemRemap.ORIG_TAG, 3)) {
+				int o = vt.getInteger(net.minecraft.item.ViaItemRemap.ORIG_TAG);
+				Item orig = Item.getItemById(o >>> 16);
+				if (orig != null) {
+					NBTTagCompound t = vt.copy();
+					t.removeTag(net.minecraft.item.ViaItemRemap.ORIG_TAG);
+					this.writeShort(o >>> 16);
+					this.writeByte(stack.func_190916_E());
+					this.writeShort(o & 0xFFFF);
+					this.writeNBTTagCompoundToBuffer(t.hasNoTags() || !(orig.isDamageable() || orig.getShareTag()) ? null : t);
+					return;
+				}
+			}
+		}
 		if (stack == null) {
 			this.writeShort(-1);
 		} else {
