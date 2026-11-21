@@ -22,7 +22,7 @@ import net.minecraft.util.math.Vec3d;
  * Treasure Client: Reach Display, Combo Counter, Item Counter, Scoreboard and Block Outline.
  *
  * Reach and combo only count hits the server confirmed (the target's hurt animation started
- * right after your attack), so they show what really happened. Nothing here changes how the
+ * within a second of your attack), so they show what really happened. Nothing here changes how the
  * game plays: they only show information or change how things look.
  */
 public final class TCPvpMods {
@@ -93,10 +93,7 @@ public final class TCPvpMods {
 	private static Entity attacked;
 	private static long attackAt;
 	private static double attackReach = -1;
-	private static int attackedHurt;
-	private static int ownHurt;
 	private static double reach = -1;
-	private static long reachAt;
 	private static int combo;
 	private static long comboAt;
 
@@ -123,46 +120,65 @@ public final class TCPvpMods {
 				double z = Math.max(bb.minZ, Math.min(eye.zCoord, bb.maxZ));
 				d = eye.distanceTo(new Vec3d(x, y, z)); // nearest point of its hitbox
 			}
-			if (target != attacked) {
-				attackedHurt = ((EntityLivingBase) target).hurtTime;
-			}
 			attacked = target;
 			attackAt = now();
 			attackReach = d;
+			++lagAttacks;
 		} catch (Throwable t) {}
 	}
 
-	/** Every client tick: confirm hits and reset the combo when you get hit. */
+	// for .lag full: attacks you made and how many the server confirmed, since the last .lag
+	private static int lagAttacks, lagHits;
+
+	/** ".lag full" line for Reach Display / Combo Counter, or null when both are off; resets the counts. */
+	public static String lagLine() {
+		if (!(reachOn || comboOn)) {
+			return null;
+		}
+		String s = "\u00a77  reach/combo: \u00a7f" + lagAttacks + "\u00a77 attacks, \u00a7f" + lagHits
+				+ "\u00a77 confirmed by the server";
+		lagAttacks = lagHits = 0;
+		return s;
+	}
+
+	/**
+	 * The server said this entity got hurt (status 2 or 33, EntityLivingBase.handleStatusUpdate):
+	 * you got hit (combo resets), or the one you just attacked did (a confirmed hit).
+	 */
+	public static void onHurt(Entity e) {
+		if (!(reachOn || comboOn) || e == null) {
+			return;
+		}
+		Minecraft mc = Minecraft.getMinecraft();
+		if (mc == null || mc.player == null) {
+			return;
+		}
+		if (e == mc.player) {
+			combo = 0; // you got hit
+			return;
+		}
+		long t = now();
+		if (e == attacked && t - attackAt < 1000L) {
+			++lagHits;
+			reach = attackReach;
+			combo = (t - comboAt < 3000L) ? combo + 1 : 1;
+			comboAt = t;
+			attackAt = 0; // the next hurt for the same hit doesn't count again
+		}
+	}
+
+	/** Every client tick: forget the fight when you leave, and end an old combo. */
 	public static void tick(Minecraft mc) {
-		EntityPlayer p = mc.player;
-		if (p == null) {
+		if (mc.player == null) {
 			attacked = null;
 			combo = 0;
 			reach = -1;
 			return;
 		}
-		long t = now();
-		int own = p.hurtTime;
-		if (own > ownHurt) {
-			combo = 0; // you got hit
+		if (attacked != null && attacked.isDead) {
+			attacked = null;
 		}
-		ownHurt = own;
-		if (attacked instanceof EntityLivingBase) {
-			int h = ((EntityLivingBase) attacked).hurtTime;
-			if (h > attackedHurt && t - attackAt < 700L) {
-				// the server hurt it right after your attack: a real hit
-				reach = attackReach;
-				reachAt = t;
-				combo = (t - comboAt < 3000L) ? combo + 1 : 1;
-				comboAt = t;
-				attackAt = 0;
-			}
-			attackedHurt = h;
-			if (attacked.isDead) {
-				attacked = null;
-			}
-		}
-		if (combo > 0 && t - comboAt >= 3000L) {
+		if (combo > 0 && now() - comboAt >= 3000L) {
 			combo = 0;
 		}
 	}
@@ -170,8 +186,8 @@ public final class TCPvpMods {
 	/** Adds the HUD lines for the overlay (TreasureHud). */
 	public static void hud(EntityPlayer p, StringBuilder sb) {
 		if (reachOn) {
-			long t = now();
-			sb.append("reach=").append(reach < 0 || t - reachAt > 5000L ? "-" : String.valueOf(Math.round(reach * 100.0) / 100.0)).append('\n');
+			// the last hit's reach stays until the next one ("-" before your first hit)
+			sb.append("reach=").append(reach < 0 ? "-" : String.valueOf(Math.round(reach * 100.0) / 100.0)).append('\n');
 		}
 		if (comboOn) {
 			sb.append("combo=").append(combo).append('\n');
