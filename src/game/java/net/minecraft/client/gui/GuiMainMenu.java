@@ -73,8 +73,10 @@ public class GuiMainMenu extends GuiScreen {
 	// main-menu brand line shows whatever the user renamed the client to
 	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
 	// renaming in the overlay shows up live without a per-frame storage read.
-	private static String brandTitle = "Treasure Client 1.4";
+	private static String brandTitle = "Treasure Client 1.5 Beta";
 	private static boolean customBrand = false; // true when the user set a custom title
+	/** The version shown on the 1.5 main menu, taken from the default title above (e.g. "1.5 Beta"). */
+	private static final String TC_VERSION = brandTitle.startsWith("Treasure Client ") ? brandTitle.substring(16) : brandTitle;
 	private static long brandRead = 0L;
 
 	private static String brandLine() {
@@ -85,14 +87,14 @@ public class GuiMainMenu extends GuiScreen {
 				byte[] b = EagRuntime.getStorage("tctitle");
 				if (b != null && b.length > 0) {
 					String s = new String(b, StandardCharsets.UTF_8).trim();
-					if (s.isEmpty()) { brandTitle = "Treasure Client 1.4"; customBrand = false; }
+					if (s.isEmpty()) { brandTitle = "Treasure Client 1.5 Beta"; customBrand = false; }
 					else { brandTitle = s; customBrand = true; }
 				} else {
-					brandTitle = "Treasure Client 1.4"; customBrand = false;
+					brandTitle = "Treasure Client 1.5 Beta"; customBrand = false;
 				}
 			}
 		} catch (Throwable t) {
-			brandTitle = "Treasure Client 1.4"; customBrand = false;
+			brandTitle = "Treasure Client 1.5 Beta"; customBrand = false;
 		}
 		return brandTitle;
 	}
@@ -205,7 +207,86 @@ public class GuiMainMenu extends GuiScreen {
 	 * Called from the main game loop to update the screen.
 	 */
 	public void updateScreen() {
-		// Treasure Client: Deep Sea mode removed — nothing to poll here anymore.
+		// Treasure Client 1.5: the big menu words are drawn by the page overlay (shared by every
+		// edition). It asks for things through "tcmenuact" and says it is alive through "tcmenuack".
+		try {
+			byte[] a = EagRuntime.getStorage("tcmenuact");
+			if (a != null) {
+				EagRuntime.setStorage("tcmenuact", null);
+				if (a.length > 0) {
+					this.tcDoAction(new String(a, StandardCharsets.UTF_8).trim());
+					return;
+				}
+			}
+			byte[] k = EagRuntime.getStorage("tcmenuack");
+			long ack = 0L;
+			if (k != null && k.length > 0 && k.length < 20) {
+				try { ack = Long.parseLong(new String(k, StandardCharsets.US_ASCII).trim()); } catch (NumberFormatException e) { ack = 0L; }
+			}
+			this.tcOverlayLive = Math.abs(System.currentTimeMillis() - ack) < 2500L;
+		} catch (Throwable t) {
+			this.tcOverlayLive = false;
+		}
+		// the game's own buttons only come back if the overlay isn't answering (so you can never get stuck)
+		boolean fallback = this.tcFallback();
+		for (int i = 0; i < this.buttonList.size(); ++i) {
+			this.buttonList.get(i).visible = fallback;
+		}
+	}
+
+	// Treasure Client 1.5: overlay main menu state
+	private boolean tcOverlayLive = false;
+	private long tcInitAt = 0L;
+
+	/** True when the overlay isn't drawing the menu, so the game draws its own buttons. */
+	private boolean tcFallback() {
+		return !this.tcOverlayLive && EagRuntime.steadyTimeMillis() - this.tcInitAt > 1500L;
+	}
+
+	/** Tells the overlay the main menu is showing, and what to put on it. */
+	private void tcPublishMenu() {
+		try {
+			String rejoin = TCLastServer.has() && !this.mc.isDemo() ? TCLastServer.name() : "";
+			String prof = "";
+			try {
+				TCProfiles.Profile p = TCProfiles.get(TCProfiles.activeId());
+				if (p != null && p.name != null) prof = p.name;
+			} catch (Throwable t) {
+			}
+			String info = this.mc.getSession().getProfile().getName() + "\n" + rejoin.replace('\n', ' ') + "\n"
+					+ prof.replace('\n', ' ') + "\n" + TC_VERSION + "\n" + (this.mc.isDemo() ? "1" : "0");
+			EagRuntime.setStorage("tcmenuinfo", info.getBytes(StandardCharsets.UTF_8));
+			EagRuntime.setStorage("tcmenu", new byte[] { (byte) 1 });
+		} catch (Throwable t) {
+		}
+	}
+
+	/** Runs a menu word the overlay clicked (same as pressing the matching button). */
+	private void tcDoAction(String code) {
+		int id;
+		switch (code) {
+		case "sp": id = 1; break;
+		case "mp": id = 2; break;
+		case "demo": id = 11; break;
+		case "cos": id = 104; break;
+		case "set": id = 0; break;
+		case "prof": id = 103; break;
+		case "rejoin": id = 110; break;
+		case "lang": id = 5; break;
+		case "about": id = 102; break;
+		default: return;
+		}
+		for (int i = 0; i < this.buttonList.size(); ++i) {
+			GuiButton b = this.buttonList.get(i);
+			if (b.id == id) {
+				b.playPressSound(this.mc.getSoundHandler());
+				try {
+					this.actionPerformed(b);
+				} catch (IOException e) {
+				}
+				return;
+			}
+		}
 	}
 
 	/**
@@ -250,24 +331,69 @@ public class GuiMainMenu extends GuiScreen {
 			this.splashText = I18n.format("eaglercraft.splashes.halloween");
 		}
 
-		int i = 24;
-		int j = this.height / 4 + 48;
+		// Treasure Client 1.5: side-panel layout. Buttons sit in a dark glass panel on the left,
+		// your player stands on the right, and "Rejoin" sits under the panel.
+		int gap = this.height < 270 ? 22 : 24;
+		int rows = 6;
+		this.tcPanelW = 136;
+		this.tcPanelX = 12;
+		this.tcPanelH = 8 + rows * gap - (gap - 20) + 8;
+		boolean rejoin = TCLastServer.has() && !this.mc.isDemo();
+		int below = rejoin ? 24 : 0;
+		this.tcPanelY = Math.max(48, (this.height - this.tcPanelH - below) / 2 + 6);
+		int bx = this.tcPanelX + 8, bw = this.tcPanelW - 16;
+		int j = this.tcPanelY + 8;
 
 		if (this.mc.isDemo()) {
-			this.addDemoButtons(j, 24);
+			this.addDemoButtons(bx, bw, j, gap);
 		} else {
-			this.addSingleplayerMultiplayerButtons(j, 24);
+			this.buttonList.add(new GuiButton(1, bx, j, bw, 20, I18n.format("menu.singleplayer")));
+			this.buttonList.add(new GuiButton(2, bx, j + gap, bw, 20, I18n.format("menu.multiplayer")));
 		}
-
-		// Treasure Client: Options takes the third row (Credits moved into the Mods screen)
-		this.buttonList.add(new GuiButton(0, this.width / 2 - 100, j + 24 * 2, I18n.format("menu.options")));
-		this.buttonList.add(new GuiButton(102, this.width / 2 - 100, j + 72 + 12, 98, 20, "Mods"));
-		this.buttonList.add(new GuiButton(4, this.width / 2 + 2, j + 72 + 12, 98, 20, I18n.format("Edit Profile")));
-		this.buttonList.add(new GuiButtonLanguage(5, this.width / 2 - 124, j + 72 + 12));
-		// Treasure Client: always-available Treasure Settings opener (so an unbound
-		// hotkey can never lock you out of the overlay menu).
-		this.buttonList.add(new GuiButton(101, this.width / 2 - 100, j + 72 + 36, 200, 20, "Treasure Settings"));
+		// the Mod Menu is the in-browser overlay (also on its key, Right Shift by default)
+		this.buttonList.add(new GuiButton(101, bx, j + gap * 2, bw, 20, "Mod Menu"));
+		this.buttonList.add(new GuiButton(104, bx, j + gap * 3, bw, 20, "Cosmetics"));
+		this.buttonList.add(new GuiButton(0, bx, j + gap * 4, bw - 24, 20, I18n.format("menu.options")));
+		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 4));
+		this.buttonList.add(new GuiButton(102, bx, j + gap * 5, bw, 20, "About & Credits"));
+		if (rejoin) {
+			String n = TCLastServer.name();
+			String label = "Rejoin " + n;
+			while (n.length() > 3 && this.fontRendererObj.getStringWidth(label) > this.tcPanelW - 12) {
+				n = n.substring(0, n.length() - 1);
+				label = "Rejoin " + n.trim() + "...";
+			}
+			this.buttonList.add(new GuiButton(110, this.tcPanelX, this.tcPanelY + this.tcPanelH + 4, this.tcPanelW, 20, label));
+		}
 		this.buttonList.add(new GuiButtonTCProfile(103, this.width - 28, 6)); // Treasure Client: Profiles
+		// Treasure Client 1.5: the overlay draws the menu; the buttons above stay hidden unless it doesn't answer
+		this.tcInitAt = EagRuntime.steadyTimeMillis();
+		boolean fallback = this.tcFallback();
+		for (int i = 0; i < this.buttonList.size(); ++i) {
+			this.buttonList.get(i).visible = fallback;
+		}
+		this.tcPublishMenu();
+	}
+
+	// Treasure Client 1.5: side panel and player positions (set in initGui)
+	private int tcPanelX, tcPanelY, tcPanelW, tcPanelH;
+	private static float tcYaw = -22.0F; // the player's turn, kept while the game is open
+	private boolean tcDragging = false;
+	private int tcDragLastX = 0;
+	private static final String TC_CHANGELOG_URL = "https://treasureclient.github.io/changelog.html";
+
+	/** Left edge of the player's area, right of the panel. */
+	private int tcPlayerLeft() {
+		return this.tcPanelX + this.tcPanelW + 10;
+	}
+
+	/** Whether there is room for the player (very narrow windows only show the panel). */
+	private boolean tcShowPlayer() {
+		return this.width - this.tcPlayerLeft() >= 90 && this.height >= 150;
+	}
+
+	private int tcWhatsNewW() {
+		return this.fontRendererObj.getStringWidth("What's new");
 	}
 
 	/**
@@ -283,10 +409,10 @@ public class GuiMainMenu extends GuiScreen {
 	/**
 	 * Adds Demo buttons on Main Menu for players who are playing Demo.
 	 */
-	private void addDemoButtons(int p_73972_1_, int p_73972_2_) {
-		this.buttonList.add(new GuiButton(11, this.width / 2 - 100, p_73972_1_, I18n.format("menu.playdemo")));
+	private void addDemoButtons(int x, int w, int p_73972_1_, int p_73972_2_) {
+		this.buttonList.add(new GuiButton(11, x, p_73972_1_, w, 20, I18n.format("menu.playdemo")));
 		this.buttonResetDemo = this.addButton(
-				new GuiButton(12, this.width / 2 - 100, p_73972_1_ + p_73972_2_ * 1, I18n.format("menu.resetdemo")));
+				new GuiButton(12, x, p_73972_1_ + p_73972_2_ * 1, w, 20, I18n.format("menu.resetdemo")));
 		ISaveFormat isaveformat = this.mc.getSaveLoader();
 		WorldInfo worldinfo = isaveformat.getWorldInfo("Demo_World");
 
@@ -313,6 +439,18 @@ public class GuiMainMenu extends GuiScreen {
 
 		if (button.id == 0) {
 			this.mc.displayGuiScreen(new GuiOptions(this, this.mc.gameSettings));
+		}
+
+		if (button.id == 104) {
+			// Treasure Client 1.5: Cosmetics. Until the cosmetics screen is in, this is skin & cape.
+			this.mc.displayGuiScreen(new GuiScreenEditProfile(this));
+		}
+
+		if (button.id == 110) {
+			net.minecraft.client.multiplayer.ServerData d = TCLastServer.data();
+			if (d != null) {
+				this.mc.displayGuiScreen(new net.minecraft.client.multiplayer.GuiConnecting(this, this.mc, d));
+			}
 		}
 
 		if (button.id == 103) {
@@ -650,57 +788,103 @@ public class GuiMainMenu extends GuiScreen {
 			this.drawRect(x, y, x + (int) size, y + (int) size, particleColor);
 		}
 
-		int j = this.width / 2;
-
-		// ---- chest logo crest above the wordmark (recolored to the active theme) ----
-		this.drawLogo(j, 1, 36);
-
-		// ---- wordmark: big, layered shadow + themed accent ----
-		brandLine(); // refresh brandTitle / customBrand from the overlay
-		if (customBrand) {
-			// The user renamed the client in the Mod Menu — show that title as the
-			// big wordmark, scaled to fit the screen width (one centered line).
-			String ct = brandTitle;
-			int cw = Math.max(1, this.fontRendererObj.getStringWidth(ct));
-			float sc = (this.width - 60.0F) / (float) cw;
-			if (sc > 2.5F) sc = 2.5F;
-			if (sc < 1.0F) sc = 1.0F;
-			GlStateManager.pushMatrix();
-			GlStateManager.translate((float) j, 58.0F, 0.0F);
-			GlStateManager.scale(sc, sc, sc);
-			this.drawCenteredString(this.fontRendererObj, ct, 1, -3, 0xff000000);
-			this.drawCenteredString(this.fontRendererObj, ct, 0, -4, cAccent());
-			GlStateManager.popMatrix();
-		} else {
-			GlStateManager.pushMatrix();
-			GlStateManager.translate((float) j, 48.0F, 0.0F);
-			GlStateManager.scale(2.5F, 2.5F, 2.5F);
-			// drop shadow
-			this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 1, -3, 0xff000000);
-			// main
-			this.drawCenteredString(this.fontRendererObj, TextFormatting.BOLD + "TREASURE", 0, -4, cAccent());
-			GlStateManager.popMatrix();
-
-			GlStateManager.pushMatrix();
-			GlStateManager.translate((float) j, 72.0F, 0.0F);
-			GlStateManager.scale(1.4F, 1.4F, 1.4F);
-			this.drawCenteredString(this.fontRendererObj, "C L I E N T", 1, 1, 0xff000000);
-			this.drawCenteredString(this.fontRendererObj, "C L I E N T", 0, 0, cAccentDim());
-			GlStateManager.popMatrix();
+		// ---- Treasure Client 1.5: the overlay draws the words; the game draws just your player ----
+		if (!this.tcFallback()) {
+			int cx = (int) (this.width * 0.80F);
+			float scale = Math.max(24.0F, this.height * 0.18F);
+			int feetY = (int) (this.height * 0.31F + scale * 2.0F);
+			int sw = (int) (scale * 0.55F);
+			for (int k = 0; k < 3; ++k) {
+				int ins = k * sw / 4;
+				Gui.drawRect(cx - sw + ins, feetY - 1 + k, cx + sw - ins, feetY + 1 + k, 0x22000000);
+			}
+			TCPlayerPreview.draw(cx, feetY, scale, tcYaw, mouseX, mouseY);
+			super.drawScreen(mouseX, mouseY, partialTicks);
+			return;
 		}
 
-		// splash with gentle pulse
+		// ---- header, top left: chest logo + wordmark ----
+		int lx = 10, ly = 6, lh = 30;
+		this.drawLogo(lx + Math.round(lh * LOGO_ASPECT) / 2, ly, lh);
+		int wx = lx + Math.round(lh * LOGO_ASPECT) + 6;
+		brandLine(); // refresh brandTitle / customBrand from the overlay
+		int wordRight;
+		if (customBrand) {
+			// The user renamed the client in the Mod Menu: show that title as the wordmark
+			String ct = brandTitle;
+			int cw = Math.max(1, this.fontRendererObj.getStringWidth(ct));
+			float sc = Math.min(2.0F, Math.max(1.0F, (this.width - wx - 60.0F) / (float) cw));
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) wx, 15.0F, 0.0F);
+			GlStateManager.scale(sc, sc, sc);
+			this.drawString(this.fontRendererObj, ct, 1, 1, 0xff000000);
+			this.drawString(this.fontRendererObj, ct, 0, 0, cAccent());
+			GlStateManager.popMatrix();
+			wordRight = wx + (int) (cw * sc);
+		} else {
+			String w1 = TextFormatting.BOLD + "TREASURE";
+			GlStateManager.pushMatrix();
+			GlStateManager.translate((float) wx, 9.0F, 0.0F);
+			GlStateManager.scale(2.0F, 2.0F, 2.0F);
+			this.drawString(this.fontRendererObj, w1, 1, 1, 0xff000000);
+			this.drawString(this.fontRendererObj, w1, 0, 0, cAccent());
+			GlStateManager.popMatrix();
+			wordRight = wx + this.fontRendererObj.getStringWidth(w1) * 2;
+			this.drawString(this.fontRendererObj, "C L I E N T", wx + 1, 28, cAccentDim());
+		}
+
+		// splash: tilted and pulsing at the end of the wordmark, like the vanilla one
 		GlStateManager.pushMatrix();
-		GlStateManager.translate((float) j, 90.0F, 0.0F);
-		float f = 1.0F - 0.08F * MathHelper
+		GlStateManager.translate((float) (wordRight + 6), 26.0F, 0.0F);
+		GlStateManager.rotate(-12.0F, 0.0F, 0.0F, 1.0F);
+		float f = 0.9F - 0.08F * MathHelper
 				.abs(MathHelper.sin((float) (t % 1000L) / 1000.0F * ((float) Math.PI * 2F)));
 		GlStateManager.scale(f, f, f);
-		this.drawCenteredString(this.fontRendererObj, this.splashText, 0, 0, cAccent());
+		if (wordRight + 6 + this.fontRendererObj.getStringWidth(this.splashText) * f < this.width - 34) {
+			this.drawString(this.fontRendererObj, this.splashText, 0, 0, cAccent());
+		}
 		GlStateManager.popMatrix();
 
+		// ---- the glass panel behind the buttons ----
+		int acc = cAccent();
+		TreasureButtons.roundedRect(this.tcPanelX, this.tcPanelY, this.tcPanelW, this.tcPanelH,
+				(TreasureButtons.panelBg() & 0x00FFFFFF) | 0xB0000000);
+		TreasureButtons.roundedOutline(this.tcPanelX, this.tcPanelY, this.tcPanelW, this.tcPanelH,
+				(acc & 0x00FFFFFF) | 0x66000000);
+
+		// ---- your player on the right ----
+		if (this.tcShowPlayer()) {
+			int left = this.tcPlayerLeft();
+			int cx = (left + this.width) / 2;
+			int feetY = this.height - 30;
+			float scale = Math.min(80.0F, Math.max(30.0F, (feetY - 56) / 2.2F));
+			// soft shadow under the feet
+			int sw = (int) (scale * 0.55F);
+			for (int k = 0; k < 3; ++k) {
+				int ins = k * sw / 4;
+				Gui.drawRect(cx - sw + ins, feetY - 1 + k, cx + sw - ins, feetY + 1 + k, 0x22000000);
+			}
+			TCPlayerPreview.draw(cx, feetY, scale, tcYaw, mouseX, mouseY);
+			// your name above the head
+			String pn = this.mc.getSession().getProfile().getName();
+			int nw = this.fontRendererObj.getStringWidth(pn);
+			int ny = (int) (feetY - scale * 2.0F) - 14;
+			Gui.drawRect(cx - nw / 2 - 3, ny - 2, cx + nw / 2 + 3, ny + 9, 0x66000000);
+			this.drawString(this.fontRendererObj, pn, cx - nw / 2, ny, 0xFFFFFFFF);
+			if (!this.tcDragging && mouseX >= left && mouseY > ny + 10 && mouseY < feetY + 4) {
+				String hint = "Drag to spin";
+				this.drawString(this.fontRendererObj, hint, cx - this.fontRendererObj.getStringWidth(hint) / 2,
+						feetY + 6, cAccentDim());
+			}
+		}
+
+		// ---- bottom corners: version (left), What's new (right) ----
 		this.drawString(this.fontRendererObj, brandLine(), 2, this.height - 20, cAccentDim());
-		this.drawString(this.fontRendererObj, "Eaglercraft 1.12.2",
-				2, this.height - 10, cAccentDim());
+		this.drawString(this.fontRendererObj, "Eaglercraft 1.12.2", 2, this.height - 10, cAccentDim());
+		int ww = this.tcWhatsNewW();
+		boolean overNew = mouseX >= this.width - ww - 4 && mouseY >= this.height - 12;
+		this.drawString(this.fontRendererObj, (overNew ? TextFormatting.UNDERLINE : "") + "What's new",
+				this.width - ww - 2, this.height - 10, overNew ? 0xFFFFFFFF : cAccent());
 
 		super.drawScreen(mouseX, mouseY, partialTicks);
 	}
@@ -711,16 +895,51 @@ public class GuiMainMenu extends GuiScreen {
 	protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
 		super.mouseClicked(mouseX, mouseY, mouseButton);
 
-		if (mouseX > this.field_193979_N && mouseX < this.field_193979_N + this.field_193978_M
-				&& mouseY > this.height - 10 && mouseY < this.height) {
-			this.mc.displayGuiScreen(new GuiWinGame(false, null));
+		// Treasure Client 1.5: with the overlay menu, press on the player to spin it
+		if (!this.tcFallback()) {
+			int cx = (int) (this.width * 0.80F);
+			if (mouseButton == 0 && Math.abs(mouseX - cx) < this.width * 0.12F && mouseY > this.height * 0.24F
+					&& mouseY < this.height * 0.68F) {
+				this.tcDragging = true;
+				this.tcDragLastX = mouseX;
+			}
+			return;
 		}
+		// Treasure Client: "What's new" opens the changelog on the website
+		if (mouseButton == 0 && mouseX >= this.width - this.tcWhatsNewW() - 4 && mouseY >= this.height - 12) {
+			EagRuntime.openLink(TC_CHANGELOG_URL);
+			return;
+		}
+		// Treasure Client: press on the player (right side) to start spinning it
+		if (mouseButton == 0 && this.tcShowPlayer() && mouseX >= this.tcPlayerLeft() && mouseY > 40
+				&& mouseY < this.height - 14) {
+			this.tcDragging = true;
+			this.tcDragLastX = mouseX;
+		}
+	}
 
+	protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+		super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+		if (this.tcDragging) {
+			tcYaw += (mouseX - this.tcDragLastX) * 1.6F;
+			tcYaw = MathHelper.wrapDegrees(tcYaw);
+			this.tcDragLastX = mouseX;
+		}
+	}
+
+	protected void mouseReleased(int mouseX, int mouseY, int state) {
+		super.mouseReleased(mouseX, mouseY, state);
+		this.tcDragging = false;
 	}
 
 	/**
 	 * Called when the screen is unloaded. Used to disable keyboard repeat events
 	 */
 	public void onGuiClosed() {
+		// Treasure Client 1.5: the overlay hides the menu words
+		try {
+			EagRuntime.setStorage("tcmenu", null);
+		} catch (Throwable t) {
+		}
 	}
 }

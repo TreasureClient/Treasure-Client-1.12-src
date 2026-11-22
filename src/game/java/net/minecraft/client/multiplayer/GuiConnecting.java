@@ -82,6 +82,7 @@ public class GuiConnecting extends GuiScreen {
 		String serveraddress = AddressResolver.resolveURI(parServerData);
 		mcIn.loadWorld((WorldClient) null);
 		mcIn.setServerData(parServerData);
+		net.minecraft.client.gui.TCLastServer.remember(parServerData); // Treasure Client: title screen "Rejoin"
 		if (RateLimitTracker.isLockedOut(serveraddress)) {
 			logger.error("Server locked this client out on a previous connection, will not attempt to reconnect");
 		} else {
