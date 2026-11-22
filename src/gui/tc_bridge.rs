@@ -12,6 +12,10 @@
 //! - `tcpause`: the overlay writes 3 to freeze the game (an empty screen that frees the
 //!   mouse) and 2 to go back; the game answers 0, or 4 when Escape closed it.
 //! - `tczoom`: 1 while the Zoom key is held. `tcmods`: the mod settings.
+//! - `tcmenu`: 1 while the title screen shows, with `tcmenuinfo` ("name\nrejoin\nprofile\nversion\ndemo\nnosp").
+//!   The overlay draws the 1.5 main menu words, writes the clicked one to `tcmenuact`, and
+//!   writes the time to `tcmenuack` while it shows them (the title screen's own buttons
+//!   come back if it stops).
 
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -37,6 +41,65 @@ fn set(key: &str, value: &[u8]) {
             &format!("{PREFIX}{key}"),
             &base64::engine::general_purpose::STANDARD.encode(value),
         );
+    }
+}
+
+fn remove(key: &str) {
+    if let Some(s) = storage() {
+        let _ = s.remove_item(&format!("{PREFIX}{key}"));
+    }
+}
+
+static TITLE_SHOWN: AtomicBool = AtomicBool::new(false);
+static TITLE_SINCE: AtomicU64 = AtomicU64::new(0);
+static TITLE_AT: AtomicU64 = AtomicU64::new(0);
+static MENU_LIVE: AtomicBool = AtomicBool::new(false);
+static MENU_CHECKED: AtomicU64 = AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    js_sys::Date::now() as u64
+}
+
+/// The title screen is drawing this frame. The first frame tells the overlay to show the
+/// 1.5 main menu (with `info`). Returns how long the title has been showing, in ms.
+pub(crate) fn title_frame(info: &str) -> u64 {
+    let now = now_ms();
+    if !TITLE_SHOWN.swap(true, Ordering::Relaxed) {
+        TITLE_SINCE.store(now, Ordering::Relaxed);
+        MENU_CHECKED.store(0, Ordering::Relaxed);
+        set("tcmenuinfo", info.as_bytes());
+        set("tcmenu", &[1]);
+    }
+    TITLE_AT.store(now, Ordering::Relaxed);
+    now.saturating_sub(TITLE_SINCE.load(Ordering::Relaxed))
+}
+
+/// The menu word the overlay clicked ("mp", "set", ...), once.
+pub(crate) fn take_menu_action() -> Option<String> {
+    let value = get("tcmenuact")?;
+    remove("tcmenuact");
+    String::from_utf8(value).ok().map(|s| s.trim().to_owned())
+}
+
+/// Whether the overlay is drawing the main menu (it writes the time every 400 ms).
+pub(crate) fn menu_overlay_live() -> bool {
+    let now = now_ms();
+    if now.saturating_sub(MENU_CHECKED.load(Ordering::Relaxed)) >= 200 {
+        MENU_CHECKED.store(now, Ordering::Relaxed);
+        let ack = get("tcmenuack")
+            .and_then(|v| String::from_utf8(v).ok())
+            .and_then(|s| s.trim().parse::<u64>().ok())
+            .unwrap_or(0);
+        MENU_LIVE.store(now.abs_diff(ack) < 2500, Ordering::Relaxed);
+    }
+    MENU_LIVE.load(Ordering::Relaxed)
+}
+
+/// Hides the overlay's main menu once the title screen stops drawing.
+fn title_gone_check() {
+    if TITLE_SHOWN.load(Ordering::Relaxed) && now_ms().saturating_sub(TITLE_AT.load(Ordering::Relaxed)) > 250 {
+        TITLE_SHOWN.store(false, Ordering::Relaxed);
+        remove("tcmenu");
     }
 }
 
@@ -113,6 +176,7 @@ fn set_hud(out: String) {
 }
 
 pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
+    title_gone_check();
     let in_world = state.hud.in_world;
     let playing = in_world && !state.screen.is_open();
     let changed = in_world != IN_WORLD.swap(in_world, Ordering::Relaxed);

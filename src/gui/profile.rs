@@ -858,6 +858,15 @@ mod tc {
         p.region_part(sheet, sx, sy, 8.0, 8.0, x, y, size, size, [1.0; 4]);
     }
 
+    /// Your player on the 1.5 title screen: the skin you wear, looking at the mouse.
+    pub(crate) fn title_figure(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx, rect: [f32; 4]) {
+        state.profile.ensure_loaded();
+        let name = state.profile.accounts.active().map(|a| a.name.clone());
+        state.profile.skin.open(name.as_deref());
+        let slim = state.profile.skin.slim();
+        state.profile.skin.preview_as(p, ctx, rect, slim);
+    }
+
     /// The face button in the top right of the title screen. Opens Profiles.
     pub(crate) fn title_button(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
         state.profile.ensure_loaded();

@@ -492,7 +492,220 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
   background: linear-gradient(180deg, color-mix(in srgb, var(--a-2) 9%, transparent), transparent 60%), var(--tc-card-bg, var(--panel)); }
 #tc-root .tc-mod.tc-tile:not(.tc-on) .tc-lab b { color: color-mix(in srgb, var(--txt) 70%, transparent); }
 
-    `;
+/* ===== TC15: Treasure Client 1.5 look (main menu words + the clean Mod Menu). Everything is under #tc-root.tc15 ===== */
+#tc-root.tc15 { --t15-ink: #ecebe6; --t15-dim: rgba(236,235,230,.66); --t15-faint: rgba(236,235,230,.13); --t15-ease: cubic-bezier(.2,.7,.2,1); }
+#tc-root.tc15 .t15-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
+#tc-root.tc15 .t15-word { font-family: 'Archivo', 'Outfit', system-ui, sans-serif; font-weight: 600; font-stretch: 72%; text-transform: uppercase; letter-spacing: -.01em; line-height: .98; }
+
+/* ---------------- Mod Menu: full screen, no card ---------------- */
+#tc-root.tc15 #tc-gui { background: rgba(8,8,10,.5); backdrop-filter: none; -webkit-backdrop-filter: none; place-items: stretch; }
+#tc-root.tc15 #tc-gui::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(10,10,12,.88) 0%, rgba(10,10,12,.74) 30%, rgba(10,10,12,.62) 100%); }
+#tc-root.tc15 #tc-gui-panel { width: 100vw; height: 100vh; max-width: none; max-height: none; border: 0; border-radius: 0; background: transparent;
+  box-shadow: none; transform: none; transition: none; color: var(--t15-ink); font-family: 'Archivo', 'Outfit', system-ui, sans-serif; }
+#tc-root.tc15 #tc-gui-panel .tc-head { padding: 4.2vh 5vw 0; border: 0; background: none; gap: 26px; }
+#tc-root.tc15 .tc-head .tc-logo-chest { height: 24px; filter: none; }
+#tc-root.tc15 .tc-head .tc-logo-word { display: none; }
+#tc-root.tc15 .tc-head .tc-brandwrap { gap: 10px; }
+#tc-root.tc15 .t15-brand { font-family: 'Archivo', 'Outfit', sans-serif; font-weight: 800; font-stretch: 80%; font-size: 15px; letter-spacing: .14em; color: var(--t15-ink); text-transform: uppercase; }
+#tc-root.tc15 .tc-brand-custom { font: 800 15px 'Archivo', 'Outfit', sans-serif; letter-spacing: .08em; filter: none; }
+#tc-root.tc15 .tc-brand-custom:not([style*="none"]) ~ .t15-brand { display: none; }
+#tc-root.tc15 .t15-link { font: inherit; letter-spacing: inherit; text-transform: inherit; background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--t15-dim); transition: color .15s; }
+#tc-root.tc15 .t15-link:hover { color: var(--t15-ink); }
+#tc-root.tc15 .t15-link.t15-mono { font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
+#tc-root.tc15 .t15-link b { color: var(--a-1); font-weight: 500; }
+#tc-root.tc15 .tc-head .tc-close { width: auto; height: auto; border: 0; border-radius: 0; padding: 4px 0; background: none; color: var(--t15-dim);
+  font: 500 11.5px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; transform: none; }
+#tc-root.tc15 .tc-head .tc-close:hover { color: var(--t15-ink); transform: none; }
+
+/* body: left column (Modules / Themes) and the right column (tabs + list) */
+#tc-root.tc15 .tc-body { display: grid; grid-template-columns: minmax(210px, 27vw) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+  gap: 0 2vw; padding: 0 0 0 5vw; overflow: hidden; align-items: stretch; flex: 1 1 auto; min-height: 0; }
+#tc-root.tc15 #tc-gui-panel.tc-showsub .tc-body { display: none; }
+#tc-root.tc15 .tc-subpage { display: none; flex-direction: column; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+#tc-root.tc15 #tc-gui-panel.tc-showsub .tc-subpage { display: flex; }
+#tc-root.tc15 #tc-gui-bg { display: none; }
+#tc-root.tc15 .tc-cats { grid-row: 1 / 3; grid-column: 1; position: static; display: flex; flex-direction: column; gap: 0; padding: 5vh 0 4.5vh; min-height: 0; }
+#tc-root.tc15 .t15-label { color: var(--t15-dim); margin-bottom: 2.6vh; }
+#tc-root.tc15 .tc-cats .tc-view { position: relative; display: flex; align-items: flex-start; gap: 16px; width: auto; padding: 1.2vh 0; margin: 0 0 0 calc(var(--i, 0) * 3vw);
+  background: none; border: 0; border-radius: 0; color: var(--t15-ink); cursor: pointer; text-align: left; }
+#tc-root.tc15 .tc-cats .tc-view .t15-n { width: 24px; padding-top: .8vh; color: var(--t15-dim); transition: color .2s; }
+#tc-root.tc15 .tc-cats .tc-view .t15-w { font-size: clamp(30px, 6vh, 54px); opacity: .42; transition: opacity .2s, transform .3s var(--t15-ease); text-shadow: 0 2px 14px rgba(0,0,0,.4); }
+#tc-root.tc15 .tc-cats .tc-view::before { content: ""; position: absolute; left: calc(-5vw - var(--i, 0) * 3vw); top: 50%; width: 0; height: 3px; background: var(--a-1);
+  transform: none; transition: width .3s var(--t15-ease); }
+#tc-root.tc15 .tc-cats .tc-view:hover .t15-w { opacity: .75; }
+#tc-root.tc15 .tc-cats .tc-view.active .t15-w { opacity: 1; transform: translateX(14px); }
+#tc-root.tc15 .tc-cats .tc-view.active .t15-n { color: var(--a-1); }
+#tc-root.tc15 .tc-cats .tc-view.active::before { width: calc(5vw - 10px + var(--i, 0) * 3vw); }
+#tc-root.tc15 .tc-cats .tc-view:hover, #tc-root.tc15 .tc-cats .tc-view.active { background: none; border: 0; }
+#tc-root.tc15 .t15-hint { margin-top: auto; color: var(--t15-dim); line-height: 1.7; max-width: 22vw; text-transform: none; letter-spacing: .02em; font-size: 11.5px; }
+#tc-root.tc15 .t15-hint b { color: var(--t15-ink); font-weight: 500; }
+
+/* top of the right column: the mod types as tabs, and the search */
+#tc-root.tc15 .t15-bar { grid-row: 1; grid-column: 2; display: flex; align-items: flex-end; gap: 28px; padding: 5vh 5vw 0 0; }
+#tc-root.tc15 .t15-bar #tc-catbar { position: relative; flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 4px 26px; margin: 0; padding: 0 0 12px; border-bottom: 1px solid var(--t15-faint); background: none; }
+#tc-root.tc15 #tc-catbar .tc-cat { padding: 6px 0; border: 0; border-radius: 0; background: none; color: var(--t15-dim); cursor: pointer;
+  font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .07em; text-transform: uppercase; transition: color .15s; }
+#tc-root.tc15 #tc-catbar .tc-cat:hover { color: var(--t15-ink); background: none; padding-left: 0; }
+#tc-root.tc15 #tc-catbar .tc-cat.active { color: var(--t15-ink); background: none; }
+#tc-root.tc15 #tc-catbar .tc-cat em { font-style: normal; margin-left: 7px; color: var(--t15-dim); opacity: .8; font-size: 10.5px; }
+#tc-root.tc15 #tc-catbar .tc-cat.active em { color: var(--a-1); opacity: 1; }
+#tc-root.tc15 .t15-ink { position: absolute; bottom: -1px; left: 0; width: 0; height: 2px; background: var(--a-1); pointer-events: none;
+  transition: left .35s var(--t15-ease), width .35s var(--t15-ease); }
+#tc-root.tc15 .t15-bar .tc-search-wrap { flex: 0 1 260px; margin: 0; padding-bottom: 12px; border-bottom: 1px solid var(--t15-faint); transition: border-color .2s; }
+#tc-root.tc15 .t15-bar .tc-search-wrap:focus-within { border-bottom-color: var(--a-1); }
+#tc-root.tc15 .tc-search-ic { display: none; }
+#tc-root.tc15 .tc-search { width: 100%; padding: 6px 0; border: 0; border-radius: 0; background: none; box-shadow: none; outline: none;
+  color: var(--t15-ink); font: 500 14px 'Archivo', 'Outfit', sans-serif; }
+#tc-root.tc15 .tc-search::placeholder { color: var(--t15-dim); }
+#tc-root.tc15 .tc-body.searching #tc-catbar { display: flex !important; visibility: hidden; }
+#tc-root.tc15 #tc-body.tcv-themes .t15-bar #tc-catbar { display: flex !important; visibility: hidden; }
+
+/* the list */
+#tc-root.tc15 .tc-panels, #tc-root.tc15 .tc-body.searching .tc-panels { grid-row: 2; grid-column: 2; overflow-y: auto; min-height: 0; padding: 1.4vh 5vw 6vh 0;
+  scrollbar-width: thin; scrollbar-color: var(--t15-faint) transparent; }
+#tc-root.tc15 .tc-panels.tc-all { display: block; }
+#tc-root.tc15 .tc-panel.active, #tc-root.tc15 .tc-body.searching .tc-panel.tc-search-hit { display: block; }
+#tc-root.tc15 .tc-body:not(.searching) .tc-panels.tc-all > .tc-panel.active,
+#tc-root.tc15 .tc-body.searching .tc-panels.tc-all > .tc-panel.tc-search-hit { display: contents; }
+#tc-root.tc15 .tc-seclabel { margin: 22px 0 6px; color: var(--t15-dim); font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .08em; }
+#tc-root.tc15 .tc-sep { margin: 10px 0; background: var(--t15-faint); }
+#tc-root.tc15 .tc-note { background: none; border: 0; border-left: 2px solid var(--t15-faint); border-radius: 0; color: var(--t15-dim); padding: 8px 14px; }
+#tc-root.tc15 .tc-panel > .tc-mod:not(.tc-tile) { border: 0; border-bottom: 1px solid var(--t15-faint); background: none; border-radius: 0; margin: 0; }
+#tc-root.tc15 .tc-panel > .tc-mod:not(.tc-tile) > .tc-row { padding: 15px 8px 15px 16px; margin: 0; border-radius: 0; }
+#tc-root.tc15 .tc-row:hover { background: rgba(255,255,255,.03); }
+#tc-root.tc15 .tc-lab b { font: 600 16px 'Archivo', 'Outfit', sans-serif; color: var(--t15-ink); }
+#tc-root.tc15 .tc-lab i { font: 400 13px 'Archivo', 'Outfit', sans-serif; color: var(--t15-dim); }
+
+/* each module is one row: icon, name and description, settings, switch */
+#tc-root.tc15 .tc-mod.tc-tile { display: flex; flex-direction: row; align-items: center; min-height: 0; margin: 0; padding: 0; border: 0;
+  border-bottom: 1px solid var(--t15-faint); border-radius: 0; background: none; box-shadow: none; transform: none; overflow: visible;
+  transition: background .15s; }
+#tc-root.tc15 .tc-mod.tc-tile:hover { background: rgba(255,255,255,.035); transform: none; box-shadow: none; border-color: var(--t15-faint); }
+#tc-root.tc15 .tc-mod.tc-tile:active { transform: none; background: rgba(255,255,255,.06); }
+#tc-root.tc15 .tc-mod.tc-tile.tc-on { background: none; border-color: var(--t15-faint); }
+#tc-root.tc15 .tc-mod.tc-tile.tc-on:hover { background: rgba(255,255,255,.035); }
+#tc-root.tc15 .tc-mod.tc-tile::after { left: 0; right: auto; top: 26%; bottom: 26%; width: 2px; height: auto; border-radius: 2px; background: var(--a-1);
+  transform: scaleY(.2); box-shadow: none; }
+#tc-root.tc15 .tc-mod.tc-tile.tc-on::after { opacity: 1; transform: none; box-shadow: none; }
+#tc-root.tc15 .tc-tile > .tc-row { flex: 1 1 auto; flex-direction: row; justify-content: flex-start; align-items: center; text-align: left; gap: 16px;
+  padding: 15px 8px 15px 16px; min-width: 0; }
+#tc-root.tc15 .tc-tile-ico { width: 21px; height: 21px; flex: none; opacity: .45; color: var(--t15-ink); }
+#tc-root.tc15 .tc-tile.tc-on .tc-tile-ico { color: var(--a-1); opacity: 1; filter: none; }
+#tc-root.tc15 .tc-mod.tc-tile:hover .tc-tile-ico { transform: none; opacity: .8; }
+#tc-root.tc15 .tc-tile .tc-lab { align-items: flex-start; gap: 3px; min-width: 0; }
+#tc-root.tc15 .tc-tile .tc-lab b { font-size: 16px; }
+#tc-root.tc15 .tc-mod.tc-tile:not(.tc-on) .tc-lab b { color: var(--t15-ink); }
+#tc-root.tc15 .tc-tile .tc-lab i { font-size: 13px; -webkit-line-clamp: 1; }
+#tc-root.tc15 .tc-tile-foot { position: static; display: flex; align-items: center; gap: 16px; padding: 0 6px 0 12px; pointer-events: auto; flex: none; }
+#tc-root.tc15 .tc-tile-foot .tc-gear { width: 28px; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--t15-dim); font-size: 16px; opacity: 1; }
+#tc-root.tc15 .tc-tile-foot .tc-gear:hover { color: var(--a-1); background: rgba(255,255,255,.06); transform: rotate(60deg); }
+#tc-root.tc15 .tc-tile-foot .tc-sw, #tc-root.tc15 .tc-sw { position: relative; width: 40px; min-width: 40px; height: 22px; padding: 0; margin: 0; border: 0; border-radius: 99px;
+  background: rgba(236,235,230,.16); box-shadow: none; display: block; transition: background .2s; }
+#tc-root.tc15 .tc-tile-foot .tc-sw::after { content: none; }
+#tc-root.tc15 .tc-row > .tc-sw { margin-left: auto; }
+#tc-root.tc15 .tc-row > .tc-gear + .tc-sw { margin-left: 12px; }
+#tc-root.tc15 .tc-tile-foot .tc-sw i, #tc-root.tc15 .tc-sw i { display: block; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--t15-ink); transform: none; transition: transform .25s var(--t15-ease), background .2s; }
+#tc-root.tc15 .tc-tile-foot .tc-sw.on, #tc-root.tc15 .tc-sw.on { background: var(--a-1); box-shadow: none; }
+#tc-root.tc15 .tc-tile-foot .tc-sw.on i, #tc-root.tc15 .tc-sw.on i { transform: translateX(18px); background: #111; }
+#tc-root.tc15 .tc-tile-foot .tc-sw:hover, #tc-root.tc15 .tc-sw:hover { filter: none; box-shadow: 0 0 0 3px rgba(236,235,230,.1); }
+#tc-root.tc15 .tc-mod.tc-tile.tc-tile-wide { flex-wrap: wrap; cursor: default; }
+#tc-root.tc15 .tc-mod.tc-tile.tc-tile-wide > .tc-row { flex: 1 1 100%; padding-bottom: 4px; }
+#tc-root.tc15 .tc-mod.tc-tile.tc-tile-wide > .tc-cfg { flex: 1 1 100%; padding: 2px 16px 14px 53px; }
+#tc-root.tc15 .tc-tile-wide .tc-cfg-row { justify-content: flex-start; }
+#tc-root.tc15 .tc-tile-wide .tc-tile-ico { color: var(--a-1); opacity: 1; }
+
+/* buttons and controls inside the menu */
+#tc-root.tc15 .tc-apply, #tc-root.tc15 .tc-done, #tc-root.tc15 .tc-te-save { background: var(--a-1); color: #111; box-shadow: none; border-radius: 6px; font-family: 'Archivo', 'Outfit', sans-serif; font-weight: 600; }
+#tc-root.tc15 .tc-seg { background: rgba(255,255,255,.05); border-color: var(--t15-faint); }
+#tc-root.tc15 .tc-seg button { font: 500 12.5px 'Archivo', 'Outfit', sans-serif; }
+#tc-root.tc15 .tc-seg button.on { background: var(--a-1); color: #111; }
+#tc-root.tc15 .tc-foot { display: none; }
+
+/* Themes view */
+#tc-root.tc15 .tc-themes-h1 { font-family: 'Archivo', 'Outfit', sans-serif; font-weight: 600; font-stretch: 80%; font-size: 26px; text-transform: uppercase; color: var(--t15-ink);
+  background: none; -webkit-text-fill-color: currentColor; filter: none; }
+#tc-root.tc15 .tc-themes-head { margin-bottom: 18px; }
+#tc-root.tc15 .tc-themes-h1 + .tc-themes-sub, #tc-root.tc15 .tc-themes-sub { margin-top: 8px; }
+#tc-root.tc15 .tc-themes-sub { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--t15-dim); }
+#tc-root.tc15 .tc-theme { border-radius: 8px; border-color: var(--t15-faint); }
+#tc-root.tc15 .tc-theme.selected { border-color: var(--a-1); box-shadow: 0 0 0 1px var(--a-1); }
+#tc-root.tc15 .tc-title-editor { background: rgba(255,255,255,.04); border-color: var(--t15-faint); border-radius: 8px; }
+
+/* a mod's settings page */
+#tc-root.tc15 .tc-subpage { padding: 4vh 5vw 6vh; }
+#tc-root.tc15 .tc-subpage-head { gap: 22px; margin-bottom: 3vh; align-items: baseline; }
+#tc-root.tc15 .tc-subback { box-shadow: none; background: none; border: 0; padding: 4px 0; color: var(--t15-dim); cursor: pointer; font: 500 11.5px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; }
+#tc-root.tc15 .tc-subback:hover { color: var(--t15-ink); }
+#tc-root.tc15 .tc-subpage-title { font: 600 clamp(30px, 6vh, 54px)/1 'Archivo', 'Outfit', sans-serif; font-stretch: 72%; text-transform: uppercase; color: var(--t15-ink);
+  letter-spacing: -.01em; background: none; -webkit-text-fill-color: currentColor; filter: none; }
+#tc-root.tc15 .tc-subpage-body { max-width: 760px; margin: 0; }
+#tc-root.tc15 .tc-subpage-body .tc-cfg-row { border-bottom-color: var(--t15-faint); color: var(--t15-dim); font: 400 14px 'Archivo', 'Outfit', sans-serif; }
+
+/* ---------------- smooth movement ---------------- */
+@keyframes t15in { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes t15down { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes t15up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes t15fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes t15side { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+#tc-root.tc15 #tc-gui.open .tc-head { animation: t15down .45s var(--t15-ease) both; }
+#tc-root.tc15 #tc-gui.open .t15-label, #tc-root.tc15 #tc-gui.open .tc-cats .tc-view { animation: t15in .55s var(--t15-ease) both; animation-delay: calc(60ms + var(--i, 0) * 70ms); }
+#tc-root.tc15 #tc-gui.open .t15-hint { animation: t15fade .6s ease both .3s; }
+#tc-root.tc15 #tc-gui.open .t15-bar { animation: t15down .5s var(--t15-ease) both .08s; }
+#tc-root.tc15 .t15-anim .tc-mod, #tc-root.tc15 .t15-anim .tc-seclabel { animation: t15up .45s var(--t15-ease) both; animation-delay: calc(40ms + var(--k, 12) * 26ms); }
+#tc-root.tc15 #tc-body.tcv-themes .tc-panel[data-group="themes"] { animation: t15up .45s var(--t15-ease) both; }
+#tc-root.tc15 #tc-gui-panel.tc-showsub .tc-subpage { animation: t15side .4s var(--t15-ease) both; }
+
+/* ---------------- the main menu (title screen) ---------------- */
+#tc-root.tc15 #tc-title { position: absolute; inset: 0; pointer-events: none; color: var(--t15-ink); font-family: 'Archivo', 'Outfit', system-ui, sans-serif;
+  opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s; }
+#tc-root.tc15 #tc-title.show { opacity: 1; visibility: visible; transition: opacity .3s ease, visibility 0s; }
+#tc-root.tc15 #tc-title.under { opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s; }
+#tc-root.tc15 #tc-title .t-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(12,12,14,.72) 0%, rgba(12,12,14,.5) 32%, rgba(12,12,14,.12) 62%, rgba(12,12,14,.22) 100%),
+  linear-gradient(0deg, rgba(12,12,14,.45), transparent 28%); }
+#tc-root.tc15 #tc-title .t-top, #tc-root.tc15 #tc-title .t-bottom { position: absolute; left: 5vw; right: 5vw; display: flex; align-items: center; justify-content: space-between; }
+#tc-root.tc15 #tc-title .t-top { top: 4.2vh; }
+#tc-root.tc15 #tc-title .t-bottom { bottom: 4vh; color: var(--t15-dim); }
+#tc-root.tc15 #tc-title .t-brand { display: flex; align-items: center; gap: 10px; }
+#tc-root.tc15 #tc-title .t-brand img { height: 22px; width: auto; filter: none; }
+#tc-root.tc15 #tc-title .t-brand span { font-weight: 800; font-stretch: 80%; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; text-shadow: 0 1px 8px rgba(0,0,0,.5); }
+#tc-root.tc15 #tc-title .t15-mono { text-shadow: 0 1px 6px rgba(0,0,0,.7), 0 0 2px rgba(0,0,0,.5); }
+#tc-root.tc15 #tc-title .t15-link { pointer-events: auto; text-shadow: 0 1px 6px rgba(0,0,0,.7), 0 0 2px rgba(0,0,0,.5); }
+#tc-root.tc15 #tc-title .t-sep { opacity: .5; margin: 0 12px; }
+#tc-root.tc15 #tc-title .t-rejoin { color: var(--t15-ink); }
+#tc-root.tc15 #tc-title .t-menu { position: absolute; left: 5vw; top: 50%; transform: translateY(-50%); list-style: none; margin: 0; padding: 0; }
+#tc-root.tc15 #tc-title .t-item { position: relative; display: flex; align-items: flex-start; gap: 18px; padding: 1.5vh 0; margin-left: calc(var(--i) * 3.4vw); cursor: pointer; pointer-events: auto; }
+#tc-root.tc15 #tc-title .t-item .t-n { width: 26px; padding-top: .9vh; color: var(--t15-dim); transition: color .2s; }
+#tc-root.tc15 #tc-title .t-item .t15-word { font-size: clamp(32px, 6.4vh, 60px); text-shadow: 0 2px 14px rgba(0,0,0,.45); transition: transform .28s var(--t15-ease), opacity .2s; }
+#tc-root.tc15 #tc-title .t-item .t-bar { position: absolute; left: calc(-5vw - var(--i) * 3.4vw); top: 50%; height: 3px; width: 0; background: var(--a-1); transition: width .28s var(--t15-ease); }
+#tc-root.tc15 #tc-title .t-item .t-hint { align-self: center; color: var(--t15-dim); opacity: 0; transform: translateX(-8px); white-space: nowrap; transition: opacity .2s, transform .28s var(--t15-ease); }
+#tc-root.tc15 #tc-title .t-menu:hover .t15-word, #tc-root.tc15 #tc-title .t-menu.kbd .t15-word { opacity: .45; }
+#tc-root.tc15 #tc-title .t-item.on .t15-word { opacity: 1; transform: translateX(18px); }
+#tc-root.tc15 #tc-title .t-item.on .t-n { color: var(--a-1); }
+#tc-root.tc15 #tc-title .t-item.on .t-bar { width: calc(5vw - 10px + var(--i) * 3.4vw); }
+#tc-root.tc15 #tc-title .t-item.on .t-hint { opacity: 1; transform: translateX(18px); }
+#tc-root.tc15 #tc-title .t-item:active .t15-word { transform: translateX(22px) scale(.99); }
+#tc-root.tc15 #tc-title .t-item.t-off { cursor: default; }
+#tc-root.tc15 #tc-title .t-item.t-off .t15-word { opacity: .3 !important; }
+#tc-root.tc15 #tc-title .t-who { position: absolute; left: 80%; top: 69%; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+#tc-root.tc15 #tc-title .t-who b { display: block; font-weight: 700; font-stretch: 85%; font-size: 22px; letter-spacing: .02em; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+#tc-root.tc15 #tc-title .t-who .t15-mono { display: block; margin-top: 6px; color: var(--t15-dim); }
+#tc-root.tc15 #tc-title .t-who .t15-link { color: var(--a-1); padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; }
+#tc-root.tc15 #tc-title .t-who .t15-link:hover { text-decoration: underline; }
+/* coming in, and going out after a click */
+#tc-root.tc15 #tc-title.enter .t-item { animation: t15up .55s var(--t15-ease) both; animation-delay: calc(60ms + var(--i) * 60ms); }
+#tc-root.tc15 #tc-title.enter .t-top, #tc-root.tc15 #tc-title.enter .t-bottom { animation: t15fade .6s ease both .1s; }
+#tc-root.tc15 #tc-title.enter .t-who { animation: t15fade .6s ease both .35s; }
+#tc-root.tc15 #tc-title.leave .t-item { opacity: 0; transform: translateX(-26px); transition: opacity .18s ease, transform .2s ease; transition-delay: calc(var(--i) * 22ms); }
+#tc-root.tc15 #tc-title.leave .t-item.on { opacity: 1; transform: none; }
+#tc-root.tc15 #tc-title.leave .t-item.on .t15-word { transform: translateX(30px); }
+
+@media (prefers-reduced-motion: reduce) {
+  #tc-root.tc15 *, #tc-root.tc15 *::before, #tc-root.tc15 *::after { animation: none !important; transition: none !important; }
+}
+/* TC15 END */
+`;
   function ensureStyle() {
     if (document.getElementById('tc-root-style')) return;
     try {
@@ -1673,6 +1886,223 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
         });
       });
     })();
+
+
+    /* ===== TC15: Treasure Client 1.5 look — the main menu words and the clean Mod Menu =====
+       Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
+       Main menu talk with the game (all through the game's storage, like tcopen):
+         game -> us: tcmenu = 1 while the title screen is showing; tcmenuinfo = "name\nrejoin\nprofile\nversion\ndemo"
+         us -> game: tcmenuact = sp | mp | demo | cos | set | prof | rejoin | lang | about
+                     tcmenuack = the time, every 400 ms while we show the menu (the game shows its old buttons if we stop) */
+    (function () {
+      try {
+        var SK = '_eaglercraft_1.12.';
+        var sget = function (k) { try { var v = localStorage.getItem(SK + k); return v == null ? null : atob(v); } catch (e) { return null; } };
+        var sset = function (k, v) { try { if (v == null) localStorage.removeItem(SK + k); else localStorage.setItem(SK + k, btoa(v)); } catch (e) {} };
+        var utf8 = function (s) { try { return decodeURIComponent(escape(s)); } catch (e) { return s; } };
+        var mainSwitches = function (sel) {
+          var out = [];
+          $$(sel).forEach(function (p) {
+            [].forEach.call(p.children, function (m) {
+              if (!m.classList.contains('tc-mod') || m.style.display === 'none') return;
+              var s = m.querySelector(':scope > .tc-tile-foot > .tc-sw[data-mod], :scope > .tc-row > .tc-sw[data-mod]');
+              if (s) out.push(s);
+            });
+          });
+          return out;
+        };
+        var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+        if (!root || root.classList.contains('tc15') || $('#tc-title')) return;
+        // the menu words use Archivo (JetBrains Mono is already loaded for the small labels)
+        try {
+          if (!document.getElementById('tc15-font')) {
+            var lf = document.createElement('link'); lf.id = 'tc15-font'; lf.rel = 'stylesheet';
+            lf.href = 'https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;500&display=swap';
+            (document.head || document.documentElement).appendChild(lf);
+          }
+        } catch (e) {}
+
+        /* ---------- Mod Menu ---------- */
+        var panel = $('#tc-gui-panel'), body = $('#tc-body'), cats = $('#tc-cats'), panels = $('.tc-panels'), catbar = $('#tc-catbar');
+        var head = panel && panel.querySelector('.tc-head'), search = panel && panel.querySelector('.tc-search-wrap');
+        if (panel && body && cats && panels && catbar && head) {
+          // brand words next to the chest
+          var bw = head.querySelector('.tc-brandwrap');
+          if (bw && !bw.querySelector('.t15-brand')) { var bt = document.createElement('span'); bt.className = 't15-brand'; bt.textContent = 'Treasure Client'; bw.appendChild(bt); }
+          // left column: "Mod Menu", then Modules and Themes as big stepped words; Edit HUD moves to the top bar
+          var close = $('#tc-close');
+          if (close) close.innerHTML = 'Close &#10005;';
+          var lab = document.createElement('div'); lab.className = 't15-label t15-mono'; lab.textContent = 'Mod Menu'; lab.style.setProperty('--i', 0);
+          cats.insertBefore(lab, cats.firstChild);
+          var n = 0;
+          $$('#tc-cats .tc-view').forEach(function (v) {
+            var name = v.textContent.trim();
+            if (v.dataset.view === 'hud') {
+              v.className = 't15-link t15-mono tc-view-hud'; v.textContent = 'Edit HUD';
+              if (close) head.insertBefore(v, close); else head.appendChild(v);
+              return;
+            }
+            n++;
+            v.style.setProperty('--i', n - 1);
+            v.innerHTML = '<span class="t15-n t15-mono">0' + n + '</span><span class="t15-w t15-word">' + esc(name) + '</span>';
+          });
+          var fh = panel.querySelector('.tc-foot-hint');
+          var hint = document.createElement('div'); hint.className = 't15-hint t15-mono';
+          hint.innerHTML = 'Click a mod to turn it on or off. <b>&#9881;</b> opens its settings.<br>' + (fh ? esc(fh.textContent) : '');
+          cats.appendChild(hint);
+          // right column: the mod types as tabs along the top, with the search beside them
+          var bar = document.createElement('div'); bar.className = 't15-bar';
+          body.insertBefore(bar, panels);
+          bar.appendChild(catbar);
+          if (search) { bar.appendChild(search); var si = search.querySelector('input'); if (si) si.placeholder = 'Search mods'; }
+          var ink = document.createElement('span'); ink.className = 't15-ink'; catbar.appendChild(ink);
+          $$('#tc-catbar .tc-cat').forEach(function (c) {
+            if (!c.querySelector('em')) c.innerHTML = '<span>' + esc(c.textContent.trim()) + '</span><em></em>';
+          });
+          var moveInk = function () {
+            var a = $('#tc-catbar .tc-cat.active');
+            if (!a || !a.offsetWidth) { ink.style.width = '0'; return; }
+            ink.style.left = a.offsetLeft + 'px'; ink.style.width = a.offsetWidth + 'px';
+          };
+          // how many mods are on, per type
+          var counts = function () {
+            $$('#tc-catbar .tc-cat').forEach(function (c) {
+              var g = c.dataset.cat, sel = g === 'all' ? '.tc-panel:not([data-group="themes"])' : '.tc-panel[data-group="' + g + '"]';
+              var sw = mainSwitches(sel), all = sw.length, on = sw.filter(function (s) { return s.classList.contains('on'); }).length;
+              var em = c.querySelector('em'); if (em) em.textContent = all ? on + '/' + all : '';
+            });
+          };
+          // rows slide up one after another whenever the list changes
+          var animTimer = 0;
+          var animate = function () {
+            if (!gui.classList.contains('open')) return;
+            var k = 0;
+            panels.classList.remove('t15-anim');
+            $$('.tc-panels .tc-mod, .tc-panels .tc-seclabel').forEach(function (m) {
+              if (m.offsetParent === null) return;
+              m.style.setProperty('--k', k < 16 ? k++ : 16);
+            });
+            void panels.offsetWidth;
+            panels.classList.add('t15-anim');
+            clearTimeout(animTimer);
+            animTimer = setTimeout(function () { panels.classList.remove('t15-anim'); }, 1100);
+          };
+          var refresh = function () { counts(); requestAnimationFrame(moveInk); };
+          $$('#tc-catbar .tc-cat').forEach(function (c) { c.addEventListener('click', function () { refresh(); animate(); }); });
+          $$('#tc-cats .tc-view').forEach(function (v) { v.addEventListener('click', function () { refresh(); if (v.dataset.view === 'modules') animate(); }); });
+          panels.addEventListener('click', function (e) { if (e.target.closest('.tc-mod')) setTimeout(counts, 30); });
+          try {
+            new MutationObserver(function () {
+              if (gui.classList.contains('open')) { refresh(); animate(); }
+            }).observe(gui, { attributes: true, attributeFilter: ['class'] });
+          } catch (e) {}
+          addEventListener('resize', function () { requestAnimationFrame(moveInk); });
+          try { if (root.__tcBgStop) root.__tcBgStop(); } catch (e) {}
+          root.__tcBgStart = null;
+          root.classList.add('tc15'); // only now: if anything above failed, the old look stays
+          refresh();
+        }
+        if (!root.classList.contains('tc15')) return;
+
+        /* ---------- the main menu (title screen) ---------- */
+        sset('tcmenu', null); // a stale "showing" from last time must not show the menu over the loading screen
+        var ITEMS = [
+          ['sp', 'Singleplayer', 'Your worlds'],
+          ['mp', 'Multiplayer', 'Servers · LAN · Java'],
+          ['mods', 'Mod Menu', ''],
+          ['cos', 'Cosmetics', 'Skin · cape · more soon'],
+          ['set', 'Settings', 'Video · controls · sound']
+        ];
+        var tt = document.createElement('div'); tt.id = 'tc-title';
+        tt.innerHTML =
+          '<div class="t-shade"></div>' +
+          '<div class="t-top"><div class="t-brand"><img class="tc-logo-chest" alt="" draggable="false"><span class="t-bname">Treasure Client</span></div>' +
+          '<div class="t15-mono t-ver" style="color:var(--t15-dim)"></div></div>' +
+          '<ul class="t-menu">' + ITEMS.map(function (it, i) {
+            return '<li class="t-item" data-act="' + it[0] + '" style="--i:' + i + '"><span class="t-bar"></span><span class="t-n t15-mono">0' + (i + 1) + '</span>' +
+              '<span class="t15-word">' + it[1] + '</span><span class="t-hint t15-mono">' + it[2] + '</span></li>';
+          }).join('') + '</ul>' +
+          '<div class="t-who"><b class="t-name">Player</b><span class="t15-mono"><span class="t-prof"></span><button class="t15-link" data-act="prof">Change</button></span></div>' +
+          '<div class="t-bottom t15-mono"><div><button class="t15-link t-rejoin" data-act="rejoin"></button></div>' +
+          '<div><button class="t15-link" data-act="lang">Language</button><span class="t-sep">/</span><button class="t15-link" data-act="about">About</button>' +
+          '<span class="t-sep">/</span><button class="t15-link" data-act="new">What\'s new</button></div></div>';
+        if (gui && gui.parentNode === root) root.insertBefore(tt, gui); else root.appendChild(tt);
+        try { if (typeof tcApplyLogos === 'function') tcApplyLogos(); } catch (e) {}
+
+        var menu = tt.querySelector('.t-menu'), items = [].slice.call(tt.querySelectorAll('.t-item')), cur = -1, leaving = false;
+        var setOn = function (i) { cur = i; items.forEach(function (x, j) { x.classList.toggle('on', j === i); }); };
+        var act = function (code) {
+          if (code === 'sp' && tt.__nosp) return; // the Rust edition has no singleplayer yet
+          if (code === 'mods') { openGui(); return; }
+          if (code === 'new') { try { window.open('https://treasureclient.github.io/changelog.html', '_blank'); } catch (e) {} return; }
+          if (leaving) return;
+          leaving = true; tt.classList.add('leave');
+          setTimeout(function () { sset('tcmenuact', code); }, 170);
+          setTimeout(function () { leaving = false; tt.classList.remove('leave'); }, 1500); // if the game didn't switch screens
+        };
+        items.forEach(function (it, i) {
+          it.addEventListener('mouseenter', function () { menu.classList.remove('kbd'); setOn(i); });
+          it.addEventListener('click', function () { setOn(i); act(it.dataset.act === 'sp' && tt.__demo ? 'demo' : it.dataset.act); });
+        });
+        menu.addEventListener('mouseleave', function () { if (!menu.classList.contains('kbd')) setOn(-1); });
+        $$('#tc-title button.t15-link').forEach(function (b) { b.addEventListener('click', function () { act(b.dataset.act); }); });
+        addEventListener('keydown', function (e) {
+          if (!tt.classList.contains('show') || tt.classList.contains('under') || gui.classList.contains('open')) return;
+          if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+          var d = parseInt(e.key, 10);
+          if (d >= 1 && d <= items.length) { menu.classList.add('kbd'); setOn(d - 1); }
+          else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { menu.classList.add('kbd'); setOn(cur < 0 ? 0 : (cur + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length); }
+          else if (e.key === 'Enter' && cur >= 0) items[cur].click();
+        }, true);
+
+        var lastInfo = null, shown = false, lastAck = 0;
+        var update = function () {
+          if (root.__tcBgStart) { try { if (root.__tcBgStop) root.__tcBgStop(); } catch (e) {} root.__tcBgStart = null; } // no floating dots in the clean look
+          var m = sget('tcmenu'), on = !!(m && m.charCodeAt(0) === 1);
+          // the corner label shows the game's real version (it used to be stuck on 1.3), and hides on the main menu
+          var wm = document.getElementById('tc-watermark');
+          if (wm) {
+            var vi = (sget('tcmenuinfo') || '').split('\n')[3];
+            if (vi && wm.__v !== vi) { wm.__v = vi; wm.textContent = 'Treasure Client ' + utf8(vi); }
+            wm.style.visibility = on ? 'hidden' : '';
+          }
+          if (on !== shown) {
+            shown = on;
+            tt.classList.toggle('show', on);
+            if (on) { leaving = false; tt.classList.remove('leave'); setOn(-1); tt.classList.remove('enter'); void tt.offsetWidth; tt.classList.add('enter'); }
+          }
+          if (!on) return;
+          var now = Date.now();
+          if (now - lastAck > 400) { lastAck = now; sset('tcmenuack', String(now)); }
+          tt.classList.toggle('under', gui.classList.contains('open'));
+          var info = sget('tcmenuinfo');
+          if (info !== lastInfo) {
+            lastInfo = info;
+            var f = utf8(info || '').split('\n');
+            tt.querySelector('.t-name').textContent = f[0] || 'Player';
+            var rj = tt.querySelector('.t-rejoin');
+            rj.innerHTML = f[1] ? 'Rejoin <b>' + esc(f[1]) + '</b> &rarr;' : '';
+            rj.style.display = f[1] ? '' : 'none';
+            tt.querySelector('.t-prof').textContent = f[2] ? 'Profile: ' + f[2] + ' · ' : '';
+            tt.querySelector('.t-ver').textContent = f[3] || '';
+            tt.__demo = f[4] === '1';
+            items[0].querySelector('.t15-word').textContent = tt.__demo ? 'Play Demo' : 'Singleplayer';
+            tt.__nosp = f[5] === 'nosp';
+            items[0].classList.toggle('t-off', tt.__nosp);
+            items[0].querySelector('.t-hint').textContent = tt.__nosp ? 'Coming soon' : 'Your worlds';
+          }
+          // the brand follows a custom title set in Themes; the Mod Menu hint shows how many mods are on
+          var cb = $('.tc-head .tc-brand-custom');
+          tt.querySelector('.t-bname').textContent = cb && cb.style.display !== 'none' && cb.textContent.trim() ? cb.textContent.trim() : 'Treasure Client';
+          var msw = mainSwitches('.tc-panel:not([data-group="themes"])'), all = msw.length, onc = msw.filter(function (s) { return s.classList.contains('on'); }).length;
+          items[2].querySelector('.t-hint').textContent = all ? all + ' mods · ' + onc + ' on' : '';
+        };
+        setInterval(update, 100);
+        update();
+        window.__tcTitle = { update: update, el: tt };
+      } catch (e) { try { console.error('[TreasureClient] 1.5 look failed (old look stays):', e); } catch (e2) {} }
+    })();
+    /* TC15 END */
 
     /* ---------- reliable mouse-wheel scrolling ----------
        The Eaglercraft game canvas also listens for wheel events and can eat the

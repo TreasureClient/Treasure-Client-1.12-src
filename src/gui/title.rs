@@ -61,6 +61,34 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     // the JS and WASM editions' main menu).
     use crate::gui::tc_style;
     tc_style::title_background(p, ctx.vw, ctx.vh);
+
+    // Treasure Client 1.5: the page overlay draws the main menu words (the same menu as the
+    // JS and WASM editions) and the game draws your player under the name. The buttons
+    // below only come back if the overlay doesn't answer within a second and a half.
+    #[cfg(target_arch = "wasm32")]
+    {
+        let name = state
+            .profile
+            .accounts
+            .active()
+            .map(|a| a.name.clone())
+            .unwrap_or_else(|| "Player".to_owned());
+        let info = format!("{}\n\n\nRust Beta\n0\nnosp", name.replace('\n', " "));
+        let shown_ms = crate::gui::tc_bridge::title_frame(&info);
+        if let Some(action) = crate::gui::tc_bridge::take_menu_action() {
+            menu_action(state, &action);
+        }
+        if crate::gui::tc_bridge::menu_overlay_live() || shown_ms < 1500 {
+            #[cfg(eagler_skins)]
+            {
+                let h = ctx.vh * 0.40;
+                let w = h * 0.6;
+                let cx = (ctx.vw * 0.80).floor();
+                crate::gui::profile::title_figure(p, state, ctx, [cx - w / 2.0, ctx.vh * 0.29, w, h]);
+            }
+            return;
+        }
+    }
     let (accent, dim, _) = tc_style::title_colors();
     let cx = (ctx.vw / 2.0).floor();
 
@@ -192,6 +220,47 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
             }
         }
     }
+}
+
+/// A main menu word the overlay clicked (Treasure Client 1.5).
+#[cfg(target_arch = "wasm32")]
+fn menu_action(state: &mut GuiState, action: &str) {
+    match action {
+        "mp" => {
+            state.nav = Some(Screen::Multiplayer);
+            #[cfg(feature = "online_mode")]
+            crate::gui::bannotice::before_multiplayer(state);
+        }
+        "set" => {
+            state.options_parent = Screen::Title;
+            state.nav = Some(Screen::Options);
+        }
+        "cos" => {
+            #[cfg(eagler_skins)]
+            crate::gui::profile::open_edit(state, Screen::Title);
+            #[cfg(not(eagler_skins))]
+            {
+                state.profile.open();
+                state.nav = Some(Screen::Accounts);
+            }
+        }
+        "prof" => {
+            state.profile.open();
+            state.nav = Some(Screen::Accounts);
+        }
+        #[cfg(feature = "asset_download")]
+        "lang" => {
+            state.language.open();
+            state.nav = Some(Screen::Language);
+        }
+        "about" => {
+            state.credits_parent = Screen::Title;
+            state.nav = Some(Screen::Credits);
+        }
+        _ => return,
+    }
+    #[cfg(feature = "audio")]
+    crate::gui::widgets::play_click();
 }
 
 /// Opens the Treasure Client Mod Menu (the overlay watches `tcopen`).
