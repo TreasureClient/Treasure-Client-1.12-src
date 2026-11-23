@@ -1255,6 +1255,139 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15.hud-editing .tc-hud-box, #tc-root.tc15.hud-editing #tc-keystrokes, #tc-root.tc15.hud-editing #tc-cps,
 #tc-root.tc15.hud-editing #tc-fps, #tc-root.tc15.hud-editing #tc-potions { outline-offset: 4px; }
 
+/* ---------------- 1.5 Cosmetics screen ---------------- */
+#tc-root.tc15 #tc-cos { position: absolute; inset: 0; pointer-events: none; color: var(--t15-ink); font-family: 'Archivo', 'Outfit', system-ui, sans-serif;
+  opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s; --c: var(--a-1); }
+#tc-root.tc15 #tc-cos.show { opacity: 1; visibility: visible; transition: opacity .3s ease, visibility 0s; }
+#tc-root.tc15 #tc-cos.under { opacity: 0; visibility: hidden; }
+#tc-root.tc15 #tc-cos .c-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(12,12,14,.86) 0%, rgba(12,12,14,.74) 40%, rgba(12,12,14,.3) 64%, rgba(12,12,14,.16) 100%); }
+#tc-root.tc15 #tc-cos button { pointer-events: auto; }
+#tc-root.tc15 #tc-cos .c-top { position: absolute; left: 5vw; right: 5vw; top: 4.2vh; display: flex; align-items: center; justify-content: space-between; }
+#tc-root.tc15 #tc-cos .c-brand { display: flex; align-items: center; gap: 10px; }
+#tc-root.tc15 #tc-cos .c-brand img { height: 22px; width: auto; filter: none; }
+#tc-root.tc15 #tc-cos .c-brand span { font-weight: 800; font-stretch: 80%; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; }
+#tc-root.tc15 #tc-cos .c-left { position: absolute; left: 5vw; top: 13vh; bottom: 5vh; width: 22vw; display: flex; flex-direction: column; }
+#tc-root.tc15 #tc-cos .c-tabs { list-style: none; margin: 0; padding: 0; }
+#tc-root.tc15 #tc-cos .c-tab { position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 1.1vh 0; margin-left: calc(var(--i) * 1.6vw); cursor: pointer; pointer-events: auto; }
+#tc-root.tc15 #tc-cos .c-tab .t-n { width: 24px; padding-top: .7vh; color: var(--t15-dim); transition: color .2s; }
+#tc-root.tc15 #tc-cos .c-tab .t15-word { font-size: clamp(26px, 5.2vh, 46px); opacity: .42; transition: opacity .2s, transform .3s var(--t15-ease); text-shadow: 0 2px 14px rgba(0,0,0,.4); }
+#tc-root.tc15 #tc-cos .c-tab .t-bar { position: absolute; left: calc(-5vw - var(--i) * 1.6vw); top: 50%; height: 3px; width: 0; background: var(--a-1); transition: width .3s var(--t15-ease); }
+#tc-root.tc15 #tc-cos .c-tab:hover .t15-word { opacity: .75; }
+#tc-root.tc15 #tc-cos .c-tab.on .t15-word { opacity: 1; transform: translateX(14px); }
+#tc-root.tc15 #tc-cos .c-tab.on .t-n { color: var(--a-1); }
+#tc-root.tc15 #tc-cos .c-tab.on .t-bar { width: calc(5vw - 10px + var(--i) * 1.6vw); }
+#tc-root.tc15 #tc-cos .c-soon-tab .t15-word { opacity: .26; }
+#tc-root.tc15 #tc-cos .c-tag { align-self: center; color: var(--t15-dim); font-size: 10px; border: 1px solid var(--t15-faint); padding: 2px 6px; border-radius: 99px; transition: transform .3s var(--t15-ease); }
+#tc-root.tc15 #tc-cos .c-tab.on .c-tag { transform: translateX(14px); color: var(--a-1); border-color: var(--a-1); }
+#tc-root.tc15 #tc-cos .c-foot { margin-top: auto; color: var(--t15-dim); line-height: 1.8; text-transform: none; letter-spacing: .02em; }
+#tc-root.tc15 #tc-cos .c-foot .t15-link { color: var(--a-1); text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; }
+#tc-root.tc15 #tc-cos .c-mid { position: absolute; left: 29vw; width: 35vw; top: 13vh; bottom: 5vh; overflow-y: auto; pointer-events: auto; scrollbar-width: thin; scrollbar-color: var(--t15-faint) transparent; padding-right: 8px; }
+#tc-root.tc15 #tc-cos .c-page { display: none; }
+#tc-root.tc15 #tc-cos .c-page.on { display: block; }
+#tc-root.tc15 #tc-cos .c-sub { color: var(--t15-dim); margin: 1.4vh 0 1.4vh; }
+#tc-root.tc15 #tc-cos .c-colhead { margin-top: 3vh; }
+#tc-root.tc15 #tc-cos .c-colname { color: var(--t15-ink); }
+#tc-root.tc15 #tc-cos .c-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+#tc-root.tc15 #tc-cos .c-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 10px 12px; text-align: left; cursor: pointer;
+  background: rgba(255,255,255,.035); border: 0; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--t15-faint); color: var(--t15-ink); font: inherit;
+  transition: background .15s, box-shadow .15s, transform .2s var(--t15-ease); }
+#tc-root.tc15 #tc-cos .c-card:hover { background: rgba(255,255,255,.07); transform: translateY(-2px); }
+#tc-root.tc15 #tc-cos .c-card.on { box-shadow: inset 0 0 0 2px var(--a-1); background: rgba(255,255,255,.06); }
+#tc-root.tc15 #tc-cos .c-card b { font: 600 15px 'Archivo', 'Outfit', sans-serif; margin-top: 6px; }
+#tc-root.tc15 #tc-cos .c-card i { font: 400 12px 'Archivo', 'Outfit', sans-serif; font-style: normal; color: var(--t15-dim); line-height: 1.3; }
+#tc-root.tc15 #tc-cos .c-card em { position: absolute; top: 8px; right: 8px; font-style: normal; font-size: 9.5px; color: #0b0b0d; background: var(--a-1); padding: 2px 6px; border-radius: 2px; opacity: 0; transform: scale(.8); transition: opacity .15s, transform .2s var(--t15-ease); }
+#tc-root.tc15 #tc-cos .c-card.on em { opacity: 1; transform: none; }
+#tc-root.tc15 #tc-cos .c-card:not(:hover):not(.on) .cape::before, #tc-root.tc15 #tc-cos .c-card:not(:hover):not(.on) .cape::after,
+#tc-root.tc15 #tc-cos .c-card:not(:hover):not(.on) .aura, #tc-root.tc15 #tc-cos .c-card:not(:hover):not(.on) .aura i,
+#tc-root.tc15 #tc-cos:not(.show) *, #tc-root.tc15 #tc-cos:not(.show) *::before, #tc-root.tc15 #tc-cos:not(.show) *::after { animation-play-state: paused; }
+#tc-root.tc15 #tc-cos .c-prev { contain: paint; display: flex; align-items: center; justify-content: center; width: 100%; height: 13vh; min-height: 74px; border-radius: 4px; background: rgba(0,0,0,.28); overflow: hidden; }
+#tc-root.tc15 #tc-cos .c-anim .c-card { animation: t15up .45s var(--t15-ease) both; }
+#tc-root.tc15 #tc-cos .c-anim .c-card:nth-child(2) { animation-delay: .03s; } #tc-root.tc15 #tc-cos .c-anim .c-card:nth-child(3) { animation-delay: .06s; }
+#tc-root.tc15 #tc-cos .c-anim .c-card:nth-child(4) { animation-delay: .09s; } #tc-root.tc15 #tc-cos .c-anim .c-card:nth-child(5) { animation-delay: .12s; }
+#tc-root.tc15 #tc-cos .c-anim .c-card:nth-child(6) { animation-delay: .15s; } #tc-root.tc15 #tc-cos .c-anim .c-card:nth-child(n+7) { animation-delay: .18s; }
+#tc-root.tc15 #tc-cos .c-soon { padding: 4vh 0; max-width: 30vw; }
+#tc-root.tc15 #tc-cos .c-soon .t15-word { font-size: clamp(26px, 5vh, 44px); color: var(--a-1); }
+#tc-root.tc15 #tc-cos .c-soon p { color: var(--t15-dim); font-size: 15px; line-height: 1.6; margin-top: 2vh; }
+#tc-root.tc15 #tc-cos .c-colors { display: flex; flex-wrap: wrap; gap: 10px; }
+#tc-root.tc15 #tc-cos .c-col { width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; background: var(--sw, var(--a-1));
+  box-shadow: 0 0 0 2px rgba(0,0,0,.4); transition: transform .15s, box-shadow .15s; }
+#tc-root.tc15 #tc-cos .c-col:hover { transform: scale(1.1); }
+#tc-root.tc15 #tc-cos .c-col.on { box-shadow: 0 0 0 2px #0b0b0d, 0 0 0 4px var(--t15-ink); }
+#tc-root.tc15 #tc-cos .c-col-theme { background: conic-gradient(var(--a-1) 0 50%, rgba(255,255,255,.85) 50% 100%); }
+#tc-root.tc15 #tc-cos .c-col-rainbow { background: conic-gradient(#ff6f6f, #ffd76b, #9bea5b, #45e3c6, #7fb0ff, #b38cff, #ff6fa8, #ff6f6f); }
+#tc-root.tc15 #tc-cos .c-who { position: absolute; left: 78%; top: 69%; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+#tc-root.tc15 #tc-cos .c-who b { display: block; font-weight: 700; font-stretch: 85%; font-size: 22px; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+#tc-root.tc15 #tc-cos .c-who span { display: block; margin-top: 6px; color: var(--t15-dim); text-shadow: 0 1px 6px rgba(0,0,0,.7); }
+#tc-root.tc15 #tc-cos .c-who .c-wear { color: var(--a-1); }
+#tc-root.tc15 #tc-cos.enter .c-tab { animation: t15in .55s var(--t15-ease) both; animation-delay: calc(60ms + var(--i) * 60ms); }
+#tc-root.tc15 #tc-cos.enter .c-top, #tc-root.tc15 #tc-cos.enter .c-foot, #tc-root.tc15 #tc-cos.enter .c-who { animation: t15fade .6s ease both .15s; }
+
+/* small windows: drop the extras so nothing overlaps */
+@media (max-width: 1000px) {
+  #tc-root.tc15 #tc-cos .c-tag, #tc-root.tc15 #tc-cos .c-card i { display: none; }
+  #tc-root.tc15 #tc-cos .c-grid { gap: 6px; }
+  #tc-root.tc15 #tc-cos .c-card { padding: 6px 6px 8px; }
+}
+/* the cape previews (small animated pictures of each cape) */
+#tc-root.tc15 #tc-cos .cape { position: relative; display: block; width: 6.4vh; min-width: 38px; height: 10.2vh; min-height: 60px; overflow: hidden; border-radius: 2px 2px 5px 5px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.5); transform: perspective(200px) rotateX(6deg); }
+#tc-root.tc15 #tc-cos .cape::before, #tc-root.tc15 #tc-cos .cape::after { content: ""; position: absolute; }
+@keyframes c-shine { 0%, 30% { transform: translateX(-160%) rotate(25deg); } 75%, 100% { transform: translateX(260%) rotate(25deg); } }
+@keyframes c-fall { from { transform: translateY(0); } to { transform: translateY(60px); } }
+@keyframes c-slide { from { background-position: 0 0; } to { background-position: 24px 0; } }
+@keyframes c-pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@keyframes c-drift { 0% { transform: translateX(-12%); } 50% { transform: translateX(12%); } 100% { transform: translateX(-12%); } }
+@keyframes c-down { from { top: -20%; } to { top: 110%; } }
+@keyframes c-spin { to { transform: rotate(360deg); } }
+@keyframes c-rise { from { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-46px); opacity: 0; } }
+@keyframes c-ring { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.1); opacity: 0; } }
+@keyframes c-sway { 0%, 100% { transform: translateX(-16px) scale(.8); } 50% { transform: translateX(16px) scale(1.1); } }
+#tc-root.tc15 #tc-cos .cape-none { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(236,235,230,.3); transform: none; }
+#tc-root.tc15 #tc-cos .cape-treasure, #tc-root.tc15 #tc-cos .cape-theme { background: linear-gradient(#2b1a0c, #120a04); box-shadow: inset 0 0 0 2px #140b04, inset 0 0 0 4px #ffd76b, 0 6px 16px rgba(0,0,0,.5); }
+#tc-root.tc15 #tc-cos .cape-theme { background: repeating-linear-gradient(45deg, rgba(255,255,255,.07) 0 3px, transparent 3px 10px), #0f0f12; box-shadow: inset 0 0 0 2px #0f0f12, inset 0 0 0 4px var(--a-1), 0 6px 16px rgba(0,0,0,.5); }
+#tc-root.tc15 #tc-cos .cape-treasure::before, #tc-root.tc15 #tc-cos .cape-theme::before { left: 28%; right: 28%; top: 34%; height: 26%; border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(#ffd76b 0 38%, #8a6420 38% 46%, #e8b94a 46%); }
+#tc-root.tc15 #tc-cos .cape-theme::before { background: var(--a-1); box-shadow: inset 0 -60% 0 rgba(0,0,0,.18); }
+#tc-root.tc15 #tc-cos .cape-treasure::after, #tc-root.tc15 #tc-cos .cape-theme::after, #tc-root.tc15 #tc-cos .cape-frost::after { top: -30%; bottom: -30%; width: 30%; left: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); animation: c-shine 4s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .cape-frost { background: linear-gradient(#0a1d36, #5fb4e6); }
+#tc-root.tc15 #tc-cos .cape-frost::before { left: 0; right: 0; top: -60px; bottom: 0; background-image: radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(rgba(255,255,255,.7) .8px, transparent 1.3px);
+  background-size: 14px 20px, 9px 15px; animation: c-fall 6s linear infinite; }
+#tc-root.tc15 #tc-cos .cape-tropical { background: linear-gradient(#6b2a72 0%, #ff8a5a 46%, #0b7a86 47%, #04323b 100%); }
+#tc-root.tc15 #tc-cos .cape-tropical::before { left: 24%; right: 24%; top: 16%; aspect-ratio: 1; border-radius: 50%; background: linear-gradient(#ffe48a, #ff9b5a); clip-path: inset(0 0 42% 0); }
+#tc-root.tc15 #tc-cos .cape-tropical::after { left: 0; right: 0; bottom: 0; top: 47%; background: repeating-linear-gradient(170deg, transparent 0 5px, rgba(120,240,220,.55) 5px 6px);
+  animation: c-slide 1.6s linear infinite; }
+#tc-root.tc15 #tc-cos .cape-ember { background: #1a1210; }
+#tc-root.tc15 #tc-cos .cape-ember::before { inset: 0; background: repeating-linear-gradient(62deg, transparent 0 9px, #ff6a1a 9px 10.5px), repeating-linear-gradient(-48deg, transparent 0 12px, #ffb23a 12px 13px);
+  animation: c-pulse 2s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .cape-aurora { background: linear-gradient(#050a1f, #0c1636 70%, #02040a 70%); }
+#tc-root.tc15 #tc-cos .cape-aurora::before { left: -20%; right: -20%; top: 8%; height: 44%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(76,242,160,.9), rgba(76,216,242,.55) 35%, rgba(179,140,255,.25) 55%, transparent 70%); animation: c-drift 4s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .cape-galaxy { background: radial-gradient(circle at 35% 38%, #8a3ccf 0, transparent 45%), radial-gradient(circle at 68% 70%, #d0408f 0, transparent 40%), #05030f; }
+#tc-root.tc15 #tc-cos .cape-galaxy::before { inset: 0; background-image: radial-gradient(#fff .8px, transparent 1.3px); background-size: 11px 13px; animation: c-pulse 3s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .cape-circuit { background: linear-gradient(90deg, transparent 47%, rgba(47,211,154,.5) 47% 53%, transparent 53%), linear-gradient(90deg, transparent 20%, rgba(47,211,154,.35) 20% 25%, transparent 25% 75%, rgba(47,211,154,.35) 75% 80%, transparent 80%), #071a14; }
+#tc-root.tc15 #tc-cos .cape-circuit::before { left: 30%; right: 30%; top: 40%; height: 20%; background: #0b241c; box-shadow: inset 0 0 0 1.5px #2fd39a; }
+#tc-root.tc15 #tc-cos .cape-circuit::after { left: calc(50% - 2px); width: 4px; height: 14px; border-radius: 2px; background: #b6ffe4; box-shadow: 0 0 6px #2fd39a; animation: c-down 2s linear infinite; }
+/* the aura previews (use the chosen colour, --c) */
+#tc-root.tc15 #tc-cos .aura { position: relative; display: block; width: 10vh; min-width: 60px; height: 10vh; min-height: 60px; }
+#tc-root.tc15 #tc-cos .aura i { position: absolute; display: block; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 2px var(--c); opacity: 0; }
+#tc-root.tc15 #tc-cos.c-rainbow { --c: #ff8fd0; }
+#tc-root.tc15 #tc-cos .aura-none::before { content: ""; position: absolute; inset: 22%; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(236,235,230,.3); }
+#tc-root.tc15 #tc-cos .aura-halo::before { content: ""; position: absolute; left: 10%; right: 10%; top: 40%; height: 22%; border-radius: 50%; border: 2px solid var(--c); box-shadow: 0 0 8px var(--c), inset 0 0 6px var(--c); }
+#tc-root.tc15 #tc-cos .aura-halo i:first-child { opacity: 1; left: calc(50% - 3px); top: calc(51% - 3px); animation: c-sway 2.4s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .aura-orbit { animation: c-spin 3s linear infinite; }
+#tc-root.tc15 #tc-cos .aura-orbit i { opacity: 1; }
+#tc-root.tc15 #tc-cos .aura-orbit i:nth-child(1) { left: 6%; top: 46%; } #tc-root.tc15 #tc-cos .aura-orbit i:nth-child(2) { right: 18%; top: 14%; width: 5px; height: 5px; }
+#tc-root.tc15 #tc-cos .aura-orbit i:nth-child(3) { right: 24%; bottom: 10%; width: 4px; height: 4px; }
+#tc-root.tc15 #tc-cos .aura-rising i { bottom: 8%; width: 5px; height: 5px; animation: c-rise 2.4s ease-in infinite; }
+#tc-root.tc15 #tc-cos .aura-rising i:nth-child(1) { left: 28%; } #tc-root.tc15 #tc-cos .aura-rising i:nth-child(2) { left: 52%; animation-delay: .8s; }
+#tc-root.tc15 #tc-cos .aura-rising i:nth-child(3) { left: 70%; animation-delay: 1.6s; }
+#tc-root.tc15 #tc-cos .aura-ripple i { opacity: 1; left: 0; right: 0; top: 30%; width: auto; height: 40%; background: none; border: 2px solid var(--c); box-shadow: 0 0 6px var(--c); animation: c-ring 2.4s ease-out infinite; }
+#tc-root.tc15 #tc-cos .aura-ripple i:nth-child(2) { animation-delay: .8s; } #tc-root.tc15 #tc-cos .aura-ripple i:nth-child(3) { animation-delay: 1.6s; }
+#tc-root.tc15 #tc-cos .aura-helix i { opacity: 1; left: calc(50% - 3px); animation: c-sway 1.6s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .aura-helix i:nth-child(1) { top: 18%; } #tc-root.tc15 #tc-cos .aura-helix i:nth-child(2) { top: 46%; animation-delay: -.53s; }
+#tc-root.tc15 #tc-cos .aura-helix i:nth-child(3) { top: 74%; animation-delay: -1.06s; }
+
 @media (prefers-reduced-motion: reduce) {
   #tc-root.tc15 *, #tc-root.tc15 *::before, #tc-root.tc15 *::after { animation: none !important; transition: none !important; }
 }
@@ -2440,6 +2573,10 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
+
+
+
     /* ===== TC15: Treasure Client 1.5 look — the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -2562,7 +2699,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           ['sp', 'Singleplayer', 'Your worlds'],
           ['mp', 'Multiplayer', 'Servers · LAN · Java'],
           ['mods', 'Mod Menu', ''],
-          ['cos', 'Cosmetics', 'Skin · cape · more soon'],
+          ['cos', 'Cosmetics', 'Capes · auras · skin'],
           ['set', 'Settings', 'Video · controls · sound']
         ];
         var tt = document.createElement('div'); tt.id = 'tc-title';
@@ -2616,7 +2753,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           if (wm) {
             var vi = (sget('tcmenuinfo') || '').split('\n')[3];
             if (vi && wm.__v !== vi) { wm.__v = vi; wm.textContent = 'Treasure Client ' + utf8(vi); }
-            wm.style.visibility = on ? 'hidden' : '';
+            var cv = sget('tccosui'), cosOn = !!cv && Math.abs(Date.now() - (parseInt(cv, 10) || 0)) < 2000;
+            wm.style.visibility = on || cosOn ? 'hidden' : '';
           }
           if (on !== shown) {
             shown = on;
@@ -2653,6 +2791,156 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         update();
         window.__tcTitle = { update: update, el: tt };
       } catch (e) { try { console.error('[TreasureClient] 1.5 look failed (old look stays):', e); } catch (e2) {} }
+    })();
+    /* ---------- 1.5 Cosmetics screen: the words and cards (the game draws your player wearing them) ----------
+       game -> us: tccosui = the game's clock (ms), renewed every 400 ms while it shows (a stale value never shows it);
+                   tccosinfo = "name\ncape\naura\ncolor"
+       us -> game: tccosact = lines of cape:id | aura:id | color:id | back | skin; tccosack = the time every 400 ms */
+    (function () {
+      try {
+        if (!root || !root.classList.contains('tc15') || $('#tc-cos')) return;
+        var SK = '_eaglercraft_1.12.';
+        var sget = function (k) { try { var v = localStorage.getItem(SK + k); return v == null ? null : atob(v); } catch (e) { return null; } };
+        var sset = function (k, v) { try { if (v == null) localStorage.removeItem(SK + k); else localStorage.setItem(SK + k, btoa(v)); } catch (e) {} };
+        var utf8 = function (s) { try { return decodeURIComponent(escape(s)); } catch (e) { return s; } };
+        var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+        var CAPES = [
+          ['none', 'None', 'Your normal Eaglercraft cape'],
+          ['treasure', 'Treasure', 'Gold chest, a shine sweeps across'],
+          ['frost', 'Frost', 'Snowflakes drifting over ice'],
+          ['tropical', 'Tropical', 'A sunset over rolling waves'],
+          ['ember', 'Ember', 'Lava cracks that pulse'],
+          ['aurora', 'Aurora', 'Northern lights over pines'],
+          ['galaxy', 'Galaxy', 'A drifting nebula and stars'],
+          ['circuit', 'Circuit', 'Light running along the tracks'],
+          ['theme', 'Your theme', 'Changes with your TC theme']
+        ];
+        var AURAS = [
+          ['none', 'None', 'No aura'],
+          ['halo', 'Halo', 'A thin ring round your waist'],
+          ['orbit', 'Orbit', 'Three lights circling you'],
+          ['rising', 'Rising', 'Soft dots floating up'],
+          ['ripple', 'Ripple', 'Circles spreading on the ground'],
+          ['helix', 'Helix', 'Two strands spiralling round you']
+        ];
+        var COLORS = [['theme', 'Your theme', ''], ['gold', 'Gold', '#ffd76b'], ['ice', 'Ice', '#7fe9ff'], ['aqua', 'Aqua', '#45e3c6'],
+          ['ember', 'Ember', '#ff7a3c'], ['violet', 'Violet', '#b38cff'], ['rose', 'Rose', '#ff6fa8'], ['lime', 'Lime', '#9bea5b'],
+          ['white', 'White', '#f4f4f4'], ['rainbow', 'Rainbow', '']];
+        var TABS = [['capes', 'Capes', 0], ['auras', 'Auras', 0], ['hats', 'Hats', 1], ['boots', 'Boots', 1], ['maker', 'Maker', 1]];
+        var SOON = {
+          hats: 'Hats are coming soon: crowns, halos, little floating things and more, all made by Treasure Client.',
+          boots: 'Boots are coming soon: trails and steps that glow where you walk.',
+          maker: 'The Maker is coming soon: build your own cape, aura, hat or boots from Treasure Client\'s patterns, shapes, colours and animations, then wear it.'
+        };
+        var card = function (kind, it) {
+          var prev = kind === 'cape' ? '<span class="cape cape-' + it[0] + '"></span>' : '<span class="aura aura-' + it[0] + '"><i></i><i></i><i></i></span>';
+          return '<button class="c-card" data-kind="' + kind + '" data-id="' + it[0] + '"><span class="c-prev">' + prev + '</span>' +
+            '<b>' + esc(it[1]) + '</b><i>' + esc(it[2]) + '</i><em class="t15-mono">Wearing</em></button>';
+        };
+        var cs = document.createElement('div'); cs.id = 'tc-cos';
+        cs.innerHTML =
+          '<div class="c-shade"></div>' +
+          '<div class="c-top"><div class="c-brand"><img class="tc-logo-chest" alt="" draggable="false"><span>Treasure Client</span></div>' +
+          '<button class="t15-link t15-mono" data-act="back">&larr; Back</button></div>' +
+          '<div class="c-left"><div class="t15-label t15-mono">Cosmetics</div><ul class="c-tabs">' +
+          TABS.map(function (t, i) {
+            return '<li class="c-tab' + (t[2] ? ' c-soon-tab' : '') + '" data-tab="' + t[0] + '" style="--i:' + i + '"><span class="t-bar"></span><span class="t-n t15-mono">0' + (i + 1) + '</span>' +
+              '<span class="t15-word">' + t[1] + '</span>' + (t[2] ? '<span class="c-tag t15-mono">Soon</span>' : '') + '</li>';
+          }).join('') + '</ul>' +
+          '<div class="c-foot t15-mono">Only Treasure Client players will see them (sharing comes next).<br>Press F5 in game to see yourself.<br>' +
+          '<button class="t15-link t15-mono" data-act="skin">Skin &amp; Eaglercraft cape &rarr;</button></div></div>' +
+          '<div class="c-mid">' +
+          '<div class="c-page" data-page="capes"><div class="c-sub t15-mono">Animated capes</div><div class="c-grid">' + CAPES.map(function (c) { return card('cape', c); }).join('') + '</div></div>' +
+          '<div class="c-page" data-page="auras"><div class="c-sub t15-mono">Auras</div><div class="c-grid">' + AURAS.map(function (c) { return card('aura', c); }).join('') + '</div>' +
+          '<div class="c-sub t15-mono c-colhead">Aura colour <span class="c-colname"></span></div><div class="c-colors">' +
+          COLORS.map(function (c) { return '<button class="c-col c-col-' + c[0] + '" data-id="' + c[0] + '" title="' + esc(c[1]) + '"' + (c[2] ? ' style="--sw:' + c[2] + '"' : '') + '></button>'; }).join('') +
+          '</div></div>' +
+          ['hats', 'boots', 'maker'].map(function (k) { return '<div class="c-page" data-page="' + k + '"><div class="c-soon"><span class="t15-word">Coming soon</span><p>' + esc(SOON[k]) + '</p></div></div>'; }).join('') +
+          '</div>' +
+          '<div class="c-who"><b class="c-name">Player</b><span class="t15-mono c-wear"></span><span class="t15-mono c-hint">Drag to spin</span></div>';
+        var tt = $('#tc-title');
+        if (tt && tt.parentNode === root) root.insertBefore(cs, tt.nextSibling); else if (gui && gui.parentNode === root) root.insertBefore(cs, gui); else root.appendChild(cs);
+        try { if (typeof tcApplyLogos === 'function') tcApplyLogos(); } catch (e) {}
+
+        var send = function (cmd) { var cur = sget('tccosact'); sset('tccosact', cur ? cur + '\n' + cmd : cmd); };
+        var tab = 'capes', state = { cape: 'none', aura: 'none', color: 'theme' };
+        var colorOf = function (id) { for (var i = 0; i < COLORS.length; i++) if (COLORS[i][0] === id) return COLORS[i]; return COLORS[0]; };
+        var nameOf = function (list, id) { for (var i = 0; i < list.length; i++) if (list[i][0] === id) return list[i][1]; return id; };
+        var paint = function () {
+          [].forEach.call(cs.querySelectorAll('.c-card'), function (c) { c.classList.toggle('on', state[c.dataset.kind] === c.dataset.id); });
+          [].forEach.call(cs.querySelectorAll('.c-col'), function (c) { c.classList.toggle('on', state.color === c.dataset.id); });
+          var col = colorOf(state.color);
+          cs.style.setProperty('--c', col[2] || 'var(--a-1)');
+          cs.classList.toggle('c-rainbow', state.color === 'rainbow');
+          cs.querySelector('.c-colname').textContent = '· ' + col[1];
+          var w = [];
+          if (state.cape !== 'none') w.push(nameOf(CAPES, state.cape) + ' cape');
+          if (state.aura !== 'none') w.push(nameOf(AURAS, state.aura) + ' aura');
+          cs.querySelector('.c-wear').textContent = w.length ? w.join(' · ') : 'Nothing on yet';
+        };
+        var setTab = function (t) {
+          tab = t;
+          [].forEach.call(cs.querySelectorAll('.c-tab'), function (x) { x.classList.toggle('on', x.dataset.tab === t); });
+          [].forEach.call(cs.querySelectorAll('.c-page'), function (p) {
+            var on = p.dataset.page === t;
+            p.classList.toggle('on', on);
+            if (on) { p.classList.remove('c-anim'); void p.offsetWidth; p.classList.add('c-anim'); }
+          });
+        };
+        [].forEach.call(cs.querySelectorAll('.c-tab'), function (x) { x.addEventListener('click', function () { setTab(x.dataset.tab); }); });
+        [].forEach.call(cs.querySelectorAll('.c-card'), function (c) {
+          c.addEventListener('click', function () { state[c.dataset.kind] = c.dataset.id; paint(); send(c.dataset.kind + ':' + c.dataset.id); });
+        });
+        [].forEach.call(cs.querySelectorAll('.c-col'), function (c) {
+          c.addEventListener('click', function () {
+            state.color = c.dataset.id; paint(); send('color:' + c.dataset.id);
+            if (state.aura === 'none') { state.aura = 'halo'; paint(); send('aura:halo'); } // picking a colour with no aura shows one
+          });
+        });
+        [].forEach.call(cs.querySelectorAll('button[data-act]'), function (b) { b.addEventListener('click', function () { send(b.dataset.act); }); });
+        setTab('capes');
+
+        var shown = false, lastInfo = null, lastAck = 0, hideTimer = 0;
+        cs.style.display = 'none';
+        // left over from last time (the tab was closed or reloaded on this screen): never show it over the menu
+        sset('tccosui', null); sset('tccosact', null);
+        var isOn = function () {
+          var v = sget('tccosui'), t = v ? parseInt(v, 10) : 0;
+          return t > 0 && Math.abs(Date.now() - t) < 2000;
+        };
+        var update = function () {
+          var on = isOn();
+          if (on !== shown) {
+            shown = on;
+            clearTimeout(hideTimer);
+            if (on) {
+              cs.style.display = ''; void cs.offsetWidth;
+              cs.classList.add('show');
+              cs.classList.remove('enter'); void cs.offsetWidth; cs.classList.add('enter'); setTab(tab);
+            } else {
+              cs.classList.remove('show');
+              // after the fade, take the page out completely so it costs nothing behind the main menu
+              hideTimer = setTimeout(function () { if (!shown) cs.style.display = 'none'; }, 350);
+            }
+          }
+          if (!on) return;
+          var now = Date.now();
+          if (now - lastAck > 400) { lastAck = now; sset('tccosack', String(now)); }
+          var info = sget('tccosinfo');
+          if (info !== lastInfo && !sget('tccosact')) { // wait until the game has taken our last click
+            lastInfo = info;
+            var f = utf8(info || '').split('\n');
+            cs.querySelector('.c-name').textContent = f[0] || 'Player';
+            if (f[1]) state.cape = f[1];
+            if (f[2]) state.aura = f[2];
+            if (f[3]) state.color = f[3];
+            paint();
+          }
+          cs.classList.toggle('under', gui.classList.contains('open'));
+        };
+        setInterval(update, 100);
+        update();
+      } catch (e) { try { console.error('[TreasureClient] Cosmetics screen failed:', e); } catch (e2) {} }
     })();
     /* ---------- 1.5 HUD (phase 2): a theme-coloured label + a white value for the one-line readouts ---------- */
     (function () {

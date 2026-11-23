@@ -442,8 +442,8 @@ public class GuiMainMenu extends GuiScreen {
 		}
 
 		if (button.id == 104) {
-			// Treasure Client 1.5: Cosmetics. Until the cosmetics screen is in, this is skin & cape.
-			this.mc.displayGuiScreen(new GuiScreenEditProfile(this));
+			// Treasure Client 1.5: Cosmetics (capes and auras; skin & Eaglercraft cape is inside)
+			this.mc.displayGuiScreen(new GuiTCCosmetics(this));
 		}
 
 		if (button.id == 110) {

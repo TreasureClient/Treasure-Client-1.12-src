@@ -8,6 +8,9 @@ import net.lax1dude.eaglercraft.profile.SkinPreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelPlayer;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.tccos.TCAuras;
+import net.minecraft.client.tccos.TCCapes;
+import net.minecraft.client.tccos.TCCosmetics;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 
@@ -18,6 +21,7 @@ import net.minecraft.util.math.MathHelper;
  */
 public final class TCPlayerPreview {
 	private static ModelPlayer steve = null;
+	private static final float TILT = 8.0f;
 	private static ModelPlayer alex = null;
 
 	private TCPlayerPreview() {
@@ -30,6 +34,11 @@ public final class TCPlayerPreview {
 	 * @param yaw    body turn in degrees (0 = facing you, a little to the side looks nicer)
 	 */
 	public static void draw(int cx, int feetY, float scale, float yaw, int mouseX, int mouseY) {
+		draw(cx, feetY, scale, yaw, mouseX, mouseY, TCCosmetics.mine());
+	}
+
+	/** Same, wearing the given Treasure Client cosmetics (the Cosmetics screen previews with this). */
+	public static void draw(int cx, int feetY, float scale, float yaw, int mouseX, int mouseY, TCCosmetics.Look look) {
 		SkinModel skinModel = EaglerProfile.getActiveSkinModel();
 		ResourceLocation skin = EaglerProfile.getActiveSkinResourceLocation();
 		ResourceLocation cape = EaglerProfile.getActiveCapeResourceLocation();
@@ -64,19 +73,41 @@ public final class TCPlayerPreview {
 		GlStateManager.scale(scale, scale, scale);
 		GlStateManager.rotate(180.0f, 1.0f, 0.0f, 0.0f);
 		GlStateManager.scale(1.0f, -1.0f, 1.0f);
+		// seen a little from above, so rings round the player (auras) don't look like flat lines
+		GlStateManager.rotate(TILT, 1.0f, 0.0f, 0.0f);
 		RenderHelper.enableGUIStandardItemLighting();
 		GlStateManager.rotate(yaw, 0.0f, 1.0f, 0.0f);
 		if (skin != null) {
 			Minecraft.getMinecraft().getTextureManager().bindTexture(skin);
 		}
 		model.render(null, 0.0f, 0.0f, ticks, headYaw, headPitch, 0.0625f);
-		if (cape != null) {
-			Minecraft.getMinecraft().getTextureManager().bindTexture(cape);
+		// Treasure Client cosmetics: an animated TC cape takes the place of the normal cape
+		boolean tcCape = look != null && look.hasCape() && TCCapes.bind(look.cape);
+		if (tcCape || cape != null) {
+			if (!tcCape) {
+				Minecraft.getMinecraft().getTextureManager().bindTexture(cape);
+			}
 			GlStateManager.pushMatrix();
 			GlStateManager.translate(0.0F, 0.0F, 0.125F);
 			GlStateManager.rotate(6.0F + MathHelper.sin(ticks * 0.05f) * 2.0F, 1.0F, 0.0F, 0.0F);
 			GlStateManager.rotate(180.0F, 0.0F, 1.0F, 0.0F);
+			if (tcCape) {
+				TCCapes.pushFrame();
+			}
 			model.renderCape(0.0625f);
+			if (tcCape) {
+				TCCapes.popFrame();
+			}
+			GlStateManager.popMatrix();
+		}
+		if (look != null && look.hasAura()) {
+			// aura space: feet at the origin, y up, facing the screen (undo the body's turn)
+			RenderHelper.disableStandardItemLighting();
+			GlStateManager.pushMatrix();
+			GlStateManager.rotate(-yaw, 0.0f, 1.0f, 0.0f);
+			GlStateManager.translate(0.0f, 1.5f, 0.0f);
+			GlStateManager.scale(1.0f, -1.0f, 1.0f);
+			TCAuras.renderGui(look);
 			GlStateManager.popMatrix();
 		}
 		GlStateManager.popMatrix();
