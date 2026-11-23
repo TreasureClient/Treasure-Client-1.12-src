@@ -4,6 +4,8 @@ import net.lax1dude.eaglercraft.opengl.GlStateManager;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.model.ModelPlayer;
 import net.minecraft.client.renderer.entity.RenderPlayer;
+import net.minecraft.client.tccos.TCCapes;
+import net.minecraft.client.tccos.TCCosmetics;
 import net.minecraft.entity.player.EnumPlayerModelParts;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.EntityEquipmentSlot;
@@ -19,14 +21,23 @@ public class LayerCape implements LayerRenderer<AbstractClientPlayer> {
 
 	public void doRenderLayer(AbstractClientPlayer entitylivingbaseIn, float limbSwing, float limbSwingAmount,
 			float partialTicks, float ageInTicks, float netHeadYaw, float headPitch, float scale) {
+		// Treasure Client cosmetics: an animated TC cape takes the place of the normal cape
+		TCCosmetics.Look tcLook = TCCosmetics.of(entitylivingbaseIn);
+		boolean tcWants = tcLook != null && tcLook.hasCape();
 		if (entitylivingbaseIn.hasPlayerInfo() && !entitylivingbaseIn.isInvisible()
 				&& entitylivingbaseIn.isWearing(EnumPlayerModelParts.CAPE)
-				&& entitylivingbaseIn.getLocationCape() != null) {
+				&& (tcWants || entitylivingbaseIn.getLocationCape() != null)) {
 			ItemStack itemstack = entitylivingbaseIn.getItemStackFromSlot(EntityEquipmentSlot.CHEST);
 
 			if (itemstack.getItem() != Items.ELYTRA) {
 				GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-				this.playerRenderer.bindTexture(entitylivingbaseIn.getLocationCape());
+				boolean tcCape = tcWants && TCCapes.bind(tcLook.cape);
+				if (!tcCape) {
+					if (entitylivingbaseIn.getLocationCape() == null) {
+						return; // the TC cape is still being made and there's no normal cape
+					}
+					this.playerRenderer.bindTexture(entitylivingbaseIn.getLocationCape());
+				}
 				GlStateManager.pushMatrix();
 				GlStateManager.translate(0.0F, 0.0F, 0.125F);
 				double d0 = entitylivingbaseIn.prevChasingPosX
@@ -69,7 +80,13 @@ public class LayerCape implements LayerRenderer<AbstractClientPlayer> {
 				GlStateManager.rotate(f3 / 2.0F, 0.0F, 0.0F, 1.0F);
 				GlStateManager.rotate(-f3 / 2.0F, 0.0F, 1.0F, 0.0F);
 				GlStateManager.rotate(180.0F, 0.0F, 1.0F, 0.0F);
+				if (tcCape) {
+					TCCapes.pushFrame();
+				}
 				((ModelPlayer) this.playerRenderer.getMainModel()).renderCape(0.0625F);
+				if (tcCape) {
+					TCCapes.popFrame();
+				}
 				GlStateManager.popMatrix();
 			}
 		}
