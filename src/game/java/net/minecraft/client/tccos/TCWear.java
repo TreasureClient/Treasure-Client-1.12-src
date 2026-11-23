@@ -52,9 +52,14 @@ public final class TCWear {
 		int hatRgb = hat ? look.wearRgb(look.hatColor, TCWearShapes.naturalHat(look.hat), ms) : 0;
 		int bootRgb = boots ? look.wearRgb(look.bootColor, TCWearShapes.naturalBoots(look.boots), ms) : 0;
 		boolean natural = "natural".equals(look.hatColor);
+		boolean hatCustom = "custom".equals(look.hat), bootsCustom = "custom".equals(look.boots);
+		String[] hk = hatCustom ? look.hkParts() : null, bk = bootsCustom ? look.bkParts() : null;
+		int acc = look.accent();
+		boolean hatGlow = hat && (hatCustom ? TCWearShapes.customHatGlows(hk[1], hk[2]) : hatGlows(look.hat));
+		boolean bootGlow = boots && (bootsCustom ? TCWearShapes.customBootsGlow(bk[1]) : bootsGlow(look.boots));
 		for (int pass = 0; pass < 2; ++pass) {
 			boolean glowPass = pass == 1;
-			if (glowPass && !(hat && hatGlows(look.hat) || boots && bootsGlow(look.boots))) break;
+			if (glowPass && !hatGlow && !bootGlow) break;
 			float lx = 0f, ly = 0f;
 			if (glowPass) {
 				lx = GlStateManager.getTexCoordX(1);
@@ -62,22 +67,31 @@ public final class TCWear {
 				GlStateManager.disableLighting();
 				OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
 			}
-			if (hat && (!glowPass || hatGlows(look.hat))) {
+			if (hat && (!glowPass || hatGlow)) {
 				GlStateManager.pushMatrix();
 				model.bipedHead.postRender(0.0625F);
 				GlStateManager.scale(0.0625F, 0.0625F, 0.0625F);
 				begin(glowPass);
-				TCWearShapes.drawHat(look.hat, hatRgb, natural, t);
+				if (hatCustom) {
+					TCWearShapes.customHat(hk[0], hk[1], hk[2], TCCapeArt.paletteRgb(hk[3], acc), TCCapeArt.paletteRgb(hk[4], acc), t);
+				} else {
+					TCWearShapes.drawHat(look.hat, hatRgb, natural, t);
+				}
 				Tessellator.getInstance().draw();
 				GlStateManager.popMatrix();
 			}
-			if (boots && (!glowPass || bootsGlow(look.boots))) {
+			if (boots && (!glowPass || bootGlow)) {
 				for (int leg = 0; leg < 2; ++leg) {
 					GlStateManager.pushMatrix();
 					(leg == 0 ? model.bipedRightLeg : model.bipedLeftLeg).postRender(0.0625F);
 					GlStateManager.scale(0.0625F, 0.0625F, 0.0625F);
 					begin(glowPass);
-					TCWearShapes.drawBoot(look.boots, bootRgb, t, leg == 0 ? -1 : 1, active);
+					if (bootsCustom) {
+						TCWearShapes.customBoot(bk[0], bk[1], TCCapeArt.paletteRgb(bk[3], acc), TCCapeArt.paletteRgb(bk[4], acc), t,
+								leg == 0 ? -1 : 1, active);
+					} else {
+						TCWearShapes.drawBoot(look.boots, bootRgb, t, leg == 0 ? -1 : 1, active);
+					}
 					Tessellator.getInstance().draw();
 					GlStateManager.popMatrix();
 				}
@@ -165,17 +179,20 @@ public final class TCWear {
 		double yaw = Math.toRadians(p.renderYawOffset);
 		double px = Math.cos(yaw), pz = Math.sin(yaw); // to the side
 		double fx = -Math.sin(yaw), fz = Math.cos(yaw); // forwards
-		switch (look.boots) {
+		String kind = look.trailKind();
+		if (kind == null) kind = "";
+		switch (kind) {
 		case "frost":
 		case "magma":
+		case "prints":
 			if (ground && walk - tr.lastWalk >= 0.62f) {
 				tr.lastWalk = walk;
 				tr.side = -tr.side;
 				tr.add(p.posX + px * 0.14 * tr.side, p.posY + 0.016, p.posZ + pz * 0.14 * tr.side,
-						"frost".equals(look.boots) ? PRINT_FROST : PRINT_MAGMA, now);
+						"magma".equals(kind) ? PRINT_MAGMA : PRINT_FROST, now);
 			}
 			break;
-		case "cloud":
+		case "puffs":
 			if (ground != tr.lastGround) {
 				for (int k = 0; k < 3; ++k) {
 					double a = k * 2.1 + now * 0.001;
@@ -183,7 +200,7 @@ public final class TCWear {
 				}
 			}
 			break;
-		case "rocket":
+		case "flames":
 			if ((!ground || p.isSprinting()) && now - tr.lastEmit >= 45L) {
 				tr.lastEmit = now;
 				for (int s = -1; s <= 1; s += 2) {
@@ -191,7 +208,7 @@ public final class TCWear {
 				}
 			}
 			break;
-		case "winged":
+		case "sparks":
 			if (!ground && now - tr.lastEmit >= 70L) {
 				tr.lastEmit = now;
 				tr.side = -tr.side;
