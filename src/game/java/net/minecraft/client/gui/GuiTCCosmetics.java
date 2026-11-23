@@ -14,7 +14,8 @@ import net.minecraft.util.math.MathHelper;
  * draws the background and your player wearing what you pick.
  *
  * Talk with the overlay (game storage, like the main menu):
- *   game -> overlay: tccosui = 1 while this screen shows; tccosinfo = "name\ncape\naura\ncolor"
+ *   game -> overlay: tccosui = the clock (ms), renewed every 400 ms while this screen shows, so a value
+ *                    left over from a closed or reloaded tab never shows the page; tccosinfo = "name\ncape\naura\ncolor"
  *   overlay -> game: tccosact = lines of "cape:id" | "aura:id" | "color:id" | "back" | "skin"
  *                    tccosack = the time, every 400 ms (the game shows plain buttons if it stops)
  */
@@ -46,12 +47,20 @@ public class GuiTCCosmetics extends GuiScreen {
 		this.labels();
 		if (this.initAt == 0L) this.initAt = EagRuntime.steadyTimeMillis();
 		this.lastFrame = EagRuntime.steadyTimeMillis();
-		try {
-			EagRuntime.setStorage("tccosui", new byte[] { (byte) 1 });
-		} catch (Throwable t) {
-		}
+		this.heartbeat();
 		this.publish();
 		this.updateButtons();
+	}
+
+	private long lastBeat = 0L;
+
+	/** Tells the overlay this screen is still showing (it hides the page if this stops). */
+	private void heartbeat() {
+		try {
+			this.lastBeat = EagRuntime.steadyTimeMillis();
+			EagRuntime.setStorage("tccosui", String.valueOf(System.currentTimeMillis()).getBytes(StandardCharsets.US_ASCII));
+		} catch (Throwable t) {
+		}
 	}
 
 	private void labels() {
@@ -90,6 +99,9 @@ public class GuiTCCosmetics extends GuiScreen {
 	}
 
 	public void updateScreen() {
+		if (EagRuntime.steadyTimeMillis() - this.lastBeat >= 400L) {
+			this.heartbeat();
+		}
 		try {
 			byte[] a = EagRuntime.getStorage("tccosact");
 			if (a != null) {

@@ -934,7 +934,10 @@ public class GlStateManager {
 			_i = activeTexture;
 			_j = textureMatrixStackPointer[_i];
 			mat = textureMatrixStack[_i][_j];
-			textureMatrixStackAccessSerial[_i][_j] = ++textureCoordsAccessSerial[_i];
+			// Treasure Client: this used the texture *coords* counter, so after a translate/scale a
+			// loadIdentity could get the same number back and the shader kept the old matrix (an
+			// animated cape's texture matrix stuck to the skin drawn next). Use the matrix counter.
+			textureMatrixStackAccessSerial[_i][_j] = ++textureMatrixAccessSerial[_i];
 			break;
 		default:
 			throw new IllegalStateException();

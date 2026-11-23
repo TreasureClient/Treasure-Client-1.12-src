@@ -1599,6 +1599,12 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15 #tc-cos.enter .c-tab { animation: t15in .55s var(--t15-ease) both; animation-delay: calc(60ms + var(--i) * 60ms); }
 #tc-root.tc15 #tc-cos.enter .c-top, #tc-root.tc15 #tc-cos.enter .c-foot, #tc-root.tc15 #tc-cos.enter .c-who { animation: t15fade .6s ease both .15s; }
 
+/* small windows: drop the extras so nothing overlaps */
+@media (max-width: 1000px) {
+  #tc-root.tc15 #tc-cos .c-tag, #tc-root.tc15 #tc-cos .c-card i { display: none; }
+  #tc-root.tc15 #tc-cos .c-grid { gap: 6px; }
+  #tc-root.tc15 #tc-cos .c-card { padding: 6px 6px 8px; }
+}
 /* the cape previews (small animated pictures of each cape) */
 #tc-root.tc15 #tc-cos .cape { position: relative; display: block; width: 6.4vh; min-width: 38px; height: 10.2vh; min-height: 60px; overflow: hidden; border-radius: 2px 2px 5px 5px;
   box-shadow: 0 6px 16px rgba(0,0,0,.5); transform: perspective(200px) rotateX(6deg); }
@@ -2850,6 +2856,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
+
     /* ===== TC15: Treasure Client 1.5 look — the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -3026,7 +3034,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           if (wm) {
             var vi = (sget('tcmenuinfo') || '').split('\n')[3];
             if (vi && wm.__v !== vi) { wm.__v = vi; wm.textContent = 'Treasure Client ' + utf8(vi); }
-            var cosOn = (sget('tccosui') || '').charCodeAt(0) === 1;
+            var cv = sget('tccosui'), cosOn = !!cv && Math.abs(Date.now() - (parseInt(cv, 10) || 0)) < 2000;
             wm.style.visibility = on || cosOn ? 'hidden' : '';
           }
           if (on !== shown) {
@@ -3066,7 +3074,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       } catch (e) { try { console.error('[TreasureClient] 1.5 look failed (old look stays):', e); } catch (e2) {} }
     })();
     /* ---------- 1.5 Cosmetics screen: the words and cards (the game draws your player wearing them) ----------
-       game -> us: tccosui = 1 while it shows; tccosinfo = "name\ncape\naura\ncolor"
+       game -> us: tccosui = the game's clock (ms), renewed every 400 ms while it shows (a stale value never shows it);
+                   tccosinfo = "name\ncape\naura\ncolor"
        us -> game: tccosact = lines of cape:id | aura:id | color:id | back | skin; tccosack = the time every 400 ms */
     (function () {
       try {
@@ -3174,8 +3183,14 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
         var shown = false, lastInfo = null, lastAck = 0, hideTimer = 0;
         cs.style.display = 'none';
+        // left over from last time (the tab was closed or reloaded on this screen): never show it over the menu
+        sset('tccosui', null); sset('tccosact', null);
+        var isOn = function () {
+          var v = sget('tccosui'), t = v ? parseInt(v, 10) : 0;
+          return t > 0 && Math.abs(Date.now() - t) < 2000;
+        };
         var update = function () {
-          var m = sget('tccosui'), on = !!(m && m.charCodeAt(0) === 1);
+          var on = isOn();
           if (on !== shown) {
             shown = on;
             clearTimeout(hideTimer);
