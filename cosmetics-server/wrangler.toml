@@ -1,0 +1,9 @@
+name = "tc-cosmetics"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tc-cosmetics"
+database_id = "6be370b7-5e94-4edf-b158-a4a28378fa7d"

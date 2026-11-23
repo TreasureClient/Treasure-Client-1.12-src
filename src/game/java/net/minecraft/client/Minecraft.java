@@ -1444,6 +1444,7 @@ public class Minecraft implements IThreadListener {
 		net.minecraft.item.ItemArmor.tcClientSwap = this.isSingleplayer(); // Treasure Client: modern armor swap
 		net.minecraft.client.gui.TreasureMods.tick(this); // Treasure Client mods
 		net.minecraft.client.gui.TCPvpMods.tick(this); // Reach Display / Combo Counter
+		net.minecraft.client.tccos.TCCosmetics.tick(); // Treasure Client cosmetics: sharing
 		net.minecraft.client.gui.TreasureHud.tick(this); // Treasure Client HUD data bridge
 		net.minecraft.client.renderer.texture.TCTexturePreload.tick(this); // menus only: mob/menu pictures early
 		TCLagMonitor.addLogic(TCLagMonitor.L_MODS, tcM);

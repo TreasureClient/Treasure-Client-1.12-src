@@ -43,6 +43,7 @@ public class RenderPlayer extends RenderLivingBase<AbstractClientPlayer> {
 		this.addLayer(new LayerArrow(this));
 		this.addLayer(new LayerDeadmau5Head(this));
 		this.addLayer(new LayerCape(this));
+		this.addLayer(new net.minecraft.client.renderer.entity.layers.LayerTCWear(this)); // Treasure Client hats and boots
 		this.addLayer(new LayerCustomHead(this.getMainModel().bipedHead));
 		this.addLayer(new LayerElytra(this));
 		this.addLayer(new LayerEntityOnShoulder(renderManager));

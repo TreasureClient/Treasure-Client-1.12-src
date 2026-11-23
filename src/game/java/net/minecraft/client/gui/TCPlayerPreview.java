@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.tccos.TCAuras;
 import net.minecraft.client.tccos.TCCapes;
 import net.minecraft.client.tccos.TCCosmetics;
+import net.minecraft.client.tccos.TCWear;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 
@@ -81,8 +82,10 @@ public final class TCPlayerPreview {
 			Minecraft.getMinecraft().getTextureManager().bindTexture(skin);
 		}
 		model.render(null, 0.0f, 0.0f, ticks, headYaw, headPitch, 0.0625f);
+		// Treasure Client cosmetics: hat and boots on the posed model
+		TCWear.render(look, model, true, true, false);
 		// Treasure Client cosmetics: an animated TC cape takes the place of the normal cape
-		boolean tcCape = look != null && look.hasCape() && TCCapes.bind(look.cape);
+		boolean tcCape = look != null && look.hasCape() && TCCapes.bind(look);
 		if (tcCape || cape != null) {
 			if (!tcCape) {
 				Minecraft.getMinecraft().getTextureManager().bindTexture(cape);
