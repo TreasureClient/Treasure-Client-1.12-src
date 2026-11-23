@@ -142,6 +142,60 @@ pub fn follows_mouse(
             }
         }
     }
+    tc_wear(p, figure, &placed, k, [cx, cy], size);
+}
+
+/// Treasure Client cosmetics: your hat and boots on the figure (a helmet or armour boots hide
+/// them, like in game). Their faces are sorted back to front and drawn over the body.
+fn tc_wear(p: &mut Painter, figure: &Figure, placed: &[(Quat, Vec3); 6], k: f32, [cx, cy]: [f32; 2], size: f32) {
+    let look = crate::tc_cos::mine();
+    let (hat, boots) = (look.has_hat() && !figure.armor[0], look.has_boots() && !figure.armor[3]);
+    if !hat && !boots {
+        return;
+    }
+    let ms = crate::tc_cos::now_ms();
+    let t = (ms % 3_600_000) as f32 / 1000.0;
+    use crate::tc_cos::shapes;
+    let mut sets = Vec::with_capacity(3);
+    if hat {
+        sets.push((0usize, shapes::hat_of(&look, t, ms)));
+    }
+    if boots {
+        sets.push((4, shapes::boot_of(&look, t, ms, -1.0, false)));
+        sets.push((5, shapes::boot_of(&look, t, ms, 1.0, false)));
+    }
+    let mut faces: Vec<(f32, [[f32; 2]; 4], f32, [f32; 3])> = Vec::new();
+    for (part, s) in &sets {
+        let (turn, at) = placed[*part];
+        for q in &s.quads {
+            if (turn * Vec3::from(q.normal)).z >= 0.0 {
+                continue;
+            }
+            let pts = q.corners.map(|c| at + k * (turn * Vec3::from(c)));
+            let depth = pts.iter().map(|v| v.z).sum::<f32>() / 4.0;
+            let n = q.normal;
+            let shade = if q.glow {
+                1.0
+            } else if n[1].abs() > n[0].abs().max(n[2].abs()) {
+                if n[1] < 0.0 { 1.0 } else { 0.5 }
+            } else if n[2].abs() > n[0].abs() {
+                0.8
+            } else {
+                0.6
+            };
+            faces.push((depth, pts.map(|v| [cx + v.x * size, cy + v.y * size]), shade, q.rgb));
+        }
+    }
+    faces.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let white = p.atlas.white;
+    for (_, corners, shade, rgb) in faces {
+        p.region_quad(
+            white,
+            corners,
+            [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+            [rgb[0] * shade, rgb[1] * shade, rgb[2] * shade, 1.0],
+        );
+    }
 }
 
 fn entity_pose(s: &AnimSample) -> azalea::entity::Pose {

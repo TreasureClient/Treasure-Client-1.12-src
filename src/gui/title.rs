@@ -73,6 +73,38 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
             .active()
             .map(|a| a.name.clone())
             .unwrap_or_else(|| "Player".to_owned());
+        // Treasure Client cosmetics: the overlay draws the Cosmetics page; the game draws your
+        // player on the right wearing what you pick.
+        if crate::gui::tc_bridge::cos_is_open() {
+            let (acts, live) = crate::gui::tc_bridge::cos_frame(&name);
+            for act in acts {
+                match act.as_str() {
+                    "back" => crate::gui::tc_bridge::cos_close(),
+                    "skin" => {
+                        crate::gui::tc_bridge::cos_close();
+                        menu_action(state, "skin");
+                    }
+                    other => {
+                        if let Some((k, v)) = other.split_once(':') {
+                            crate::tc_cos::set(k.trim(), v.trim());
+                        }
+                    }
+                }
+            }
+            if !live {
+                // the page isn't there: the old skin screen instead
+                crate::gui::tc_bridge::cos_close();
+                menu_action(state, "skin");
+            }
+            #[cfg(eagler_skins)]
+            if crate::gui::tc_bridge::cos_is_open() {
+                let h = ctx.vh * 0.46;
+                let w = h * 0.6;
+                let cx = (ctx.vw * 0.78).floor();
+                crate::gui::profile::title_figure(p, state, ctx, [cx - w / 2.0, ctx.vh * 0.22, w, h]);
+            }
+            return;
+        }
         let info = format!("{}\n\n\nRust Beta\n0\nnosp", name.replace('\n', " "));
         let shown_ms = crate::gui::tc_bridge::title_frame(&info);
         if let Some(action) = crate::gui::tc_bridge::take_menu_action() {
@@ -236,6 +268,12 @@ fn menu_action(state: &mut GuiState, action: &str) {
             state.nav = Some(Screen::Options);
         }
         "cos" => {
+            #[cfg(target_arch = "wasm32")]
+            crate::gui::tc_bridge::cos_open();
+            #[cfg(not(target_arch = "wasm32"))]
+            menu_action(state, "skin");
+        }
+        "skin" => {
             #[cfg(eagler_skins)]
             crate::gui::profile::open_edit(state, Screen::Title);
             #[cfg(not(eagler_skins))]

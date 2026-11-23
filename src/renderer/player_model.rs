@@ -19,6 +19,7 @@ use crate::items::model::DisplayContext;
 use crate::util::mth::{DEG_TO_RAD, lerp};
 
 mod avatar_layers;
+mod tc_wear;
 
 const FLIP_DEGREES: f32 = 90.0;
 
@@ -693,6 +694,8 @@ struct Rig {
     #[cfg(feature = "skins")]
     seen_textures: u32,
     layers: avatar_layers::LayersRig,
+    /// Treasure Client cosmetics: hat and boots.
+    tc: tc_wear::WearRig,
 }
 
 #[derive(Resource, Default)]
@@ -812,7 +815,7 @@ fn spawn_rig(
     commands: &mut Commands,
     assets: &PlayerModelAssets,
     materials: &mut Assets<EntityMaterial>,
-    _meshes: &mut Assets<Mesh>,
+    meshes: &mut Assets<Mesh>,
 ) -> Rig {
     let lit = Lit::full_bright();
     let skin_material = |materials: &mut Assets<EntityMaterial>| {
@@ -1028,6 +1031,7 @@ fn spawn_rig(
         &base,
         lit,
     );
+    let tc = tc_wear::spawn(commands, meshes, materials, &posed_parts, lit);
 
     Rig {
         id: None,
@@ -1075,6 +1079,7 @@ fn spawn_rig(
         #[cfg(feature = "skins")]
         seen_textures: 0,
         layers,
+        tc,
     }
 }
 
@@ -1209,7 +1214,7 @@ fn sync_player_models(
     let eye = view.camera_world.to_array();
     let culls = !crate::renderer::terrain::pack_drawing() && crate::tc_mods::get().entity_culling;
     let mut behind_walls: Vec<bool> = Vec::new();
-    let players: Vec<(i32, [f64; 3], AnimSample, WornSkin, Body)> = {
+    let players: Vec<(i32, [f64; 3], AnimSample, WornSkin, Body, String)> = {
         let s = shared.0.lock().unwrap();
         behind_walls.extend(s.session.other_players.iter().map(|p| {
             let feet = p.anim.position(partial);
@@ -1235,6 +1240,7 @@ fn sync_player_models(
                         state: p.skin.clone(),
                     },
                     Body::of(&p.body, view.gamemode),
+                    p.username.clone(),
                 )
             })
             .collect()
@@ -1267,7 +1273,7 @@ fn sync_player_models(
     taken.resize(rigs.entries.len(), false);
     assign.clear();
     unmatched.clear();
-    for (k, (id, _, _, _, _)) in players.iter().enumerate() {
+    for (k, (id, _, _, _, _, _)) in players.iter().enumerate() {
         match slot_of.get(id) {
             Some(&i) if !taken[i] => {
                 taken[i] = true;
@@ -1301,7 +1307,7 @@ fn sync_player_models(
     }
 
     let light = crate::client::worldsync::light_map().read();
-    for (k, ((id, feet, sample, worn, body), slot)) in players.iter().zip(assign.iter()).enumerate() {
+    for (k, ((id, feet, sample, worn, body, name), slot)) in players.iter().zip(assign.iter()).enumerate() {
         let Some(slot) = *slot else { continue };
         let shown = if behind_walls.get(k).copied().unwrap_or(false) {
             RigVisibility::Hidden
@@ -1326,6 +1332,7 @@ fn sync_player_models(
             *body,
             shown,
             lit,
+            crate::tc_cos::of_name(name),
             &mut queries,
             &mut items,
             &mut commands,
@@ -1379,6 +1386,7 @@ fn sync_player_models(
             body,
             shown,
             lit,
+            Some(crate::tc_cos::mine()),
             &mut queries,
             &mut items,
             &mut commands,
@@ -1758,6 +1766,7 @@ fn apply_rig(
     body: Body,
     shown: RigVisibility,
     lit: Lit,
+    tc_look: Option<std::sync::Arc<crate::tc_cos::Look>>,
     queries: &mut RigQueries,
     items: &mut ItemCtx,
     commands: &mut Commands,
@@ -1898,6 +1907,8 @@ fn apply_rig(
         commands,
     );
 
+    tc_wear::update(&mut rig.tc, tc_look, sample, body.hidden, items, &mut queries.5);
+
     if lit != rig.lit {
         #[cfg(feature = "skins")]
         let cape = Some(&rig.cape.material);
@@ -1907,7 +1918,7 @@ fn apply_rig(
             .into_iter()
             .chain(cape)
             .chain(rig.held.iter().map(|held| &held.material))
-            .chain([&rig.head_item.material, &rig.skull.material])
+            .chain([&rig.head_item.material, &rig.skull.material, &rig.tc.solid])
             .chain(
                 rig.armor
                     .iter()

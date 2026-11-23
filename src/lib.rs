@@ -6,6 +6,7 @@ pub mod tc_mods;
 pub mod tc_chat;
 /// Treasure Client: Tier Tagger.
 pub mod tc_tiers;
+pub mod tc_cos;
 #[cfg(feature = "audio")]
 mod audio;
 mod blockentities;

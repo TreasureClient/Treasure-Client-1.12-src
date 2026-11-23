@@ -103,6 +103,68 @@ fn title_gone_check() {
     }
 }
 
+// ------------------------------------------------------------------ the Cosmetics screen
+//
+// Like the JS and WASM editions: the overlay draws the Cosmetics page while `tccosui` holds a
+// recent time (renewed every 400 ms, so a reloaded tab never shows it by mistake), with
+// `tccosinfo` = "name\nlook"; it writes what you pick to `tccosact` (lines of "key:value",
+// "back" or "skin") and the time to `tccosack` every 400 ms while it shows the page.
+
+static COS_OPEN: AtomicBool = AtomicBool::new(false);
+static COS_SINCE: AtomicU64 = AtomicU64::new(0);
+static COS_BEAT: AtomicU64 = AtomicU64::new(0);
+
+/// Opens the Cosmetics page (from the main menu's Cosmetics word).
+pub(crate) fn cos_open() {
+    COS_OPEN.store(true, Ordering::Relaxed);
+    COS_SINCE.store(now_ms(), Ordering::Relaxed);
+    COS_BEAT.store(0, Ordering::Relaxed);
+    remove("tccosact");
+    // the main menu words hide while the Cosmetics page shows
+    TITLE_SHOWN.store(false, Ordering::Relaxed);
+    remove("tcmenu");
+}
+
+pub(crate) fn cos_is_open() -> bool {
+    COS_OPEN.load(Ordering::Relaxed)
+}
+
+pub(crate) fn cos_close() {
+    if COS_OPEN.swap(false, Ordering::Relaxed) {
+        remove("tccosui");
+    }
+}
+
+/// The Cosmetics page is showing this frame (`name` = your player name). Returns what the
+/// overlay asked for, and whether it answers (false for a second and a half = it isn't there).
+pub(crate) fn cos_frame(name: &str) -> (Vec<String>, bool) {
+    let now = now_ms();
+    if now.saturating_sub(COS_BEAT.load(Ordering::Relaxed)) >= 400 {
+        COS_BEAT.store(now, Ordering::Relaxed);
+        set("tccosui", now.to_string().as_bytes());
+        static LAST_INFO: Mutex<String> = Mutex::new(String::new());
+        let info = format!("{}\n{}", name.replace('\n', " "), crate::tc_cos::mine().encode());
+        let mut last = LAST_INFO.lock().unwrap();
+        if *last != info {
+            set("tccosinfo", info.as_bytes());
+            *last = info;
+        }
+    }
+    let mut acts = Vec::new();
+    if let Some(raw) = get("tccosact") {
+        remove("tccosact");
+        if let Ok(text) = String::from_utf8(raw) {
+            acts.extend(text.lines().map(|l| l.trim().to_owned()).filter(|l| !l.is_empty()));
+        }
+    }
+    let ack = get("tccosack")
+        .and_then(|v| String::from_utf8(v).ok())
+        .and_then(|s| s.trim().parse::<u64>().ok())
+        .unwrap_or(0);
+    let live = now.abs_diff(ack) < 2500 || now.saturating_sub(COS_SINCE.load(Ordering::Relaxed)) < 1500;
+    (acts, live)
+}
+
 /// What the overlay asked for through `tcpause`, if anything (3 = freeze, 2 = back).
 pub(crate) fn take_pause() -> Option<u8> {
     let value = *get("tcpause")?.first()?;
@@ -177,6 +239,11 @@ fn set_hud(out: String) {
 
 pub(crate) fn publish(state: &GuiState, snap: &Snapshot, time: f64) {
     title_gone_check();
+    // Treasure Client cosmetics: share your look and fetch other players' (every half second).
+    if let Some(account) = state.profile.accounts.active() {
+        crate::tc_cos::set_my_name(&account.name);
+    }
+    crate::tc_cos::tick();
     let in_world = state.hud.in_world;
     let playing = in_world && !state.screen.is_open();
     let changed = in_world != IN_WORLD.swap(in_world, Ordering::Relaxed);
