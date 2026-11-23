@@ -85,8 +85,10 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
                         menu_action(state, "skin");
                     }
                     other => {
-                        if let Some((k, v)) = other.split_once(':') {
-                            crate::tc_cos::set(k.trim(), v.trim());
+                        if let Some((k, v)) = other.split_once(':')
+                            && crate::tc_cos::set(k.trim(), v.trim())
+                        {
+                            cos_turn_to(k.trim(), v.trim());
                         }
                     }
                 }
@@ -101,7 +103,9 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
                 let h = ctx.vh * 0.46;
                 let w = h * 0.6;
                 let cx = (ctx.vw * 0.78).floor();
+                crate::gui::puppet::set_turn(Some(cos_turn(ctx, cx)));
                 crate::gui::profile::title_figure(p, state, ctx, [cx - w / 2.0, ctx.vh * 0.22, w, h]);
+                crate::gui::puppet::set_turn(None);
             }
             return;
         }
@@ -412,4 +416,76 @@ mod tests {
         let top = first_row_y(240.0);
         assert_eq!(top + BOTTOM_ROW_STEP - (top + WIDGET_HEIGHT), 16.0);
     }
+}
+
+/// Treasure Client cosmetics: how the player on the Cosmetics page is turned. It spins slowly by
+/// itself, turns round to show what you just picked, and can be dragged round (like the JS and
+/// WASM editions).
+struct CosTurn {
+    yaw: f32,
+    target: f32,
+    show_until: u64,
+    idle_until: u64,
+    drag_x: Option<f32>,
+    last_ms: u64,
+}
+
+static COS_TURN: std::sync::Mutex<CosTurn> = std::sync::Mutex::new(CosTurn {
+    yaw: -25.0,
+    target: 0.0,
+    show_until: 0,
+    idle_until: 0,
+    drag_x: None,
+    last_ms: 0,
+});
+
+fn wrap_deg(a: f32) -> f32 {
+    (a + 180.0).rem_euclid(360.0) - 180.0
+}
+
+/// After a pick: turn the player so you see it (the back for a cape, three quarters for a hat...).
+fn cos_turn_to(what: &str, id: &str) {
+    let (target, ms) = match what {
+        "cape" | "mk" if id != "none" => (160.0, 3200),
+        "aura" | "ak" | "asize" | "aspeed" if id != "none" => (-25.0, 2500),
+        "hat" | "hatc" | "hk" if id != "none" => (-30.0, 2500),
+        "boots" | "bootc" | "trail" | "bk" => (55.0, 2500),
+        _ => return,
+    };
+    if let Ok(mut t) = COS_TURN.lock() {
+        t.target = target;
+        t.show_until = crate::tc_cos::now_ms() + ms;
+    }
+}
+
+fn cos_turn(ctx: &ScreenCtx, cx: f32) -> f32 {
+    let Ok(mut t) = COS_TURN.lock() else { return 0.0 };
+    let now = crate::tc_cos::now_ms();
+    // a slow frame never makes it jump
+    let dt = (now.saturating_sub(t.last_ms) as f32 / 1000.0).min(0.05);
+    t.last_ms = now;
+    let input = ctx.input;
+    if let Some(m) = input.mouse
+        && input.left_click
+        && (m.x - cx).abs() < ctx.vw * 0.13
+        && m.y > ctx.vh * 0.18
+        && m.y < ctx.vh * 0.7
+    {
+        t.drag_x = Some(m.x);
+    }
+    if !input.left_down {
+        t.drag_x = None;
+    }
+    if let (Some(last), Some(m)) = (t.drag_x, input.mouse) {
+        t.yaw = wrap_deg(t.yaw + (m.x - last) * 1.6);
+        t.drag_x = Some(m.x);
+        t.show_until = 0;
+        t.idle_until = now + 4000;
+    } else if now < t.show_until {
+        let diff = wrap_deg(t.target - t.yaw);
+        t.yaw += diff * (dt * 6.0).min(1.0);
+    } else if now > t.idle_until {
+        t.yaw = wrap_deg(t.yaw + dt * 16.0);
+    }
+    t.yaw
 }

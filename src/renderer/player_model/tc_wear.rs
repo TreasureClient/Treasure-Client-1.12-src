@@ -55,7 +55,9 @@ fn fill(mesh: &mut Mesh, quads: &[shapes::Quad], glow: bool, shift: [f32; 3]) {
             pos.push([c[0] + shift[0], c[1] + shift[1], c[2] + shift[2]]);
             nor.push(q.normal);
             uv.push([0.5, 0.5]);
-            col.push([q.rgb[0], q.rgb[1], q.rgb[2], 1.0]);
+            // the shapes' colours are screen (sRGB) colours; the renderer works in linear light
+            let lin = crate::util::mth::srgb_to_linear;
+            col.push([lin(q.rgb[0]), lin(q.rgb[1]), lin(q.rgb[2]), 1.0]);
         }
         idx.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }

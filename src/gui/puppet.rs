@@ -83,7 +83,8 @@ pub fn follows_mouse(
         (((cx - m.x) / 40.0).atan(), ((cy - m.y) / 40.0).atan())
     });
     let mut s = figure.sample.clone();
-    s.body_yaw = 180.0 + x_angle * 20.0;
+    let turn = TURN.lock().map_or(0.0, |t| t.unwrap_or(0.0));
+    s.body_yaw = 180.0 + turn + x_angle * 20.0;
     s.head_yaw = x_angle * 20.0;
     s.pitch = if s.fall_flying { 0.0 } else { -y_angle * 20.0 };
 
@@ -113,7 +114,38 @@ pub fn follows_mouse(
     });
     order.sort_by(|a, b| depth[*b].total_cmp(&depth[*a]));
 
+    // Treasure Client cosmetics: your aura (the half behind you first, the rest at the end)
+    let glows = tc_aura(p, &view, lift, [cx, cy], size);
+    if let Some((region, glows)) = &glows {
+        for g in glows.iter().filter(|g| g.0 > 0.0) {
+            p.region_quad(*region, g.1, g.2, g.3);
+        }
+    }
+    // Treasure Client cosmetics: your cape, drawn in its place between the body parts
+    let mut cape = tc_cape(p, figure, &pose).map(|(region, faces)| {
+        let (turn, at) = placed[1];
+        let c = Vec3::from(crate::renderer::player_model::CAPE.pivot) + pose.cape * Vec3::new(0.0, 8.0, -0.5);
+        ((at + k * (turn * c)).z, region, faces)
+    });
+    let draw_cape = |p: &mut Painter, cape: &mut Option<(f32, Region, Vec<Face>)>| {
+        let Some((_, region, faces)) = cape.take() else { return };
+        let (turn, at) = placed[1];
+        for face in &faces {
+            if (turn * face.out).z >= 0.0 {
+                continue;
+            }
+            let corners = face.corners.map(|c| {
+                let v = at + k * (turn * Vec3::from(c));
+                [cx + v.x * size, cy + v.y * size]
+            });
+            p.region_quad(region, corners, face.uv, [face.shade, face.shade, face.shade, 1.0]);
+        }
+    };
+
     for part in order {
+        if cape.as_ref().is_some_and(|(d, _, _)| depth[part] <= *d) {
+            draw_cape(p, &mut cape);
+        }
         let (turn, at) = placed[part];
         for shell in &model[part].shells {
             let region = match shell.sheet {
@@ -142,7 +174,182 @@ pub fn follows_mouse(
             }
         }
     }
+    draw_cape(p, &mut cape);
     tc_wear(p, figure, &placed, k, [cx, cy], size);
+    if let Some((region, glows)) = &glows {
+        for g in glows.iter().filter(|g| g.0 <= 0.0) {
+            p.region_quad(*region, g.1, g.2, g.3);
+        }
+    }
+}
+
+/// One glow of the aura on screen: its depth, corners, texture corners and colour.
+type ScreenGlow = (f32, [[f32; 2]; 4], [[f32; 2]; 4], [f32; 4]);
+
+/// Your aura on the figure, seen a little from above (so its rings don't look like flat
+/// lines) and not turned with the body. None when you wear no aura.
+fn tc_aura(p: &mut Painter, view: &Quat, lift: Vec3, [cx, cy]: [f32; 2], size: f32) -> Option<(Region, Vec<ScreenGlow>)> {
+    let look = crate::tc_cos::mine();
+    if !look.has_aura() {
+        return None;
+    }
+    // the dot picture is kept in the cape picture, under the cape (see `slot_picture`)
+    if !look.has_cape() {
+        show_cape(&slot_picture(None));
+    }
+    let slot = p.atlas.server_icon(crate::gui::atlas::PUPPET_CAPE_SLOT)?;
+    let region = Region { x: slot.x, y: slot.y + DOT_Y as u32, w: DOT_N as u32, h: DOT_N as u32 };
+    let mut glows = Vec::new();
+    crate::tc_cos::auras::aura(&look, crate::tc_cos::now_ms(), 1.0, 0.0, [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], &mut glows);
+    let turn = *view * Quat::from_rotation_x(-8f32.to_radians());
+    let lin = crate::util::mth::srgb_to_linear;
+    let mut out = Vec::with_capacity(glows.len());
+    for g in glows {
+        let pts = g.corners.map(|c| lift + turn * Vec3::from(c));
+        let depth = pts.iter().map(|v| v.z).sum::<f32>() / 4.0;
+        let a = g.alpha.iter().sum::<f32>() / 4.0;
+        if a <= 0.004 {
+            continue;
+        }
+        let k = lin(a.clamp(0.0, 1.0));
+        // alpha -1: added on top (glows, never darkens)
+        let color = [lin(g.rgb[0]) * k, lin(g.rgb[1]) * k, lin(g.rgb[2]) * k, -1.0];
+        out.push((depth, pts.map(|v| [cx + v.x * size, cy + v.y * size]), g.uv, color));
+    }
+    Some((region, out))
+}
+
+/// Treasure Client cosmetics: the Cosmetics page turns the figure round (degrees; None faces you).
+static TURN: Mutex<Option<f32>> = Mutex::new(None);
+
+pub fn set_turn(turn: Option<f32>) {
+    if let Ok(mut t) = TURN.lock() {
+        *t = turn;
+    }
+}
+
+/// Your Treasure Client cape for the figure: its 64 pictures at half detail, one 64x64 picture
+/// each (shown in the cape picture slot as the animation goes).
+struct FigureCape {
+    key: String,
+    builder: Option<Box<crate::tc_cos::capeart::Builder>>,
+    frames: Vec<Arc<Vec<u8>>>,
+}
+
+static FIGURE_CAPE: Mutex<Option<FigureCape>> = Mutex::new(None);
+
+/// The cape's faces (placed on the body like in game) and the picture they use, or None when
+/// you wear no Treasure Client cape (or it's still being drawn).
+fn tc_cape(
+    p: &mut Painter,
+    figure: &Figure,
+    pose: &crate::renderer::player_model::Pose,
+) -> Option<(Region, Vec<Face>)> {
+    use crate::tc_cos::capeart;
+    let look = crate::tc_cos::mine();
+    if !look.has_cape() {
+        return None;
+    }
+    let id = look.cape_art_id();
+    if !capeart::known(&id) {
+        return None;
+    }
+    let key = format!("{id}@{:06x}", look.accent() & 0xFF_FFFF);
+    let mut held = FIGURE_CAPE.lock().ok()?;
+    if held.as_ref().is_none_or(|c| c.key != key) {
+        *held = Some(FigureCape {
+            key,
+            builder: Some(Box::new(capeart::Builder::new(&id, look.accent()))),
+            frames: Vec::new(),
+        });
+    }
+    let cape = held.as_mut()?;
+    if let Some(builder) = cape.builder.as_mut() {
+        let start = crate::platform::time::Instant::now();
+        let mut done = builder.step(1);
+        while !done && start.elapsed().as_secs_f64() < 0.003 {
+            done = builder.step(1);
+        }
+        if !done {
+            return None;
+        }
+        let px = cape.builder.take()?.pixels;
+        cape.frames = (0..capeart::FRAMES).map(|f| slot_picture(Some((&px, f)))).collect();
+    }
+    let frame = cape.frames.get(capeart::frame_at(crate::tc_cos::now_ms()))?;
+    show_cape(frame);
+    drop(held);
+
+    let slot = p.atlas.server_icon(crate::gui::atlas::PUPPET_CAPE_SLOT)?;
+    // the cape's texture coordinates are for 64x32; its picture is drawn at twice that size
+    let region = Region { w: 128, h: 64, ..slot };
+    let def = &crate::renderer::player_model::CAPE;
+    let cube = geom::CubeDef {
+        tex: def.tex,
+        origin: def.origin,
+        size: def.size,
+        grow: geom::Grow::all(0.0),
+        mirror: false,
+        tex_scale: [1.0, 1.0],
+        faces: geom::Faces::ALL,
+        #[cfg(cem)]
+        cem: None,
+    };
+    let lift = if figure.armor[1] { Vec3::new(0.0, -0.85, 1.1) } else { Vec3::ZERO };
+    let pivot = Vec3::from(def.pivot) + lift;
+    let faces = faces(&cube, crate::renderer::skin::CAPE_SHEET)
+        .into_iter()
+        .map(|f| Face {
+            corners: f.corners.map(|c| (pivot + pose.cape * Vec3::from(c)).to_array()),
+            out: pose.cape * f.out,
+            ..f
+        })
+        .collect();
+    Some((region, faces))
+}
+
+/// Where the soft dot (for auras) is kept in the cape picture: under the cape.
+const DOT_Y: usize = 34;
+const DOT_N: usize = 30;
+
+/// The figure's cape picture (64x64): one cape picture at half detail (44x34) in the top left,
+/// and the aura's soft dot under it. Without a cape, just the dot (made once).
+fn slot_picture(cape: Option<(&[u32], usize)>) -> Arc<Vec<u8>> {
+    static DOT_ONLY: OnceLock<Arc<Vec<u8>>> = OnceLock::new();
+    match cape {
+        None => DOT_ONLY.get_or_init(|| Arc::new(slot_pixels(None))).clone(),
+        Some(c) => Arc::new(slot_pixels(Some(c))),
+    }
+}
+
+fn slot_pixels(cape: Option<(&[u32], usize)>) -> Vec<u8> {
+    use crate::tc_cos::capeart::{CELL_H, CELL_W, COLS, TEX_W};
+    let mut out = vec![0u8; 64 * 64 * 4];
+    if let Some((px, frame)) = cape {
+        let (ox, oy) = (frame % COLS * CELL_W, frame / COLS * CELL_H);
+        for y in 0..CELL_H / 2 {
+            for x in 0..CELL_W / 2 {
+                let mut sum = [0u32; 4];
+                for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                    let c = px[(oy + y * 2 + dy) * TEX_W + ox + x * 2 + dx];
+                    for (i, shift) in [16, 8, 0, 24].into_iter().enumerate() {
+                        sum[i] += (c >> shift) & 0xFF;
+                    }
+                }
+                let at = (y * 64 + x) * 4;
+                for i in 0..4 {
+                    out[at + i] = (sum[i] / 4) as u8;
+                }
+            }
+        }
+    }
+    // the dot's shape is in its colour (glows are added: colour times the dot)
+    for (i, a) in crate::tc_cos::auras::dot_alpha(DOT_N).into_iter().enumerate() {
+        let (x, y) = (i % DOT_N, DOT_Y + i / DOT_N);
+        let v = (a * 255.0 + 0.5) as u8;
+        out[(y * 64 + x) * 4..][..4].copy_from_slice(&[v, v, v, 255]);
+    }
+    out
 }
 
 /// Treasure Client cosmetics: your hat and boots on the figure (a helmet or armour boots hide
@@ -183,7 +390,8 @@ fn tc_wear(p: &mut Painter, figure: &Figure, placed: &[(Quat, Vec3); 6], k: f32,
             } else {
                 0.6
             };
-            faces.push((depth, pts.map(|v| [cx + v.x * size, cy + v.y * size]), shade, q.rgb));
+            let lin = crate::util::mth::srgb_to_linear;
+            faces.push((depth, pts.map(|v| [cx + v.x * size, cy + v.y * size]), shade, q.rgb.map(lin)));
         }
     }
     faces.sort_by(|a, b| b.0.total_cmp(&a.0));

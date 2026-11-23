@@ -19,6 +19,9 @@ use crate::items::model::DisplayContext;
 use crate::util::mth::{DEG_TO_RAD, lerp};
 
 mod avatar_layers;
+#[cfg(feature = "skins")]
+mod tc_cape;
+mod tc_aura;
 mod tc_wear;
 
 const FLIP_DEGREES: f32 = 90.0;
@@ -454,7 +457,7 @@ fn flatten_player_mesh(slim: bool) -> [PartDef; 12] {
 }
 
 #[cfg(feature = "skins")]
-const CAPE: PartDef = PartDef {
+pub(crate) const CAPE: PartDef = PartDef {
     name: "cape",
     tex: [0.0, 0.0],
     origin: [-5.0, 0.0, -1.0],
@@ -662,6 +665,8 @@ struct CapeRig {
     material: Handle<EntityMaterial>,
     ready: bool,
     offset: Vec3,
+    /// Treasure Client cosmetics: an animated cape in place of the normal one.
+    tc: tc_cape::CapeTc,
 }
 
 struct WingsRig {
@@ -696,6 +701,7 @@ struct Rig {
     layers: avatar_layers::LayersRig,
     /// Treasure Client cosmetics: hat and boots.
     tc: tc_wear::WearRig,
+    tc_aura: tc_aura::AuraRig,
 }
 
 #[derive(Resource, Default)]
@@ -703,6 +709,8 @@ pub(crate) struct PlayerRigs {
     entries: Vec<Rig>,
     local: Option<Rig>,
     scratch: SlotScratch,
+    #[cfg(feature = "skins")]
+    tc_capes: tc_cape::CapeCache,
 }
 
 #[derive(Default)]
@@ -963,6 +971,7 @@ fn spawn_rig(
             material: cape_material,
             ready: false,
             offset: Vec3::ZERO,
+            tc: Default::default(),
         }
     };
 
@@ -1032,6 +1041,7 @@ fn spawn_rig(
         lit,
     );
     let tc = tc_wear::spawn(commands, meshes, materials, &posed_parts, lit);
+    let tc_aura = tc_aura::spawn(commands, meshes, materials, root);
 
     Rig {
         id: None,
@@ -1080,6 +1090,7 @@ fn spawn_rig(
         seen_textures: 0,
         layers,
         tc,
+        tc_aura,
     }
 }
 
@@ -1159,6 +1170,12 @@ struct ItemCtx<'a> {
     skins: &'a mut super::skin::SkinTextures,
     #[cfg(feature = "skins")]
     model: &'a PlayerModelAssets,
+    #[cfg(feature = "skins")]
+    tc_capes: &'a mut tc_cape::CapeCache,
+    /// Treasure Client cosmetics: the camera (world) and how many auras are drawn this frame.
+    tc_eye: bevy::math::DVec3,
+    tc_origin: crate::renderer::RenderOrigin,
+    tc_auras: usize,
 }
 
 #[derive(Clone, Default)]
@@ -1191,6 +1208,10 @@ fn sync_player_models(
     let _lag = crate::diag::budget::timed(crate::diag::budget::Slot::Entities);
     crate::prof_span!("render:sync_player_models");
     let Some(assets) = assets else { return };
+    #[cfg(feature = "skins")]
+    let mut tc_capes = std::mem::take(&mut rigs.tc_capes);
+    #[cfg(feature = "skins")]
+    tc_capes.begin_frame();
     let mut items = ItemCtx {
         assets: &mut item_assets,
         meshes: &mut item_meshes,
@@ -1205,6 +1226,11 @@ fn sync_player_models(
         skins: &mut skin_textures,
         #[cfg(feature = "skins")]
         model: &assets,
+        #[cfg(feature = "skins")]
+        tc_capes: &mut tc_capes,
+        tc_eye: view.camera_world,
+        tc_origin: *origin,
+        tc_auras: 0,
     };
     let dirs = diffuse_lights(crate::renderer::dimension::current());
 
@@ -1413,6 +1439,10 @@ fn sync_player_models(
         for root in doomed {
             commands.entity(root).despawn();
         }
+    }
+    #[cfg(feature = "skins")]
+    {
+        rigs.tc_capes = tc_capes;
     }
 }
 
@@ -1814,7 +1844,8 @@ fn apply_rig(
     #[cfg(feature = "skins")]
     {
         update_skin(rig, &worn.state, items, &mut queries.5);
-        if worn.state.refs.cape.is_some() {
+        tc_cape::update(rig, tc_look.as_deref(), items, &mut queries.5);
+        if worn.state.refs.cape.is_some() || rig.cape.tc.on {
             if let Ok(mut transform) = queries.2.get_mut(rig.cape.node) {
                 transform.rotation = pose.cape;
                 transform.translation = Vec3::from(CAPE.pivot) + rig.cape.offset;
@@ -1907,6 +1938,21 @@ fn apply_rig(
         commands,
     );
 
+    tc_aura::update(
+        &mut rig.tc_aura,
+        tc_look.as_deref(),
+        sample,
+        body.hidden,
+        tc_aura::Place {
+            root: Transform { translation, rotation: root.rotation, scale },
+            feet,
+            feet_world: items.tc_origin.to_world(feet).to_array(),
+            entity_id,
+        },
+        items,
+        &mut queries.2,
+        &mut queries.5,
+    );
     tc_wear::update(&mut rig.tc, tc_look, sample, body.hidden, items, &mut queries.5);
 
     if lit != rig.lit {

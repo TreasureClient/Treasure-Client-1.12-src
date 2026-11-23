@@ -10,6 +10,8 @@
 //! - game -> overlay: `tccospub` = "name\nlook" (your look, when it changes); `tccosreq` = names to look up
 //! - overlay -> game: `tccosdata` = lines of "name=look" ("name=" = not a Treasure Client player)
 
+pub mod auras;
+pub mod capeart;
 pub mod shapes;
 
 use std::collections::HashMap;

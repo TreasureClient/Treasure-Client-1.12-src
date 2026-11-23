@@ -324,6 +324,8 @@ pub struct AnimSample {
         reason = "no sprint pose in HumanoidModel.setupAnim; see the field comment"
     )]
     pub sprinting: bool,
+    /// Treasure Client cosmetics: boot trails need to know when you land.
+    pub on_ground: bool,
     pub fall_flying: bool,
     pub fall_flying_scale: f32,
     pub flying_y_rot: Option<f32>,
@@ -745,6 +747,10 @@ impl HumanoidAnim {
             }),
             crouching: self.flags.crouching,
             sprinting: self.flags.sprinting,
+            #[cfg(feature = "skins")]
+            on_ground: self.flags.on_ground,
+            #[cfg(not(feature = "skins"))]
+            on_ground: false,
             fall_flying: self.flags.fall_flying,
             fall_flying_scale: self.fall_flying_scale(t),
             flying_y_rot: if self.flags.fall_flying {
