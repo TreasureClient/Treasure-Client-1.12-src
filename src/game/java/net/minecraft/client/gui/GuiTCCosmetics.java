@@ -9,14 +9,14 @@ import net.minecraft.client.tccos.TCCosmetics;
 import net.minecraft.util.math.MathHelper;
 
 /**
- * Treasure Client 1.5: the Cosmetics screen (capes and auras; hats, boots and the Maker are
- * coming). Like the main menu, the page overlay draws the words and the cards, and the game
+ * Treasure Client 1.5: the Cosmetics screen (capes, auras, hats, boots and the Maker). Like the main menu, the page overlay draws the words and the cards, and the game
  * draws the background and your player wearing what you pick.
  *
  * Talk with the overlay (game storage, like the main menu):
  *   game -> overlay: tccosui = the clock (ms), renewed every 400 ms while this screen shows, so a value
- *                    left over from a closed or reloaded tab never shows the page; tccosinfo = "name\ncape\naura\ncolor"
- *   overlay -> game: tccosact = lines of "cape:id" | "aura:id" | "color:id" | "back" | "skin"
+ *                    left over from a closed or reloaded tab never shows the page; tccosinfo = "name\nlook" (see TCCosmetics)
+ *   overlay -> game: tccosact = lines of "key:value" (cape, aura, color, hat, hatc, boots, bootc, trail, mk, asize, aspeed)
+ *                    | "back" | "skin"
  *                    tccosack = the time, every 400 ms (the game shows plain buttons if it stops)
  */
 public class GuiTCCosmetics extends GuiScreen {
@@ -42,8 +42,10 @@ public class GuiTCCosmetics extends GuiScreen {
 		this.buttonList.add(new GuiButton(1, bx, y, bw, 20, ""));
 		this.buttonList.add(new GuiButton(2, bx, y + 24, bw, 20, ""));
 		this.buttonList.add(new GuiButton(3, bx, y + 48, bw, 20, ""));
-		this.buttonList.add(new GuiButton(4, bx, y + 84, bw, 20, "Skin & Eaglercraft cape..."));
-		this.buttonList.add(new GuiButton(5, bx, y + 108, bw, 20, "Done"));
+		this.buttonList.add(new GuiButton(6, bx, y + 72, bw, 20, ""));
+		this.buttonList.add(new GuiButton(7, bx, y + 96, bw, 20, ""));
+		this.buttonList.add(new GuiButton(4, bx, y + 132, bw, 20, "Skin & Eaglercraft cape..."));
+		this.buttonList.add(new GuiButton(5, bx, y + 156, bw, 20, "Done"));
 		this.labels();
 		if (this.initAt == 0L) this.initAt = EagRuntime.steadyTimeMillis();
 		this.lastFrame = EagRuntime.steadyTimeMillis();
@@ -69,11 +71,17 @@ public class GuiTCCosmetics extends GuiScreen {
 		this.buttonList.get(1).displayString = "Aura: " + name(m.aura);
 		this.buttonList.get(2).displayString = "Aura colour: " + name(m.color);
 		this.buttonList.get(2).enabled = m.hasAura();
+		this.buttonList.get(3).displayString = "Hat: " + name(m.hat);
+		this.buttonList.get(4).displayString = "Boots: " + name(m.boots);
 	}
 
 	private static String name(String id) {
 		if ("none".equals(id)) return "None";
 		if ("theme".equals(id)) return "Your theme";
+		if ("custom".equals(id)) return "Made by you";
+		if ("tophat".equals(id)) return "Top hat";
+		if ("catears".equals(id)) return "Cat ears";
+		if ("angel".equals(id)) return "Angel ring";
 		return Character.toUpperCase(id.charAt(0)) + id.substring(1);
 	}
 
@@ -81,7 +89,7 @@ public class GuiTCCosmetics extends GuiScreen {
 	private void publish() {
 		try {
 			TCCosmetics.Look m = TCCosmetics.mine();
-			String info = this.mc.getSession().getProfile().getName() + "\n" + m.cape + "\n" + m.aura + "\n" + m.color;
+			String info = this.mc.getSession().getProfile().getName() + "\n" + m.encode();
 			EagRuntime.setStorage("tccosinfo", info.getBytes(StandardCharsets.UTF_8));
 		} catch (Throwable t) {
 		}
@@ -147,11 +155,17 @@ public class GuiTCCosmetics extends GuiScreen {
 
 	/** After a change: turn the player so you see it, and tell the overlay. */
 	private void picked(String what, String id) {
-		if ("cape".equals(what) && !"none".equals(id)) {
+		if (("cape".equals(what) || "mk".equals(what)) && !"none".equals(id)) {
 			this.yawTarget = 160.0F;
 			this.showUntil = EagRuntime.steadyTimeMillis() + 3200L;
-		} else if ("aura".equals(what) && !"none".equals(id)) {
+		} else if (("aura".equals(what) || "asize".equals(what) || "aspeed".equals(what)) && !"none".equals(id)) {
 			this.yawTarget = -25.0F;
+			this.showUntil = EagRuntime.steadyTimeMillis() + 2500L;
+		} else if (("hat".equals(what) || "hatc".equals(what)) && !"none".equals(id)) {
+			this.yawTarget = -30.0F; // a three-quarter view shows a hat best
+			this.showUntil = EagRuntime.steadyTimeMillis() + 2500L;
+		} else if ("boots".equals(what) || "bootc".equals(what) || "trail".equals(what)) {
+			this.yawTarget = 55.0F;
 			this.showUntil = EagRuntime.steadyTimeMillis() + 2500L;
 		}
 		this.labels();
@@ -164,6 +178,8 @@ public class GuiTCCosmetics extends GuiScreen {
 		case 1: this.cycle("cape", TCCosmetics.CAPES, m.cape); break;
 		case 2: this.cycle("aura", TCCosmetics.AURAS, m.aura); break;
 		case 3: this.cycle("color", TCCosmetics.COLORS, m.color); break;
+		case 6: this.cycle("hat", TCCosmetics.HATS, m.hat); break;
+		case 7: this.cycle("boots", TCCosmetics.BOOTS, m.boots); break;
 		case 4: this.mc.displayGuiScreen(new GuiScreenEditProfile(this)); break;
 		case 5: this.mc.displayGuiScreen(this.parent); break;
 		default: break;
@@ -214,7 +230,7 @@ public class GuiTCCosmetics extends GuiScreen {
 			this.drawCenteredString(this.fontRendererObj, "Cosmetics", this.width / 2 - this.width / 6, this.height / 4 - 14,
 					TreasureButtons.accent());
 			this.drawCenteredString(this.fontRendererObj, "Press F5 in game to see yourself", this.width / 2 - this.width / 6,
-					this.height / 4 + 140, 0xFFA0A0A0);
+					this.height / 4 + 188, 0xFFA0A0A0);
 		}
 		super.drawScreen(mouseX, mouseY, partialTicks);
 	}

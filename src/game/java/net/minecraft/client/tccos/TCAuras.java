@@ -5,6 +5,7 @@ import net.lax1dude.eaglercraft.opengl.EaglercraftGPU;
 import net.lax1dude.eaglercraft.opengl.GlStateManager;
 import net.lax1dude.eaglercraft.opengl.TCModelBatch;
 import net.lax1dude.eaglercraft.opengl.WorldRenderer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.TCLagMonitor;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.renderer.ActiveRenderInfo;
@@ -37,10 +38,14 @@ public final class TCAuras {
 	private static float rx, ry, rz, ux, uy, uz;
 	private static WorldRenderer buf;
 
-	/** Draws a player's aura in the world; x, y, z is where their feet are, from the camera. */
+	/** Draws a player's aura and boot trail in the world; x, y, z is where their feet are, from the camera. */
 	public static void renderWorld(AbstractClientPlayer p, double x, double y, double z) {
 		TCCosmetics.Look look = TCCosmetics.of(p);
-		if (look == null || !look.hasAura() || p.isInvisible() || p.isSpectator() || p.isPlayerSleeping()) return;
+		if (look == null || p.isInvisible() || p.isSpectator() || p.isPlayerSleeping()) return;
+		boolean aura = look.hasAura(), trail = look.hasTrail();
+		if (!aura && !trail) return;
+		// footprints are added even when they're too far to draw, so a trail never has gaps
+		TCWear.Trail tr = trail ? TCWear.trail(p, look) : null;
 		double dist = Math.sqrt(x * x + y * y + z * z);
 		if (dist > FAR) return;
 		long f = TCLagMonitor.frameStartNs;
@@ -61,12 +66,75 @@ public final class TCAuras {
 		TCModelBatch.flushIfPending();
 		GlStateManager.pushMatrix();
 		GlStateManager.translate((float) x, (float) y, (float) z);
-		begin();
 		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
-		draw(look, fade, p.getEntityId() * 0.618f);
-		end();
+		if (tr != null) {
+			float pt = Minecraft.getMinecraft().getRenderPartialTicks();
+			double ix = p.lastTickPosX + (p.posX - p.lastTickPosX) * pt;
+			double iy = p.lastTickPosY + (p.posY - p.lastTickPosY) * pt;
+			double iz = p.lastTickPosZ + (p.posZ - p.lastTickPosZ) * pt;
+			begin();
+			drawTrail(look, tr, ix, iy, iz, fade);
+			end();
+		}
+		if (aura) {
+			float s = look.auraScale();
+			GlStateManager.scale(s, s, s);
+			begin();
+			draw(look, fade, p.getEntityId() * 0.618f);
+			end();
+		}
 		GlStateManager.enableLighting();
 		GlStateManager.popMatrix();
+	}
+
+	/** Footprints, puffs and flames left behind by boots (world positions, drawn from the player's position). */
+	private static void drawTrail(TCCosmetics.Look look, TCWear.Trail tr, double ix, double iy, double iz, float fade) {
+		long now = EagRuntime.steadyTimeMillis();
+		int tint = look.wearRgb(look.bootColor, -1, now);
+		for (int i = 0; i < tr.born.length; ++i) {
+			if (tr.born[i] == 0L) continue;
+			float age = (now - tr.born[i]) / 1000f;
+			if (age < 0f) age = 0f;
+			float x = (float) (tr.x[i] - ix), y = (float) (tr.y[i] - iy), z = (float) (tr.z[i] - iz);
+			switch (tr.kind[i]) {
+			case TCWear.PRINT_FROST: {
+				if (age > 3f) break;
+				float a = (float) Math.pow(1f - age / 3f, 1.2) * fade;
+				int c = tint == -1 ? 0x9FDFFF : tint;
+				flatAt(x, y, z, 0.17f, ((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f, 0.55f * a);
+				flatAt(x, y + 0.002f, z, 0.07f, 1f, 1f, 1f, 0.5f * a);
+				break;
+			}
+			case TCWear.PRINT_MAGMA: {
+				if (age > 2.2f) break;
+				float k = 1f - age / 2.2f, a = k * fade;
+				int c = tint == -1 ? 0xFF6A1A : tint;
+				flatAt(x, y, z, 0.18f, ((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f, 0.6f * a);
+				dotAt(x, y + 0.05f + age * 0.35f, z, 0.035f, 1f, 0.7f, 0.3f, 0.9f * a * k);
+				break;
+			}
+			case TCWear.PUFF: {
+				if (age > 1.1f) break;
+				float k = age / 1.1f;
+				dotAt(x, y + k * 0.15f, z, 0.12f + 0.25f * k, 1f, 1f, 1f, 0.32f * (1f - k) * fade);
+				break;
+			}
+			case TCWear.FLAME: {
+				if (age > 0.45f) break;
+				float k = age / 0.45f;
+				dotAt(x, y - age * 0.25f, z, 0.03f + 0.09f * (1f - k), 1f, 0.85f - 0.55f * k, 0.35f - 0.3f * k, 0.85f * (1f - k) * fade);
+				break;
+			}
+			case TCWear.SPARK: {
+				if (age > 0.6f) break;
+				float k = age / 0.6f;
+				dotAt(x, y - age * 0.3f, z, 0.045f, 1f, 1f, 0.9f, 0.9f * (1f - k) * fade);
+				break;
+			}
+			default:
+				break;
+			}
+		}
 	}
 
 	/**
@@ -77,9 +145,13 @@ public final class TCAuras {
 		if (look == null || !look.hasAura()) return;
 		rx = 1f; ry = 0f; rz = 0f;
 		ux = 0f; uy = 1f; uz = 0f;
+		float s = look.auraScale();
+		GlStateManager.pushMatrix();
+		GlStateManager.scale(s, s, s);
 		begin();
 		draw(look, 1f, 0f);
 		end();
+		GlStateManager.popMatrix();
 	}
 
 	private static void begin() {
@@ -123,7 +195,7 @@ public final class TCAuras {
 
 	private static void draw(TCCosmetics.Look look, float fade, float seed) {
 		long ms = EagRuntime.steadyTimeMillis();
-		float t = (ms % 3600000L) / 1000f;
+		float t = (ms % 3600000L) / 1000f * look.auraSpeedMul();
 		color(look, ms, 0f);
 		switch (look.aura) {
 		case "halo": halo(t, fade, seed); break;
@@ -229,6 +301,20 @@ public final class TCAuras {
 		buf.pos(x - bx, y - by, z - bz).tex(0.0, 0.0).color(r, g, b, a).endVertex();
 		buf.pos(x + ax, y + ay, z + az).tex(1.0, 0.0).color(r, g, b, a).endVertex();
 		buf.pos(x + bx, y + by, z + bz).tex(1.0, 1.0).color(r, g, b, a).endVertex();
+	}
+
+	/** A soft dot facing the camera, at a point. */
+	private static void dotAt(float x, float y, float z, float s, float r, float g, float b, float a) {
+		dot(x, y, z, s, r, g, b, a);
+	}
+
+	/** A soft round glow lying flat at a point. */
+	private static void flatAt(float x, float y, float z, float s, float r, float g, float b, float a) {
+		if (a <= 0.004f) return;
+		buf.pos(x - s, y, z - s).tex(0.0, 0.0).color(r, g, b, a).endVertex();
+		buf.pos(x - s, y, z + s).tex(0.0, 1.0).color(r, g, b, a).endVertex();
+		buf.pos(x + s, y, z + s).tex(1.0, 1.0).color(r, g, b, a).endVertex();
+		buf.pos(x + s, y, z - s).tex(1.0, 0.0).color(r, g, b, a).endVertex();
 	}
 
 	/** A soft round glow lying flat (on the ground). */

@@ -31,7 +31,7 @@ public class LayerCape implements LayerRenderer<AbstractClientPlayer> {
 
 			if (itemstack.getItem() != Items.ELYTRA) {
 				GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-				boolean tcCape = tcWants && TCCapes.bind(tcLook.cape);
+				boolean tcCape = tcWants && TCCapes.bind(tcLook);
 				if (!tcCape) {
 					if (entitylivingbaseIn.getLocationCape() == null) {
 						return; // the TC cape is still being made and there's no normal cape

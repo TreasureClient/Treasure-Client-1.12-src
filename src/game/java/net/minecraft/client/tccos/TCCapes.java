@@ -1,13 +1,11 @@
 package net.minecraft.client.tccos;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import net.lax1dude.eaglercraft.EagRuntime;
 import net.lax1dude.eaglercraft.opengl.GlStateManager;
 import net.minecraft.client.TCLagMonitor;
-import net.minecraft.client.gui.TreasureButtons;
 import net.minecraft.client.renderer.texture.TextureUtil;
 
 /**
@@ -30,24 +28,31 @@ public final class TCCapes {
 	}
 
 	private static final Map<String, Entry> CACHE = new HashMap<>();
-	private static final int MAX_KEPT = 6;
+	private static final int MAX_KEPT = 10;
 	/** Time a frame may spend drawing cape pictures (at least one picture, then stop once this is used). */
 	private static final long BUDGET_NS = 3_000_000L;
 	/** Only one cape is drawn per frame, even if several players need a new one. */
 	private static long lastStepFrame = -1L;
 
+	/** Binds a player's cape (their own theme colour for "Your theme" and Maker capes). */
+	public static boolean bind(TCCosmetics.Look look) {
+		return look != null && bind(look.capeArtId(), look.accent());
+	}
+
 	/**
 	 * Binds the cape's texture. Returns false while it's still being drawn (or if it's unknown):
 	 * the caller then shows the normal cape (or none).
 	 */
-	public static boolean bind(String id) {
+	public static boolean bind(String id, int accent) {
 		if (id == null || !TCCapeArt.known(id)) return false;
-		int accent = TreasureButtons.accent();
-		String key = "theme".equals(id) ? "theme:" + Integer.toHexString(accent) : id;
+		boolean themed = "theme".equals(id) || id.startsWith("custom:") && TCCapeArt.makerUsesTheme(id.substring(7));
+		String key = themed ? id + "@" + Integer.toHexString(accent & 0xFFFFFF) : id;
 		Entry e = CACHE.get(key);
 		long now = EagRuntime.steadyTimeMillis();
 		if (e == null) {
-			if ("theme".equals(id)) forgetOldThemes();
+			// every kept cape was used a moment ago (lots of different capes around): don't throw one
+			// away just to make another, or they'd be redrawn over and over; show the normal cape instead
+			if (CACHE.size() >= MAX_KEPT && newestOldest() > now - 1500L) return false;
 			trim();
 			e = new Entry();
 			try {
@@ -131,21 +136,12 @@ public final class TCCapes {
 		}
 	}
 
-	/** Frees theme capes made for an older theme colour. */
-	public static void forgetOldThemes() {
-		String keep = "theme:" + Integer.toHexString(TreasureButtons.accent());
-		Iterator<Map.Entry<String, Entry>> it = CACHE.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<String, Entry> me = it.next();
-			if (me.getKey().startsWith("theme:") && !me.getKey().equals(keep)) {
-				if (me.getValue().glId != -1) {
-					try {
-						GlStateManager.deleteTexture(me.getValue().glId);
-					} catch (Throwable t) {
-					}
-				}
-				it.remove();
-			}
+	/** When the least recently used cape was last used. */
+	private static long newestOldest() {
+		long old = Long.MAX_VALUE;
+		for (Entry e : CACHE.values()) {
+			if (e.lastUsed < old) old = e.lastUsed;
 		}
+		return old;
 	}
 }

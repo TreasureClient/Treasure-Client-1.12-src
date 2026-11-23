@@ -34,10 +34,41 @@ public final class TCCapeArt {
 	public static final String[] IDS = { "treasure", "frost", "tropical", "ember", "aurora", "galaxy", "circuit", "theme" };
 
 	public static boolean known(String id) {
+		if (id == null) return false;
+		if (id.startsWith("custom:")) return validMaker(id.substring(7));
 		for (int i = 0; i < IDS.length; ++i) {
 			if (IDS[i].equals(id)) return true;
 		}
 		return false;
+	}
+
+	// ------------------------------------------------------------------ the Maker's parts
+
+	public static final String[] PATTERNS = { "solid", "fade", "stripes", "chevron", "checks", "waves", "stars", "split" };
+	public static final String[] PALETTE = { "theme", "black", "white", "gold", "red", "orange", "yellow", "lime", "green", "aqua", "blue", "violet", "pink" };
+	static final int[] PALETTE_RGB = { 0, 0x16161A, 0xF0F0EA, 0xFFD76B, 0xE8434F, 0xFF8A3C, 0xFFE066, 0x9BEA5B, 0x2FBF71, 0x45E3C6, 0x4A8CFF, 0x9A6BFF, 0xFF6FA8 };
+	public static final String[] EMBLEMS = { "none", "star", "heart", "diamond", "bolt", "moon", "crown", "sword" };
+	public static final String[] MOTIONS = { "still", "shine", "flow", "pulse", "sparkle" };
+
+	/** A Maker cape is "pattern.colour1.colour2.emblem.motion", each from the lists above. */
+	public static boolean validMaker(String spec) {
+		if (spec == null || spec.length() > 60) return false;
+		String[] p = spec.split("\\.", -1);
+		return p.length == 5 && idx(PATTERNS, p[0]) >= 0 && idx(PALETTE, p[1]) >= 0 && idx(PALETTE, p[2]) >= 0
+				&& idx(EMBLEMS, p[3]) >= 0 && idx(MOTIONS, p[4]) >= 0;
+	}
+
+	/** True if a Maker cape uses the theme colour (so it changes with the wearer's theme). */
+	public static boolean makerUsesTheme(String spec) {
+		String[] p = spec.split("\\.", -1);
+		return p.length == 5 && ("theme".equals(p[1]) || "theme".equals(p[2]));
+	}
+
+	static int idx(String[] a, String v) {
+		for (int i = 0; i < a.length; ++i) {
+			if (a[i].equals(v)) return i;
+		}
+		return -1;
 	}
 
 	/** Draws every frame of a cape at once (used by the picture checker; the game uses {@link Builder}). */
@@ -116,6 +147,7 @@ public final class TCCapeArt {
 	}
 
 	static Art make(String id, int accent) {
+		if (id.startsWith("custom:")) return new Custom(id.substring(7), accent);
 		switch (id) {
 		case "frost": return new Frost();
 		case "tropical": return new Tropical();
@@ -583,6 +615,156 @@ public final class TCCapeArt {
 			}
 		}
 	}
+
+	/**
+	 * The Maker's cape: a pattern in two colours, an emblem on a round badge, and a motion.
+	 * Every pattern repeats every 16 (or 10) pixels, so "flow" slides it exactly one repeat per
+	 * loop and the animation joins up.
+	 */
+	static final class Custom extends Art {
+		final int pat, emb, mot;
+		final float r1, g1, b1, r2, g2, b2;
+
+		Custom(String spec, int accent) {
+			String[] p = spec.split("\\.", -1);
+			pat = Math.max(0, idx(PATTERNS, p[0]));
+			int c1 = color(p[1], accent), c2 = color(p[2], accent);
+			emb = Math.max(0, idx(EMBLEMS, p[3]));
+			mot = Math.max(0, idx(MOTIONS, p[4]));
+			r1 = ((c1 >> 16) & 255) / 255f; g1 = ((c1 >> 8) & 255) / 255f; b1 = (c1 & 255) / 255f;
+			r2 = ((c2 >> 16) & 255) / 255f; g2 = ((c2 >> 8) & 255) / 255f; b2 = (c2 & 255) / 255f;
+			lining = mixRgb(0xFF000000 | c1, 0xFF0A0A0C, 0.62f);
+			trim = 0xFF000000 | mixRgb(0xFF000000 | c2, 0xFF000000, 0.25f);
+		}
+
+		static int color(String id, int accent) {
+			int i = idx(PALETTE, id);
+			return i <= 0 ? (accent & 0xFFFFFF) : PALETTE_RGB[i];
+		}
+
+		/** How much of colour 2 a pixel gets (0..1). */
+		float pattern(int x, int y, float t) {
+			boolean flow = mot == 2;
+			float o16 = flow ? t * 16f : 0f;
+			switch (pat) {
+			case 1: // fade
+				return flow ? 0.5f - 0.5f * (float) Math.cos(2 * Math.PI * (y / (float) FH - t)) : y / (float) (FH - 1);
+			case 2: { // stripes
+				float v = (x + (flow ? t * 10f : 0f)) % 10f;
+				return edge(v, 5f, 10f);
+			}
+			case 3: { // chevron
+				float v = (y + Math.abs(x - FW / 2f + 0.5f) * 0.9f - o16 + 64f) % 16f;
+				return edge(v, 8f, 16f);
+			}
+			case 4: { // checks
+				int cx = x / 8, cy = (int) Math.floor((y + o16) / 8f);
+				return ((cx + cy) & 1) == 0 ? 0f : 1f;
+			}
+			case 5: { // waves
+				float v = (y + 3f * (float) Math.sin(2 * Math.PI * x / 20f) + o16 + 64f) % 16f;
+				return edge(v, 8f, 16f);
+			}
+			case 7: // split: a diagonal
+				return x * 1.25f + y > FH * 0.72f + FW * 0.4f ? 1f : 0f;
+			default: // solid, stars (the stars are drawn on top)
+				return 0f;
+			}
+		}
+
+		/** 1 in the first half of a repeat, 0 in the second, with a one-pixel soft edge. */
+		static float edge(float v, float half, float period) {
+			if (v < 0.5f) return 0.5f + v;
+			if (v < half - 0.5f) return 1f;
+			if (v < half + 0.5f) return half + 0.5f - v;
+			if (v > period - 0.5f) return v - (period - 0.5f);
+			return 0f;
+		}
+
+		void frame(float t, float[] r, float[] g, float[] b) {
+			float pulse = mot == 3 ? 0.9f + 0.18f * (float) Math.sin(2 * Math.PI * 2 * t) : 1f;
+			for (int y = 0; y < FH; ++y) {
+				float v = y / (float) FH;
+				float shade = (1.06f - 0.22f * v) * pulse;
+				for (int x = 0; x < FW; ++x) {
+					int i = y * FW + x;
+					float k = pattern(x, y, t);
+					float cr = lerp(r1, r2, k), cg = lerp(g1, g2, k), cb = lerp(b1, b2, k);
+					// a little cloth texture
+					float n = 0.94f + 0.06f * hash(x >> 1, y >> 1, 9);
+					r[i] = cr * shade * n; g[i] = cg * shade * n; b[i] = cb * shade * n;
+				}
+			}
+			if (pat == 6) { // stars in colour 2, drifting down when flowing
+				for (int k = 0; k < 14; ++k) {
+					float x = 3 + hash(k, 1, 51) * (FW - 6);
+					float y0 = hash(k, 2, 51);
+					float y = (mot == 2 ? frac(y0 + t) : y0) * (FH + 6) - 3;
+					int arm = k % 3 == 0 ? 2 : 1;
+					sparkle(r, g, b, Math.round(x), Math.round(y), arm, 1f, r2, g2, b2);
+					set(r, g, b, Math.round(x), Math.round(y), r2, g2, b2);
+				}
+			}
+			if (emb > 0) badge(r, g, b);
+			if (mot == 1) { // shine: a soft band crossing once per loop
+				for (int y = 0; y < FH; ++y) {
+					for (int x = 0; x < FW; ++x) {
+						float s = (x * 0.55f + y) / (FH + FW * 0.55f);
+						float sh = (float) Math.exp(-sq((s - (t * 1.7f - 0.35f)) / 0.05f)) * 0.3f;
+						int i = y * FW + x;
+						r[i] += sh; g[i] += sh; b[i] += sh;
+					}
+				}
+			} else if (mot == 4) { // sparkle
+				for (int k = 0; k < 9; ++k) {
+					float tw = Math.max(0f, (float) Math.sin(2 * Math.PI * (t * 2 + k * 0.37)));
+					tw = tw * tw * tw;
+					sparkle(r, g, b, 3 + (int) (hash(k, 7, 52) * (FW - 6)), 3 + (int) (hash(k, 8, 52) * (FH - 6)), 2, tw, 1f, 1f, 1f);
+				}
+			}
+		}
+
+		/** The emblem on a round badge in the middle (readable on any pattern). */
+		void badge(float[] r, float[] g, float[] b) {
+			float cx = FW / 2f - 0.5f, cy = FH * 0.42f;
+			float br = r1 * 0.4f, bg = g1 * 0.4f, bb = b1 * 0.4f;
+			// the emblem is colour 2, or white if colour 2 is too dark to see on the badge
+			float er = r2, eg = g2, eb = b2;
+			float le = r2 * 0.3f + g2 * 0.59f + b2 * 0.11f, lb = br * 0.3f + bg * 0.59f + bb * 0.11f;
+			if (le - lb < 0.3f) { er = 0.95f; eg = 0.95f; eb = 0.92f; }
+			for (int y = 0; y < FH; ++y) {
+				for (int x = 0; x < FW; ++x) {
+					float d = (float) Math.sqrt(sq(x - cx) + sq(y - cy));
+					if (d > 14.5f) continue;
+					int i = y * FW + x;
+					if (d > 13f) { r[i] = er * 0.85f; g[i] = eg * 0.85f; b[i] = eb * 0.85f; } // the ring
+					else { r[i] = lerp(r[i], br, 0.86f); g[i] = lerp(g[i], bg, 0.86f); b[i] = lerp(b[i], bb, 0.86f); }
+				}
+			}
+			String[] bmp = EMBLEM_BITMAPS[emb - 1];
+			int ox = Math.round(cx - 10.5f), oy = Math.round(cy - 10.5f);
+			for (int by = 0; by < 11; ++by) {
+				for (int bx = 0; bx < 11; ++bx) {
+					if (bmp[by].charAt(bx) != '#') continue;
+					float lit = 1.08f - by * 0.03f; // a little lighter at the top
+					for (int sy = 0; sy < 2; ++sy)
+						for (int sx = 0; sx < 2; ++sx)
+							set(r, g, b, ox + bx * 2 + sx, oy + by * 2 + sy, er * lit, eg * lit, eb * lit);
+				}
+			}
+		}
+	}
+
+	/** The emblems, 11x11 each (drawn twice the size). */
+	static final String[][] EMBLEM_BITMAPS = {
+		{ ".....#.....", ".....#.....", "....###....", "....###....", "###########", ".#########.", "..#######..", "...#####...", "...##.##...", "..##...##..", "..#.....#.." },
+		{ "...........", ".###...###.", "###########", "###########", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#.....", "..........." },
+		{ ".....#.....", "....###....", "...#####...", "..#######..", ".#########.", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#....." },
+		{ "......###..", ".....###...", "....###....", "...###.....", "..########.", ".......###.", "......###..", ".....###...", "....###....", "...##......", "..#........" },
+		{ "....####...", "..#####....", ".#####.....", ".####......", "#####......", "#####......", "#####......", ".####......", ".#####.....", "..#####....", "....####..." },
+		{ "...........", "#....#....#", "##...#...##", "##..###..##", "###.###.###", "###########", "###########", "###########", "...........", "###########", "..........." },
+		{ ".........##", "........###", ".......###.", "......###..", ".....###...", "#...###....", "##.###.....", ".####......", "..##.......", ".#..#......", "#....#....." },
+	};
 
 	// ------------------------------------------------------------------ drawing helpers
 

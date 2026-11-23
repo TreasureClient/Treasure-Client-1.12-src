@@ -1591,6 +1591,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15 #tc-cos .c-col:hover { transform: scale(1.1); }
 #tc-root.tc15 #tc-cos .c-col.on { box-shadow: 0 0 0 2px #0b0b0d, 0 0 0 4px var(--t15-ink); }
 #tc-root.tc15 #tc-cos .c-col-theme { background: conic-gradient(var(--a-1) 0 50%, rgba(255,255,255,.85) 50% 100%); }
+#tc-root.tc15 #tc-cos .c-col-black { box-shadow: 0 0 0 2px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.28); }
+#tc-root.tc15 #tc-cos .c-col-natural { background: linear-gradient(135deg, #f2c14e 0 33%, #e8434f 33% 66%, #4a8cff 66%); }
 #tc-root.tc15 #tc-cos .c-col-rainbow { background: conic-gradient(#ff6f6f, #ffd76b, #9bea5b, #45e3c6, #7fb0ff, #b38cff, #ff6fa8, #ff6f6f); }
 #tc-root.tc15 #tc-cos .c-who { position: absolute; left: 78%; top: 69%; transform: translateX(-50%); text-align: center; white-space: nowrap; }
 #tc-root.tc15 #tc-cos .c-who b { display: block; font-weight: 700; font-stretch: 85%; font-size: 22px; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
@@ -1599,6 +1601,36 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15 #tc-cos.enter .c-tab { animation: t15in .55s var(--t15-ease) both; animation-delay: calc(60ms + var(--i) * 60ms); }
 #tc-root.tc15 #tc-cos.enter .c-top, #tc-root.tc15 #tc-cos.enter .c-foot, #tc-root.tc15 #tc-cos.enter .c-who { animation: t15fade .6s ease both .15s; }
 
+/* hats and boots: pixel pictures; option chips; the Maker */
+#tc-root.tc15 #tc-cos .wear { display: flex; align-items: flex-end; justify-content: center; width: 72%; height: 78%; }
+#tc-root.tc15 #tc-cos .pix { display: block; height: auto; max-width: 100%; max-height: 100%; aspect-ratio: var(--w) / var(--h); width: min(100%, calc(var(--w) * 7px)); }
+#tc-root.tc15 #tc-cos .c-card:hover .wear, #tc-root.tc15 #tc-cos .c-card.on .wear { animation: c-bob 1.6s ease-in-out infinite; }
+@keyframes c-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+#tc-root.tc15 #tc-cos .c-card:not(:hover):not(.on) .wear { animation-play-state: paused; }
+#tc-root.tc15 #tc-cos .c-none { width: 30%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(236,235,230,.3); }
+#tc-root.tc15 #tc-cos .c-note { color: var(--t15-dim); margin-top: 2.4vh; text-transform: none; letter-spacing: .02em; }
+#tc-root.tc15 #tc-cos .c-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+#tc-root.tc15 #tc-cos .c-chip { border: 0; cursor: pointer; padding: 7px 11px; border-radius: 4px; background: rgba(255,255,255,.05); color: var(--t15-ink);
+  box-shadow: inset 0 0 0 1px var(--t15-faint); transition: background .15s, box-shadow .15s, color .15s; }
+#tc-root.tc15 #tc-cos .c-chip:hover { background: rgba(255,255,255,.1); }
+#tc-root.tc15 #tc-cos .c-chip.on { box-shadow: inset 0 0 0 2px var(--a-1); color: var(--a-1); }
+#tc-root.tc15 #tc-cos .mk-sec { font-size: clamp(22px, 4vh, 34px); margin: 5vh 0 1.4vh; padding-top: 3vh; border-top: 1px solid var(--t15-faint); }
+#tc-root.tc15 #tc-cos .mk-top { display: flex; gap: 22px; align-items: center; margin: 1vh 0 1vh; }
+#tc-root.tc15 #tc-cos .mk-what .t15-word { font-size: clamp(22px, 4vh, 34px); }
+#tc-root.tc15 #tc-cos .mk-what p { color: var(--t15-dim); font-size: 13.5px; line-height: 1.55; margin: 1vh 0 1.4vh; max-width: 24vw; }
+#tc-root.tc15 #tc-cos .mk-cape { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 9vh; min-width: 54px; height: 14.4vh; min-height: 86px;
+  border-radius: 2px 2px 6px 6px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,.5); transform: perspective(240px) rotateX(6deg); contain: paint; }
+#tc-root.tc15 #tc-cos .mk-cape::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+#tc-root.tc15 #tc-cos .mk-cape.mk-m-shine::after { inset: -30% auto -30% 0; width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: c-shine 4s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .mk-cape.mk-m-pulse { animation: c-pulse2 2s ease-in-out infinite; }
+@keyframes c-pulse2 { 0%, 100% { opacity: 1; } 50% { opacity: .78; } }
+#tc-root.tc15 #tc-cos .mk-cape.mk-m-sparkle::after { background-image: radial-gradient(#fff 1px, transparent 1.8px); background-size: 17px 23px; animation: c-pulse 1.6s ease-in-out infinite; }
+#tc-root.tc15 #tc-cos .mk-emb { display: none; width: 58%; aspect-ratio: 1; border-radius: 50%; align-items: center; justify-content: center; font-style: normal;
+  font-size: 4.2vh; line-height: 1; color: var(--e); background: color-mix(in srgb, var(--b) 40%, #000); box-shadow: 0 0 0 2px var(--e); }
+#tc-root.tc15 #tc-cos .mk-emb.on { display: flex; }
+#tc-root.tc15 #tc-cos .c-share.warn { color: #ffb36b; }
+#tc-root.tc15 #tc-cos:not(.show) .mk-cape, #tc-root.tc15 #tc-cos:not(.show) .mk-cape::after { animation-play-state: paused; }
 /* small windows: drop the extras so nothing overlaps */
 @media (max-width: 1000px) {
   #tc-root.tc15 #tc-cos .c-tag, #tc-root.tc15 #tc-cos .c-card i { display: none; }
@@ -2858,6 +2890,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
+
     /* ===== TC15: Treasure Client 1.5 look — the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -3075,8 +3109,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
     })();
     /* ---------- 1.5 Cosmetics screen: the words and cards (the game draws your player wearing them) ----------
        game -> us: tccosui = the game's clock (ms), renewed every 400 ms while it shows (a stale value never shows it);
-                   tccosinfo = "name\ncape\naura\ncolor"
-       us -> game: tccosact = lines of cape:id | aura:id | color:id | back | skin; tccosack = the time every 400 ms */
+                   tccosinfo = "name\nlook" (look = c=..;a=..;ac=..;h=..;hc=..;b=..;bc=..;bt=..;mk=..;as=..;sp=..;acc=..)
+       us -> game: tccosact = lines of key:value (cape, aura, color, hat, hatc, boots, bootc, trail, mk, asize, aspeed) | back | skin;
+                   tccosack = the time every 400 ms */
     (function () {
       try {
         if (!root || !root.classList.contains('tc15') || $('#tc-cos')) return;
@@ -3094,7 +3129,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           ['aurora', 'Aurora', 'Northern lights over pines'],
           ['galaxy', 'Galaxy', 'A drifting nebula and stars'],
           ['circuit', 'Circuit', 'Light running along the tracks'],
-          ['theme', 'Your theme', 'Changes with your TC theme']
+          ['theme', 'Your theme', 'Changes with your TC theme'],
+          ['custom', 'Made by you', 'The cape from the Maker']
         ];
         var AURAS = [
           ['none', 'None', 'No aura'],
@@ -3104,20 +3140,110 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           ['ripple', 'Ripple', 'Circles spreading on the ground'],
           ['helix', 'Helix', 'Two strands spiralling round you']
         ];
+        var HATS = [
+          ['none', 'None', 'No hat'],
+          ['crown', 'Crown', 'Gold, with softly glowing gems'],
+          ['tophat', 'Top hat', 'Tall and dapper, a little tilted'],
+          ['wizard', 'Wizard', 'Bends and sways, stars twinkle'],
+          ['beanie', 'Beanie', 'Knitted, with a pompom'],
+          ['catears', 'Cat ears', 'They twitch now and then'],
+          ['horns', 'Horns', 'Curled, with glowing tips'],
+          ['propeller', 'Propeller', 'A cap with a spinning propeller'],
+          ['angel', 'Angel ring', 'A glowing ring floating above you']
+        ];
+        var BOOTS = [
+          ['none', 'None', 'No boots'],
+          ['sneakers', 'Sneakers', 'Clean, with a coloured stripe'],
+          ['rocket', 'Rocket', 'Flames when you jump or sprint'],
+          ['winged', 'Winged', 'Little wings that flap'],
+          ['cloud', 'Cloud', 'Puffs when you jump and land'],
+          ['frost', 'Frost', 'Icy footprints where you walk'],
+          ['magma', 'Magma', 'Glowing cracks, ember steps']
+        ];
         var COLORS = [['theme', 'Your theme', ''], ['gold', 'Gold', '#ffd76b'], ['ice', 'Ice', '#7fe9ff'], ['aqua', 'Aqua', '#45e3c6'],
           ['ember', 'Ember', '#ff7a3c'], ['violet', 'Violet', '#b38cff'], ['rose', 'Rose', '#ff6fa8'], ['lime', 'Lime', '#9bea5b'],
           ['white', 'White', '#f4f4f4'], ['rainbow', 'Rainbow', '']];
-        var TABS = [['capes', 'Capes', 0], ['auras', 'Auras', 0], ['hats', 'Hats', 1], ['boots', 'Boots', 1], ['maker', 'Maker', 1]];
-        var SOON = {
-          hats: 'Hats are coming soon: crowns, halos, little floating things and more, all made by Treasure Client.',
-          boots: 'Boots are coming soon: trails and steps that glow where you walk.',
-          maker: 'The Maker is coming soon: build your own cape, aura, hat or boots from Treasure Client\'s patterns, shapes, colours and animations, then wear it.'
+        var WEAR = [['natural', 'Its own colours', '']].concat(COLORS.slice(0, 9), [['black', 'Black', '#26262b'], ['rainbow', 'Rainbow', '']]);
+        // the Maker cape's parts
+        var PATTERNS = [['solid', 'Solid'], ['fade', 'Fade'], ['stripes', 'Stripes'], ['chevron', 'Chevron'], ['checks', 'Checks'], ['waves', 'Waves'], ['stars', 'Stars'], ['split', 'Split']];
+        var PALETTE = [['theme', 'Your theme', ''], ['black', 'Black', '#16161a'], ['white', 'White', '#f0f0ea'], ['gold', 'Gold', '#ffd76b'], ['red', 'Red', '#e8434f'],
+          ['orange', 'Orange', '#ff8a3c'], ['yellow', 'Yellow', '#ffe066'], ['lime', 'Lime', '#9bea5b'], ['green', 'Green', '#2fbf71'], ['aqua', 'Aqua', '#45e3c6'],
+          ['blue', 'Blue', '#4a8cff'], ['violet', 'Violet', '#9a6bff'], ['pink', 'Pink', '#ff6fa8']];
+        var EMBLEMS = [['none', 'None'], ['star', 'Star'], ['heart', 'Heart'], ['diamond', 'Diamond'], ['bolt', 'Bolt'], ['moon', 'Moon'], ['crown', 'Crown'], ['sword', 'Sword']];
+        var MOTIONS = [['still', 'Still'], ['shine', 'Shine'], ['flow', 'Flow'], ['pulse', 'Pulse'], ['sparkle', 'Sparkle']];
+        var SIZES = [['small', 'Small'], ['normal', 'Normal'], ['big', 'Big']];
+        var SPEEDS = [['calm', 'Calm'], ['normal', 'Normal'], ['lively', 'Lively']];
+        var TABS = [['capes', 'Capes'], ['auras', 'Auras'], ['hats', 'Hats'], ['boots', 'Boots'], ['maker', 'Maker']];
+
+        /* little pixel pictures of the hats and boots (one character per pixel) */
+        var PIX = {
+          crown: ['Y....Y....Y', 'YY..YYY..YY', 'YYY.YYY.YYY', 'YYYYYYYYYYY', 'YbYYYrYYYbY', 'YYYYYYYYYYY', 'yyyyyyyyyyy'],
+          tophat: ['..KKKKKKK..', '..KKKKKKK..', '..KKKKKKK..', '..KKKKKKK..', '..RRRGRRR..', 'kkkkkkkkkkk'],
+          wizard: ['.........P.', '........PP.', '.......PPP.', '......PPPP.', '.....PSPP..', '....PPPPP..', '...PPPPSP..', '...PPPPPPP.', '...GGGGGGG.', 'PPPPPPPPPPP'],
+          beanie: ['....WWW....', '....WWW....', '..RRRRRRR..', '.RRRRRRRRR.', '.RRRRRRRRR.', '.DDDDDDDDD.', '.DdDdDdDdD.'],
+          catears: ['.C.......C.', '.CC.....CC.', '.CpC...CpC.', '.CppC.CppC.', '.CppCCCppC.', 'CCCCCCCCCCC'],
+          horns: ['r.........r', 'r.........r', 'Rr.......rR', '.R.......R.', '.RR.....RR.', '..RR...RR..'],
+          propeller: ['YYYYYgBBBBB', '.....g.....', '...RRYYY...', '..RRRYYYY..', '.RRRRYYYYB.', '.GGGGGBBBB.', 'RRR........'],
+          angel: ['..LLLLLLL..', '.L.......L.', '..LLLLLLL..'],
+          sneakers: ['...BBBB.', '...WWWW.', '...WKWW.', '..WWKWWW', 'WWWBBBWW', 'gggggggg'],
+          rocket: ['...OOOO.', '...MMMM.', '...MMMM.', '..MOOOMM', 'MMMMMMMn', 'dddddddn', '......FF', '.......F'],
+          winged: ['...TTTT.WWW', '...EEEEWWW.', '...EEEEWW..', '..EEEEEE...', 'EEEEEEEE...', 'TTTTTTTT...'],
+          cloud: ['...CCC...', '..CCCCC..', '.CCCCCCCC', 'CCCCCCCCC', 'cCCCCCCCc', '.ccccccc.'],
+          frost: ['...IIII.', '..XIIII.', '...IIIIX', '..IIIIII', 'IIIIIIIX', 'jjjjjjjj'],
+          magma: ['...MMMM.', '...MOMM.', '...MOMM.', '..MMOOMM', 'MOOMMMMM', 'dddddddd']
         };
+        var PIXC = { Y: '#f2c14e', y: '#b58a2c', b: '#5ab8ff', r: '#ff3b5c', K: '#33333c', k: '#45454f', R: '#b3263a', G: '#e8b94a', P: '#4a35a0', S: '#ffe58a',
+          W: '#f2f2f2', D: '#b23b3b', d: '#8e2c2c', p: '#f29cb8', L: '#ffe7a0', B: '#4a8cff', g: '#9a9aa2', O: '#ff7a3c', M: '#a7b0ba', n: '#3a3e45', F: '#ffb23a',
+          T: '#ffd76b', E: '#ede6d6', C: '#f4f6fa', c: '#d9dde6', I: '#9fdfff', X: '#e8fbff', j: '#6fa8c4' };
+        var pix = function (id) {
+          if (id === 'catears') PIXC.C = '#5a5a66';
+          var rows = PIX[id]; if (!rows) return '';
+          var w = rows[0].length, h = rows.length, out = '';
+          for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+            var ch = rows[y][x];
+            if (ch === '.') continue;
+            var col = id === 'magma' && ch === 'M' ? '#55403a' : id === 'magma' && ch === 'O' ? '#ff6a1a' : id === 'magma' && ch === 'd' ? '#33241f' :
+              id === 'rocket' && ch === 'd' ? '#4a4f57' : id === 'horns' && ch === 'R' ? '#9a2e2e' : id === 'horns' && ch === 'r' ? '#4a1818' : PIXC[ch];
+            out += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + col + '"/>';
+          }
+          return '<svg class="pix" viewBox="0 0 ' + w + ' ' + h + '" style="--w:' + w + ';--h:' + h + '" shape-rendering="crispEdges">' + out + '</svg>';
+        };
+
         var card = function (kind, it) {
-          var prev = kind === 'cape' ? '<span class="cape cape-' + it[0] + '"></span>' : '<span class="aura aura-' + it[0] + '"><i></i><i></i><i></i></span>';
+          var prev = kind === 'cape' ? '<span class="cape cape-' + it[0] + '"></span>' :
+            kind === 'aura' ? '<span class="aura aura-' + it[0] + '"><i></i><i></i><i></i></span>' :
+            it[0] === 'none' ? '<span class="c-none"></span>' : '<span class="wear wear-' + it[0] + '">' + pix(it[0]) + '</span>';
           return '<button class="c-card" data-kind="' + kind + '" data-id="' + it[0] + '"><span class="c-prev">' + prev + '</span>' +
             '<b>' + esc(it[1]) + '</b><i>' + esc(it[2]) + '</i><em class="t15-mono">Wearing</em></button>';
         };
+        var swatches = function (key, list) {
+          return '<div class="c-colors">' + list.map(function (c) {
+            return '<button class="c-col c-col-' + c[0] + '" data-key="' + key + '" data-id="' + c[0] + '" title="' + esc(c[1]) + '"' + (c[2] ? ' style="--sw:' + c[2] + '"' : '') + '></button>';
+          }).join('') + '</div>';
+        };
+        var chips = function (key, list) {
+          return '<div class="c-chips">' + list.map(function (c) {
+            return '<button class="c-chip t15-mono" data-key="' + key + '" data-id="' + c[0] + '">' + esc(c[1]) + '</button>';
+          }).join('') + '</div>';
+        };
+        var head = function (label, key) { return '<div class="c-sub t15-mono c-colhead">' + label + (key ? ' <span class="c-colname" data-for="' + key + '"></span>' : '') + '</div>'; };
+        var grid = function (kind, list) { return '<div class="c-grid">' + list.map(function (c) { return card(kind, c); }).join('') + '</div>'; };
+
+        var maker =
+          '<div class="mk-top"><span class="mk-cape"><i class="mk-emb"></i></span><div class="mk-what"><span class="t15-word">Your cape</span>' +
+          '<p>Pick a pattern, two colours, an emblem and how it moves. It goes on as you build it; turn round in game (F5) to see it.</p>' +
+          '<button class="c-chip t15-mono mk-wear" data-key="cape" data-id="custom">Wear it</button></div></div>' +
+          head('Pattern') + chips('mk0', PATTERNS) +
+          head('Colour 1', 'mk1') + swatches('mk1', PALETTE) +
+          head('Colour 2', 'mk2') + swatches('mk2', PALETTE) +
+          head('Emblem') + chips('mk3', EMBLEMS) +
+          head('Motion') + chips('mk4', MOTIONS) +
+          '<div class="mk-sec t15-word">Your aura</div>' + chips('aura', AURAS) + head('Colour', 'color') + swatches('color', COLORS) +
+          head('Size') + chips('asize', SIZES) + head('Speed') + chips('aspeed', SPEEDS) +
+          '<div class="mk-sec t15-word">Your hat</div>' + chips('hat', HATS) + head('Colour', 'hatc') + swatches('hatc', WEAR) +
+          '<div class="mk-sec t15-word">Your boots</div>' + chips('boots', BOOTS) + head('Colour', 'bootc') + swatches('bootc', WEAR) +
+          head('Trail') + chips('trail', [['1', 'On'], ['0', 'Off']]);
+
         var cs = document.createElement('div'); cs.id = 'tc-cos';
         cs.innerHTML =
           '<div class="c-shade"></div>' +
@@ -3125,18 +3251,19 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           '<button class="t15-link t15-mono" data-act="back">&larr; Back</button></div>' +
           '<div class="c-left"><div class="t15-label t15-mono">Cosmetics</div><ul class="c-tabs">' +
           TABS.map(function (t, i) {
-            return '<li class="c-tab' + (t[2] ? ' c-soon-tab' : '') + '" data-tab="' + t[0] + '" style="--i:' + i + '"><span class="t-bar"></span><span class="t-n t15-mono">0' + (i + 1) + '</span>' +
-              '<span class="t15-word">' + t[1] + '</span>' + (t[2] ? '<span class="c-tag t15-mono">Soon</span>' : '') + '</li>';
+            return '<li class="c-tab" data-tab="' + t[0] + '" style="--i:' + i + '"><span class="t-bar"></span><span class="t-n t15-mono">0' + (i + 1) + '</span>' +
+              '<span class="t15-word">' + t[1] + '</span></li>';
           }).join('') + '</ul>' +
-          '<div class="c-foot t15-mono">Only Treasure Client players will see them (sharing comes next).<br>Press F5 in game to see yourself.<br>' +
+          '<div class="c-foot t15-mono"><span class="c-share">Other Treasure Client players see what you wear.</span><br>Press F5 in game to see yourself.<br>' +
           '<button class="t15-link t15-mono" data-act="skin">Skin &amp; Eaglercraft cape &rarr;</button></div></div>' +
           '<div class="c-mid">' +
-          '<div class="c-page" data-page="capes"><div class="c-sub t15-mono">Animated capes</div><div class="c-grid">' + CAPES.map(function (c) { return card('cape', c); }).join('') + '</div></div>' +
-          '<div class="c-page" data-page="auras"><div class="c-sub t15-mono">Auras</div><div class="c-grid">' + AURAS.map(function (c) { return card('aura', c); }).join('') + '</div>' +
-          '<div class="c-sub t15-mono c-colhead">Aura colour <span class="c-colname"></span></div><div class="c-colors">' +
-          COLORS.map(function (c) { return '<button class="c-col c-col-' + c[0] + '" data-id="' + c[0] + '" title="' + esc(c[1]) + '"' + (c[2] ? ' style="--sw:' + c[2] + '"' : '') + '></button>'; }).join('') +
-          '</div></div>' +
-          ['hats', 'boots', 'maker'].map(function (k) { return '<div class="c-page" data-page="' + k + '"><div class="c-soon"><span class="t15-word">Coming soon</span><p>' + esc(SOON[k]) + '</p></div></div>'; }).join('') +
+          '<div class="c-page" data-page="capes"><div class="c-sub t15-mono">Animated capes</div>' + grid('cape', CAPES) + '</div>' +
+          '<div class="c-page" data-page="auras"><div class="c-sub t15-mono">Auras</div>' + grid('aura', AURAS) + head('Aura colour', 'color') + swatches('color', COLORS) + '</div>' +
+          '<div class="c-page" data-page="hats"><div class="c-sub t15-mono">Hats</div>' + grid('hat', HATS) + head('Hat colour', 'hatc') + swatches('hatc', WEAR) +
+          '<div class="c-note t15-mono">A helmet hides your hat.</div></div>' +
+          '<div class="c-page" data-page="boots"><div class="c-sub t15-mono">Boots</div>' + grid('boots', BOOTS) + head('Boots colour', 'bootc') + swatches('bootc', WEAR) +
+          head('Trail') + chips('trail', [['1', 'On'], ['0', 'Off']]) + '<div class="c-note t15-mono">Armour boots hide them.</div></div>' +
+          '<div class="c-page" data-page="maker">' + maker + '</div>' +
           '</div>' +
           '<div class="c-who"><b class="c-name">Player</b><span class="t15-mono c-wear"></span><span class="t15-mono c-hint">Drag to spin</span></div>';
         var tt = $('#tc-title');
@@ -3144,19 +3271,59 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         try { if (typeof tcApplyLogos === 'function') tcApplyLogos(); } catch (e) {}
 
         var send = function (cmd) { var cur = sget('tccosact'); sset('tccosact', cur ? cur + '\n' + cmd : cmd); };
-        var tab = 'capes', state = { cape: 'none', aura: 'none', color: 'theme' };
-        var colorOf = function (id) { for (var i = 0; i < COLORS.length; i++) if (COLORS[i][0] === id) return COLORS[i]; return COLORS[0]; };
-        var nameOf = function (list, id) { for (var i = 0; i < list.length; i++) if (list[i][0] === id) return list[i][1]; return id; };
+        var tab = 'capes';
+        var state = { cape: 'none', aura: 'none', color: 'theme', hat: 'none', hatc: 'natural', boots: 'none', bootc: 'natural', trail: '1',
+          mk: 'fade.theme.black.star.shine', asize: 'normal', aspeed: 'normal' };
+        var SHORT = { c: 'cape', a: 'aura', ac: 'color', h: 'hat', hc: 'hatc', b: 'boots', bc: 'bootc', bt: 'trail', mk: 'mk', as: 'asize', sp: 'aspeed' };
+        var find = function (list, id) { for (var i = 0; i < list.length; i++) if (list[i][0] === id) return list[i]; return null; };
+        var nameOf = function (list, id) { var f = find(list, id); return f ? f[1] : id; };
+        var hexOf = function (list, id) { var f = find(list, id); return f && f[2] ? f[2] : 'var(--a-1)'; };
+        var mkParts = function () { var p = String(state.mk).split('.'); return p.length === 5 ? p : ['fade', 'theme', 'black', 'star', 'shine']; };
+        var valueOf = function (key) { if (key.indexOf('mk') === 0) return mkParts()[+key.slice(2)]; return state[key]; };
+        var LISTS = { color: COLORS, hatc: WEAR, bootc: WEAR, mk1: PALETTE, mk2: PALETTE };
+        // a CSS picture of the Maker cape
+        var makerPreview = function () {
+          var p = mkParts(), c1 = hexOf(PALETTE, p[1]), c2 = hexOf(PALETTE, p[2]), bg;
+          switch (p[0]) {
+            case 'fade': bg = 'linear-gradient(' + c1 + ',' + c2 + ')'; break;
+            case 'stripes': bg = 'repeating-linear-gradient(90deg,' + c1 + ' 0 6px,' + c2 + ' 6px 12px)'; break;
+            case 'chevron': bg = 'linear-gradient(135deg,' + c1 + ' 25%,transparent 25%) -6px 0/12px 12px,linear-gradient(225deg,' + c1 + ' 25%,transparent 25%) -6px 0/12px 12px,linear-gradient(315deg,' + c1 + ' 25%,transparent 25%) 0 0/12px 12px,linear-gradient(45deg,' + c1 + ' 25%,' + c2 + ' 25%) 0 0/12px 12px'; break;
+            case 'checks': bg = 'conic-gradient(' + c1 + ' 25%,' + c2 + ' 0 50%,' + c1 + ' 0 75%,' + c2 + ' 0) 0 0/16px 16px'; break;
+            case 'waves': bg = 'radial-gradient(circle at 50% 0,transparent 5px,' + c2 + ' 5.5px 8px,transparent 8.5px) 0 0/16px 10px,' + c1; break;
+            case 'stars': bg = 'radial-gradient(' + c2 + ' 1px,transparent 1.6px) 0 0/11px 13px,' + c1; break;
+            case 'split': bg = 'linear-gradient(140deg,' + c1 + ' 58%,' + c2 + ' 58%)'; break;
+            default: bg = c1;
+          }
+          var mc = cs.querySelector('.mk-cape');
+          mc.style.background = bg;
+          mc.className = 'mk-cape mk-m-' + p[4];
+          var e = cs.querySelector('.mk-emb');
+          e.className = 'mk-emb' + (p[3] !== 'none' ? ' on' : '');
+          e.style.setProperty('--b', c1);
+          e.style.setProperty('--e', c2);
+          e.textContent = { star: '★', heart: '♥', diamond: '◆', bolt: 'ϟ', moon: '☾', crown: '♛', sword: '⚔' }[p[3]] || '';
+        };
         var paint = function () {
-          [].forEach.call(cs.querySelectorAll('.c-card'), function (c) { c.classList.toggle('on', state[c.dataset.kind] === c.dataset.id); });
-          [].forEach.call(cs.querySelectorAll('.c-col'), function (c) { c.classList.toggle('on', state.color === c.dataset.id); });
-          var col = colorOf(state.color);
-          cs.style.setProperty('--c', col[2] || 'var(--a-1)');
+          [].forEach.call(cs.querySelectorAll('.c-card'), function (c) {
+            var k = { cape: 'cape', aura: 'aura', hat: 'hat', boots: 'boots' }[c.dataset.kind];
+            c.classList.toggle('on', state[k] === c.dataset.id);
+          });
+          [].forEach.call(cs.querySelectorAll('.c-col, .c-chip[data-key]'), function (c) {
+            c.classList.toggle('on', c.dataset.key !== 'cape' && valueOf(c.dataset.key) === c.dataset.id);
+          });
+          cs.querySelector('.mk-wear').classList.toggle('on', state.cape === 'custom');
+          [].forEach.call(cs.querySelectorAll('.c-colname'), function (n) {
+            var key = n.dataset.for, list = LISTS[key];
+            if (list) n.textContent = '· ' + nameOf(list, valueOf(key));
+          });
+          cs.style.setProperty('--c', hexOf(COLORS, state.color));
           cs.classList.toggle('c-rainbow', state.color === 'rainbow');
-          cs.querySelector('.c-colname').textContent = '· ' + col[1];
+          makerPreview();
           var w = [];
           if (state.cape !== 'none') w.push(nameOf(CAPES, state.cape) + ' cape');
           if (state.aura !== 'none') w.push(nameOf(AURAS, state.aura) + ' aura');
+          if (state.hat !== 'none') w.push(nameOf(HATS, state.hat));
+          if (state.boots !== 'none') w.push(nameOf(BOOTS, state.boots) + ' boots');
           cs.querySelector('.c-wear').textContent = w.length ? w.join(' · ') : 'Nothing on yet';
         };
         var setTab = function (t) {
@@ -3167,21 +3334,32 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             p.classList.toggle('on', on);
             if (on) { p.classList.remove('c-anim'); void p.offsetWidth; p.classList.add('c-anim'); }
           });
+          cs.querySelector('.c-mid').scrollTop = 0;
+        };
+        var pick = function (key, id) {
+          if (key.indexOf('mk') === 0) {
+            var p = mkParts(); p[+key.slice(2)] = id; state.mk = p.join('.'); state.cape = 'custom';
+            paint(); send('mk:' + state.mk);
+            return;
+          }
+          state[key] = id; paint(); send(key + ':' + id);
+          // picking a colour with nothing to colour puts something on
+          if (key === 'color' && state.aura === 'none') { state.aura = 'halo'; paint(); send('aura:halo'); }
+          if (key === 'hatc' && state.hat === 'none') { state.hat = 'crown'; paint(); send('hat:crown'); }
+          if (key === 'bootc' && state.boots === 'none') { state.boots = 'sneakers'; paint(); send('boots:sneakers'); }
         };
         [].forEach.call(cs.querySelectorAll('.c-tab'), function (x) { x.addEventListener('click', function () { setTab(x.dataset.tab); }); });
         [].forEach.call(cs.querySelectorAll('.c-card'), function (c) {
-          c.addEventListener('click', function () { state[c.dataset.kind] = c.dataset.id; paint(); send(c.dataset.kind + ':' + c.dataset.id); });
+          c.addEventListener('click', function () { pick(c.dataset.kind, c.dataset.id); });
         });
-        [].forEach.call(cs.querySelectorAll('.c-col'), function (c) {
-          c.addEventListener('click', function () {
-            state.color = c.dataset.id; paint(); send('color:' + c.dataset.id);
-            if (state.aura === 'none') { state.aura = 'halo'; paint(); send('aura:halo'); } // picking a colour with no aura shows one
-          });
+        [].forEach.call(cs.querySelectorAll('.c-col, .c-chip[data-key]'), function (c) {
+          c.addEventListener('click', function () { pick(c.dataset.key, c.dataset.id); });
         });
         [].forEach.call(cs.querySelectorAll('button[data-act]'), function (b) { b.addEventListener('click', function () { send(b.dataset.act); }); });
         setTab('capes');
+        paint();
 
-        var shown = false, lastInfo = null, lastAck = 0, hideTimer = 0;
+        var shown = false, lastInfo = null, lastAck = 0, hideTimer = 0, lastShare = null;
         cs.style.display = 'none';
         // left over from last time (the tab was closed or reloaded on this screen): never show it over the menu
         sset('tccosui', null); sset('tccosact', null);
@@ -3212,16 +3390,95 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             lastInfo = info;
             var f = utf8(info || '').split('\n');
             cs.querySelector('.c-name').textContent = f[0] || 'Player';
-            if (f[1]) state.cape = f[1];
-            if (f[2]) state.aura = f[2];
-            if (f[3]) state.color = f[3];
+            String(f[1] || '').split(';').forEach(function (kv) {
+              var i = kv.indexOf('='); if (i <= 0) return;
+              var k = SHORT[kv.slice(0, i)]; if (k) state[k] = kv.slice(i + 1);
+            });
             paint();
+          }
+          // sharing status (written by the sharing part below)
+          var sh = null; try { sh = localStorage.getItem('tccos_share_status'); } catch (e) {}
+          if (sh !== lastShare) {
+            lastShare = sh;
+            var msg = { on: 'Other Treasure Client players see what you wear.', taken: 'Your name’s cosmetics are set from another device, so others won’t see these.',
+              offline: 'Can’t reach the cosmetics server: only you see these for now.', off: 'Only you see these for now (sharing isn’t set up yet).' }[sh] ||
+              'Other Treasure Client players see what you wear.';
+            cs.querySelector('.c-share').textContent = msg;
+            cs.querySelector('.c-share').classList.toggle('warn', sh === 'taken' || sh === 'offline');
           }
           cs.classList.toggle('under', gui.classList.contains('open'));
         };
         setInterval(update, 100);
         update();
       } catch (e) { try { console.error('[TreasureClient] Cosmetics screen failed:', e); } catch (e2) {} }
+    })();
+    /* ---------- Cosmetics sharing: other Treasure Client players' looks, from the Treasure Client cosmetics server ----------
+       game -> us: tccospub = "name\nlook" (yours, when it changes); tccosreq = names to look up (comma separated)
+       us -> game: tccosdata = lines of name=look ('' = not a Treasure Client player)
+       The server remembers a look per name; the first browser to share a name gets a key for it (kept in
+       localStorage), so nobody else can change that name's cosmetics. Nothing else is sent. */
+    (function () {
+      try {
+        var API = 'https://tc-cosmetics.arjuntxca00.workers.dev'; // the Treasure Client cosmetics server ('' = sharing off)
+        var SK = '_eaglercraft_1.12.';
+        var sget = function (k) { try { var v = localStorage.getItem(SK + k); return v == null ? null : atob(v); } catch (e) { return null; } };
+        var sset = function (k, v) { try { if (v == null) localStorage.removeItem(SK + k); else localStorage.setItem(SK + k, btoa(v)); } catch (e) {} };
+        var status = function (s) { try { localStorage.setItem('tccos_share_status', s); } catch (e) {} };
+        if (!API) { status('off'); return; }
+        var NAME = /^[A-Za-z0-9_]{1,16}$/, LOOK = /^[a-z0-9=;.]{1,300}$/;
+        var cache = {}, order = [], queue = [], busy = false, pubBusy = false, pubRetryAt = 0, saveTimer = 0;
+        sset('tccosdata', null); sset('tccosreq', null);
+        var save = function () {
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(function () {
+            while (order.length > 300) delete cache[order.shift()];
+            sset('tccosdata', order.map(function (n) { return n + '=' + cache[n]; }).join('\n'));
+          }, 200);
+        };
+        var post = function (path, body) {
+          return fetch(API + path, { method: 'POST', body: JSON.stringify(body) }) // plain text: no extra CORS round trip
+            .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }, function () { return { s: r.status, j: null }; }); });
+        };
+        var poll = function () {
+          var req = sget('tccosreq');
+          if (req) {
+            sset('tccosreq', null);
+            req.split(',').forEach(function (n) { n = n.trim(); if (NAME.test(n) && queue.indexOf(n) < 0 && queue.length < 400) queue.push(n); });
+          }
+          if (!busy && queue.length) {
+            var batch = queue.splice(0, 50);
+            busy = true;
+            post('/v1/looks', { names: batch }).then(function (res) {
+              var L = (res.j && res.j.looks) || {};
+              batch.forEach(function (n) {
+                var k = n.toLowerCase(), v = typeof L[k] === 'string' && LOOK.test(L[k]) ? L[k] : '';
+                if (!(k in cache)) order.push(k);
+                cache[k] = v;
+              });
+              save();
+            }).catch(function () {}).then(function () { busy = false; });
+          }
+          var pub = sget('tccospub');
+          if (pub && !pubBusy && Date.now() >= pubRetryAt) {
+            var nl = pub.indexOf('\n'), name = pub.slice(0, nl), look = pub.slice(nl + 1);
+            if (nl <= 0 || !NAME.test(name) || !LOOK.test(look)) { sset('tccospub', null); return; }
+            var tk = 'tccos_key_' + name.toLowerCase(), token = null;
+            try { token = localStorage.getItem(tk); } catch (e) {}
+            pubBusy = true;
+            post('/v1/set', { name: name, look: look, token: token }).then(function (res) {
+              if (res.s === 200) {
+                if (res.j && res.j.token) { try { localStorage.setItem(tk, res.j.token); } catch (e) {} }
+                status('on');
+                if (sget('tccospub') === pub) sset('tccospub', null);
+              } else if (res.s === 409) {
+                status('taken');
+                if (sget('tccospub') === pub) sset('tccospub', null);
+              } else { status('offline'); pubRetryAt = Date.now() + 30000; }
+            }).catch(function () { status('offline'); pubRetryAt = Date.now() + 30000; }).then(function () { pubBusy = false; });
+          }
+        };
+        setInterval(poll, 1000);
+      } catch (e) { try { console.error('[TreasureClient] Cosmetics sharing failed:', e); } catch (e2) {} }
     })();
     /* ---------- 1.5 HUD (phase 2): a theme-coloured label + a white value for the one-line readouts ---------- */
     (function () {
