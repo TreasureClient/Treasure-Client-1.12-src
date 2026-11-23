@@ -30,12 +30,12 @@ public final class TCCosmetics {
 
 	/** Cape ids in menu order ("none" = your normal Eaglercraft cape, "custom" = the one you made in the Maker). */
 	public static final String[] CAPES = { "none", "treasure", "frost", "tropical", "ember", "aurora", "galaxy", "circuit", "theme", "custom" };
-	public static final String[] AURAS = { "none", "halo", "orbit", "rising", "ripple", "helix" };
+	public static final String[] AURAS = { "none", "halo", "orbit", "rising", "ripple", "helix", "custom" };
 	/** Aura colours. */
 	public static final String[] COLORS = { "theme", "gold", "ice", "aqua", "ember", "violet", "rose", "lime", "white", "rainbow" };
 	private static final int[] COLOR_RGB = { 0, 0xFFD76B, 0x7FE9FF, 0x45E3C6, 0xFF7A3C, 0xB38CFF, 0xFF6FA8, 0x9BEA5B, 0xF4F4F4, 0 };
-	public static final String[] HATS = { "none", "crown", "tophat", "wizard", "beanie", "catears", "horns", "propeller", "angel" };
-	public static final String[] BOOTS = { "none", "sneakers", "rocket", "winged", "cloud", "frost", "magma" };
+	public static final String[] HATS = { "none", "crown", "tophat", "wizard", "beanie", "catears", "horns", "propeller", "angel", "custom" };
+	public static final String[] BOOTS = { "none", "sneakers", "rocket", "winged", "cloud", "frost", "magma", "custom" };
 	/** Hat and boots colours ("natural" = the colours they were made with). */
 	public static final String[] WEAR_COLORS = { "natural", "theme", "gold", "ice", "aqua", "ember", "violet", "rose", "lime", "white", "black", "rainbow" };
 	private static final int[] WEAR_RGB = { 0, 0, 0xFFD76B, 0x7FE9FF, 0x45E3C6, 0xFF7A3C, 0xB38CFF, 0xFF6FA8, 0x9BEA5B, 0xF4F4F4, 0x26262B, 0 };
@@ -43,6 +43,45 @@ public final class TCCosmetics {
 	public static final String[] SPEEDS = { "calm", "normal", "lively" };
 	/** The Maker's default cape. */
 	public static final String DEFAULT_MK = "fade.theme.black.star.shine";
+
+	// the Maker's aura: base.particles.colour1.colour2.height (colours from COLORS)
+	public static final String[] AK_BASES = { "none", "ring", "glow", "ripple", "double" };
+	public static final String[] AK_PARTS = { "none", "orbit", "rising", "helix", "sparkle", "snow" };
+	public static final String[] AK_HEIGHTS = { "low", "waist", "head" };
+	public static final String DEFAULT_AK = "ring.sparkle.theme.white.waist";
+	// the Maker's hat: base.top.trim.colour1.colour2 (colours from TCCapeArt.PALETTE)
+	public static final String[] HK_BASES = { "none", "cap", "beanie", "brim", "crown", "band" };
+	public static final String[] HK_TOPS = { "none", "pompom", "cone", "propeller", "ears", "horns", "antenna", "halo" };
+	public static final String[] HK_TRIMS = { "none", "stripe", "gems", "stars" };
+	public static final String DEFAULT_HK = "cap.pompom.stripe.theme.white";
+	// the Maker's boots: shape.extra.trail.colour1.colour2 (colours from TCCapeArt.PALETTE)
+	public static final String[] BK_SHAPES = { "sneaker", "boot", "chunky", "cloud" };
+	public static final String[] BK_EXTRAS = { "none", "wings", "crystals", "cracks", "nozzle" };
+	public static final String[] BK_TRAILS = { "none", "prints", "puffs", "flames", "sparks" };
+	public static final String DEFAULT_BK = "sneaker.none.sparks.white.theme";
+
+	public static boolean validAk(String s) {
+		return validSpec(s, AK_BASES, AK_PARTS, COLORS, COLORS, AK_HEIGHTS);
+	}
+
+	public static boolean validHk(String s) {
+		return validSpec(s, HK_BASES, HK_TOPS, HK_TRIMS, TCCapeArt.PALETTE, TCCapeArt.PALETTE);
+	}
+
+	public static boolean validBk(String s) {
+		return validSpec(s, BK_SHAPES, BK_EXTRAS, BK_TRAILS, TCCapeArt.PALETTE, TCCapeArt.PALETTE);
+	}
+
+	/** A Maker design is parts joined with dots, each part from its own list. */
+	static boolean validSpec(String s, String[]... lists) {
+		if (s == null || s.length() > 80) return false;
+		String[] p = s.split("\\.", -1);
+		if (p.length != lists.length) return false;
+		for (int i = 0; i < p.length; ++i) {
+			if (indexOf(lists[i], p[i]) < 0) return false;
+		}
+		return true;
+	}
 
 	/** One player's look. */
 	public static final class Look {
@@ -58,6 +97,10 @@ public final class TCCosmetics {
 		public String mk = DEFAULT_MK;
 		public String auraSize = "normal";
 		public String auraSpeed = "normal";
+		/** The Maker's aura, hat and boots (see DEFAULT_AK etc.). */
+		public String ak = DEFAULT_AK, hk = DEFAULT_HK, bk = DEFAULT_BK;
+		private String akFrom, hkFrom, bkFrom;
+		private String[] akParts, hkParts, bkParts;
 		/** Their theme colour (0xRRGGBB), or -1 = yours, live. */
 		public int acc = -1;
 
@@ -78,7 +121,45 @@ public final class TCCosmetics {
 		}
 
 		public boolean hasTrail() {
-			return this.trail && TCWear.bootsHaveTrail(boots);
+			return this.trail && trailKind() != null;
+		}
+
+		/** What the boots leave behind: frost, magma, prints, puffs, flames, sparks, or null. */
+		public String trailKind() {
+			switch (boots) {
+			case "frost": return "frost";
+			case "magma": return "magma";
+			case "cloud": return "puffs";
+			case "rocket": return "flames";
+			case "winged": return "sparks";
+			case "custom": {
+				String t = bkParts()[2];
+				return "none".equals(t) ? null : t;
+			}
+			default: return null;
+			}
+		}
+
+		/** The trail's colour (0xRRGGBB), or -1 for the boots' own. */
+		public int trailTint(long ms) {
+			if ("custom".equals(boots)) return TCCapeArt.paletteRgb(bkParts()[4], accent());
+			return wearRgb(bootColor, -1, ms);
+		}
+
+		/** The Maker designs split into their parts (worked out again only when they change). */
+		public String[] akParts() {
+			if (ak != akFrom) { akFrom = ak; akParts = ak.split("\\."); }
+			return akParts;
+		}
+
+		public String[] hkParts() {
+			if (hk != hkFrom) { hkFrom = hk; hkParts = hk.split("\\."); }
+			return hkParts;
+		}
+
+		public String[] bkParts() {
+			if (bk != bkFrom) { bkFrom = bk; bkParts = bk.split("\\."); }
+			return bkParts;
 		}
 
 		/** The id to draw the cape from ("custom:<maker cape>" for the Maker's). */
@@ -93,9 +174,14 @@ public final class TCCosmetics {
 
 		/** The aura colour as 0xRRGGBB right now (rainbow changes over time). */
 		public int auraRgb(long timeMs, float offset) {
-			int i = indexOf(COLORS, color);
+			return colorRgb(color, timeMs, offset);
+		}
+
+		/** An aura colour id (from COLORS) as 0xRRGGBB right now. */
+		public int colorRgb(String id, long timeMs, float offset) {
+			int i = indexOf(COLORS, id);
 			if (i <= 0) return accent();
-			if ("rainbow".equals(color)) return rainbow(timeMs, offset);
+			if ("rainbow".equals(id)) return rainbow(timeMs, offset);
 			return COLOR_RGB[i];
 		}
 
@@ -122,7 +208,7 @@ public final class TCCosmetics {
 		public String encode() {
 			return "c=" + cape + ";a=" + aura + ";ac=" + color + ";h=" + hat + ";hc=" + hatColor + ";b=" + boots + ";bc="
 					+ bootColor + ";bt=" + (trail ? "1" : "0") + ";mk=" + mk + ";as=" + auraSize + ";sp=" + auraSpeed + ";acc="
-					+ hex6(accent());
+					+ hex6(accent()) + ";ak=" + ak + ";hk=" + hk + ";bk=" + bk;
 		}
 
 		public boolean isEmpty() {
@@ -160,6 +246,9 @@ public final class TCCosmetics {
 		case "bc": case "bootc": if (indexOf(WEAR_COLORS, v) < 0) return false; l.bootColor = v; return true;
 		case "bt": case "trail": if (!"1".equals(v) && !"0".equals(v)) return false; l.trail = "1".equals(v); return true;
 		case "mk": if (!TCCapeArt.validMaker(v)) return false; l.mk = v; return true;
+		case "ak": if (!validAk(v)) return false; l.ak = v; return true;
+		case "hk": if (!validHk(v)) return false; l.hk = v; return true;
+		case "bk": if (!validBk(v)) return false; l.bk = v; return true;
 		case "as": case "asize": if (indexOf(SIZES, v) < 0) return false; l.auraSize = v; return true;
 		case "sp": case "aspeed": if (indexOf(SPEEDS, v) < 0) return false; l.auraSpeed = v; return true;
 		case "acc":
@@ -202,11 +291,15 @@ public final class TCCosmetics {
 		return mine;
 	}
 
-	/** Changes one of your cosmetics ("cape", "aura", "color", "hat", "hatc", "boots", "bootc", "trail", "mk", "asize", "aspeed") and saves it. */
+	/** Changes one of your cosmetics ("cape", "aura", "color", "hat", "hatc", "boots", "bootc", "trail", "mk", "ak", "hk", "bk", "asize", "aspeed") and saves it. */
 	public static boolean set(String what, String id) {
 		Look m = mine();
 		if ("acc".equals(what) || !setField(m, what, id, false)) return false;
-		if ("mk".equals(what)) m.cape = "custom"; // editing the Maker cape puts it on
+		// editing a Maker design puts it on
+		if ("mk".equals(what)) m.cape = "custom";
+		else if ("ak".equals(what)) m.aura = "custom";
+		else if ("hk".equals(what)) m.hat = "custom";
+		else if ("bk".equals(what)) m.boots = "custom";
 		everSet = true;
 		try {
 			EagRuntime.setStorage("tccos", m.encode().getBytes(StandardCharsets.UTF_8));

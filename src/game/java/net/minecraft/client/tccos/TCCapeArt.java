@@ -50,6 +50,12 @@ public final class TCCapeArt {
 	public static final String[] EMBLEMS = { "none", "star", "heart", "diamond", "bolt", "moon", "crown", "sword" };
 	public static final String[] MOTIONS = { "still", "shine", "flow", "pulse", "sparkle" };
 
+	/** A palette colour as 0xRRGGBB ("theme" = the given accent). */
+	public static int paletteRgb(String id, int accent) {
+		int i = idx(PALETTE, id);
+		return i <= 0 ? (accent & 0xFFFFFF) : PALETTE_RGB[i];
+	}
+
 	/** A Maker cape is "pattern.colour1.colour2.emblem.motion", each from the lists above. */
 	public static boolean validMaker(String spec) {
 		if (spec == null || spec.length() > 60) return false;

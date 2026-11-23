@@ -19,6 +19,14 @@ public final class TCWearShapes {
 		return "crown".equals(id) || "wizard".equals(id) || "angel".equals(id) || "horns".equals(id);
 	}
 
+	public static boolean customHatGlows(String top, String trim) {
+		return "antenna".equals(top) || "halo".equals(top) || "gems".equals(trim) || "stars".equals(trim);
+	}
+
+	public static boolean customBootsGlow(String extra) {
+		return "crystals".equals(extra) || "cracks".equals(extra) || "nozzle".equals(extra);
+	}
+
 	public static boolean bootsGlow(String id) {
 		return "rocket".equals(id) || "frost".equals(id) || "magma".equals(id);
 	}
@@ -222,6 +230,241 @@ public final class TCWearShapes {
 		rotReset();
 	}
 
+	// ------------------------------------------------------------------ the Maker's hat and boots
+
+	/** A hat put together in the Maker: a base, something on top, a trim, two colours. */
+	public static void customHat(String base, String top, String trim, int c1, int c2, float t) {
+		float topY; // where the top part sits
+		float bandLo = 0f, bandHi = 0f, bandR = 0f; // where a stripe or gems go
+		switch (base) {
+		case "cap":
+			box(-4.65f, -9f, -4.65f, 4.65f, -6.8f, 4.65f, c1);
+			box(-3.4f, -9.7f, -3.4f, 3.4f, -9f, 3.4f, c1);
+			box(-3.6f, -7.3f, -7.4f, 3.6f, -6.8f, -4.65f, trim.equals("stripe") ? c2 : shade(c1, 0.85f));
+			topY = -9.7f; bandLo = -7.7f; bandHi = -6.9f; bandR = 4.75f;
+			break;
+		case "beanie":
+			box(-4.7f, -9.3f, -4.7f, 4.7f, -5.6f, 4.7f, c1);
+			box(-3.8f, -9.9f, -3.8f, 3.8f, -9.3f, 3.8f, c1);
+			box(-4.95f, -6.6f, -4.95f, 4.95f, -5f, 4.95f, shade(c1, 0.78f));
+			topY = -9.9f; bandLo = -6.65f; bandHi = -4.95f; bandR = 5.0f;
+			break;
+		case "brim":
+			box(-6f, -8.6f, -6f, 6f, -8f, 6f, shade(c1, 0.85f));
+			box(-4f, -12f, -4f, 4f, -8.6f, 4f, c1);
+			box(-3.4f, -12.6f, -3.4f, 3.4f, -12f, 3.4f, c1);
+			topY = -12.6f; bandLo = -9.8f; bandHi = -8.6f; bandR = 4.1f;
+			break;
+		case "crown": {
+			float o = 4.7f, i = 4.1f;
+			box(-o, -10.2f, -o, o, -8f, -i, c1);
+			box(-o, -10.2f, i, o, -8f, o, c1);
+			box(-o, -10.2f, -i, -i, -8f, i, c1);
+			box(i, -10.2f, -i, o, -8f, i, c1);
+			box(-i, -9.3f, -i, i, -8f, i, shade(c1, 0.55f));
+			float[] at = { -3.3f, 0f, 3.3f };
+			for (int k = 0; k < 3; ++k) {
+				float tp = k == 1 ? -12.4f : -11.6f, a = at[k];
+				box(a - 0.7f, tp, -o, a + 0.7f, -10.2f, -i, c1);
+				box(a - 0.7f, tp, i, a + 0.7f, -10.2f, o, c1);
+				box(-o, tp, a - 0.7f, -i, -10.2f, a + 0.7f, c1);
+				box(i, tp, a - 0.7f, o, -10.2f, a + 0.7f, c1);
+			}
+			topY = -9.3f; bandLo = -9.0f; bandHi = -8.2f; bandR = 4.8f;
+			break;
+		}
+		case "band":
+			box(-4.75f, -7.6f, -4.75f, 4.75f, -6.2f, -4.4f, c1);
+			box(-4.75f, -7.6f, 4.4f, 4.75f, -6.2f, 4.75f, c1);
+			box(-4.75f, -7.6f, -4.4f, -4.4f, -6.2f, 4.4f, c1);
+			box(4.4f, -7.6f, -4.4f, 4.75f, -6.2f, 4.4f, c1);
+			topY = -8f; bandLo = -7.2f; bandHi = -6.6f; bandR = 4.8f;
+			break;
+		default:
+			topY = -8f;
+			break;
+		}
+		// the trim
+		if (bandR > 0f) {
+			switch (trim) {
+			case "stripe":
+				box(-bandR, bandLo, -bandR, bandR, bandHi, bandR, c2);
+				break;
+			case "gems": {
+				float p = 0.8f + 0.2f * (float) Math.sin(t * 2.6f), y = (bandLo + bandHi) / 2f;
+				int g = shade(c2, p);
+				glowBox(-0.7f, y - 0.6f, -bandR - 0.25f, 0.7f, y + 0.6f, -bandR, g);
+				glowBox(-3.1f, y - 0.4f, -bandR - 0.2f, -2.3f, y + 0.4f, -bandR, g);
+				glowBox(2.3f, y - 0.4f, -bandR - 0.2f, 3.1f, y + 0.4f, -bandR, g);
+				glowBox(-bandR - 0.2f, y - 0.5f, -0.5f, -bandR, y + 0.5f, 0.5f, g);
+				glowBox(bandR, y - 0.5f, -0.5f, bandR + 0.2f, y + 0.5f, 0.5f, g);
+				break;
+			}
+			case "stars": {
+				float y = (bandLo + bandHi) / 2f - ("brim".equals(base) ? 1.6f : 0.9f);
+				float[] xs = { -2.4f, 0.4f, 2.6f };
+				for (int k = 0; k < 3; ++k) {
+					float tw = 0.55f + 0.45f * (float) Math.max(0, Math.sin(t * 2.2f + k * 1.9f));
+					int g = shade(mix(c2, 0xFFFFFF, 0.35f), tw);
+					float x = xs[k], yy = y - (k == 1 ? 0.8f : 0f), z = -bandR;
+					glowBox(x - 0.5f, yy - 0.14f, z - 0.2f, x + 0.5f, yy + 0.14f, z, g);
+					glowBox(x - 0.14f, yy - 0.5f, z - 0.2f, x + 0.14f, yy + 0.5f, z, g);
+				}
+				break;
+			}
+			default:
+				break;
+			}
+		}
+		// the top (a floating ring or an antenna goes above a crown's points)
+		float above = "crown".equals(base) ? -12.4f : topY;
+		switch (top) {
+		case "pompom":
+			box(-1.5f, topY - 2.5f, -1.5f, 1.5f, topY + 0.1f, 1.5f, c2);
+			box(-1.1f, topY - 2.9f, -1.1f, 1.1f, topY - 2.5f, 1.1f, c2);
+			break;
+		case "cone": {
+			rot(0f, topY, 0f, (float) Math.sin(t * 1.4f) * 3f, 0f, 0f);
+			float[][] seg = { { 2.6f, 1.6f, 0f }, { 2.0f, 1.5f, 0.3f }, { 1.4f, 1.4f, 0.8f }, { 0.85f, 1.2f, 1.5f }, { 0.45f, 0.9f, 2.4f } };
+			float y = topY;
+			for (float[] q : seg) {
+				box(-q[0], y - q[1], -q[0] + q[2], q[0], y, q[0] + q[2], c2);
+				y -= q[1];
+			}
+			rotReset();
+			break;
+		}
+		case "propeller":
+			box(-0.3f, topY - 1.5f, -0.3f, 0.3f, topY, 0.3f, 0x9A9AA2);
+			box(-0.6f, topY - 2f, -0.6f, 0.6f, topY - 1.4f, 0.6f, c1);
+			rot(0f, topY - 1.7f, 0f, 0f, (t * 760f) % 360f, 0f);
+			box(-4.6f, topY - 1.85f, -0.55f, -0.6f, topY - 1.5f, 0.55f, c2);
+			box(0.6f, topY - 1.85f, -0.55f, 4.6f, topY - 1.5f, 0.55f, shade(c2, 0.8f));
+			rotReset();
+			break;
+		case "ears":
+			for (int sd = -1; sd <= 1; sd += 2) {
+				float cx = sd * 2.6f, cz = -0.7f, b = Math.min(topY, -8f) + 0.4f;
+				rot(cx, b, cz, 0f, 0f, -sd * 13f);
+				float[][] st = { { 1.8f, 1.3f }, { 1.4f, 1.3f }, { 0.95f, 1.2f }, { 0.5f, 1.0f } };
+				float y = b;
+				for (float[] q : st) {
+					box(cx - q[0], y - q[1], cz - 0.6f, cx + q[0], y, cz + 0.6f, c1);
+					if (q[0] > 0.6f) box(cx - q[0] + 0.55f, y - q[1], cz - 0.74f, cx + q[0] - 0.55f, y, cz - 0.6f, c2);
+					y -= q[1];
+				}
+				rotReset();
+			}
+			break;
+		case "horns": {
+			float[][] sg = { { 3.2f, -0.3f, -2.2f, 0.95f }, { 3.9f, -1.3f, -2.4f, 0.85f }, { 4.6f, -2.3f, -2.5f, 0.75f },
+					{ 5.0f, -3.4f, -2.4f, 0.62f }, { 5.1f, -4.4f, -2.0f, 0.5f }, { 4.8f, -5.2f, -1.4f, 0.4f } };
+			float b = Math.min(topY, -8f);
+			for (int sd = -1; sd <= 1; sd += 2) {
+				for (int k = 0; k < sg.length; ++k) {
+					float[] q = sg[k];
+					int c = mix(c2, shade(c2, 0.3f), k / (float) (sg.length - 1));
+					box(sd * q[0] - q[3], b + q[1] - q[3], q[2] - q[3], sd * q[0] + q[3], b + q[1] + q[3], q[2] + q[3], c);
+				}
+			}
+			break;
+		}
+		case "antenna": {
+			float bob = 0.3f * (float) Math.sin(t * 2.4f);
+			box(-0.25f, above - 4f, -0.25f, 0.25f, topY, 0.25f, 0x9A9AA2);
+			float p = 0.8f + 0.2f * (float) Math.sin(t * 3f);
+			glowBox(-0.8f, above - 5.4f + bob, -0.8f, 0.8f, above - 3.8f + bob, 0.8f, shade(c2, p));
+			break;
+		}
+		case "halo": {
+			float y = above - 2.6f + 0.35f * (float) Math.sin(t * 2f), spin = (t * 25f) % 360f;
+			int n = 18;
+			float r = 3.7f, half = (float) (Math.PI * r / n) * 1.12f;
+			int col = shade(c2, 0.85f + 0.15f * (float) Math.sin(t * 3f));
+			for (int k = 0; k < n; ++k) {
+				rot(0f, y, 0f, 7f, spin + k * 360f / n, 0f);
+				glowBox(-half, y - 0.28f, -r - 0.32f, half, y + 0.28f, -r + 0.32f, col);
+			}
+			rotReset();
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	/** Boots put together in the Maker: a shape, an extra, two colours (the trail is drawn elsewhere). */
+	public static void customBoot(String shape, String extra, int c1, int c2, float t, int side, boolean active) {
+		switch (shape) {
+		case "boot":
+			box(-2.35f, 6.4f, -2.35f, 2.35f, 11.8f, 2.35f, c1);
+			box(-2.35f, 10.5f, -3.1f, 2.35f, 11.8f, -2.35f, c1);
+			box(-2.45f, 11.75f, -3.2f, 2.45f, 12.35f, 2.45f, c2);
+			box(-2.5f, 6.2f, -2.5f, 2.5f, 7.0f, 2.5f, c2);
+			break;
+		case "chunky":
+			box(-2.35f, 8.6f, -2.35f, 2.35f, 11.4f, 2.35f, c1);
+			box(-2.35f, 10.2f, -3.1f, 2.35f, 11.4f, -2.35f, c1);
+			box(-2.6f, 11.3f, -3.4f, 2.6f, 13.0f, 2.7f, c2);
+			box(-2.42f, 8.4f, -2.42f, 2.42f, 9.0f, 2.42f, c2);
+			break;
+		case "cloud":
+			cloud(c1, t, side);
+			box(-1.2f, 12.3f, -2.4f, 1.6f, 12.8f, 2.0f, c2);
+			break;
+		default: // sneaker
+			box(-2.35f, 8.6f, -2.35f, 2.35f, 11.8f, 2.35f, c1);
+			box(-2.35f, 10.5f, -3.1f, 2.35f, 11.8f, -2.35f, c1);
+			box(-2.45f, 11.75f, -3.2f, 2.45f, 12.35f, 2.45f, mix(c2, 0xF0F0EA, 0.5f));
+			box(-2.42f, 8.4f, -2.42f, 2.42f, 9.0f, 2.42f, c2);
+			box(side * 2.35f, 9.9f, -2.0f, side * 2.43f, 10.7f, 1.8f, c2);
+			break;
+		}
+		switch (extra) {
+		case "wings": {
+			float flap = (float) Math.sin(t * (active ? 14f : 4f)) * (active ? 26f : 10f);
+			float x = side * 2.4f;
+			rot(x, 9.4f, 0.4f, 0f, side * (20f + flap), 0f);
+			float x0 = side > 0 ? x : x - 0.3f, x1 = side > 0 ? x + 0.3f : x;
+			box(x0, 7.6f, 0.4f, x1, 8.6f, 4.6f, 0xFFFFFF);
+			box(x0, 8.6f, 0.4f, x1, 9.5f, 3.8f, 0xF4F1EA);
+			box(x0, 9.5f, 0.4f, x1, 10.3f, 3.0f, 0xE9E4DA);
+			box(x0 - 0.02f, 7.5f, 0.3f, x1 + 0.02f, 7.85f, 4.7f, c2);
+			rotReset();
+			break;
+		}
+		case "crystals": {
+			int g = shade(mix(c2, 0xFFFFFF, 0.4f), 0.55f + 0.2f * (float) Math.sin(t * 1.8f + side));
+			float x = side * 2.35f;
+			crystal(x, 9.6f, -1.1f, side, 1.5f, g);
+			crystal(x, 10.6f, 0.9f, side, 1.1f, g);
+			crystal(x, 8.7f, 1.6f, side, 0.8f, g);
+			break;
+		}
+		case "cracks": {
+			float p = 0.6f + 0.4f * (float) Math.sin(t * 2.4f + side * 0.8f);
+			int g = shade(c2, p);
+			glowBox(-1.6f, 9.2f, -2.45f, -1.2f, 11.6f, -2.35f, g);
+			glowBox(-1.2f, 10.2f, -2.45f, 0.9f, 10.6f, -2.35f, g);
+			glowBox(0.9f, 9.0f, -2.45f, 1.3f, 10.6f, -2.35f, g);
+			float x = side * 2.35f;
+			glowBox(x - 0.06f, 9.4f, -1.8f, x + 0.06f, 9.8f, 1.6f, g);
+			glowBox(x - 0.06f, 9.8f, 0.6f, x + 0.06f, 11.4f, 1.0f, g);
+			break;
+		}
+		case "nozzle": {
+			box(-1.1f, 10.3f, 2.35f, 1.1f, 11.9f, 3.3f, 0x3A3E45);
+			float flick = 0.75f + 0.25f * (float) Math.sin(t * 40f) * (float) Math.sin(t * 23f + 1f);
+			float len = active ? 2.2f + 1.4f * flick : 0.6f + 0.3f * flick;
+			glowBox(-0.75f, 11.9f, 2.45f, 0.75f, 11.9f + len, 3.15f, mix(c2, 0xFF7A1A, 0.5f));
+			glowBox(-0.4f, 11.9f, 2.6f, 0.4f, 11.9f + len * 0.6f, 3.0f, 0xFFE07A);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
 	// ------------------------------------------------------------------ the boots
 
 	/** A pair of boots' own colour (used when their colour is "natural"). */
@@ -304,7 +547,7 @@ public final class TCWearShapes {
 		// a round cloud: a wide middle, rounder lumps on every side and on top
 		box(-3.0f, 10.4f + b, -3.6f, 3.0f, 12.3f + b, 3.0f, c);
 		box(-2.4f, 9.4f + b, -2.9f, 2.4f, 10.4f + b, 2.4f, c);
-		box(-1.6f, 8.6f + b, -2.0f, 1.0f, 9.4f + b, 1.4f, c);
+		box(-2.6f, 8.8f + b, -2.7f, 2.6f, 9.4f + b, 2.5f, c); // a puff round the top (outside the leg, so it never flickers through it)
 		box(-3.8f, 10.8f + b, -2.6f, -3.0f, 12.0f + b, 2.0f, lo);
 		box(3.0f, 10.6f + b, -2.2f, 3.8f, 11.9f + b, 2.4f, lo);
 		box(-2.2f, 10.7f + b, 3.0f, 2.0f, 12.0f + b, 3.8f, lo);

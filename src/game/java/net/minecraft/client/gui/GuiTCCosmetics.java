@@ -15,7 +15,7 @@ import net.minecraft.util.math.MathHelper;
  * Talk with the overlay (game storage, like the main menu):
  *   game -> overlay: tccosui = the clock (ms), renewed every 400 ms while this screen shows, so a value
  *                    left over from a closed or reloaded tab never shows the page; tccosinfo = "name\nlook" (see TCCosmetics)
- *   overlay -> game: tccosact = lines of "key:value" (cape, aura, color, hat, hatc, boots, bootc, trail, mk, asize, aspeed)
+ *   overlay -> game: tccosact = lines of "key:value" (cape, aura, color, hat, hatc, boots, bootc, trail, mk, ak, hk, bk, asize, aspeed)
  *                    | "back" | "skin"
  *                    tccosack = the time, every 400 ms (the game shows plain buttons if it stops)
  */
@@ -158,13 +158,13 @@ public class GuiTCCosmetics extends GuiScreen {
 		if (("cape".equals(what) || "mk".equals(what)) && !"none".equals(id)) {
 			this.yawTarget = 160.0F;
 			this.showUntil = EagRuntime.steadyTimeMillis() + 3200L;
-		} else if (("aura".equals(what) || "asize".equals(what) || "aspeed".equals(what)) && !"none".equals(id)) {
+		} else if (("aura".equals(what) || "ak".equals(what) || "asize".equals(what) || "aspeed".equals(what)) && !"none".equals(id)) {
 			this.yawTarget = -25.0F;
 			this.showUntil = EagRuntime.steadyTimeMillis() + 2500L;
-		} else if (("hat".equals(what) || "hatc".equals(what)) && !"none".equals(id)) {
+		} else if (("hat".equals(what) || "hatc".equals(what) || "hk".equals(what)) && !"none".equals(id)) {
 			this.yawTarget = -30.0F; // a three-quarter view shows a hat best
 			this.showUntil = EagRuntime.steadyTimeMillis() + 2500L;
-		} else if ("boots".equals(what) || "bootc".equals(what) || "trail".equals(what)) {
+		} else if ("boots".equals(what) || "bootc".equals(what) || "trail".equals(what) || "bk".equals(what)) {
 			this.yawTarget = 55.0F;
 			this.showUntil = EagRuntime.steadyTimeMillis() + 2500L;
 		}
