@@ -57,9 +57,88 @@ public class ChunkProviderClient implements IChunkProvider {
 		return c;
 	}
 
+	// ---------------------------------------------------------------- Bobby
+	// Treasure Client, inspired by Johni0702's Bobby (our own code): when the server unloads a chunk
+	// that's still inside your render distance, it stays on screen as it was, so you can see as
+	// far as your render distance even when the server sends less (or after you walk away from a
+	// place). Kept chunks go once they're more than one chunk past your render distance, when
+	// Bobby is turned off, or when the server sends that chunk again (it replaces ours). They're
+	// only kept for this world (a new world, dimension or server starts empty) and never saved.
+
+	/** The chunks the server unloaded that we're still showing. */
+	private final com.carrotsearch.hppc.LongHashSet tcKept = new com.carrotsearch.hppc.LongHashSet();
+	/** At most this many (a render distance of 16 is 33 x 33 = 1089 chunks). */
+	private static final int TC_KEEP_MAX = 1200;
+	private int tcKeptTicks;
+
+	/** The server unloaded this chunk: true if Bobby keeps it (then nothing else happens). */
+	public boolean tcKeepOnUnload(int x, int z) {
+		if (!net.minecraft.client.gui.TreasureMods.bobby() || this.tcKept.size() >= TC_KEEP_MAX) {
+			return false;
+		}
+		net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+		net.minecraft.entity.Entity view = mc.getRenderViewEntity() != null ? mc.getRenderViewEntity() : mc.player;
+		if (view == null || view.world != this.worldObj) {
+			return false;
+		}
+		Chunk chunk = this.tcLookup(x, z);
+		if (chunk == null || chunk.isEmpty()) {
+			return false;
+		}
+		if (tcDistance(view, x, z) > mc.gameSettings.renderDistanceChunks) {
+			return false;
+		}
+		this.tcKept.add(ChunkPos.asLong(x, z));
+		return true;
+	}
+
+	/** How many chunks away (the bigger of the two directions, like render distance). */
+	private static int tcDistance(net.minecraft.entity.Entity view, int x, int z) {
+		int px = net.minecraft.util.math.MathHelper.floor(view.posX) >> 4;
+		int pz = net.minecraft.util.math.MathHelper.floor(view.posZ) >> 4;
+		return Math.max(Math.abs(x - px), Math.abs(z - pz));
+	}
+
+	/** Once a second: let kept chunks go that are now too far away (or all of them if Bobby is off). */
+	private void tcTrimKept() {
+		if (this.tcKept.isEmpty() || ++this.tcKeptTicks < 20) {
+			return;
+		}
+		this.tcKeptTicks = 0;
+		net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+		net.minecraft.entity.Entity view = mc.getRenderViewEntity() != null ? mc.getRenderViewEntity() : mc.player;
+		boolean all = !net.minecraft.client.gui.TreasureMods.bobby() || view == null;
+		int keep = mc.gameSettings.renderDistanceChunks + 1;
+		long[] drop = null;
+		int n = 0;
+		for (com.carrotsearch.hppc.cursors.LongCursor c : this.tcKept) {
+			long key = c.value;
+			int x = (int) key, z = (int) (key >>> 32);
+			if (all || tcDistance(view, x, z) > keep) {
+				if (drop == null) {
+					drop = new long[this.tcKept.size()];
+				}
+				drop[n++] = key;
+			}
+		}
+		for (int i = 0; i < n; i++) {
+			long key = drop[i];
+			int x = (int) key, z = (int) (key >>> 32);
+			this.tcKept.remove(key);
+			this.unloadChunk(x, z);
+			this.worldObj.markBlockRangeForRenderUpdate(x * 16, 0, z * 16, x * 16 + 15, 256, z * 16 + 15);
+		}
+	}
+
+	/** .lag / F3: how many chunks Bobby is showing that the server unloaded. */
+	public int tcKeptCount() {
+		return this.tcKept.size();
+	}
+
 	public void unloadChunk(int x, int z) {
 		Chunk chunk = this.provideChunk(x, z);
 		this.tcLastChunk = null;
+		this.tcKept.remove(ChunkPos.asLong(x, z));
 
 		if (!chunk.isEmpty()) {
 			chunk.onChunkUnload();
@@ -83,6 +162,8 @@ public class ChunkProviderClient implements IChunkProvider {
 	public Chunk loadChunk(int chunkX, int chunkZ) {
 		Chunk chunk = new Chunk(this.worldObj, chunkX, chunkZ);
 		this.tcLastChunk = null;
+		// the server sent it again: it's a normal chunk now (the old copy is cleaned up below)
+		this.tcKept.remove(ChunkPos.asLong(chunkX, chunkZ));
 		Chunk old = this.chunkMapping.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
 		if (old != null && old != chunk) {
 			this.tcReplaced(old, chunk);
@@ -166,6 +247,7 @@ public class ChunkProviderClient implements IChunkProvider {
 		if (EagRuntime.steadyTimeMillis() - i > 100L) {
 			LOGGER.info("Warning: Clientside chunk ticking took {} ms", (long) (EagRuntime.steadyTimeMillis() - i));
 		}
+		this.tcTrimKept();
 
 		return false;
 	}

@@ -356,11 +356,11 @@ public class GuiMainMenu extends GuiScreen {
 			this.buttonList.add(new GuiButton(2, bx, j + gap, bw, 20, I18n.format("menu.multiplayer")));
 		}
 		// the Mod Menu is the in-browser overlay (also on its key, Right Shift by default)
-		// same order as the overlay's words: Treasure Settings (the Mod Menu), Options, Mods
+		// same order as the overlay's words: Options, Treasure (the Mod Menu), Mods
 		// (the list of every mod we ported, with the credits), Cosmetics
-		this.buttonList.add(new GuiButton(101, bx, j + gap * 2, bw, 20, "Treasure Settings"));
-		this.buttonList.add(new GuiButton(0, bx, j + gap * 3, bw - 24, 20, I18n.format("menu.options")));
-		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 3));
+		this.buttonList.add(new GuiButton(0, bx, j + gap * 2, bw - 24, 20, I18n.format("menu.options")));
+		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 2));
+		this.buttonList.add(new GuiButton(101, bx, j + gap * 3, bw, 20, "Treasure"));
 		this.buttonList.add(new GuiButton(102, bx, j + gap * 4, bw, 20, "Mods"));
 		this.buttonList.add(new GuiButton(104, bx, j + gap * 5, bw, 20, "Cosmetics"));
 		if (rejoin) {
@@ -747,7 +747,7 @@ public class GuiMainMenu extends GuiScreen {
 
 		// ---- background ----
 		// Each theme uses a full-screen image background.
-		// (the background picked for this theme in Treasure Settings; sharp unless "Blur background" is on)
+		// (the background picked for this theme in Treasure (the Mod Menu); sharp unless "Blur background" is on)
 		this.drawBgTexture(TreasureBackground.activeBg());
 		// very light darkening only near the bottom, so the background stays clearly visible
 		this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x33000000);

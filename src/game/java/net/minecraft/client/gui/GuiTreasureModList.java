@@ -278,6 +278,17 @@ public class GuiTreasureModList extends GuiScreen {
 				return "§aOn §7· singleplayer";
 			}
 		});
+		this.entries.add(new Entry("Bobby", "Treasure Client, inspired by Johni0702", "Built in",
+				"When the server unloads a chunk that's still inside your render distance, it stays on screen as it was. So you see as far as your render distance even on servers that send fewer chunks, and places you just walked away from don't vanish. Kept chunks go once they're past your render distance, and the server's own copy replaces them when it sends them again. They're only kept while you're in that world and are never saved.",
+				"bobby") {
+			boolean setting() {
+				return TreasureMods.bobby();
+			}
+
+			String status(boolean on) {
+				return on ? "§aOn" : "§7Off";
+			}
+		});
 		this.entries.add(new Entry("Dynamic Resolution", "Treasure Client", "Built in",
 				"When frames get slow from drawing, like when your device heats up, the world is drawn at a slightly lower resolution so the graphics chip has less to do. It goes back up once things are smooth again. Off by default. It never goes below 60% or below your own Render Resolution setting, and it ignores lag that comes from the server.",
 				"dynResOn") {
