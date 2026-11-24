@@ -227,9 +227,22 @@ public class GuiMainMenu extends GuiScreen {
 			if (k != null && k.length > 0 && k.length < 20) {
 				try { ack = Long.parseLong(new String(k, StandardCharsets.US_ASCII).trim()); } catch (NumberFormatException e) { ack = 0L; }
 			}
-			this.tcOverlayLive = Math.abs(System.currentTimeMillis() - ack) < 2500L;
+			long now = EagRuntime.steadyTimeMillis();
+			if (Math.abs(System.currentTimeMillis() - ack) < 2500L) {
+				this.tcLastLiveAt = now;
+			}
+			// the overlay only draws the menu while "tcmenu" says it's showing. Something can clear it
+			// while we're still open (the overlay clears a stale one when it starts up, which can happen
+			// after this menu opened), so say it again once a second if it's gone.
+			if (now - this.tcLastFlagCheck > 1000L) {
+				this.tcLastFlagCheck = now;
+				byte[] m = EagRuntime.getStorage("tcmenu");
+				if (m == null || m.length == 0 || m[0] != 1) {
+					this.tcPublishMenu();
+				}
+			}
 		} catch (Throwable t) {
-			this.tcOverlayLive = false;
+			this.tcLastLiveAt = 0L;
 		}
 		// the game's own buttons only come back if the overlay isn't answering (so you can never get stuck)
 		boolean fallback = this.tcFallback();
@@ -239,12 +252,20 @@ public class GuiMainMenu extends GuiScreen {
 	}
 
 	// Treasure Client 1.5: overlay main menu state
-	private boolean tcOverlayLive = false;
+	/** When the overlay last said it's alive (game clock), 0 = not since this menu opened. */
+	private long tcLastLiveAt = 0L;
+	private long tcLastFlagCheck = 0L;
 	private long tcInitAt = 0L;
 
-	/** True when the overlay isn't drawing the menu, so the game draws its own buttons. */
+	/**
+	 * True when the overlay isn't drawing the menu, so the game draws its own buttons: it never
+	 * answered within 1.5 s of the menu opening, or it answered and then went quiet for 8 s. (It
+	 * used to be 2.5 s of quiet, so one slow moment, like a long freeze while a world closes or the
+	 * browser holding back the page's timers, swapped the menu for the old buttons.)
+	 */
 	private boolean tcFallback() {
-		return !this.tcOverlayLive && EagRuntime.steadyTimeMillis() - this.tcInitAt > 1500L;
+		long now = EagRuntime.steadyTimeMillis();
+		return this.tcLastLiveAt == 0L ? now - this.tcInitAt > 1500L : now - this.tcLastLiveAt > 8000L;
 	}
 
 	/** Tells the overlay the main menu is showing, and what to put on it. */
@@ -375,6 +396,7 @@ public class GuiMainMenu extends GuiScreen {
 		this.buttonList.add(new GuiButtonTCProfile(103, this.width - 28, 6)); // Treasure Client: Profiles
 		// Treasure Client 1.5: the overlay draws the menu; the buttons above stay hidden unless it doesn't answer
 		this.tcInitAt = EagRuntime.steadyTimeMillis();
+		this.tcLastLiveAt = 0L; // coming back to this menu: wait for the overlay's next answer
 		boolean fallback = this.tcFallback();
 		for (int i = 0; i < this.buttonList.size(); ++i) {
 			this.buttonList.get(i).visible = fallback;

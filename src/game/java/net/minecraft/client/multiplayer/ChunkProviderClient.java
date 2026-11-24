@@ -99,8 +99,31 @@ public class ChunkProviderClient implements IChunkProvider {
 		return Math.max(Math.abs(x - px), Math.abs(z - pz));
 	}
 
-	/** Once a second: let kept chunks go that are now too far away (or all of them if Bobby is off). */
+	/** Kept chunks found too far away, let go a few per tick (see tcTrimKept). */
+	private long[] tcDrop;
+	private int tcDropN, tcDropAt;
+	/** At most this many kept chunks are let go per tick (after a teleport there can be hundreds). */
+	private static final int TC_DROP_PER_TICK = 12;
+
+	/**
+	 * Once a second: find kept chunks that are now too far away (or all of them if Bobby is off),
+	 * then let them go a few each tick, so a teleport doesn't drop hundreds in one frame.
+	 */
 	private void tcTrimKept() {
+		if (this.tcDropAt < this.tcDropN) {
+			int end = Math.min(this.tcDropN, this.tcDropAt + TC_DROP_PER_TICK);
+			for (; this.tcDropAt < end; this.tcDropAt++) {
+				long key = this.tcDrop[this.tcDropAt];
+				if (!this.tcKept.contains(key)) {
+					continue; // the server sent it again meanwhile
+				}
+				int x = (int) key, z = (int) (key >>> 32);
+				this.tcKept.remove(key);
+				this.unloadChunk(x, z);
+				this.worldObj.markBlockRangeForRenderUpdate(x * 16, 0, z * 16, x * 16 + 15, 256, z * 16 + 15);
+			}
+			return;
+		}
 		if (this.tcKept.isEmpty() || ++this.tcKeptTicks < 20) {
 			return;
 		}
@@ -109,25 +132,23 @@ public class ChunkProviderClient implements IChunkProvider {
 		net.minecraft.entity.Entity view = mc.getRenderViewEntity() != null ? mc.getRenderViewEntity() : mc.player;
 		boolean all = !net.minecraft.client.gui.TreasureMods.bobby() || view == null;
 		int keep = mc.gameSettings.renderDistanceChunks + 1;
-		long[] drop = null;
 		int n = 0;
 		for (com.carrotsearch.hppc.cursors.LongCursor c : this.tcKept) {
 			long key = c.value;
 			int x = (int) key, z = (int) (key >>> 32);
 			if (all || tcDistance(view, x, z) > keep) {
-				if (drop == null) {
-					drop = new long[this.tcKept.size()];
+				if (this.tcDrop == null || this.tcDrop.length < this.tcKept.size()) {
+					long[] grown = new long[Math.max(64, this.tcKept.size())];
+					if (this.tcDrop != null) {
+						System.arraycopy(this.tcDrop, 0, grown, 0, n);
+					}
+					this.tcDrop = grown;
 				}
-				drop[n++] = key;
+				this.tcDrop[n++] = key;
 			}
 		}
-		for (int i = 0; i < n; i++) {
-			long key = drop[i];
-			int x = (int) key, z = (int) (key >>> 32);
-			this.tcKept.remove(key);
-			this.unloadChunk(x, z);
-			this.worldObj.markBlockRangeForRenderUpdate(x * 16, 0, z * 16, x * 16 + 15, 256, z * 16 + 15);
-		}
+		this.tcDropN = n;
+		this.tcDropAt = 0;
 	}
 
 	/** .lag / F3: how many chunks Bobby is showing that the server unloaded. */

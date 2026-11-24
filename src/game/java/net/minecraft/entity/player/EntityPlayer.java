@@ -93,6 +93,8 @@ import net.minecraft.world.WorldServer;
 
 @SuppressWarnings("incomplete-switch")
 public abstract class EntityPlayer extends EntityLivingBase {
+	/** Treasure Client cosmetics: this player's name in lower case (worked out once, not every frame). */
+	public String tcCosKey;
 	private static final DataParameter<Float> ABSORPTION = EntityDataManager.<Float>createKey(11,
 			DataSerializers.FLOAT);
 	private static final DataParameter<Integer> PLAYER_SCORE = EntityDataManager.<Integer>createKey(12,

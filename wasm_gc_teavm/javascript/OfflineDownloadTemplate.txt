@@ -2207,11 +2207,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15 .t15-on .t15-v { color: var(--a-1); }
 #tc-root.tc15 .t15-off .t15-v { color: var(--t15-dim); }
 /* coordinates, armor, performance: mono labels in the theme colour, values in white */
-/* coordinates on one line (X, Y, Z, biome), so the box stays short */
-#tc-root.tc15 #tc-coords { display: flex; align-items: baseline; gap: 0; min-width: 0; white-space: nowrap; }
-#tc-root.tc15 #tc-coords b { margin-right: 6px; }
-#tc-root.tc15 #tc-coords span { margin-right: 12px; }
-#tc-root.tc15 #tc-coords span:last-child { margin-right: 0; }
+/* coordinates: four rows (X, Y, Z, then biome); the boxes under it move down to make room (tc15.js) */
+#tc-root.tc15 #tc-coords { display: grid; grid-template-columns: auto auto; column-gap: 10px; row-gap: 0; align-items: baseline; min-width: 0; white-space: nowrap; }
 #tc-root.tc15 #tc-coords b, #tc-root.tc15 #tc-perfmon .tc-pm-row span:first-child, #tc-root.tc15 .tc-armor-slot b {
   font: 600 9.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--a-1); }
 #tc-root.tc15 #tc-coords span { color: var(--t15-ink); }
@@ -3654,6 +3651,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
     /* ===== TC15: Treasure Client 1.5 look \u2014 the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -3822,7 +3820,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           else if (e.key === 'Enter' && cur >= 0) items[cur].click();
         }, true);
 
-        var lastInfo = null, shown = false, lastAck = 0;
+        var lastInfo = null, shown = false, lastAck = 0, lastCount = 0;
         var update = function () {
           if (root.__tcBgStart) { try { if (root.__tcBgStop) root.__tcBgStop(); } catch (e) {} root.__tcBgStart = null; } // no floating dots in the clean look
           var m = sget('tcmenu'), on = !!(m && m.charCodeAt(0) === 1);
@@ -3861,10 +3859,15 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           }
           // the brand follows a custom title set in Themes; the Mod Menu hint shows how many mods are on
           var cb = $('.tc-head .tc-brand-custom');
-          tt.querySelector('.t-bname').textContent = cb && cb.style.display !== 'none' && cb.textContent.trim() ? cb.textContent.trim() : 'Treasure Client';
-          var msw = mainSwitches('.tc-panel:not([data-group="themes"])'), all = msw.length, onc = msw.filter(function (s) { return s.classList.contains('on'); }).length;
-          var mi = menu.querySelector('.t-item[data-act="tcs"] .t-hint');
-          if (mi) mi.textContent = all ? all + ' mods \u00B7 ' + onc + ' on' : '';
+          // (only written when they change: rewriting the same text 10 times a second made the page redo its layout)
+          var bn = tt.querySelector('.t-bname'), bt = cb && cb.style.display !== 'none' && cb.textContent.trim() ? cb.textContent.trim() : 'Treasure Client';
+          if (bn.textContent !== bt) bn.textContent = bt;
+          if (now - lastCount > 1000) {
+            lastCount = now;
+            var msw = mainSwitches('.tc-panel:not([data-group="themes"])'), all = msw.length, onc = msw.filter(function (s) { return s.classList.contains('on'); }).length;
+            var mi = menu.querySelector('.t-item[data-act="tcs"] .t-hint'), ht = all ? all + ' mods \u00B7 ' + onc + ' on' : '';
+            if (mi && mi.textContent !== ht) mi.textContent = ht;
+          }
         };
         setInterval(update, 100);
         update();
@@ -4239,13 +4242,14 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var status = function (s) { try { localStorage.setItem('tccos_share_status', s); } catch (e) {} };
         if (!API) { status('off'); return; }
         var NAME = /^[A-Za-z0-9_]{1,16}$/, LOOK = /^[a-z0-9=;.]{1,300}$/;
-        var cache = {}, order = [], queue = [], busy = false, pubBusy = false, pubRetryAt = 0, saveTimer = 0;
-        sset('tccosdata', null); sset('tccosreq', null);
+        var cache = {}, order = [], queue = [], busy = false, pubBusy = false, pubRetryAt = 0, saveTimer = 0, dataVer = 0;
+        sset('tccosdata', null); sset('tccosreq', null); sset('tccosver', null);
         var save = function () {
           clearTimeout(saveTimer);
           saveTimer = setTimeout(function () {
             while (order.length > 300) delete cache[order.shift()];
             sset('tccosdata', order.map(function (n) { return n + '=' + cache[n]; }).join('\n'));
+            sset('tccosver', String(++dataVer)); // a small number the game checks, so it only reads the list when it changed
           }, 200);
         };
         var post = function (path, body) {
@@ -4330,6 +4334,30 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           if (t.c !== p[2]) { if (t.c) el.classList.remove(t.c); if (p[2]) el.classList.add(p[2]); t.c = p[2]; }
         };
       } catch (e) { try { console.error('[TreasureClient] 1.5 HUD look failed:', e); } catch (e2) {} }
+    })();
+    /* ---------- 1.5 HUD: boxes on the same side stack under each other (coordinates are 4 rows again) ----------
+       Only boxes still at their default spot move; one you placed with the HUD editor stays where you put it. */
+    (function () {
+      try {
+        if (!root || !root.classList.contains('tc15')) return;
+        var COL = ['tc-coords', 'tc-perfmon', 'tc-sprint', 'tc-sneak', 'tc-reach', 'tc-combo', 'tc-items'];
+        var placed = function (id) {
+          try { var p = state.hudPositions && state.hudPositions[id]; return !!(p && typeof p.left === 'number'); } catch (e) { return false; }
+        };
+        var stack = function () {
+          if (root.classList.contains('tc-nogame') || root.classList.contains('hud-editing')) return;
+          var mid = innerWidth / 2, y = { l: 18, r: 18 };
+          COL.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el || placed(id) || el.classList.contains('tc-hidden') || el.classList.contains('tc-reach-cross')) return;
+            if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return; // not showing
+            var side = el.getBoundingClientRect().left < mid ? 'l' : 'r', top = y[side] + 'px';
+            if (el.style.top !== top) el.style.top = top;
+            y[side] += el.offsetHeight + 6;
+          });
+        };
+        setInterval(stack, 500);
+      } catch (e) { try { console.error('[TreasureClient] 1.5 HUD stacking failed:', e); } catch (e2) {} }
     })();
     /* TC15 END */
 
