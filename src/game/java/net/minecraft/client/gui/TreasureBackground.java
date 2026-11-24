@@ -32,11 +32,13 @@ public final class TreasureBackground {
 	private TreasureBackground() {
 	}
 
-	private static final ResourceLocation TREASURE_BG = new ResourceLocation("textures/gui/title/treasure_bg.png");
-	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
-	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
-	private static final ResourceLocation TERRACOTTA_BG = new ResourceLocation("textures/gui/title/terracotta_bg.png");
-	private static final ResourceLocation FOREST_BG = new ResourceLocation("textures/gui/title/forest_bg.png");
+	/** The background pictures (packed into assets.epk from desktopRuntime/resources/.../gui/title/). */
+	private static final java.util.Map<String, ResourceLocation> BG = new java.util.HashMap<>();
+	static {
+		for (String id : TreasureTheme.BACKGROUNDS) {
+			BG.put(id, new ResourceLocation("textures/gui/title/" + id + "_bg.png"));
+		}
+	}
 
 	/** The theme's accent color (ARGB), matching the main menu's accent. */
 	public static int accent() {
@@ -52,6 +54,12 @@ public final class TreasureBackground {
 		if (TreasureTheme.isForest()) {
 			return 0xFFAEE86A;
 		}
+		if (TreasureTheme.isSakura()) {
+			return 0xFFFF9CC6;
+		}
+		if (TreasureTheme.isDark()) {
+			return 0xFFB9B4E8;
+		}
 		return 0xFFF2C64B; // normal / treasure gold
 	}
 
@@ -64,25 +72,15 @@ public final class TreasureBackground {
 		Gui.drawRect(left, top, right, bottom, 0xC8101018);
 	}
 
-	/** The background image for the currently selected theme. */
+	/** The background picked for the current theme (each theme starts on its own picture). */
 	public static ResourceLocation activeBg() {
-		if (TreasureTheme.isFrost()) {
-			return FROST_BG;
-		}
-		if (TreasureTheme.isTropical()) {
-			return TROPICAL_BG;
-		}
-		if (TreasureTheme.isTerracotta()) {
-			return TERRACOTTA_BG;
-		}
-		if (TreasureTheme.isForest()) {
-			return FOREST_BG;
-		}
-		return TREASURE_BG;
+		ResourceLocation r = BG.get(TreasureTheme.background());
+		return r != null ? r : BG.get("treasure");
 	}
 
 	/**
-	 * Draw the full themed backdrop: blurred + panning theme image, a subtle
+	 * Draw the full themed backdrop: the panning theme image (blurred only if
+	 * the theme's "Blur background" is on), a subtle
 	 * darken for text legibility, then the animated particle field. Safe to call
 	 * once per frame at the top of a screen's drawScreen.
 	 */
@@ -102,8 +100,9 @@ public final class TreasureBackground {
 	private static final java.util.Map<ResourceLocation, ResourceLocation> BLURRED = new java.util.HashMap<>();
 
 	/**
-	 * Draws a theme image over the whole screen, blurred and slowly panning.
-	 * The blur is done once on the image when it's first used (one texture
+	 * Draws a theme image over the whole screen, slowly panning: sharp by
+	 * default, blurred when the theme's "Blur background" is on in Treasure
+	 * Settings. The blur is done once on the image when it's first used (one texture
 	 * upload), so each frame is a single full-screen draw. It used to be drawn
 	 * 17 times per frame to fake the blur, which made menus very slow on weak GPUs.
 	 */
@@ -114,7 +113,7 @@ public final class TreasureBackground {
 		GlStateManager.enableTexture2D();
 		GlStateManager.disableBlend();
 		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		mc.getTextureManager().bindTexture(blurred(tex));
+		mc.getTextureManager().bindTexture(TreasureTheme.blurBackground() ? blurred(tex) : tex);
 		// linear filtering so the stretched image isn't pixelated (GL_TEXTURE_2D, MIN/MAG = GL_LINEAR)
 		EaglercraftGPU.glTexParameteri(3553, 10241, 9729);
 		EaglercraftGPU.glTexParameteri(3553, 10240, 9729);
@@ -231,11 +230,15 @@ public final class TreasureBackground {
 		boolean tropical = TreasureTheme.isTropical();
 		boolean terracotta = TreasureTheme.isTerracotta();
 		boolean forest = TreasureTheme.isForest();
+		boolean sakura = TreasureTheme.isSakura();
+		boolean dark = TreasureTheme.isDark();
 
 		int particleColor = frost ? 0x99EAF6FF
 				: tropical ? 0x9945E3C6
 				: terracotta ? 0x99E89A5A
 				: forest ? 0x99C8E88A
+				: sakura ? 0x99FFB7D5 // falling petals
+				: dark ? 0xAAFFD98A // rising fireflies
 				: 0x99F2C64B; // normal / treasure gold
 		long tt = Minecraft.getSystemTime();
 		float gust = frost
@@ -255,7 +258,7 @@ public final class TreasureBackground {
 			}
 			float phase = (float) (((tt / 2200.0) * speed + (i * 0.137F)) % 1.0);
 			int y;
-			if (!frost && (tropical || forest)) {
+			if (!frost && (tropical || forest || dark)) {
 				y = (int) (height - phase * height);
 			} else {
 				y = (int) (phase * height);

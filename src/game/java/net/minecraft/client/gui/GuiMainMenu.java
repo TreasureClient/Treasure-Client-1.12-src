@@ -105,11 +105,15 @@ public class GuiMainMenu extends GuiScreen {
 	private boolean tropical()   { return TreasureTheme.isTropical(); }
 	private boolean terracotta() { return TreasureTheme.isTerracotta(); }
 	private boolean forest()     { return TreasureTheme.isForest(); }
+	private boolean sakura()     { return TreasureTheme.isSakura(); }
+	private boolean dark()       { return TreasureTheme.isDark(); }
 	private int cBgTop()    { return deepSeaMode ? 0xff0a3350 : 0xff2a1b0d; }
 	private int cBgBottom() { return deepSeaMode ? 0xff030f18 : 0xff0f0a05; }
 	// Per-theme accents: Frost=icy blue, Tropical=turquoise+sand, Terracotta=burnt
 	// orange, Forest=green, else the default gold.
 	private int cAccent() {
+		if (sakura()) return 0xffff9cc6;
+		if (dark()) return 0xffb9b4e8;
 		if (frost()) return 0xff7fe9ff;
 		if (tropical()) return 0xff45e3c6;
 		if (terracotta()) return 0xffdb7a3c;
@@ -117,6 +121,8 @@ public class GuiMainMenu extends GuiScreen {
 		return 0xffffd76b;
 	}
 	private int cAccentDim() {
+		if (sakura()) return 0xffddb0c4;
+		if (dark()) return 0xffa9a6bd;
 		if (frost()) return 0xff8fb9cc;
 		if (tropical()) return 0xffe0cd97;
 		if (terracotta()) return 0xffe8b98a;
@@ -124,6 +130,8 @@ public class GuiMainMenu extends GuiScreen {
 		return 0xffc9b183;
 	}
 	private int cParticle() {
+		if (sakura()) return 0x80ffb7d5;
+		if (dark()) return 0x80ffd98a;
 		if (frost()) return 0x807fe9ff;
 		if (tropical()) return 0x8045e3c6;
 		if (terracotta()) return 0x80e89a5a;
@@ -160,19 +168,15 @@ public class GuiMainMenu extends GuiScreen {
 	private static final ResourceLocation MINECRAFT_TITLE_TEXTURES = new ResourceLocation(
 			"textures/gui/title/minecraft.png");
 	private static final ResourceLocation field_194400_H = new ResourceLocation("textures/gui/title/edition.png");
-	// Treasure Client: main-menu background images (packed into assets.epk from
-	// desktopRuntime/resources/assets/minecraft/textures/gui/title/*.png).
-	private static final ResourceLocation TREASURE_BG = new ResourceLocation("textures/gui/title/treasure_bg.png");
-	private static final ResourceLocation FROST_BG = new ResourceLocation("textures/gui/title/frost_bg.png");
-	private static final ResourceLocation TROPICAL_BG = new ResourceLocation("textures/gui/title/tropical_bg.png");
-	private static final ResourceLocation TERRACOTTA_BG = new ResourceLocation("textures/gui/title/terracotta_bg.png");
-	private static final ResourceLocation FOREST_BG = new ResourceLocation("textures/gui/title/forest_bg.png");
+	// Treasure Client: the theme background images are in TreasureBackground.
 	// Treasure Client: per-theme recolored chest logo drawn above the wordmark.
 	private static final ResourceLocation LOGO_NORMAL = new ResourceLocation("textures/gui/title/treasure_logo_normal.png");
 	private static final ResourceLocation LOGO_FROST = new ResourceLocation("textures/gui/title/treasure_logo_frost.png");
 	private static final ResourceLocation LOGO_TROPICAL = new ResourceLocation("textures/gui/title/treasure_logo_tropical.png");
 	private static final ResourceLocation LOGO_TERRACOTTA = new ResourceLocation("textures/gui/title/treasure_logo_terracotta.png");
 	private static final ResourceLocation LOGO_FOREST = new ResourceLocation("textures/gui/title/treasure_logo_forest.png");
+	private static final ResourceLocation LOGO_SAKURA = new ResourceLocation("textures/gui/title/treasure_logo_sakura.png");
+	private static final ResourceLocation LOGO_DARK = new ResourceLocation("textures/gui/title/treasure_logo_dark.png");
 	private static final float LOGO_ASPECT = 221.0F / 224.0F; // texture width / height
 
 	/** An array of all the paths to the panorama pictures. */
@@ -333,8 +337,8 @@ public class GuiMainMenu extends GuiScreen {
 
 		// Treasure Client 1.5: side-panel layout. Buttons sit in a dark glass panel on the left,
 		// your player stands on the right, and "Rejoin" sits under the panel.
-		int gap = this.height < 270 ? 22 : 24;
-		int rows = 6;
+		int gap = this.height < 300 ? 22 : 24;
+		int rows = 7;
 		this.tcPanelW = 136;
 		this.tcPanelX = 12;
 		this.tcPanelH = 8 + rows * gap - (gap - 20) + 8;
@@ -351,11 +355,13 @@ public class GuiMainMenu extends GuiScreen {
 			this.buttonList.add(new GuiButton(2, bx, j + gap, bw, 20, I18n.format("menu.multiplayer")));
 		}
 		// the Mod Menu is the in-browser overlay (also on its key, Right Shift by default)
-		this.buttonList.add(new GuiButton(101, bx, j + gap * 2, bw, 20, "Mod Menu"));
-		this.buttonList.add(new GuiButton(104, bx, j + gap * 3, bw, 20, "Cosmetics"));
-		this.buttonList.add(new GuiButton(0, bx, j + gap * 4, bw - 24, 20, I18n.format("menu.options")));
-		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 4));
-		this.buttonList.add(new GuiButton(102, bx, j + gap * 5, bw, 20, "About & Credits"));
+		// same order as the overlay's words: Options, Mods, Treasure Settings, Cosmetics
+		this.buttonList.add(new GuiButton(0, bx, j + gap * 2, bw - 24, 20, I18n.format("menu.options")));
+		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 2));
+		this.buttonList.add(new GuiButton(101, bx, j + gap * 3, bw, 20, "Mods"));
+		this.buttonList.add(new GuiButton(105, bx, j + gap * 4, bw, 20, "Treasure Settings"));
+		this.buttonList.add(new GuiButton(104, bx, j + gap * 5, bw, 20, "Cosmetics"));
+		this.buttonList.add(new GuiButton(102, bx, j + gap * 6, bw, 20, "About & Credits"));
 		if (rejoin) {
 			String n = TCLastServer.name();
 			String label = "Rejoin " + n;
@@ -426,6 +432,15 @@ public class GuiMainMenu extends GuiScreen {
 	 * buttons)
 	 */
 	protected void actionPerformed(GuiButton button) throws IOException {
+		if (button.id == 105) {
+			// Treasure Client: ask the overlay to open Treasure Settings (themes, backgrounds)
+			try {
+				EagRuntime.setStorage("tcopen", new byte[] { (byte) 2 });
+			} catch (Throwable t) {
+			}
+			return;
+		}
+
 		if (button.id == 101) {
 			// Treasure Client: ask the overlay to open its Mod Menu. The overlay
 			// polls this storage key and opens itself (works even if the hotkey
@@ -687,7 +702,7 @@ public class GuiMainMenu extends GuiScreen {
 	 * whole screen (behind the buttons), the same way the panorama blit does.
 	 */
 	private void drawBgTexture(ResourceLocation tex) {
-		// pre-blurred once and drawn in one pass (see TreasureBackground.drawBlurredBg)
+		// sharp, or pre-blurred once if the theme's "Blur background" is on (see TreasureBackground.drawBlurredBg)
 		TreasureBackground.drawBlurredBg(tex, this.width, this.height, this.zLevel);
 	}
 
@@ -698,6 +713,8 @@ public class GuiMainMenu extends GuiScreen {
 		if (this.tropical()) return LOGO_TROPICAL;
 		if (this.terracotta()) return LOGO_TERRACOTTA;
 		if (this.forest()) return LOGO_FOREST;
+		if (this.sakura()) return LOGO_SAKURA;
+		if (this.dark()) return LOGO_DARK;
 		return LOGO_NORMAL;
 	}
 
@@ -738,13 +755,8 @@ public class GuiMainMenu extends GuiScreen {
 
 		// ---- background ----
 		// Each theme uses a full-screen image background.
-		ResourceLocation bg;
-		if (frost) bg = FROST_BG;
-		else if (tropical) bg = TROPICAL_BG;
-		else if (terracotta) bg = TERRACOTTA_BG;
-		else if (forest) bg = FOREST_BG;
-		else bg = TREASURE_BG;
-		this.drawBgTexture(bg);
+		// (the background picked for this theme in Treasure Settings; sharp unless "Blur background" is on)
+		this.drawBgTexture(TreasureBackground.activeBg());
 		// very light darkening only near the bottom, so the background stays clearly visible
 		this.drawGradientRect(0, 0, this.width, this.height, 0x00000000, 0x33000000);
 
@@ -756,6 +768,7 @@ public class GuiMainMenu extends GuiScreen {
 				: tropical ? 0x9945E3C6
 				: terracotta ? 0x99E89A5A
 				: forest ? 0x99C8E88A
+				: dark() ? 0xAAFFD98A
 				: cParticle();
 		// Frost wind: two slow sine waves summed so the gust eases between calm and
 		// windy over time (never a constant gale). Value = horizontal push in px.
@@ -778,8 +791,8 @@ public class GuiMainMenu extends GuiScreen {
 			}
 			float phase = (float) (((t / 2200.0) * speed + (i * 0.137F)) % 1.0);
 			int y;
-			if (!frost && (tropical || forest || deepSeaMode)) {
-				// tropical / forest / deep-sea particles rise
+			if (!frost && (tropical || forest || deepSeaMode || dark())) {
+				// tropical / forest / deep-sea particles and the Dark theme's fireflies rise
 				y = (int) (this.height - phase * this.height);
 			} else {
 				// snow / gold flecks fall
