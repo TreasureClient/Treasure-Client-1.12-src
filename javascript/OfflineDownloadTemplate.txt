@@ -1080,10 +1080,6 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15 .tc-search::placeholder { color: var(--t15-dim); }
 #tc-root.tc15 .tc-body.searching #tc-catbar { display: flex !important; visibility: hidden; }
 #tc-root.tc15 #tc-body.tcv-themes .t15-bar #tc-catbar { display: flex !important; visibility: hidden; }
-/* Mods and Treasure Settings: each shows only its own word on the left (no search in Treasure Settings) */
-#tc-root.tc15 #tc-gui[data-mode="tcset"] .tc-cats .tc-view[data-view="modules"],
-#tc-root.tc15 #tc-gui[data-mode="mods"] .tc-cats .tc-view[data-view="themes"] { display: none; }
-#tc-root.tc15 #tc-gui[data-mode="tcset"] .t15-bar .tc-search-wrap, #tc-root.tc15 #tc-gui[data-mode="tcset"] .t15-hint { visibility: hidden; }
 
 /* the list */
 #tc-root.tc15 .tc-panels, #tc-root.tc15 .tc-body.searching .tc-panels { grid-row: 2; grid-column: 2; overflow-y: auto; min-height: 0; padding: 1.4vh 5vw 6vh 0;
@@ -2675,11 +2671,12 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
     /* ===== TC15: Treasure Client 1.5 look \u2014 the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
          game -> us: tcmenu = 1 while the title screen is showing; tcmenuinfo = "name\nrejoin\nprofile\nversion\ndemo"
-         us -> game: tcmenuact = sp | mp | demo | cos | set | prof | rejoin | lang | about (mods and tcs open the overlay's own menu)
+         us -> game: tcmenuact = sp | mp | demo | cos | set | prof | rejoin | lang | about | mods (the game's mod list); tcs opens the overlay's Mod Menu
                      tcmenuack = the time, every 400 ms while we show the menu (the game shows its old buttons if we stop) */
     (function () {
       try {
@@ -2719,7 +2716,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           // left column: "Mod Menu", then Modules and Themes as big stepped words; Edit HUD moves to the top bar
           var close = $('#tc-close');
           if (close) close.innerHTML = 'Close &#10005;';
-          var lab = document.createElement('div'); lab.className = 't15-label t15-mono'; lab.textContent = 'Mods'; lab.style.setProperty('--i', 0);
+          var lab = document.createElement('div'); lab.className = 't15-label t15-mono'; lab.textContent = 'Mod Menu'; lab.style.setProperty('--i', 0);
           cats.insertBefore(lab, cats.firstChild);
           var n = 0;
           $$('#tc-cats .tc-view').forEach(function (v) {
@@ -2774,25 +2771,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             clearTimeout(animTimer);
             animTimer = setTimeout(function () { panels.classList.remove('t15-anim'); }, 1100);
           };
-          // two ways in (the main menu's Mods and Treasure Settings): the overlay's openGui sets
-          // data-mode = mods | tcset; each shows its own word on the left, with a link to the other at the top
-          var swap = document.createElement('button'); swap.className = 't15-link t15-mono t15-swap';
-          if (close) head.insertBefore(swap, close); else head.appendChild(swap);
-          var themesWord = $('#tc-cats .tc-view[data-view="themes"]');
-          var syncMode = function () {
-            var tcs = gui.getAttribute('data-mode') === 'tcset';
-            lab.textContent = tcs ? 'Treasure Settings' : 'Mods';
-            swap.textContent = tcs ? 'Mods \u2192' : 'Treasure Settings \u2192';
-            if (themesWord) themesWord.style.setProperty('--i', tcs ? 0 : 1);
-            var tn = themesWord && themesWord.querySelector('.t15-n'); if (tn) tn.textContent = tcs ? '01' : '02';
-          };
-          swap.addEventListener('click', function () {
-            var tcs = gui.getAttribute('data-mode') !== 'tcset';
-            gui.setAttribute('data-mode', tcs ? 'tcset' : 'mods');
-            try { tcSetView(tcs ? 'themes' : 'modules'); } catch (e) {}
-            syncMode(); refresh(); if (!tcs) animate();
-          });
-          var refresh = function () { syncMode(); counts(); requestAnimationFrame(moveInk); };
+          var refresh = function () { counts(); requestAnimationFrame(moveInk); };
           $$('#tc-catbar .tc-cat').forEach(function (c) { c.addEventListener('click', function () { refresh(); animate(); }); });
           $$('#tc-cats .tc-view').forEach(function (v) { v.addEventListener('click', function () { refresh(); if (v.dataset.view === 'modules') animate(); }); });
           panels.addEventListener('click', function (e) { if (e.target.closest('.tc-mod')) setTimeout(counts, 30); });
@@ -2814,9 +2793,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var ITEMS = [
           ['sp', 'Singleplayer', 'Your worlds'],
           ['mp', 'Multiplayer', 'Servers \u00B7 LAN \u00B7 Java'],
+          ['tcs', 'Treasure Settings', ''],
           ['set', 'Options', 'Video \u00B7 controls \u00B7 sound'],
-          ['mods', 'Mods', ''],
-          ['tcs', 'Treasure Settings', 'Themes \u00B7 backgrounds'],
+          ['mods', 'Mods', 'Every mod we ported'],
           ['cos', 'Cosmetics', 'Capes \u00B7 auras \u00B7 hats \u00B7 boots']
         ];
         var tt = document.createElement('div'); tt.id = 'tc-title';
@@ -2839,8 +2818,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var setOn = function (i) { cur = i; items.forEach(function (x, j) { x.classList.toggle('on', j === i); }); };
         var act = function (code) {
           if (code === 'sp' && tt.__nosp) return; // the Rust edition has no singleplayer yet
-          if (code === 'mods') { openGui('modules'); return; }
-          if (code === 'tcs') { openGui('themes'); return; }
+          if (code === 'tcs') { openGui(); return; } // the Mod Menu; "mods" goes to the game's mod list
           if (code === 'new') { try { window.open('https://treasureclient.github.io/changelog.html', '_blank'); } catch (e) {} return; }
           if (leaving) return;
           leaving = true; tt.classList.add('leave');
@@ -2903,7 +2881,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           var cb = $('.tc-head .tc-brand-custom');
           tt.querySelector('.t-bname').textContent = cb && cb.style.display !== 'none' && cb.textContent.trim() ? cb.textContent.trim() : 'Treasure Client';
           var msw = mainSwitches('.tc-panel:not([data-group="themes"])'), all = msw.length, onc = msw.filter(function (s) { return s.classList.contains('on'); }).length;
-          var mi = menu.querySelector('.t-item[data-act="mods"] .t-hint');
+          var mi = menu.querySelector('.t-item[data-act="tcs"] .t-hint');
           if (mi) mi.textContent = all ? all + ' mods \u00B7 ' + onc + ' on' : '';
         };
         setInterval(update, 100);
