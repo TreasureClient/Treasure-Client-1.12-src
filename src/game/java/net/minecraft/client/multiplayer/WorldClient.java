@@ -191,7 +191,8 @@ public class WorldClient extends World implements org.embeddedt.embeddium.impl.r
 	public void doPreChunk(int chunkX, int chunkZ, boolean loadChunk) {
 		if (loadChunk) {
 			this.clientChunkProvider.loadChunk(chunkX, chunkZ);
-		} else {
+		} else if (!this.clientChunkProvider.tcKeepOnUnload(chunkX, chunkZ)) {
+			// (Bobby keeps chunks you can still see; the rest go as before)
 			this.clientChunkProvider.unloadChunk(chunkX, chunkZ);
 			this.markBlockRangeForRenderUpdate(chunkX * 16, 0, chunkZ * 16, chunkX * 16 + 15, 256, chunkZ * 16 + 15);
 		}

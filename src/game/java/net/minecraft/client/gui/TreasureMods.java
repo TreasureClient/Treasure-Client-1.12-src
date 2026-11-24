@@ -102,6 +102,11 @@ public class TreasureMods {
 	private static boolean dynFov = false;
 	public static boolean dynamicFov() { return dynFov; }
 
+	// Bobby (inspired by Johni0702's mod): chunks the server unloads stay on screen while they're
+	// inside your render distance (ChunkProviderClient.tcKeepOnUnload). Default ON; overlay writes bobby=0.
+	private static boolean bobby = true;
+	public static boolean bobby() { return bobby; }
+
 	// VanillaFix: crash recovery and Minecraft bug fixes. Default ON; overlay writes vanillafix=0 to turn it off.
 	private static boolean vanillaFix = true;
 	public static boolean vanillaFix() { return perfPack && vanillaFix; }
@@ -492,6 +497,7 @@ public class TreasureMods {
 			viaTrade = true;
 			dynRes = false;
 			dynFov = false;
+			bobby = true;
 			entityDistance = 0;
 			oldAnim = false; oaBlock = true; oaNoDip = true; oaUseSwing = true; oaArmor = true; oaHitSwing = true;
 			tAnim = false; taPunch = true; taDraw = true; taSway = true; taBlockHit = true; taStyle = 0; taSpeed = 100;
@@ -559,6 +565,7 @@ public class TreasureMods {
 				else if (k.equals("viatrade")) viaTrade = v.equals("1");
 				else if (k.equals("dynres")) dynRes = v.equals("1");
 				else if (k.equals("dynfov")) dynFov = v.equals("1");
+				else if (k.equals("bobby")) bobby = !v.equals("0");
 				else if (k.equals("pcull")) particleCulling = v.equals("1");
 				else if (k.equals("pcore")) pCore = v.equals("1");
 				else if (k.equals("c2me")) c2me = v.equals("1");
