@@ -2177,6 +2177,7 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
 
 
 
+
     /* ===== TC15: Treasure Client 1.5 look \u2014 the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -2298,8 +2299,8 @@ window.__tcRefocusGame = function(){ try { var cv = document.getElementById("can
         var ITEMS = [
           ['sp', 'Singleplayer', 'Your worlds'],
           ['mp', 'Multiplayer', 'Servers \u00B7 LAN \u00B7 Java'],
-          ['tcs', 'Treasure Settings', ''],
           ['set', 'Options', 'Video \u00B7 controls \u00B7 sound'],
+          ['tcs', 'Treasure', ''],
           ['mods', 'Mods', 'Every mod we ported'],
           ['cos', 'Cosmetics', 'Capes \u00B7 auras \u00B7 hats \u00B7 boots']
         ];

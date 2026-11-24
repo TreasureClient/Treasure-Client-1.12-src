@@ -211,7 +211,7 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
         state.nav = Some(Screen::Language);
     }
     if Button::new(x, mods_y, HALF_WIDTH, WIDGET_HEIGHT, "Mods").draw(p, ctx) {
-        // the list of this edition's ported mods (Treasure Settings below opens the Mod Menu)
+        // the list of this edition's ported mods (Treasure below opens the Mod Menu)
         state.credits_parent = Screen::Title;
         state.nav = Some(Screen::Credits);
     }
@@ -227,7 +227,7 @@ pub fn draw(p: &mut Painter, state: &mut GuiState, ctx: &ScreenCtx) {
     // Profiles: your face in the top right.
     #[cfg(eagler_skins)]
     crate::gui::profile::title_button(p, state, ctx);
-    if Button::new(x, mods_y + 24.0, WIDGET_WIDTH_BIG, WIDGET_HEIGHT, "Treasure Settings")
+    if Button::new(x, mods_y + 24.0, WIDGET_WIDTH_BIG, WIDGET_HEIGHT, "Treasure")
         .draw(p, ctx)
     {
         open_mod_menu();
