@@ -3,9 +3,11 @@
 //!
 //! - Buttons: rounded, a hollow outline in the theme's accent colour, filling with the
 //!   accent when hovered (animated), dark text on the fill.
-//! - Backgrounds: the theme's picture (blurred, slowly panning), darker toward the bottom.
+//! - Backgrounds: the picture picked for the theme (sharp, or blurred if the theme's
+//!   "Blur background" is on), slowly panning, darker toward the bottom.
 //!
-//! The theme is the one picked in the Mod Menu's Themes tab (storage key `tctheme`).
+//! The theme is the one picked in the Mod Menu's Themes tab (storage key `tctheme`); the overlay
+//! also writes the theme's picture (`tcbg`, e.g. "sakura") and its blur switch (`tcbgblur` = 1).
 
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
@@ -19,6 +21,8 @@ pub enum Theme {
     Tropical,
     Terracotta,
     Forest,
+    Sakura,
+    Dark,
 }
 
 fn clock() -> f32 {
@@ -44,32 +48,72 @@ pub fn theme() -> Theme {
         Some("tropical") => Theme::Tropical,
         Some("terracotta") => Theme::Terracotta,
         Some("forest") => Theme::Forest,
+        Some("sakura") => Theme::Sakura,
+        Some("dark") => Theme::Dark,
         _ => Theme::Treasure,
     };
     *cache = (now, Some(theme));
     theme
 }
 
-#[cfg(target_arch = "wasm32")]
+const BACKGROUNDS: [&str; 7] = ["treasure", "frost", "tropical", "terracotta", "forest", "sakura", "dark"];
+
+/// The picture picked for the current theme and whether to blur it (checked twice a second).
+fn background_choice() -> (&'static str, bool) {
+    static CACHE: Mutex<(f32, Option<(&'static str, bool)>)> = Mutex::new((-1.0, None));
+    let now = clock();
+    let mut cache = CACHE.lock().unwrap();
+    if let (at, Some(c)) = *cache
+        && now - at < 0.5
+    {
+        return c;
+    }
+    let own = match theme() {
+        Theme::Treasure => "treasure",
+        Theme::Frost => "frost",
+        Theme::Tropical => "tropical",
+        Theme::Terracotta => "terracotta",
+        Theme::Forest => "forest",
+        Theme::Sakura => "sakura",
+        Theme::Dark => "dark",
+    };
+    let picked = read_key("tcbg");
+    let bg = BACKGROUNDS
+        .iter()
+        .copied()
+        .find(|b| picked.as_deref() == Some(*b))
+        .unwrap_or(own);
+    let blur = read_key("tcbgblur").as_deref() == Some("1");
+    *cache = (now, Some((bg, blur)));
+    (bg, blur)
+}
+
 fn read_theme() -> Option<String> {
+    read_key("tctheme")
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_key(key: &str) -> Option<String> {
     use base64::Engine;
     let raw = web_sys::window()?
         .local_storage()
         .ok()??
-        .get_item("_eaglercraft_1.12.tctheme")
+        .get_item(&format!("_eaglercraft_1.12.{key}"))
         .ok()??;
     let bytes = base64::engine::general_purpose::STANDARD.decode(raw.trim()).ok()?;
-    String::from_utf8(bytes).ok()
+    String::from_utf8(bytes).ok().map(|s| s.trim().to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn read_theme() -> Option<String> {
+fn read_key(_key: &str) -> Option<String> {
     None
 }
 
 /// The theme's accent colour (ARGB).
 pub fn accent() -> u32 {
     match theme() {
+        Theme::Sakura => 0xFFFF9CC6,
+        Theme::Dark => 0xFFB9B4E8,
         Theme::Tropical => 0xFF45E3C6,
         Theme::Frost => 0xFF7FE9FF,
         Theme::Terracotta => 0xFFDB7A3C,
@@ -80,6 +124,8 @@ pub fn accent() -> u32 {
 
 fn accent_deep() -> u32 {
     match theme() {
+        Theme::Sakura => 0xFFE8679F,
+        Theme::Dark => 0xFF8580C4,
         Theme::Tropical => 0xFF1AA7B0,
         Theme::Frost => 0xFF2EC4F1,
         Theme::Terracotta => 0xFFB85C2A,
@@ -91,6 +137,8 @@ fn accent_deep() -> u32 {
 /// Button text when the button is not filled.
 pub fn text_idle() -> u32 {
     match theme() {
+        Theme::Sakura => 0xFFFBEAF1,
+        Theme::Dark => 0xFFECEAF4,
         Theme::Tropical => 0xFFF1E6C6,
         Theme::Frost => 0xFFDFF6FF,
         Theme::Terracotta => 0xFFF3E0CC,
@@ -101,6 +149,8 @@ pub fn text_idle() -> u32 {
 
 fn text_on_fill() -> u32 {
     match theme() {
+        Theme::Sakura => 0xFF2A0A18,
+        Theme::Dark => 0xFF0C0B14,
         Theme::Tropical => 0xFF042024,
         Theme::Frost => 0xFF03101A,
         Theme::Terracotta => 0xFF2A1205,
@@ -112,6 +162,8 @@ fn text_on_fill() -> u32 {
 /// The dark panel colour behind buttons and boxes.
 pub fn panel_bg() -> u32 {
     match theme() {
+        Theme::Sakura => 0xE6220C18,
+        Theme::Dark => 0xE60E0E12,
         Theme::Tropical => 0xE6071D22,
         Theme::Frost => 0xE6031019,
         Theme::Terracotta => 0xE6241206,
@@ -204,21 +256,16 @@ pub fn background(p: &mut Painter, vw: f32, vh: f32) {
 }
 
 fn background_with(p: &mut Painter, vw: f32, vh: f32, top: u32, bottom: u32) {
-    let sprite = match theme() {
-        Theme::Treasure => "tc_bg/treasure",
-        Theme::Frost => "tc_bg/frost",
-        Theme::Tropical => "tc_bg/tropical",
-        Theme::Terracotta => "tc_bg/terracotta",
-        Theme::Forest => "tc_bg/forest",
-    };
-    // Cover the screen with a little room to pan (the picture is 2:1).
-    let scale = (vw / 384.0).max(vh / 192.0) * 1.08;
-    let (w, h) = (384.0 * scale, 192.0 * scale);
+    let (bg, blur) = background_choice();
+    let sprite = format!("tc_bg/{bg}{}", if blur { "_blur" } else { "" });
+    // Cover the screen with a little room to pan (the pictures are 2:1).
+    let scale = (vw / 2.0).max(vh) * 1.08;
+    let (w, h) = (2.0 * scale, scale);
     let t = clock() / 40.0 * std::f32::consts::TAU;
     let x = (vw - w) / 2.0 + t.sin() * (w - vw) * 0.45;
     let y = (vh - h) / 2.0 + (t * 0.7).cos() * (h - vh) * 0.3;
     p.fill(0.0, 0.0, vw, vh, 0xFF00_0000);
-    p.sprite(sprite, x, y, w, h);
+    p.sprite(&sprite, x, y, w, h);
     p.gradient_v(0.0, 0.0, vw, vh, top, bottom);
 }
 
@@ -229,6 +276,8 @@ pub fn title_colors() -> (u32, u32, u32) {
         Theme::Tropical => (0xFF45E3C6, 0xFFE0CD97, 0x9945E3C6),
         Theme::Terracotta => (0xFFDB7A3C, 0xFFE8B98A, 0x99E89A5A),
         Theme::Forest => (0xFF6FCB5B, 0xFFBFE0A0, 0x99C8E88A),
+        Theme::Sakura => (0xFFFF9CC6, 0xFFDDB0C4, 0x99FFB7D5),
+        Theme::Dark => (0xFFB9B4E8, 0xFFA9A6BD, 0xAAFFD98A),
         Theme::Treasure => (0xFFFFD76B, 0xFFC9B183, 0x80FFD76B),
     }
 }
@@ -240,6 +289,8 @@ pub fn logo_sprite() -> &'static str {
         Theme::Tropical => "tc_logo/tropical",
         Theme::Terracotta => "tc_logo/terracotta",
         Theme::Forest => "tc_logo/forest",
+        Theme::Sakura => "tc_logo/sakura",
+        Theme::Dark => "tc_logo/dark",
         Theme::Treasure => "tc_logo/normal",
     }
 }
@@ -251,7 +302,7 @@ pub fn title_background(p: &mut Painter, vw: f32, vh: f32) {
     let t = clock() * 1000.0;
     let theme = theme();
     let frost = theme == Theme::Frost;
-    let rises = matches!(theme, Theme::Tropical | Theme::Forest);
+    let rises = matches!(theme, Theme::Tropical | Theme::Forest | Theme::Dark);
     let color = title_colors().2;
     let gust = if frost {
         ((t / 7000.0).sin() * 0.5 + (t / 2300.0).sin() * 0.5) * 34.0
