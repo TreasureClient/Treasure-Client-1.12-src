@@ -278,6 +278,7 @@ public class GuiMainMenu extends GuiScreen {
 		case "rejoin": id = 110; break;
 		case "lang": id = 5; break;
 		case "about": id = 102; break;
+		case "mods": id = 102; break; // the Fabric-style list of every mod we ported
 		default: return;
 		}
 		for (int i = 0; i < this.buttonList.size(); ++i) {
@@ -338,7 +339,7 @@ public class GuiMainMenu extends GuiScreen {
 		// Treasure Client 1.5: side-panel layout. Buttons sit in a dark glass panel on the left,
 		// your player stands on the right, and "Rejoin" sits under the panel.
 		int gap = this.height < 300 ? 22 : 24;
-		int rows = 7;
+		int rows = 6;
 		this.tcPanelW = 136;
 		this.tcPanelX = 12;
 		this.tcPanelH = 8 + rows * gap - (gap - 20) + 8;
@@ -355,13 +356,13 @@ public class GuiMainMenu extends GuiScreen {
 			this.buttonList.add(new GuiButton(2, bx, j + gap, bw, 20, I18n.format("menu.multiplayer")));
 		}
 		// the Mod Menu is the in-browser overlay (also on its key, Right Shift by default)
-		// same order as the overlay's words: Options, Mods, Treasure Settings, Cosmetics
-		this.buttonList.add(new GuiButton(0, bx, j + gap * 2, bw - 24, 20, I18n.format("menu.options")));
-		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 2));
-		this.buttonList.add(new GuiButton(101, bx, j + gap * 3, bw, 20, "Mods"));
-		this.buttonList.add(new GuiButton(105, bx, j + gap * 4, bw, 20, "Treasure Settings"));
+		// same order as the overlay's words: Treasure Settings (the Mod Menu), Options, Mods
+		// (the list of every mod we ported, with the credits), Cosmetics
+		this.buttonList.add(new GuiButton(101, bx, j + gap * 2, bw, 20, "Treasure Settings"));
+		this.buttonList.add(new GuiButton(0, bx, j + gap * 3, bw - 24, 20, I18n.format("menu.options")));
+		this.buttonList.add(new GuiButtonLanguage(5, bx + bw - 20, j + gap * 3));
+		this.buttonList.add(new GuiButton(102, bx, j + gap * 4, bw, 20, "Mods"));
 		this.buttonList.add(new GuiButton(104, bx, j + gap * 5, bw, 20, "Cosmetics"));
-		this.buttonList.add(new GuiButton(102, bx, j + gap * 6, bw, 20, "About & Credits"));
 		if (rejoin) {
 			String n = TCLastServer.name();
 			String label = "Rejoin " + n;
@@ -432,15 +433,6 @@ public class GuiMainMenu extends GuiScreen {
 	 * buttons)
 	 */
 	protected void actionPerformed(GuiButton button) throws IOException {
-		if (button.id == 105) {
-			// Treasure Client: ask the overlay to open Treasure Settings (themes, backgrounds)
-			try {
-				EagRuntime.setStorage("tcopen", new byte[] { (byte) 2 });
-			} catch (Throwable t) {
-			}
-			return;
-		}
-
 		if (button.id == 101) {
 			// Treasure Client: ask the overlay to open its Mod Menu. The overlay
 			// polls this storage key and opens itself (works even if the hotkey
