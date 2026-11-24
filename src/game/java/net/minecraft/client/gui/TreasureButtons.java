@@ -43,10 +43,14 @@ public class TreasureButtons {
 	private static boolean isTropical()   { return TreasureTheme.isTropical(); }
 	private static boolean isTerracotta() { return TreasureTheme.isTerracotta(); }
 	private static boolean isForest()     { return TreasureTheme.isForest(); }
+	private static boolean isSakura()     { return TreasureTheme.isSakura(); }
+	private static boolean isDark()       { return TreasureTheme.isDark(); }
 
 	// ---- palette (ARGB ints). Frost=icy blue, Tropical=turquoise+sand,
 	// Terracotta=burnt orange, Forest=green, else the default gold. ----
 	public static int accent() {
+		if (isSakura()) return 0xFFFF9CC6;
+		if (isDark()) return 0xFFB9B4E8;
 		if (isTropical()) return 0xFF45E3C6;
 		if (isFrost()) return 0xFF7FE9FF;
 		if (isTerracotta()) return 0xFFDB7A3C;
@@ -54,6 +58,8 @@ public class TreasureButtons {
 		return 0xFFFFD76B;
 	}
 	public static int accentDeep() {
+		if (isSakura()) return 0xFFE8679F;
+		if (isDark()) return 0xFF8580C4;
 		if (isTropical()) return 0xFF1AA7B0;
 		if (isFrost()) return 0xFF2EC4F1;
 		if (isTerracotta()) return 0xFFB85C2A;
@@ -61,6 +67,8 @@ public class TreasureButtons {
 		return 0xFFD4A537;
 	}
 	public static int textIdle() {
+		if (isSakura()) return 0xFFFBEAF1;
+		if (isDark()) return 0xFFECEAF4;
 		if (isTropical()) return 0xFFF1E6C6;
 		if (isFrost()) return 0xFFDFF6FF;
 		if (isTerracotta()) return 0xFFF3E0CC;
@@ -68,6 +76,8 @@ public class TreasureButtons {
 		return 0xFFF6ECD2;
 	}
 	private static int textOnFill() {
+		if (isSakura()) return 0xFF2A0A18;
+		if (isDark()) return 0xFF0C0B14;
 		if (isTropical()) return 0xFF042024;
 		if (isFrost()) return 0xFF03101A;
 		if (isTerracotta()) return 0xFF2A1205;
@@ -76,6 +86,8 @@ public class TreasureButtons {
 	}
 	private static int textDisabled(){ return 0xFF6A6A6A; }
 	public static int panelBg() {
+		if (isSakura()) return 0xE6220C18;
+		if (isDark()) return 0xE60E0E12;
 		if (isTropical()) return 0xE6071D22;
 		if (isFrost()) return 0xE6031019;
 		if (isTerracotta()) return 0xE6241206;
