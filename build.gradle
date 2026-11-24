@@ -1,0 +1,57 @@
+plugins {
+    id 'net.fabricmc.fabric-loom-remap' version '1.19.4' apply false
+    id 'net.fabricmc.fabric-loom' version '1.19.4' apply false
+}
+
+// Which Minecraft to build for: ./gradlew build -Pmc=26.3 (default 1.21.11, see gradle.properties).
+// 1.21.11 is obfuscated (Mojang's names are mapped in); 26.x ships with real names, so no remapping.
+def mcVersions = [
+    '1.21.11': [api: '0.141.6+1.21.11', java: 21],
+    '26.1'   : [api: '0.145.1+26.1', java: 25],
+    '26.1.2' : [api: '0.155.3+26.1.2', java: 25],
+    '26.2'   : [api: '0.161.0+26.2', java: 25],
+    '26.3'   : [api: '0.166.2+26.3', java: 25],
+]
+def mc = (findProperty('mc') ?: project.minecraft_version).toString()
+def cfg = mcVersions[mc]
+if (cfg == null) throw new GradleException("Unknown Minecraft version " + mc + " (known: " + mcVersions.keySet() + ")")
+def obfuscated = mc.startsWith('1.')
+apply plugin: obfuscated ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
+ext.mcVersion = mc
+
+version = "${project.mod_version}+${mc}"
+group = 'net.treasureclient'
+base { archivesName = 'treasure-client' }
+
+repositories { mavenCentral() }
+
+dependencies {
+    minecraft "com.mojang:minecraft:${mc}"
+    if (obfuscated) {
+        mappings loom.officialMojangMappings()   // the same names Mojang uses in 26.x, so the code ports easily
+        modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+        modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.api}"
+    } else {
+        implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+        implementation "net.fabricmc.fabric-api:fabric-api:${cfg.api}"
+    }
+}
+
+// code that differs between Minecraft versions: src/v1_21 (1.21.11), src/v26 (all 26.x) plus src/v26_1 (26.1, 26.1.2) or src/v26_2 (26.2 and newer)
+if (obfuscated) sourceSets.main.java.srcDir('src/v1_21/java')
+else sourceSets.main.java.srcDirs('src/v26/java', mc.startsWith('26.1') ? 'src/v26_1/java' : 'src/v26_2/java') // 26.2 moved the open screen into Gui
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'minecraft_version', mc
+    inputs.property 'java', cfg.java
+    filesMatching('fabric.mod.json') { expand 'version': project.version, 'minecraft_version': mc, 'java': cfg.java }
+    filesMatching('treasureclient.mixins.json') { expand 'java': cfg.java }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(cfg.java)
+}
+tasks.withType(JavaCompile).configureEach { it.options.release = cfg.java; it.options.encoding = 'UTF-8' }
+
+jar { from('LICENSE') { rename { "${it}_treasure-client" } } }

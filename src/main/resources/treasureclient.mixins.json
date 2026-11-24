@@ -1,0 +1,29 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.treasureclient.mixin",
+  "compatibilityLevel": "JAVA_${java}",
+  "client": [
+    "AvatarRendererMixin",
+    "AvatarRenderStateMixin",
+    "ClientPacketListenerMixin",
+    "FullbrightMixin",
+    "GuiEntityRendererMixin",
+    "GuiSkinRendererMixin",
+    "HurtCamMixin",
+    "LivingRendererLayersAccessor",
+    "LowFireMixin",
+    "MenuBackgroundMixin",
+    "MouseHandlerMixin",
+    "ParticleEngineMixin",
+    "PlayerSkinWidgetAccessor",
+    "TitleHookMixin",
+    "WidgetLabelMixin",
+    "WidgetScopeMixin",
+    "WidgetSpriteMixin",
+    "ZoomMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "treasureclient",
+  "version": "${version}",
+  "name": "Treasure Client",
+  "description": "Treasure Client for real Minecraft: the 1.5 Mod Menu, HUD mods and themes.",
+  "authors": ["Treasure Client"],
+  "contact": { "homepage": "https://treasureclient.github.io", "sources": "https://github.com/TreasureClient" },
+  "license": "MIT",
+  "icon": "assets/treasureclient/icon.png",
+  "environment": "client",
+  "entrypoints": { "client": ["net.treasureclient.TreasureClient"] },
+  "mixins": ["treasureclient.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "${minecraft_version}",
+    "fabric-api": "*",
+    "java": ">=${java}"
+  }
+}

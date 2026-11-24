@@ -1,0 +1,518 @@
+package net.treasureclient.cos;
+
+/**
+ * Treasure Client cosmetics: the shapes of auras and boot trails, the same as the browser editions'
+ * (a copy of TCAuras with the drawing taken out: the shapes go into a list of corners).
+ *
+ * An aura is a few dozen soft dots and thin rings, worked out from the clock (nothing to update each
+ * tick). Corners are in blocks from the player's feet, y up. Each quad's colour is meant to be added
+ * to the picture (glows never darken): its brightness is colour times alpha times the soft dot
+ * picture ({@link #dotAlpha}), read at the corner's texture position.
+ */
+public final class TCAuraShapes {
+
+	private TCAuraShapes() {
+	}
+
+	/** Corners: x, y, z, u, v, r, g, b, a (9 floats each, 4 per quad). */
+	public static final class Out {
+		public float[] f = new float[9 * 4 * 256];
+		public int n; // floats used
+
+		public void clear() {
+			n = 0;
+		}
+
+		public int quads() {
+			return n / 36;
+		}
+
+		void put(float x, float y, float z, float u, float v, float r, float g, float b, float a) {
+			if (n + 9 > f.length) f = java.util.Arrays.copyOf(f, f.length * 2);
+			float[] d = f;
+			d[n] = x; d[n + 1] = y; d[n + 2] = z; d[n + 3] = u; d[n + 4] = v;
+			d[n + 5] = r; d[n + 6] = g; d[n + 7] = b; d[n + 8] = a;
+			n += 9;
+		}
+	}
+
+	private static Out out;
+	private static float sc = 1f, sx, sy, sz;
+	// the camera's right and up directions (dots always face you)
+	private static float rx, ry, rz, ux, uy, uz;
+
+	private static void v(float x, float y, float z, double u, double vv, float r, float g, float b, float a) {
+		out.put(x * sc + sx, y * sc + sy, z * sc + sz, (float) u, (float) vv, r, g, b, a);
+	}
+
+	/**
+	 * Adds a player's aura. right/up = the camera's directions (from the feet's point of view);
+	 * seed keeps two players' auras from moving in step.
+	 */
+	public static void aura(Out o, TCCosmetics.Look look, long ms, float fade, float seed, float rX, float rY, float rZ, float uX, float uY, float uZ) {
+		if (look == null || !look.hasAura()) return;
+		out = o;
+		sc = look.auraScale();
+		sx = sy = sz = 0f;
+		rx = rX; ry = rY; rz = rZ; ux = uX; uy = uY; uz = uZ;
+		draw(look, ms, fade, seed);
+		out = null;
+	}
+
+	/** The soft dot picture: n x n strengths 0..1 (a bright little centre in a soft glow, zero at the edge). */
+	public static float[] dotAlpha(int n) {
+		float[] px = new float[n * n];
+		for (int y = 0; y < n; ++y) {
+			for (int x = 0; x < n; ++x) {
+				float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+				float d2 = dx * dx + dy * dy;
+				float a = (float) Math.exp(-d2 * 9f) * 0.75f + (float) Math.exp(-d2 * 40f) * 0.25f;
+				a *= Math.max(0f, 1f - d2);
+				px[y * n + x] = Math.min(255, (int) (a * 255f + 0.5f)) / 255f;
+			}
+		}
+		return px;
+	}
+
+	// ------------------------------------------------------------------ the auras
+
+	private static float cr, cg, cb; // the aura colour
+	private static float wr, wg, wb; // the colour of the bright centres (towards white)
+
+	private static void color(TCCosmetics.Look look, long ms, float offset) {
+		int c = look.auraRgb(ms, offset);
+		cr = ((c >> 16) & 255) / 255f;
+		cg = ((c >> 8) & 255) / 255f;
+		cb = (c & 255) / 255f;
+		wr = cr + (1f - cr) * 0.55f;
+		wg = cg + (1f - cg) * 0.55f;
+		wb = cb + (1f - cb) * 0.55f;
+	}
+
+	private static void draw(TCCosmetics.Look look, long ms, float fade, float seed) {
+		float t = (ms % 3600000L) / 1000f * look.auraSpeedMul();
+		color(look, ms, 0f);
+		switch (look.aura) {
+		case "halo": halo(t, fade, seed); break;
+		case "orbit": orbit(look, ms, t, fade, seed); break;
+		case "rising": rising(t, fade, seed); break;
+		case "ripple": ripple(t, fade); break;
+		case "helix": helix(look, ms, t, fade, seed); break;
+		case "custom": custom(look, ms, t, fade, seed); break;
+		default: break;
+		}
+	}
+
+	/** A thin glowing ring round your waist, with a bright arc running round it. */
+	private static void halo(float t, float fade, float seed) {
+		float y = 1.0f + 0.035f * sin(t * 1.3f);
+		float rad = 0.62f, ph = t * 1.25f + seed;
+		ring(y, rad, 0.13f, 48, cr, cg, cb, 0.14f * fade, 0f, 0f, 0);
+		ring(y, rad, 0.026f, 48, wr, wg, wb, 0.3f * fade, 0.7f * fade, ph, 6);
+		ring(y, rad, 0.026f, 48, cr, cg, cb, 0f, 0.4f * fade, ph + (float) Math.PI, 10);
+		float hx = rad * cos(ph), hz = rad * sin(ph);
+		dot(hx, y, hz, 0.2f, cr, cg, cb, 0.35f * fade);
+		dot(hx, y, hz, 0.055f, 1f, 1f, 1f, 0.9f * fade);
+	}
+
+	/** Three small lights circling at different heights, with short fading trails. */
+	private static void orbit(TCCosmetics.Look look, long ms, float t, float fade, float seed) {
+		float[] h = { 0.45f, 1.05f, 1.7f };
+		float[] r = { 0.78f, 0.7f, 0.55f };
+		float[] w = { 1.7f, -1.3f, 2.1f };
+		for (int k = 0; k < 3; ++k) {
+			if ("rainbow".equals(look.color)) color(look, ms, k * 0.33f);
+			float ang = t * w[k] + k * 2.1f + seed;
+			float yk = h[k] + 0.07f * sin(t * 1.7f + k);
+			float dir = w[k] > 0 ? 1f : -1f;
+			for (int s = 10; s >= 1; --s) {
+				float a = ang - dir * s * 0.075f;
+				float k2 = 1f - s / 11f;
+				dot(r[k] * cos(a), yk, r[k] * sin(a), 0.065f * (1f - s / 15f), cr, cg, cb, 0.8f * k2 * k2 * fade);
+			}
+			float x = r[k] * cos(ang), z = r[k] * sin(ang);
+			dot(x, yk, z, 0.22f, cr, cg, cb, 0.32f * fade);
+			dot(x, yk, z, 0.05f, wr, wg, wb, 0.95f * fade);
+		}
+	}
+
+	/** Soft dots floating gently up from your feet. */
+	private static void rising(float t, float fade, float seed) {
+		flat(0.02f, 0.75f, cr, cg, cb, 0.14f * fade);
+		for (int i = 0; i < 18; ++i) {
+			float per = 2.4f + h(i, 1) * 1.6f;
+			float f = frac(t / per + h(i, 2));
+			float yy = f * 2.1f;
+			float ang = h(i, 3) * 6.2832f + f * 1.2f + seed;
+			float rr = 0.3f + 0.38f * h(i, 4);
+			float a = (float) Math.pow(sin((float) Math.PI * f), 1.5) * 0.85f * fade;
+			float size = 0.03f + 0.03f * h(i, 5);
+			float x = rr * cos(ang), z = rr * sin(ang);
+			dot(x, yy, z, size * 3.2f, cr, cg, cb, a * 0.28f);
+			dot(x, yy, z, size, wr, wg, wb, a);
+		}
+	}
+
+	/** A soft circle spreading out on the ground, again and again. */
+	private static void ripple(float t, float fade) {
+		flat(0.02f, 0.5f, cr, cg, cb, (0.13f + 0.06f * sin(t * 2.6f)) * fade);
+		for (int k = 0; k < 3; ++k) {
+			float f = frac(t / 2.4f + k / 3f);
+			float e = 1f - (1f - f) * (1f - f);
+			float rad = 0.18f + 1.15f * e;
+			float a = (float) Math.pow(1f - f, 1.4) * fade;
+			ring(0.03f, rad, 0.11f, 56, cr, cg, cb, 0.28f * a, 0f, 0f, 0);
+			ring(0.03f, rad, 0.028f, 56, wr, wg, wb, 0.85f * a, 0f, 0f, 0);
+		}
+	}
+
+	/** Two thin strands spiralling round you, with a light running up each one. */
+	private static void helix(TCCosmetics.Look look, long ms, float t, float fade, float seed) {
+		int n = 22;
+		for (int s = 0; s < 2; ++s) {
+			if ("rainbow".equals(look.color)) color(look, ms, s * 0.5f);
+			float hl = frac(t * 0.45f + s * 0.5f) * 2.3f - 0.2f;
+			for (int j = 0; j < n; ++j) {
+				float yy = 0.08f + j * (1.85f / (n - 1));
+				float ang = yy * (float) Math.PI * 1.7f + t * 1.5f + s * (float) Math.PI + seed;
+				float rr = 0.6f - 0.08f * (yy / 1.9f);
+				float boost = (float) Math.exp(-sq((yy - hl) / 0.18f));
+				float ends = (float) Math.pow(sin((float) Math.PI * (j + 0.5f) / n), 0.7);
+				float a = (0.32f + 0.68f * boost) * ends * fade;
+				float x = rr * cos(ang), z = rr * sin(ang);
+				if (boost > 0.25f) dot(x, yy, z, 0.18f, cr, cg, cb, 0.3f * boost * fade);
+				dot(x, yy, z, 0.032f + 0.03f * boost, boost > 0.5f ? wr : cr, boost > 0.5f ? wg : cg, boost > 0.5f ? wb : cb, a);
+			}
+		}
+	}
+
+	private static void colorId(TCCosmetics.Look look, String id, long ms, float offset) {
+		int c = look.colorRgb(id, ms, offset);
+		cr = ((c >> 16) & 255) / 255f;
+		cg = ((c >> 8) & 255) / 255f;
+		cb = (c & 255) / 255f;
+		wr = cr + (1f - cr) * 0.55f;
+		wg = cg + (1f - cg) * 0.55f;
+		wb = cb + (1f - cb) * 0.55f;
+	}
+
+	/** An aura put together in the Maker: a base in colour 1, particles in colour 2, at a height. */
+	private static void custom(TCCosmetics.Look look, long ms, float t, float fade, float seed) {
+		String[] p = look.akParts();
+		float h = "low".equals(p[4]) ? 0.3f : "head".equals(p[4]) ? 2.05f : 1.0f;
+		colorId(look, p[2], ms, 0f);
+		switch (p[0]) {
+		case "ring": {
+			float y = h + 0.035f * sin(t * 1.3f), rad = 0.62f, ph = t * 1.25f + seed;
+			ring(y, rad, 0.13f, 48, cr, cg, cb, 0.14f * fade, 0f, 0f, 0);
+			ring(y, rad, 0.026f, 48, wr, wg, wb, 0.3f * fade, 0.7f * fade, ph, 6);
+			break;
+		}
+		case "glow":
+			flat(0.02f, 0.8f, cr, cg, cb, (0.16f + 0.05f * sin(t * 2f)) * fade);
+			flat(0.025f, 0.35f, wr, wg, wb, 0.12f * fade);
+			break;
+		case "ripple":
+			ripple(t, fade);
+			break;
+		case "double":
+			for (int k = 0; k < 2; ++k) {
+				float y = h + (k == 0 ? -0.22f : 0.22f), ph = (k == 0 ? 1f : -1f) * t * 1.4f + seed + k;
+				ring(y, 0.6f, 0.11f, 44, cr, cg, cb, 0.11f * fade, 0f, 0f, 0);
+				ring(y, 0.6f, 0.024f, 44, wr, wg, wb, 0.25f * fade, 0.65f * fade, ph, 6);
+			}
+			break;
+		default:
+			break;
+		}
+		colorId(look, p[3], ms, 0.5f);
+		switch (p[1]) {
+		case "orbit": {
+			float[] dh = { -0.45f, 0f, 0.45f }, w = { 1.7f, -1.3f, 2.1f };
+			for (int k = 0; k < 3; ++k) {
+				if ("rainbow".equals(p[3])) colorId(look, p[3], ms, k * 0.33f);
+				float ang = t * w[k] + k * 2.1f + seed, yk = Math.max(0.1f, h + dh[k]) + 0.07f * sin(t * 1.7f + k);
+				float r = 0.72f, dir = w[k] > 0 ? 1f : -1f;
+				for (int s = 8; s >= 1; --s) {
+					float a = ang - dir * s * 0.08f, k2 = 1f - s / 9f;
+					dot(r * cos(a), yk, r * sin(a), 0.06f * (1f - s / 14f), cr, cg, cb, 0.75f * k2 * k2 * fade);
+				}
+				dot(r * cos(ang), yk, r * sin(ang), 0.2f, cr, cg, cb, 0.3f * fade);
+				dot(r * cos(ang), yk, r * sin(ang), 0.05f, wr, wg, wb, 0.95f * fade);
+			}
+			break;
+		}
+		case "rising":
+			for (int i = 0; i < 16; ++i) {
+				float per = 2.4f + h(i, 1) * 1.6f, f = frac(t / per + h(i, 2));
+				float ang = h(i, 3) * 6.2832f + f * 1.2f + seed, rr = 0.3f + 0.38f * h(i, 4);
+				float a = (float) Math.pow(sin((float) Math.PI * f), 1.5) * 0.85f * fade, size = 0.03f + 0.03f * h(i, 5);
+				float x = rr * cos(ang), z = rr * sin(ang), y = f * 2.1f;
+				dot(x, y, z, size * 3.2f, cr, cg, cb, a * 0.28f);
+				dot(x, y, z, size, wr, wg, wb, a);
+			}
+			break;
+		case "helix":
+			for (int s2 = 0; s2 < 2; ++s2) {
+				if ("rainbow".equals(p[3])) colorId(look, p[3], ms, s2 * 0.5f);
+				float hl = frac(t * 0.45f + s2 * 0.5f) * 2.3f - 0.2f;
+				for (int j = 0; j < 20; ++j) {
+					float yy = 0.08f + j * (1.85f / 19f);
+					float ang = yy * (float) Math.PI * 1.7f + t * 1.5f + s2 * (float) Math.PI + seed, rr = 0.6f - 0.08f * (yy / 1.9f);
+					float boost = (float) Math.exp(-sq((yy - hl) / 0.18f));
+					float a = (0.32f + 0.68f * boost) * (float) Math.pow(sin((float) Math.PI * (j + 0.5f) / 20f), 0.7) * fade;
+					dot(rr * cos(ang), yy, rr * sin(ang), 0.032f + 0.03f * boost, boost > 0.5f ? wr : cr, boost > 0.5f ? wg : cg, boost > 0.5f ? wb : cb, a);
+				}
+			}
+			break;
+		case "sparkle":
+			for (int i = 0; i < 16; ++i) {
+				float tw = Math.max(0f, sin(t * (1.6f + h(i, 6)) * 2f + h(i, 7) * 6.28f));
+				tw = tw * tw * tw;
+				float ang = h(i, 8) * 6.2832f + seed, rr = 0.4f + 0.35f * h(i, 9), y = 0.1f + h(i, 10) * 2.0f;
+				float x = rr * cos(ang), z = rr * sin(ang);
+				dot(x, y, z, 0.13f, cr, cg, cb, 0.25f * tw * fade);
+				dot(x, y, z, 0.04f, 1f, 1f, 1f, 0.9f * tw * fade);
+			}
+			break;
+		case "snow":
+			for (int i = 0; i < 16; ++i) {
+				float per = 3.2f + h(i, 11) * 1.8f, f = frac(t / per + h(i, 12));
+				float ang = h(i, 13) * 6.2832f + seed, rr = 0.25f + 0.45f * h(i, 14);
+				float x = rr * cos(ang) + 0.08f * sin(t * 1.3f + i), z = rr * sin(ang) + 0.08f * cos(t * 1.1f + i);
+				float y = 2.4f - f * 2.4f, a = (float) Math.pow(sin((float) Math.PI * f), 0.8) * 0.8f * fade;
+				dot(x, y, z, 0.1f, cr, cg, cb, a * 0.25f);
+				dot(x, y, z, 0.035f, wr, wg, wb, a);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	// ------------------------------------------------------------------ shapes
+
+	/** A soft dot facing the camera. */
+	private static void dot(float x, float y, float z, float s, float r, float g, float b, float a) {
+		if (a <= 0.004f) return;
+		float ax = (rx + ux) * s, ay = (ry + uy) * s, az = (rz + uz) * s; // right + up
+		float bx = (rx - ux) * s, by = (ry - uy) * s, bz = (rz - uz) * s; // right - up
+		v(x - ax, y - ay, z - az, 0.0, 1.0, r, g, b, a);
+		v(x - bx, y - by, z - bz, 0.0, 0.0, r, g, b, a);
+		v(x + ax, y + ay, z + az, 1.0, 0.0, r, g, b, a);
+		v(x + bx, y + by, z + bz, 1.0, 1.0, r, g, b, a);
+	}
+
+	/** A soft dot facing the camera, at a point. */
+	private static void dotAt(float x, float y, float z, float s, float r, float g, float b, float a) {
+		dot(x, y, z, s, r, g, b, a);
+	}
+
+	/** A soft round glow lying flat at a point. */
+	private static void flatAt(float x, float y, float z, float s, float r, float g, float b, float a) {
+		if (a <= 0.004f) return;
+		v(x - s, y, z - s, 0.0, 0.0, r, g, b, a);
+		v(x - s, y, z + s, 0.0, 1.0, r, g, b, a);
+		v(x + s, y, z + s, 1.0, 1.0, r, g, b, a);
+		v(x + s, y, z - s, 1.0, 0.0, r, g, b, a);
+	}
+
+	/** A soft round glow lying flat (on the ground). */
+	private static void flat(float y, float s, float r, float g, float b, float a) {
+		if (a <= 0.004f) return;
+		v(-s, y, -s, 0.0, 0.0, r, g, b, a);
+		v(-s, y, s, 0.0, 1.0, r, g, b, a);
+		v(s, y, s, 1.0, 1.0, r, g, b, a);
+		v(s, y, -s, 1.0, 0.0, r, g, b, a);
+	}
+
+	/**
+	 * A thin flat ring with soft edges. Its brightness is base + peak * (closeness to the
+	 * angle "phase") ^ sharp, so part of it can glow brighter (sharp = 0: even all round).
+	 */
+	private static void ring(float y, float rad, float halfW, int segs, float r, float g, float b, float base, float peak,
+			float phase, int sharp) {
+		float ri = Math.max(0f, rad - halfW), ro = rad + halfW;
+		float pc = cos(0f), ps = sin(0f), pa = ringAlpha(0f, base, peak, phase, sharp);
+		for (int i = 1; i <= segs; ++i) {
+			float ang = i * 6.2831855f / segs;
+			float c = cos(ang), s = sin(ang), a = ringAlpha(ang, base, peak, phase, sharp);
+			if (pa > 0.004f || a > 0.004f) {
+				v(pc * ri, y, ps * ri, 0.5, 0.0, r, g, b, pa);
+				v(pc * ro, y, ps * ro, 0.5, 1.0, r, g, b, pa);
+				v(c * ro, y, s * ro, 0.5, 1.0, r, g, b, a);
+				v(c * ri, y, s * ri, 0.5, 0.0, r, g, b, a);
+			}
+			pc = c; ps = s; pa = a;
+		}
+	}
+
+	private static float ringAlpha(float ang, float base, float peak, float phase, int sharp) {
+		if (peak <= 0f) return base;
+		float k = 0.5f + 0.5f * cos(ang - phase);
+		float p = k;
+		for (int i = 1; i < sharp; ++i) p *= k;
+		return base + peak * p;
+	}
+
+	// ------------------------------------------------------------------ maths
+
+	private static float sin(float v) {
+		return (float) Math.sin(v);
+	}
+
+	private static float cos(float v) {
+		return (float) Math.cos(v);
+	}
+
+	private static float sq(float v) {
+		return v * v;
+	}
+
+	private static float frac(float v) {
+		return v - (float) Math.floor(v);
+	}
+
+	private static float h(int i, int k) {
+		return TCCapeArt.hash(i, k, 404);
+	}
+
+	// ------------------------------------------------------------------ boot trails (from TCWear in the browser editions)
+
+	static final int PRINT_FROST = 1, PRINT_MAGMA = 2, PUFF = 3, FLAME = 4, SPARK = 5;
+	private static final int TRAIL_N = 48;
+
+	/** The footprints and puffs a player has left behind (in world positions). */
+	public static final class Trail {
+		final double[] x = new double[TRAIL_N], y = new double[TRAIL_N], z = new double[TRAIL_N];
+		final long[] born = new long[TRAIL_N];
+		final byte[] kind = new byte[TRAIL_N];
+		int next, side = 1;
+		/** How far they've walked (like Minecraft's walking distance: 0.6 per block). */
+		double walk, lastWalk;
+		boolean hasLast, lastGround = true;
+		double lastX, lastZ;
+		long lastEmit, lastSeen;
+
+		void add(double px, double py, double pz, int k, long now) {
+			x[next] = px; y[next] = py; z[next] = pz;
+			born[next] = Math.max(1L, now);
+			kind[next] = (byte) k;
+			next = (next + 1) % TRAIL_N;
+		}
+
+		/** Adds new footprints as the player moves: feet position (world), body turn (degrees). */
+		public void update(TCCosmetics.Look look, double px, double py, double pz, float bodyYaw, boolean ground, boolean sprinting, long now) {
+			lastSeen = now;
+			if (hasLast) {
+				double dx = px - lastX, dz = pz - lastZ, d = Math.sqrt(dx * dx + dz * dz);
+				if (d < 4.0) walk += d * 0.6;
+				else lastWalk = walk; // a teleport: no footprints all the way there
+			}
+			hasLast = true;
+			lastX = px;
+			lastZ = pz;
+			double yaw = Math.toRadians(bodyYaw);
+			double sX = Math.cos(yaw), sZ = Math.sin(yaw); // to the side
+			double fX = -Math.sin(yaw), fZ = Math.cos(yaw); // forwards
+			String kind = look.trailKind();
+			if (kind == null) kind = "";
+			switch (kind) {
+			case "frost":
+			case "magma":
+			case "prints":
+				if (ground && walk - lastWalk >= 0.62) {
+					lastWalk = walk;
+					side = -side;
+					add(px + sX * 0.14 * side, py + 0.016, pz + sZ * 0.14 * side, "magma".equals(kind) ? PRINT_MAGMA : PRINT_FROST, now);
+				}
+				break;
+			case "puffs":
+				if (ground != lastGround) {
+					for (int k = 0; k < 3; ++k) {
+						double a = k * 2.1 + now * 0.001;
+						add(px + Math.cos(a) * 0.22, py + 0.08, pz + Math.sin(a) * 0.22, PUFF, now - k * 60L);
+					}
+				}
+				break;
+			case "flames":
+				if ((!ground || sprinting) && now - lastEmit >= 45L) {
+					lastEmit = now;
+					for (int s = -1; s <= 1; s += 2) {
+						add(px + sX * 0.12 * s - fX * 0.14, py - 0.02, pz + sZ * 0.12 * s - fZ * 0.14, FLAME, now);
+					}
+				}
+				break;
+			case "sparks":
+				if (!ground && now - lastEmit >= 70L) {
+					lastEmit = now;
+					side = -side;
+					add(px + sX * 0.3 * side - fX * 0.1, py + 0.5, pz + sZ * 0.3 * side - fZ * 0.1, SPARK, now);
+				}
+				break;
+			default:
+				break;
+			}
+			if (walk < lastWalk) lastWalk = walk;
+			lastGround = ground;
+		}
+
+		/** Adds the trail's glows, drawn from the feet at (ix, iy, iz) (world). */
+		public void draw(Out o, TCCosmetics.Look look, double ix, double iy, double iz, float fade, long now, float rX, float rY, float rZ, float uX, float uY, float uZ) {
+			out = o;
+			sc = 1f;
+			sx = sy = sz = 0f;
+			rx = rX; ry = rY; rz = rZ; ux = uX; uy = uY; uz = uZ;
+			int tint = look.trailTint(now);
+			for (int i = 0; i < TRAIL_N; ++i) {
+				if (born[i] == 0L) continue;
+				float age = (now - born[i]) / 1000f;
+				if (age < 0f) age = 0f;
+				float x = (float) (this.x[i] - ix), y = (float) (this.y[i] - iy), z = (float) (this.z[i] - iz);
+				switch (kind[i]) {
+				case PRINT_FROST: {
+					if (age > 3f) break;
+					float a = (float) Math.pow(1f - age / 3f, 1.2) * fade;
+					int c = tint == -1 ? 0x9FDFFF : tint;
+					flatAt(x, y, z, 0.17f, ((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f, 0.55f * a);
+					flatAt(x, y + 0.002f, z, 0.07f, 1f, 1f, 1f, 0.5f * a);
+					break;
+				}
+				case PRINT_MAGMA: {
+					if (age > 2.2f) break;
+					float k = 1f - age / 2.2f, a = k * fade;
+					int c = tint == -1 ? 0xFF6A1A : tint;
+					flatAt(x, y, z, 0.18f, ((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f, 0.6f * a);
+					dotAt(x, y + 0.05f + age * 0.35f, z, 0.035f, 1f, 0.7f, 0.3f, 0.9f * a * k);
+					break;
+				}
+				case PUFF: {
+					if (age > 1.1f) break;
+					float k = age / 1.1f;
+					dotAt(x, y + k * 0.15f, z, 0.12f + 0.25f * k, 1f, 1f, 1f, 0.32f * (1f - k) * fade);
+					break;
+				}
+				case FLAME: {
+					if (age > 0.45f) break;
+					float k = age / 0.45f;
+					dotAt(x, y - age * 0.25f, z, 0.03f + 0.09f * (1f - k), 1f, 0.85f - 0.55f * k, 0.35f - 0.3f * k, 0.85f * (1f - k) * fade);
+					break;
+				}
+				case SPARK: {
+					if (age > 0.6f) break;
+					float k = age / 0.6f;
+					dotAt(x, y - age * 0.3f, z, 0.045f, 1f, 1f, 0.9f, 0.9f * (1f - k) * fade);
+					break;
+				}
+				default:
+					break;
+				}
+			}
+			out = null;
+		}
+
+		public long lastSeen() {
+			return lastSeen;
+		}
+	}
+}
