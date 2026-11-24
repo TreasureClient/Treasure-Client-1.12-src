@@ -53,6 +53,8 @@ fn remove(key: &str) {
 static TITLE_SHOWN: AtomicBool = AtomicBool::new(false);
 static TITLE_SINCE: AtomicU64 = AtomicU64::new(0);
 static TITLE_AT: AtomicU64 = AtomicU64::new(0);
+static MENU_LAST_LIVE: AtomicU64 = AtomicU64::new(0);
+static MENU_FLAG_AT: AtomicU64 = AtomicU64::new(0);
 static MENU_LIVE: AtomicBool = AtomicBool::new(false);
 static MENU_CHECKED: AtomicU64 = AtomicU64::new(0);
 
@@ -67,8 +69,18 @@ pub(crate) fn title_frame(info: &str) -> u64 {
     if !TITLE_SHOWN.swap(true, Ordering::Relaxed) {
         TITLE_SINCE.store(now, Ordering::Relaxed);
         MENU_CHECKED.store(0, Ordering::Relaxed);
+        MENU_LAST_LIVE.store(0, Ordering::Relaxed);
+        MENU_FLAG_AT.store(now, Ordering::Relaxed);
         set("tcmenuinfo", info.as_bytes());
         set("tcmenu", &[1]);
+    } else if now.saturating_sub(MENU_FLAG_AT.load(Ordering::Relaxed)) >= 1000 {
+        // the overlay only draws the menu while "tcmenu" says so; if something cleared it while
+        // the title is still up (the overlay clears a stale one when it starts), say it again
+        MENU_FLAG_AT.store(now, Ordering::Relaxed);
+        if get("tcmenu").map_or(true, |v| v.first() != Some(&1)) {
+            set("tcmenuinfo", info.as_bytes());
+            set("tcmenu", &[1]);
+        }
     }
     TITLE_AT.store(now, Ordering::Relaxed);
     now.saturating_sub(TITLE_SINCE.load(Ordering::Relaxed))
@@ -90,7 +102,13 @@ pub(crate) fn menu_overlay_live() -> bool {
             .and_then(|v| String::from_utf8(v).ok())
             .and_then(|s| s.trim().parse::<u64>().ok())
             .unwrap_or(0);
-        MENU_LIVE.store(now.abs_diff(ack) < 2500, Ordering::Relaxed);
+        if now.abs_diff(ack) < 2500 {
+            MENU_LAST_LIVE.store(now, Ordering::Relaxed);
+        }
+        // live once it has answered, until it's been quiet for 8 s (it used to be 2.5 s, so one
+        // slow moment swapped the menu for the old buttons)
+        let last = MENU_LAST_LIVE.load(Ordering::Relaxed);
+        MENU_LIVE.store(last != 0 && now.saturating_sub(last) < 8000, Ordering::Relaxed);
     }
     MENU_LIVE.load(Ordering::Relaxed)
 }
