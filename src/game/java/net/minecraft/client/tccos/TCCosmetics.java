@@ -314,6 +314,8 @@ public final class TCCosmetics {
 		Look look;
 		long at = -1L, askedAt;
 		boolean pending;
+		/** The shared text this look came from, so an unchanged one isn't read again. */
+		String raw;
 	}
 
 	private static final Map<String, Other> OTHERS = new HashMap<>();
@@ -326,9 +328,12 @@ public final class TCCosmetics {
 		if (p == null) return null;
 		Minecraft mc = Minecraft.getMinecraft();
 		if (p == mc.player) return mine();
-		String name = p.getName();
-		if (!validName(name)) return null;
-		String key = name.toLowerCase();
+		String key = p.tcCosKey;
+		if (key == null) {
+			String name = p.getName();
+			if (!validName(name)) return null;
+			key = p.tcCosKey = name.toLowerCase();
+		}
 		Other o = OTHERS.get(key);
 		if (o == null) {
 			if (OTHERS.size() > 600) OTHERS.clear();
@@ -343,7 +348,7 @@ public final class TCCosmetics {
 		if (!o.pending && (o.at < 0L || now - o.at > KEEP_MS)) {
 			o.pending = true;
 			o.askedAt = now;
-			PENDING.add(name);
+			PENDING.add(p.getName());
 		}
 		return o.look;
 	}
@@ -360,7 +365,7 @@ public final class TCCosmetics {
 	}
 
 	private static long lastPoll = 0L, lastPubCheck = 0L;
-	private static String lastData = null, lastPub = null;
+	private static String lastPub = null, lastVer = null;
 
 	/** Called every game tick: shares your look when it changes, and swaps lookups with the overlay. */
 	public static void tick() {
@@ -379,20 +384,33 @@ public final class TCCosmetics {
 				PENDING.clear();
 				EagRuntime.setStorage("tccosreq", sb.toString().getBytes(StandardCharsets.UTF_8));
 			}
-			byte[] raw = EagRuntime.getStorage("tccosdata");
-			String s = raw != null ? new String(raw, StandardCharsets.UTF_8) : "";
-			if (!s.equals(lastData)) {
-				lastData = s;
-				for (String line : s.split("\n")) {
-					int eq = line.indexOf('=');
-					if (eq <= 0) continue;
-					Other o = OTHERS.get(line.substring(0, eq).toLowerCase());
-					if (o == null) continue;
-					String v = line.substring(eq + 1);
-					Look l = v.isEmpty() ? null : parse(v, true);
-					o.look = l == null || l.isEmpty() ? null : l;
-					o.pending = false;
-					o.at = now;
+			// the overlay bumps "tccosver" whenever its list changes: check that small number first, and
+			// only read the list (up to 300 players) when it moved
+			byte[] ver = EagRuntime.getStorage("tccosver");
+			String vs = ver != null ? new String(ver, StandardCharsets.US_ASCII) : "";
+			if (!vs.equals(lastVer)) {
+				lastVer = vs;
+				byte[] raw = EagRuntime.getStorage("tccosdata");
+				String s = raw != null ? new String(raw, StandardCharsets.UTF_8) : "";
+				{
+					// (even if the text is the same: an answer for someone we asked again still counts)
+					for (String line : s.split("\n")) {
+						int eq = line.indexOf('=');
+						if (eq <= 0) continue;
+						Other o = OTHERS.get(line.substring(0, eq).toLowerCase());
+						if (o == null) continue;
+						String v = line.substring(eq + 1);
+						if (o.pending || !v.equals(o.raw)) {
+							// only a look that's new or changed is read again
+							if (!v.equals(o.raw)) {
+								o.raw = v;
+								Look l = v.isEmpty() ? null : parse(v, true);
+								o.look = l == null || l.isEmpty() ? null : l;
+							}
+							o.pending = false;
+							o.at = now;
+						}
+					}
 				}
 			}
 			if (now - lastPubCheck >= 2000L) {
