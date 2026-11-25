@@ -38,14 +38,15 @@ public final class TCPreview {
                     TCCosLayer.FULL_BRIGHT, ms);
             }
             if (look.hasAura()) {
-                TCAuraShapes.Out out = new TCAuraShapes.Out();
+                TCAuraShapes.Out out = OUT;
+                out.clear();
                 // the picture faces you: dots face along its depth
                 TCAuraShapes.aura(out, look, ms, 1f, 0f, 1f, 0f, 0f, 0f, 1f, 0f);
                 if (out.quads() > 0) {
                     poseStack.pushPose();
                     // from the model (y down, turned) to the feet, y up, facing you
                     poseStack.translate(0f, 1.5f, 0f);
-                    poseStack.mulPose(new Matrix4f().rotationY((float) Math.toRadians(rotY)));
+                    poseStack.mulPose(TURN.rotationY((float) Math.toRadians(rotY)));
                     poseStack.scale(1f, -1f, 1f);
                     TCCosLayer.glows(emit, poseStack, out);
                     poseStack.popPose();
@@ -61,6 +62,9 @@ public final class TCPreview {
     }
 
     private static boolean warned;
+    /** Reused every frame (what's in it is copied out when it's sent to be drawn). */
+    private static final TCAuraShapes.Out OUT = new TCAuraShapes.Out();
+    private static final Matrix4f TURN = new Matrix4f();
 
     static ModelPart part(ModelPart root, String name) {
         try {

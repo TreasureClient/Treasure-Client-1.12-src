@@ -95,7 +95,7 @@ public final class Hud {
         Trackers.sampleFps(mc.getFps());
         Ui.begin();
         try {
-            drawAll(null);
+            drawShown(null);
             if (Config.get().on("reachDisp") && Config.get().str("reachStyle", "box").equals("cross")) reachCross();
         } finally {
             Ui.end();
@@ -105,14 +105,58 @@ public final class Hud {
     /** Draws every shown element; returns their boxes {x, y, w, h} by id (for the editor). */
     public static java.util.Map<String, float[]> drawAll(String highlight) {
         java.util.Map<String, float[]> boxes = new java.util.LinkedHashMap<>();
-        for (Entry e : ENTRIES) {
-            if (!shown(e)) continue;
-            float[] size = e.el().render(0, 0, false);
-            float[] pos = position(e, size[0], size[1]);
-            e.el().render(pos[0], pos[1], true);
-            boxes.put(e.id(), new float[]{pos[0], pos[1], size[0], size[1]});
-        }
+        drawShown(boxes);
         return boxes;
+    }
+
+    /** Each element's size last frame (null = not shown last frame). */
+    private static float[][] lastSize = new float[0][];
+
+    /**
+     * Draws every shown element. Each one is placed using its size from the frame before, so it's
+     * worked out once per frame instead of twice (measured, then drawn); only an element that just
+     * appeared is measured first.
+     */
+    private static void drawShown(java.util.Map<String, float[]> boxes) {
+        if (lastSize.length != ENTRIES.size()) lastSize = new float[ENTRIES.size()][];
+        for (int i = 0; i < ENTRIES.size(); i++) {
+            Entry e = ENTRIES.get(i);
+            if (!shown(e)) {
+                lastSize[i] = null;
+                continue;
+            }
+            float[] size = lastSize[i];
+            if (size == null) size = e.el().render(0, 0, false);
+            float[] pos = position(e, size[0], size[1]);
+            float[] drawn = e.el().render(pos[0], pos[1], true);
+            lastSize[i] = drawn;
+            if (boxes != null) boxes.put(e.id(), new float[]{pos[0], pos[1], drawn[0], drawn[1]});
+        }
+    }
+
+    // ------------------------------------------------------------------ small helpers (no String.format: it's slow)
+    private static final java.util.HashMap<String, String> UPPER = new java.util.HashMap<>();
+
+    /** The label in capitals (remembered: labels never change). */
+    static String up(String s) {
+        String u = UPPER.get(s);
+        if (u == null) {
+            u = s.toUpperCase(Locale.ROOT);
+            if (UPPER.size() < 256) UPPER.put(s, u);
+        }
+        return u;
+    }
+
+    /** A number with one decimal ("12.3"). */
+    static String dec1(double v) {
+        long a = Math.round(Math.abs(v) * 10);
+        return (v < 0 && a > 0 ? "-" : "") + (a / 10) + "." + (a % 10);
+    }
+
+    /** A number with two decimals ("3.05"). */
+    static String dec2(double v) {
+        long a = Math.round(Math.abs(v) * 100), f = a % 100;
+        return (v < 0 && a > 0 ? "-" : "") + (a / 100) + "." + (f < 10 ? "0" : "") + f;
     }
 
     // ------------------------------------------------------------------ the box
@@ -124,7 +168,7 @@ public final class Hud {
     /** One line: LABEL value unit. tone 1 = value in the theme colour, -1 = dimmed. */
     static float[] line(float x, float y, boolean draw, String label, String value, String unit, int tone) {
         float lh = VALUE * 1.35f;
-        float lw = Ui.width(Ui.MONOB, label.toUpperCase(Locale.ROOT), LABEL, .12f);
+        float lw = Ui.width(Ui.MONOB, up(label), LABEL, .12f);
         float vw = Ui.width(Ui.HUD, value, VALUE, .01f);
         float uw = unit.isEmpty() ? 0 : 3 + Ui.width(Ui.MONO, unit, 10);
         float w = 11 + lw + 8 + vw + uw + 10, h = 5 + lh + 5;
@@ -133,7 +177,7 @@ public final class Hud {
             box(x, y, w, h);
             float base = y + 5 + (lh - (Ui.asc(Ui.HUD) + 0.21f) * VALUE) / 2 + Ui.asc(Ui.HUD) * VALUE;
             float cx = x + 11;
-            cx += Ui.textBase(Ui.MONOB, label.toUpperCase(Locale.ROOT), cx, base - 1, LABEL, th.a1(), .12f) + 8;
+            cx += Ui.textBase(Ui.MONOB, up(label), cx, base - 1, LABEL, th.a1(), .12f) + 8;
             int col = tone > 0 ? th.a1() : tone < 0 ? Theme.INK_DIM : Theme.INK;
             cx += Ui.textBase(Ui.HUD, value, cx, base, VALUE, col, .01f);
             if (!unit.isEmpty()) Ui.textBase(Ui.MONO, unit, cx + 3, base, 10, Theme.INK_DIM, 0);
@@ -143,7 +187,7 @@ public final class Hud {
 
     // ------------------------------------------------------------------ elements
     private static String fmt(double v) {
-        return Config.get().str("coordPrecision", "1").equals("0") ? String.valueOf((long) Math.floor(v)) : String.format(Locale.ROOT, "%.1f", v);
+        return Config.get().str("coordPrecision", "1").equals("0") ? String.valueOf((long) Math.floor(v)) : dec1(v);
     }
 
     private static float[] coords(float x, float y, boolean draw) {
@@ -156,7 +200,7 @@ public final class Hud {
         float lh = VALUE * 1.35f;
         float w = 11;
         for (int i = 0; i < parts.size(); i++) {
-            w += Ui.width(Ui.MONOB, parts.get(i)[0].toUpperCase(Locale.ROOT), LABEL, .12f) + 6 + Ui.width(Ui.HUD, parts.get(i)[1], VALUE, .01f);
+            w += Ui.width(Ui.MONOB, up(parts.get(i)[0]), LABEL, .12f) + 6 + Ui.width(Ui.HUD, parts.get(i)[1], VALUE, .01f);
             if (i < parts.size() - 1) w += 12;
         }
         w += 10;
@@ -167,17 +211,31 @@ public final class Hud {
             float base = y + 5 + (lh - (Ui.asc(Ui.HUD) + 0.21f) * VALUE) / 2 + Ui.asc(Ui.HUD) * VALUE;
             float cx = x + 11;
             for (String[] part : parts) {
-                cx += Ui.textBase(Ui.MONOB, part[0].toUpperCase(Locale.ROOT), cx, base - 1, LABEL, th.a1(), .12f) + 6;
+                cx += Ui.textBase(Ui.MONOB, up(part[0]), cx, base - 1, LABEL, th.a1(), .12f) + 6;
                 cx += Ui.textBase(Ui.HUD, part[1], cx, base, VALUE, Theme.INK, .01f) + 12;
             }
         }
         return new float[]{w, h};
     }
 
+    private static long biomeAt = Long.MIN_VALUE;
+    private static Object biomeLevel;
+    private static String biomeName = "—";
+    private static long biomeTime;
+
+    /** The biome's name, looked up again when you move to another block (or once a second, for chunks still loading). */
     private static String biome() {
         Minecraft mc = Minecraft.getInstance();
         BlockPos pos = mc.player.blockPosition();
-        return mc.level.getBiome(pos).unwrapKey().map(k -> pretty(k.identifier().getPath())).orElse("—");
+        long at = pos.asLong();
+        long now = System.currentTimeMillis();
+        if (at != biomeAt || mc.level != biomeLevel || now - biomeTime > 1000) {
+            biomeAt = at;
+            biomeTime = now;
+            biomeLevel = mc.level;
+            biomeName = mc.level.getBiome(pos).unwrapKey().map(k -> pretty(k.identifier().getPath())).orElse("—");
+        }
+        return biomeName;
     }
 
     static String pretty(String id) {
@@ -217,13 +275,13 @@ public final class Hud {
 
     private static float[] reach(float x, float y, boolean draw) {
         double r = Trackers.lastReach;
-        return line(x, y, draw, "Reach", Double.isNaN(r) ? "0.00" : String.format(Locale.ROOT, "%.2f", r), "blocks", 0);
+        return line(x, y, draw, "Reach", Double.isNaN(r) ? "0.00" : dec2(r), "blocks", 0);
     }
 
     /** Reach Display "Above crosshair": a small white number just over the crosshair. */
     private static void reachCross() {
         double r = Trackers.lastReach;
-        String s = Double.isNaN(r) ? "0.00" : String.format(Locale.ROOT, "%.2f", r);
+        String s = Double.isNaN(r) ? "0.00" : dec2(r);
         float w = Ui.width(Ui.MONOB, s, 10);
         Ui.text(Ui.MONOB, s, (Ui.vw - w) / 2, Ui.vh / 2 - 24, 10, 0xFFFFFFFF, 0, 1);
     }
@@ -257,7 +315,7 @@ public final class Hud {
                 vals[i] = "✓";
                 cols[i] = Theme.INK;
             }
-            colW[i] = Math.max(30, Math.max(Ui.width(Ui.MONOB, names[i].toUpperCase(Locale.ROOT), LABEL, .12f), Ui.width(Ui.HUD, vals[i], VALUE)));
+            colW[i] = Math.max(30, Math.max(Ui.width(Ui.MONOB, up(names[i]), LABEL, .12f), Ui.width(Ui.HUD, vals[i], VALUE)));
         }
         float labH = Ui.lineH(Ui.MONOB, LABEL), valH = VALUE * 1.35f;
         float w = 12 + colW[0] + colW[1] + colW[2] + colW[3] + 3 * 12 + 12, h = 6 + labH + 1 + valH + 6;
@@ -266,7 +324,7 @@ public final class Hud {
             box(x, y, w, h);
             float cx = x + 12;
             for (int i = 0; i < 4; i++) {
-                String lab = names[i].toUpperCase(Locale.ROOT);
+                String lab = up(names[i]);
                 Ui.text(Ui.MONOB, lab, cx + (colW[i] - Ui.width(Ui.MONOB, lab, LABEL, .12f)) / 2, y + 6, LABEL, th.a1(), .12f, 0);
                 Ui.text(Ui.HUD, vals[i], cx + (colW[i] - Ui.width(Ui.HUD, vals[i], VALUE)) / 2, y + 6 + labH + 1, VALUE, cols[i], 0, 1.35f);
                 cx += colW[i] + 12;
@@ -284,7 +342,7 @@ public final class Hud {
             if (e.isInfiniteDuration()) time = "∞";
             else {
                 int secs = e.getDuration() / 20;
-                time = (secs / 60) + ":" + String.format("%02d", secs % 60);
+                time = (secs / 60) + ":" + (secs % 60 < 10 ? "0" : "") + (secs % 60);
             }
             rows.add(new String[]{name, time});
         }
@@ -366,7 +424,7 @@ public final class Hud {
     private static float[] perf(float x, float y, boolean draw) {
         Minecraft mc = Minecraft.getInstance();
         int fps = mc.getFps();
-        String frame = fps > 0 ? String.format(Locale.ROOT, "%.1f ms", 1000f / fps) : "—";
+        String frame = fps > 0 ? dec1(1000f / fps) + " ms" : "—";
         int ms = -1;
         if (mc.getConnection() != null && !mc.isLocalServer()) {
             PlayerInfo info = mc.getConnection().getPlayerInfo(mc.player.getUUID());
@@ -376,7 +434,7 @@ public final class Hud {
         float s = VALUE, lh = s * 1.35f;
         float w = 108;
         for (String[] r : rows)
-            w = Math.max(w, 11 + Ui.width(Ui.MONOB, r[0].toUpperCase(Locale.ROOT), LABEL, .12f) + 14 + Ui.width(Ui.HUD, r[1], s) + 10);
+            w = Math.max(w, 11 + Ui.width(Ui.MONOB, up(r[0]), LABEL, .12f) + 14 + Ui.width(Ui.HUD, r[1], s) + 10);
         float h = 5 + 3 * lh + 2 * 2 + 5;
         if (draw) {
             Theme th = Theme.current();
@@ -384,7 +442,7 @@ public final class Hud {
             for (int i = 0; i < 3; i++) {
                 float ry = y + 5 + i * (lh + 2);
                 float base = ry + (lh - (Ui.asc(Ui.HUD) + 0.21f) * s) / 2 + Ui.asc(Ui.HUD) * s;
-                Ui.textBase(Ui.MONOB, rows[i][0].toUpperCase(Locale.ROOT), x + 11, base - 1, LABEL, th.a1(), .12f);
+                Ui.textBase(Ui.MONOB, up(rows[i][0]), x + 11, base - 1, LABEL, th.a1(), .12f);
                 Ui.textBase(Ui.HUD, rows[i][1], x + w - 10 - Ui.width(Ui.HUD, rows[i][1], s), base, s, Theme.INK, 0);
             }
         }

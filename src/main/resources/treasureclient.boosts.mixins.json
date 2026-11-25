@@ -1,0 +1,11 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "net.treasureclient.mixin.boost",
+  "plugin": "net.treasureclient.boost.BoostMixinPlugin",
+  "compatibilityLevel": "JAVA_${java}",
+  "client": [],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

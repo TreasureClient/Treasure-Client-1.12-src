@@ -27,6 +27,10 @@ public class TCCosLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
     private static final int MAX_AURAS = 16;
     private static final double FAR = 40.0, FADE_FROM = 28.0;
 
+    /** Reused every time (what's in it is copied out before the next player). */
+    private static final TCAuraShapes.Out OUT = new TCAuraShapes.Out();
+    private static final Matrix4f TURN = new Matrix4f();
+
     private static long auraFrame;
     private static int aurasThisFrame;
 
@@ -65,7 +69,8 @@ public class TCCosLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         float rX = -cam.leftVector().x(), rY = -cam.leftVector().y(), rZ = -cam.leftVector().z();
         float uX = cam.upVector().x(), uY = cam.upVector().y(), uZ = cam.upVector().z();
 
-        TCAuraShapes.Out out = new TCAuraShapes.Out();
+        TCAuraShapes.Out out = OUT;
+        out.clear();
         if (trail != null) trail.draw(out, look, state.x, state.y, state.z, fade, ms, rX, rY, rZ, uX, uY, uZ);
         if (aura) TCAuraShapes.aura(out, look, ms, fade, state.id * 0.618f, rX, rY, rZ, uX, uY, uZ);
         if (out.quads() == 0) return;
@@ -76,7 +81,7 @@ public class TCCosLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         poseStack.translate(0.0f, 1.501f, 0.0f);
         poseStack.scale(1f / 0.9375f, 1f / 0.9375f, 1f / 0.9375f);
         poseStack.scale(-1f, -1f, 1f);
-        poseStack.mulPose(new Matrix4f().rotationY((float) Math.toRadians(-(180.0f - state.bodyRot))));
+        poseStack.mulPose(TURN.rotationY((float) Math.toRadians(-(180.0f - state.bodyRot))));
         float s = state.scale > 0.01f ? 1f / state.scale : 1f;
         poseStack.scale(s, s, s);
         glows(emit, poseStack, out);

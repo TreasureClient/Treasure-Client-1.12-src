@@ -33,6 +33,14 @@ public final class TCWearDraw {
         }
     }
 
+    /** Reused for every part (what's in it is copied out when it's sent to be drawn). */
+    private static final Buf BUF = new Buf();
+
+    private static Buf fresh() {
+        BUF.n = 0;
+        return BUF;
+    }
+
     /**
      * Draws the hat (on head) and boots (on the legs) of a model whose parts are already posed;
      * the pose stack is the model's own (before any part's turn).
@@ -53,7 +61,7 @@ public final class TCWearDraw {
             if (glow && !hatGlow && !bootGlow) break;
             int lit = glow ? TCCosLayer.FULL_BRIGHT : light;
             if (hat && head != null && (!glow || hatGlow)) {
-                Buf b = new Buf();
+                Buf b = fresh();
                 TCWearShapes.begin(b, glow);
                 if (hatCustom) {
                     TCWearShapes.customHat(hk[0], hk[1], hk[2], TCCapeArt.paletteRgb(hk[3], acc), TCCapeArt.paletteRgb(hk[4], acc), t);
@@ -66,7 +74,7 @@ public final class TCWearDraw {
                 for (int leg = 0; leg < 2; ++leg) {
                     ModelPart p = leg == 0 ? rightLeg : leftLeg;
                     if (p == null) continue;
-                    Buf b = new Buf();
+                    Buf b = fresh();
                     TCWearShapes.begin(b, glow);
                     int side = leg == 0 ? -1 : 1;
                     if (bootsCustom) {

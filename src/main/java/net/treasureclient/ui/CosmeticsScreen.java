@@ -258,7 +258,7 @@ public class CosmeticsScreen extends TCScreen {
             float slide = -28 * (1 - p);
             float bw = tabBar[i].target(active ? Ui.vw * 0.05f - 10 + i * Ui.vw * 0.016f : 0).get();
             if (bw > 0.5f) Ui.rect(0, y + itemH / 2 - 1.5f, bw, 3, Theme.alpha(th.a1(), p));
-            Ui.mono(String.format("%02d", i + 1), ix + slide, y + Ui.vh * 0.011f + Ui.vh * 0.007f, ls, Theme.alpha(active ? th.a1() : Theme.INK_DIM, p), .06f);
+            Ui.mono((i + 1 < 10 ? "0" : "") + (i + 1), ix + slide, y + Ui.vh * 0.011f + Ui.vh * 0.007f, ls, Theme.alpha(active ? th.a1() : Theme.INK_DIM, p), .06f);
             float shift = tabShift[i].target(active ? 14 : 0).get();
             float op = active ? 1 : hover ? .75f : .42f;
             Ui.text(Ui.WORD, word, ix + 38 + shift + slide, y + Ui.vh * 0.011f, ws, Theme.alpha(Theme.INK, op * p), -.01f, .98f);
@@ -917,19 +917,7 @@ public class CosmeticsScreen extends TCScreen {
     }
 
     private static List<String> wrap(String face, String text, float size, float ls, float maxW) {
-        List<String> out = new ArrayList<>();
-        for (String para : text.split("\n")) {
-            StringBuilder line = new StringBuilder();
-            for (String word : para.split(" ")) {
-                String tryLine = line.isEmpty() ? word : line + " " + word;
-                if (!line.isEmpty() && Ui.width(face, tryLine, size, ls) > maxW) {
-                    out.add(line.toString());
-                    line = new StringBuilder(word);
-                } else line = new StringBuilder(tryLine);
-            }
-            out.add(line.toString());
-        }
-        return out;
+        return ModMenuScreen.wrap(face, text, size, ls, maxW);
     }
 
     // ------------------------------------------------------------------ input

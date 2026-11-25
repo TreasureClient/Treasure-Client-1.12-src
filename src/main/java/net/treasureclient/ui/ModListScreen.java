@@ -16,6 +16,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.treasureclient.compat.TCScreen;
+import net.treasureclient.boost.Boosts;
 import net.treasureclient.compat.V;
 import net.treasureclient.core.Anim;
 import net.treasureclient.core.Theme;
@@ -209,6 +210,39 @@ public class ModListScreen extends TCScreen {
             Ui.mono(label, x0, y, s, Theme.alpha(hover ? Theme.INK : th.a1(), p), .06f);
             String url = e.homepage;
             hits.add(new Object[]{new float[]{x0, y - 4, lw, h}, (Runnable) () -> V.openLink(this, url)});
+            y += h + 6;
+        }
+        if (e.id.equals("treasureclient") && !Boosts.ALL.isEmpty()) drawBoosts(th, x0, y + 18, Math.min(w, 720), p, mx, my);
+    }
+
+    /** Treasure Client's page: the built-in boosts, each with its switch and what it's doing. */
+    private void drawBoosts(Theme th, float x0, float y, float w, float p, float mx, float my) {
+        Ui.mono("Built-in boosts", x0, y, 11.5f, Theme.alpha(th.a1(), p), .06f);
+        y += Ui.lineH(Ui.MONO, 11.5f) + 4;
+        Ui.text(Ui.TEXT, "All on by default. Only switch one off if it causes a problem.", x0, y, 13, Theme.alpha(Theme.INK_DIM, p));
+        y += Ui.lineH(Ui.TEXT, 13) + 10;
+        float rh = 40;
+        for (Boosts.Boost b : Boosts.ALL) {
+            if (y + rh > Ui.vh - 8) break;
+            boolean can = Boosts.switchable(b), on = can && Boosts.switchedOn(b);
+            float swX = x0, swY = y + (rh - 22) / 2;
+            boolean hover = can && Ui.in(mx, my, x0, y, w, rh);
+            if (hover) Ui.round(swX - 3, swY - 3, 46, 28, 14, Theme.alpha(0x1AECEBE6, p));
+            Ui.round(swX, swY, 40, 22, 11, Theme.alpha(on ? th.a1() : 0x29ECEBE6, can ? p : p * .45f));
+            Ui.circle(swX + 11 + (on ? 18 : 0), swY + 11, 8, Theme.alpha(on ? 0xFF111111 : Theme.INK, can ? p : p * .45f));
+            float tx = x0 + 40 + 14;
+            Ui.text(Ui.SEMI, b.name(), tx, y + 3, 14.5f, Theme.alpha(Theme.INK, p));
+            String status = Boosts.status(b);
+            float sw = Ui.text(Ui.MONO, status.toUpperCase(Locale.ROOT), tx, y + 5 + Ui.lineH(Ui.SEMI, 14.5f), 10, Theme.alpha(
+                status.equals("Working") ? th.a1() : Theme.INK_DIM, p), .04f, 0);
+            Ui.text(Ui.TEXT, ModMenuScreen.wrap(Ui.TEXT, "· " + b.desc(), 12.5f, 0, w - 54 - sw - 10).get(0), tx + sw + 10,
+                y + 3 + Ui.lineH(Ui.SEMI, 14.5f), 12.5f, Theme.alpha(Theme.INK_DIM, .8f * p));
+            if (can) hits.add(new Object[]{new float[]{x0, y, w, rh}, (Runnable) () -> {
+                Boosts.setSwitchedOn(b, !Boosts.switchedOn(b));
+                minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                    net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            }});
+            y += rh;
         }
     }
 

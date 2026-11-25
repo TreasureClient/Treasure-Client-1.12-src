@@ -10,7 +10,7 @@
   "icon": "assets/treasureclient/icon.png",
   "environment": "client",
   "entrypoints": { "client": ["net.treasureclient.TreasureClient"] },
-  "mixins": ["treasureclient.mixins.json"],
+  "mixins": ["treasureclient.mixins.json", "treasureclient.boosts.mixins.json"],
   "depends": {
     "fabricloader": ">=0.18.0",
     "minecraft": "${minecraft_version}",

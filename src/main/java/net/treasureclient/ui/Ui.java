@@ -150,7 +150,39 @@ public final class Ui {
     }
 
     // ---------------- text ----------------
-    private static final Map<String, Component> CACHE = new HashMap<>();
+    /**
+     * Every text drawn is remembered per font and size: its Component (and, for letter-spaced text,
+     * one per letter) and its width, so drawing the same words every frame only costs a lookup.
+     */
+    private static final class Txt {
+        final Component whole;
+        float w = -1;
+        Component[] chars;
+        float[] charW;
+        float charSum;
+
+        Txt(Component whole) {
+            this.whole = whole;
+        }
+    }
+
+    private static final int SLOTS = 160;
+    @SuppressWarnings("unchecked")
+    private static final HashMap<String, Txt>[] TEXTS = new HashMap[7 * SLOTS];
+    private static final Style[] STYLES = new Style[7 * SLOTS];
+    private static Object fontSeen;
+
+    private static int faceNo(String face) {
+        return switch (face) {
+            case WORD -> 0;
+            case BRAND -> 1;
+            case HUD -> 2;
+            case SEMI -> 3;
+            case TEXT -> 4;
+            case MONO -> 5;
+            default -> 6;
+        };
+    }
 
     private static int pick(String face, float px) {
         int[] s = SIZES.get(face);
@@ -159,16 +191,53 @@ public final class Ui {
         return best;
     }
 
-    private static Component comp(String face, int size, String text) {
-        String key = face + size + '\u0000' + text;
-        Component c = CACHE.get(key);
-        if (c == null) {
-            if (CACHE.size() > 4000) CACHE.clear();
-            Style st = Style.EMPTY.withFont(new FontDescription.Resource(id(face + "_" + size)));
-            c = Component.literal(text).withStyle(st);
-            CACHE.put(key, c);
+    private static Txt txt(String face, int size, String text) {
+        var font = Minecraft.getInstance().font;
+        if (font != fontSeen) { // a new font (resource reload): measure everything again
+            fontSeen = font;
+            java.util.Arrays.fill(TEXTS, null);
         }
-        return c;
+        int slot = faceNo(face) * SLOTS + Math.min(SLOTS - 1, size);
+        HashMap<String, Txt> m = TEXTS[slot];
+        if (m == null) TEXTS[slot] = m = new HashMap<>();
+        Txt t = m.get(text);
+        if (t == null) {
+            if (m.size() > 1500) m.clear(); // changing numbers (coordinates...) would pile up
+            t = new Txt(Component.literal(text).withStyle(style(face, size, slot)));
+            m.put(text, t);
+        }
+        return t;
+    }
+
+    private static Style style(String face, int size, int slot) {
+        Style st = STYLES[slot];
+        if (st == null) STYLES[slot] = st = Style.EMPTY.withFont(new FontDescription.Resource(id(face + "_" + size)));
+        return st;
+    }
+
+    private static float wholeW(Txt t) {
+        if (t.w < 0) t.w = Minecraft.getInstance().font.width(t.whole);
+        return t.w;
+    }
+
+    private static void letters(Txt t, String face, int size, String text) {
+        if (t.chars != null) return;
+        var font = Minecraft.getInstance().font;
+        Style st = style(face, size, faceNo(face) * SLOTS + Math.min(SLOTS - 1, size));
+        int n = text.codePointCount(0, text.length());
+        Component[] cs = new Component[n];
+        float[] ws = new float[n];
+        float sum = 0;
+        for (int i = 0, j = 0; i < text.length(); j++) {
+            int cp = text.codePointAt(i);
+            cs[j] = Component.literal(new String(Character.toChars(cp))).withStyle(st);
+            ws[j] = font.width(cs[j]);
+            sum += ws[j];
+            i += Character.charCount(cp);
+        }
+        t.charW = ws;
+        t.charSum = sum;
+        t.chars = cs;
     }
 
     public static float asc(String face) {
@@ -190,19 +259,10 @@ public final class Ui {
         float px = size * k;
         int sz = pick(face, px);
         float scale = px / sz;
-        var font = Minecraft.getInstance().font;
-        float w;
-        if (letterSpacing == 0) w = font.width(comp(face, sz, text)) * scale;
-        else {
-            w = 0;
-            for (int i = 0; i < text.length(); ) {
-                int cp = text.codePointAt(i);
-                String ch = new String(Character.toChars(cp));
-                w += font.width(comp(face, sz, ch)) * scale + letterSpacing * px;
-                i += Character.charCount(cp);
-            }
-        }
-        return w / k;
+        Txt t = txt(face, sz, text);
+        if (letterSpacing == 0) return wholeW(t) * scale / k;
+        letters(t, face, sz, text);
+        return (t.charSum * scale + t.chars.length * letterSpacing * px) / k;
     }
 
     public static float width(String face, String text, float size) {
@@ -221,23 +281,20 @@ public final class Ui {
         float a = asc(face), d = desc(face);
         float lh = lineHeight > 0 ? lineHeight : a + d;
         float baseline = y + (lh * size - (a + d) * size) / 2f + a * size;
-        var font = Minecraft.getInstance().font;
+        Txt t = txt(face, sz, text);
         Gfx.pose().pushMatrix();
         Gfx.pose().translate(Math.round(x * k), Math.round(baseline * k));
         if (Math.abs(scale - 1f) > 0.002f) Gfx.pose().scale(scale, scale);
         float w;
         if (letterSpacing == 0) {
-            Component c = comp(face, sz, text);
-            Gfx.text(c, 0, -7, argb);
-            w = font.width(c) * scale;
+            Gfx.text(t.whole, 0, -7, argb);
+            w = wholeW(t) * scale;
         } else {
-            float cx = 0;
-            for (int i = 0; i < text.length(); ) {
-                int cp = text.codePointAt(i);
-                Component c = comp(face, sz, new String(Character.toChars(cp)));
-                Gfx.text(c, Math.round(cx), -7, argb);
-                cx += font.width(c) + letterSpacing * px / scale;
-                i += Character.charCount(cp);
+            letters(t, face, sz, text);
+            float cx = 0, gap = letterSpacing * px / scale;
+            for (int i = 0; i < t.chars.length; i++) {
+                Gfx.text(t.chars[i], Math.round(cx), -7, argb);
+                cx += t.charW[i] + gap;
             }
             w = cx * scale;
         }

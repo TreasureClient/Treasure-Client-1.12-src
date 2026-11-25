@@ -199,7 +199,7 @@ public class ModMenuScreen extends TCScreen {
             // the accent bar from the screen edge
             float bw = viewBar[i].target(active ? Ui.vw * 0.05f - 10 + i * Ui.vw * 0.03f : 0).get();
             if (bw > 0.5f) Ui.rect(0, y + itemH / 2 - 1.5f, bw, 3, Theme.alpha(th.a1(), p));
-            Ui.mono(String.format("%02d", i + 1), ix + slide, y + Ui.vh * 0.012f + Ui.vh * 0.008f, ls,
+            Ui.mono((i + 1 < 10 ? "0" : "") + (i + 1), ix + slide, y + Ui.vh * 0.012f + Ui.vh * 0.008f, ls,
                 Theme.alpha(active ? th.a1() : Theme.INK_DIM, p), .06f);
             float shift = viewShift[i].target(active ? 14 : 0).get();
             float op = active ? 1 : hover ? .75f : .42f;
@@ -661,7 +661,21 @@ public class ModMenuScreen extends TCScreen {
         return t.stripTrailing() + "…";
     }
 
+    private record WrapKey(String face, String text, float size, float ls, int maxW, float k) {}
+    private static final java.util.HashMap<WrapKey, List<String>> WRAPS = new java.util.HashMap<>();
+
+    /** Splits text into lines that fit (remembered: the menus ask for the same text every frame). */
     static List<String> wrap(String face, String text, float size, float ls, float maxW) {
+        WrapKey key = new WrapKey(face, text, size, ls, Math.round(maxW), Ui.k);
+        List<String> got = WRAPS.get(key);
+        if (got != null) return got;
+        if (WRAPS.size() > 400) WRAPS.clear();
+        got = List.copyOf(wrapNow(face, text, size, ls, maxW));
+        WRAPS.put(key, got);
+        return got;
+    }
+
+    private static List<String> wrapNow(String face, String text, float size, float ls, float maxW) {
         List<String> out = new ArrayList<>();
         for (String para : text.split("\n")) {
             StringBuilder line = new StringBuilder();

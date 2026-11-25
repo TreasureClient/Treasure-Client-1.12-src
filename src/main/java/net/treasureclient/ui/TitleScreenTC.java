@@ -164,7 +164,7 @@ public class TitleScreenTC extends TCScreen {
             }
             float b = bar[i].target(on ? Ui.vw * 0.05f - 10 + i * Ui.vw * 0.03f : 0).get();
             if (b > 0.5f) Ui.rect(0, y + dy + ih / 2 - 1.5f, b, 3, Theme.alpha(th.a1(), alpha));
-            Ui.mono(String.format("%02d", i + 1), ix + dx, y + dy + Ui.vh * 0.015f + Ui.vh * 0.009f, 11.5f, Theme.alpha(on ? th.a1() : Theme.INK_DIM, alpha), .06f);
+            Ui.mono((i + 1 < 10 ? "0" : "") + (i + 1), ix + dx, y + dy + Ui.vh * 0.015f + Ui.vh * 0.009f, 11.5f, Theme.alpha(on ? th.a1() : Theme.INK_DIM, alpha), .06f);
             float s = shift[i].target(on ? (leaving != null && i == leavingIndex ? 30 : 18) : 0).get();
             float op = dim[i].target(anyOn && !on ? .45f : 1).get();
             String word = it[1].toUpperCase(Locale.ROOT);

@@ -46,7 +46,7 @@ processResources {
     inputs.property 'minecraft_version', mc
     inputs.property 'java', cfg.java
     filesMatching('fabric.mod.json') { expand 'version': project.version, 'minecraft_version': mc, 'java': cfg.java }
-    filesMatching('treasureclient.mixins.json') { expand 'java': cfg.java }
+    filesMatching(['treasureclient.mixins.json', 'treasureclient.boosts.mixins.json']) { expand 'java': cfg.java }
 }
 
 java {

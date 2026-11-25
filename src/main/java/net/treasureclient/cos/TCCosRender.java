@@ -92,12 +92,25 @@ public final class TCCosRender {
                     }
                     elytra = defaultElytra;
                 }
-                state.skin = new PlayerSkin(s.body(), new ClientAsset.ResourceTexture(cape, cape), elytra, s.model(), s.secure());
+                state.skin = new PlayerSkin(s.body(), capeAsset(cape), elytra, s.model(), s.secure());
             }
         }
     }
 
     // ------------------------------------------------------------------ cape textures
+
+    private static final Map<Identifier, ClientAsset.Texture> ASSETS = new HashMap<>();
+
+    /** The handle the player renderer wants for a cape texture (one per cape, not a new one each frame). */
+    private static ClientAsset.Texture capeAsset(Identifier cape) {
+        ClientAsset.Texture t = ASSETS.get(cape);
+        if (t == null) {
+            if (ASSETS.size() > 64) ASSETS.clear();
+            t = new ClientAsset.ResourceTexture(cape, cape);
+            ASSETS.put(cape, t);
+        }
+        return t;
+    }
 
     private static final class Cape {
         TCCapeArt.Builder builder;
@@ -194,7 +207,10 @@ public final class TCCosRender {
             }
             if (oldKey == null) return;
             Cape c = CAPES.remove(oldKey);
-            if (c != null && c.id != null) Minecraft.getInstance().getTextureManager().release(c.id);
+            if (c != null && c.id != null) {
+                Minecraft.getInstance().getTextureManager().release(c.id);
+                ASSETS.remove(c.id);
+            }
         }
     }
 
