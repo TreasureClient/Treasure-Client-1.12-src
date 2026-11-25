@@ -311,6 +311,26 @@ public final class Ui {
         return text(face, text, x, baselineY - asc(face) * size, size, argb, letterSpacing, 0);
     }
 
+    /**
+     * A small mono button (Back, Edit HUD, Close) with a dark backing and a thin outline, so it reads on
+     * any background picture. (x, y) is its top-left; it is lineH + 8 tall. Returns its width.
+     */
+    public static float chip(String label, float x, float y, float size, boolean hover, int accent, float alpha) {
+        float w = chipW(label, size), h = chipH(size);
+        round(x, y, w, h, 4, Theme.alpha(hover ? accent : 0x59ECEBE6, alpha));
+        round(x + 1, y + 1, w - 2, h - 2, 3, Theme.alpha(hover ? 0xF0141418 : 0xD90C0C0F, alpha));
+        mono(label, x + 10, y + 4, size, Theme.alpha(Theme.INK, alpha), .06f);
+        return w;
+    }
+
+    public static float chipW(String label, float size) {
+        return width(MONO, label.toUpperCase(java.util.Locale.ROOT), size, .06f) + 20;
+    }
+
+    public static float chipH(float size) {
+        return lineH(MONO, size) + 8;
+    }
+
     /** The small uppercase mono labels used all over the 1.5 look. */
     public static float mono(String text, float x, float y, float size, int argb, float letterSpacing) {
         return text(MONO, text.toUpperCase(), x, y, size, argb, letterSpacing, 0);

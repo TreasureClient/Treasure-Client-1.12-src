@@ -233,10 +233,10 @@ public class CosmeticsScreen extends TCScreen {
         Ui.image(Ui.chest(), x, y, lh * 91f / 92f, lh, 91, 92, Theme.alpha(0xFFFFFFFF, p));
         Ui.text(Ui.BRAND, "TREASURE CLIENT", x + lh * 91f / 92f + 10, y + (lh - Ui.lineH(Ui.BRAND, 15)) / 2, 15, Theme.alpha(Theme.INK, p), .14f, 0);
         String back = "← Back";
-        float s = 11.5f, w = Ui.width(Ui.MONO, back.toUpperCase(Locale.ROOT), s, .06f), h = Ui.lineH(Ui.MONO, s) + 8;
+        float s = 11.5f, w = Ui.chipW(back, s), h = Ui.chipH(s);
         float bx = Ui.vw * 0.95f - w, by = y + (lh - h) / 2;
         boolean hover = Ui.in(mx, my, bx, by, w, h);
-        Ui.mono(back, bx, by + 4, s, Theme.alpha(hover ? Theme.INK : Theme.INK_DIM, p), .06f);
+        Ui.chip(back, bx, by, s, hover, Theme.current().a1(), p);
         hits.add(new Object[]{new float[]{bx, by, w, h}, (Runnable) this::onClose});
     }
 

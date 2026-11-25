@@ -168,10 +168,10 @@ public class ModMenuScreen extends TCScreen {
     /** A small mono link in the head row; returns its width. */
     private float link(String label, float x, float rowY, float mx, float my, float alpha, Runnable onClick) {
         float s = 11.5f, h = Ui.lineH(Ui.MONO, s) + 8;
-        float w = Ui.width(Ui.MONO, label.toUpperCase(Locale.ROOT), s, .06f);
+        float w = Ui.chipW(label, s);
         float y = rowY + (24 - h) / 2;
         boolean hover = Ui.in(mx, my, x, y, w, h);
-        Ui.mono(label, x, y + 4, s, Theme.alpha(hover ? Theme.INK : Theme.INK_DIM, alpha), .06f);
+        Ui.chip(label, x, y, s, hover, Theme.current().a1(), alpha);
         hits.add(new Object[]{new float[]{x, y, w, h}, onClick});
         return w;
     }
@@ -355,6 +355,10 @@ public class ModMenuScreen extends TCScreen {
             Ui.text(Ui.SEMI, d.name(), cx, ty, 16, Theme.alpha(Theme.INK, p));
             Ui.text(Ui.TEXT, ellipsis(Ui.TEXT, d.desc(), 13, textEnd - cx), cx, ty + nameH + 3, 13, Theme.alpha(Theme.INK_DIM, p));
             final ModDef def = d;
+            // the whole row turns the mod on/off; right click opens its settings. Added before the gear,
+            // because later entries are checked first and the gear sits on top of the row.
+            hits.add(new Object[]{new float[]{x0, Math.max(top, y), x1 - x0, rh - 1}, (Runnable) () -> toggle(def),
+                d.hasSettings() ? (Runnable) () -> openSettings(def) : null});
             if (d.hasSettings()) {
                 boolean gh = Ui.in(mx, my, gearX, gearY, 28, 28) && inList;
                 float rot = anim(gears, d.key(), 0, 300).target(gh ? 1 : 0).get();
@@ -364,7 +368,6 @@ public class ModMenuScreen extends TCScreen {
             }
             boolean swHover = inList && Ui.in(mx, my, swX, swY, 40, 22);
             drawSwitch(th, d.key(), on, swX, swY, swHover, p);
-            hits.add(new Object[]{new float[]{x0, Math.max(top, y), x1 - x0, rh - 1}, (Runnable) () -> toggle(def)});
         }
         Ui.unclip();
     }
@@ -442,9 +445,14 @@ public class ModMenuScreen extends TCScreen {
             Ui.rect(cx, cy, bw, ch, Theme.alpha(border, p));
             Ui.rect(cx + cw - bw, cy, bw, ch, Theme.alpha(border, p));
             final String id = t.id();
+            final Theme rt = t;
             hits.add(new Object[]{new float[]{cx, cy, cw, ch}, (Runnable) () -> {
                 Config.get().theme = id;
                 Config.get().markDirty();
+                playClick();
+            }, (Runnable) () -> {
+                themeSub = rt;
+                subAt = System.nanoTime();
                 playClick();
             }});
             // the settings gear in the top corner (added after the card, so it's checked first)
@@ -469,9 +477,9 @@ public class ModMenuScreen extends TCScreen {
         float ws = wordSize();
         float backS = 11.5f;
         float backY = y + ws * 0.72f - Ui.lineH(Ui.MONO, backS) * 0.75f;
-        float bw = Ui.width(Ui.MONO, "\u2039 BACK", backS, .06f);
+        float bw = Ui.chipW("\u2039 Back", backS);
         boolean bh = Ui.in(mx, my, x0, backY - 4, bw, Ui.lineH(Ui.MONO, backS) + 8);
-        Ui.mono("\u2039 Back", x0, backY, backS, Theme.alpha(bh ? Theme.INK : Theme.INK_DIM, p), .06f);
+        Ui.chip("\u2039 Back", x0, backY - 4, backS, bh, th.a1(), p);
         hits.add(new Object[]{new float[]{x0, backY - 4, bw, Ui.lineH(Ui.MONO, backS) + 8}, (Runnable) () -> {
             themeSub = null;
             listAnimAt = System.nanoTime();
@@ -529,9 +537,9 @@ public class ModMenuScreen extends TCScreen {
         float titleH = ws;
         float backS = 11.5f;
         float backY = y + titleH * 0.72f - Ui.lineH(Ui.MONO, backS) * 0.75f;
-        float bw = Ui.width(Ui.MONO, "‹ BACK", backS, .06f);
+        float bw = Ui.chipW("\u2039 Back", backS);
         boolean bh = Ui.in(mx, my, x0, backY - 4, bw, Ui.lineH(Ui.MONO, backS) + 8);
-        Ui.mono("‹ Back", x0, backY, backS, Theme.alpha(bh ? Theme.INK : Theme.INK_DIM, p), .06f);
+        Ui.chip("\u2039 Back", x0, backY - 4, backS, bh, th.a1(), p);
         hits.add(new Object[]{new float[]{x0, backY - 4, bw, Ui.lineH(Ui.MONO, backS) + 8}, (Runnable) () -> {
             sub = null;
             listAnimAt = System.nanoTime();
@@ -694,6 +702,22 @@ public class ModMenuScreen extends TCScreen {
     // ------------------------------------------------------------------ input
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
+        if (e.button() == 1) { // right click: a mod's or theme's settings
+            float mx = Ui.mx(e.x()), my = Ui.my(e.y());
+            for (int i = hits.size() - 1; i >= 0; i--) {
+                Object[] hit = hits.get(i);
+                float[] r = (float[]) hit[0];
+                if (Ui.in(mx, my, r[0], r[1], r[2], r[3])) {
+                    if (hit.length > 2 && hit[2] != null) {
+                        searchFocus = false;
+                        ((Runnable) hit[2]).run();
+                        return true;
+                    }
+                    if (hit.length <= 2) return true; // a button on top: right click does nothing there
+                }
+            }
+            return true;
+        }
         if (e.button() != 0) return true;
         float mx = Ui.mx(e.x()), my = Ui.my(e.y());
         pressed = true;
