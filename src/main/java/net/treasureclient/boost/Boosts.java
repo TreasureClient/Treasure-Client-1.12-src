@@ -58,6 +58,16 @@ public final class Boosts {
         "Name tags and the score under names are built once and reused until they change, instead of every frame",
         List.of(), "NameTagEntityMixin", "NameTagMixin", "NameTagScoreMixin", "NameTagWidthMixin");
 
+    /** Phase 3: the sidebar scoreboard's lines kept until a score, objective or team changes (see HudLists). */
+    public static final int SIDEBAR = add("sidebarCache", "Sidebar Cache",
+        "The scoreboard on the right is sorted and built only when a score or team changes, instead of every frame",
+        List.of(), "ScoreboardChangeMixin", "SidebarMixin");
+
+    /** Phase 3: the tab list's sorted players, names and header/footer kept until they change (see HudLists). */
+    public static final int TAB_LIST = add("tabListCache", "Tab List Cache",
+        "While you hold Tab, players are sorted and their names built only when the list or a team changes",
+        List.of(), "ScoreboardChangeMixin", "PlayerListChangeMixin", "TabListMixin");
+
     static {
         refresh();
     }
@@ -135,7 +145,7 @@ public final class Boosts {
 
     /** The boost mixins to apply in this game: built for this version and not stepped aside. */
     static List<String> mixinsToApply() {
-        List<String> out = new ArrayList<>();
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>(); // two boosts can share a mixin
         for (Boost b : ALL) {
             if (installedFrom(b.yieldTo()) != null) {
                 System.out.println("[Treasure Client] boost \"" + b.name() + "\" steps aside for " + installedFrom(b.yieldTo()));
@@ -143,7 +153,7 @@ public final class Boosts {
             }
             for (String m : b.mixins()) if (mixinExists(m)) out.add(m);
         }
-        return out;
+        return new ArrayList<>(out);
     }
 
     private static boolean hasAnyMixin(Boost b) {
