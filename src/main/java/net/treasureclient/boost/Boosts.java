@@ -68,6 +68,11 @@ public final class Boosts {
         "While you hold Tab, players are sorted and their names built only when the list or a team changes",
         List.of(), "ScoreboardChangeMixin", "PlayerListChangeMixin", "TabListMixin");
 
+    /** Phase 4: rain or snow per column remembered until chunks change (see RainCache). */
+    public static final int RAIN = add("rainCache", "Rain Cache",
+        "While it rains, whether each spot around you gets rain or snow is worked out once instead of every frame",
+        List.of("moreculling"), "ChunkChangeMixin", "RainMixin");
+
     static {
         refresh();
     }
