@@ -73,6 +73,11 @@ public final class Boosts {
         "While it rains, whether each spot around you gets rain or snow is worked out once instead of every frame",
         List.of("moreculling"), "ChunkChangeMixin", "RainMixin");
 
+    /** Phase 5: glowing sign text's outline kept until the sign or the fonts change (see GlowText). */
+    public static final int GLOW_TEXT = add("glowText", "Glowing Sign Text",
+        "Glowing signs' outlined text is built once and drawn again, instead of being built 9 times over every frame",
+        List.of(), "FontChangeMixin", "GlowTextMixin");
+
     static {
         refresh();
     }
