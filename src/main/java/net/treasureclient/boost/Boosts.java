@@ -78,6 +78,11 @@ public final class Boosts {
         "Glowing signs' outlined text is built once and drawn again, instead of being built 9 times over every frame",
         List.of(), "FontChangeMixin", "GlowTextMixin");
 
+    /** Menus outside a world run at the player's Max Framerate instead of Minecraft's 60 (see MenuFpsMixin). */
+    public static final int MENU_FPS = add("menuFps", "Full Menu Frame Rate",
+        "Menus outside a world run at your Max Framerate instead of being held to 60 FPS",
+        List.of(), "MenuFpsMixin");
+
     static {
         refresh();
     }
