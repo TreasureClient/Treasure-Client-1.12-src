@@ -46,10 +46,12 @@ public final class Boosts {
     }
 
     // ------------------------------------------------------------------ the boosts
-    // Phase 1 onwards adds them here, for example:
-    //   public static final int PACKETS = add("packetBudget", "Smooth Packets",
-    //       "Spreads big bursts of server data over a few frames instead of one long freeze",
-    //       List.of(), "PacketBudgetMixin");
+    // Each one: its number = add(id, name, description, mods it steps aside for, its mixins).
+
+    /** Phase 1: big bursts of server data spread over a few frames (see SmoothPackets). */
+    public static final int SMOOTH_PACKETS = add("smoothPackets", "Smooth Packets",
+        "Big bursts of server data (joining, teleports, minigame starts) are spread over a few frames instead of freezing one",
+        List.of(), "SmoothPacketsMixin");
 
     static {
         refresh();

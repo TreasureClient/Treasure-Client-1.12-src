@@ -32,6 +32,7 @@ public final class TreasureClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        net.treasureclient.boost.SmoothPackets.init();
         V.registerKey(MENU_KEY);
         V.registerKey(ZOOM_KEY);
         V.registerHud(Identifier.fromNamespaceAndPath("treasureclient", "hud"), Hud::render);
