@@ -53,6 +53,11 @@ public final class Boosts {
         "Big bursts of server data (joining, teleports, minigame starts) are spread over a few frames instead of freezing one",
         List.of(), "SmoothPacketsMixin");
 
+    /** Phase 2: name tags and the score under names kept until they change (see NameTags). */
+    public static final int NAME_TAGS = add("nameTags", "Name Tag Cache",
+        "Name tags and the score under names are built once and reused until they change, instead of every frame",
+        List.of(), "NameTagEntityMixin", "NameTagMixin", "NameTagScoreMixin", "NameTagWidthMixin");
+
     static {
         refresh();
     }
