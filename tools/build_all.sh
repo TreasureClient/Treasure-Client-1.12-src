@@ -7,6 +7,8 @@ for v in ${@:-1.21.11 26.1 26.1.2 26.2 26.3}; do
   if ./gradlew build -Pmc=$v --no-daemon > build_$v.log 2>&1; then
     j=$(ls build/libs/*.jar 2>/dev/null | grep -v sources | head -1)
     cp "$j" builds/treasure-client-1.5.0+$v.jar && echo "$v OK" && rm -f build_$v.log
+    # the owner's jars folder always gets the newest build too
+    mkdir -p "$HOME/Treasure-Client-mod-jars" && cp builds/treasure-client-1.5.0+$v.jar "$HOME/Treasure-Client-mod-jars/"
   else
     echo "$v FAILED (see build_$v.log)"
   fi
