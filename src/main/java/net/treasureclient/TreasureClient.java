@@ -39,6 +39,7 @@ public final class TreasureClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             Config.get().tick();
+            net.treasureclient.core.KeyFixer.tick(mc);
             TCShare.tick();
             Trackers.tick();
             Toggles.tick(mc);

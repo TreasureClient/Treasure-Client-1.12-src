@@ -32,6 +32,8 @@ public final class Config {
     public String cosmetics = "";
     /** The cosmetics server's key for each name you've shared under (so nobody else can change it). */
     public Map<String, String> cosmeticKeys = new LinkedHashMap<>();
+    /** Key bindings the key clash fixer has already looked at (it only checks each one once). */
+    public java.util.List<String> keysChecked = new java.util.ArrayList<>();
 
     private transient boolean dirty;
     private transient long dirtyAt;
@@ -58,6 +60,7 @@ public final class Config {
                     if (c.theme == null) c.theme = "normal";
                     if (c.cosmetics == null) c.cosmetics = "";
                     if (c.cosmeticKeys == null) c.cosmeticKeys = new LinkedHashMap<>();
+                    if (c.keysChecked == null) c.keysChecked = new java.util.ArrayList<>();
                     return c;
                 }
             } catch (Exception e) {
