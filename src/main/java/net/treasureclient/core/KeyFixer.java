@@ -29,7 +29,7 @@ public final class KeyFixer {
     private static boolean done;
 
     /** Raise this to run the full clean-up again for everyone. */
-    private static final int FULL = 3;
+    private static final int FULL = 4;
 
     /** Minecraft keys that are rarely used: they give way to Treasure Client's (e.g. Save Hotbar on C vs Zoom). */
     private static final Set<String> MINOR_VANILLA = Set.of("key.saveToolbarActivator", "key.loadToolbarActivator",
