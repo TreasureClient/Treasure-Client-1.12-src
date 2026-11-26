@@ -1,0 +1,82 @@
+Treasure Pack 1.0.0 for Minecraft 26.1 (Fabric Loader 0.20.1)
+
+Performance (34):
+  async-pack-scan                  26.1.0                                   beta
+  asynclogger                      2.2.3+26.1.2-fabric                      release
+  badoptimizations                 2.4.1                                    release
+  better-block-entities            1.3.4+mc26.1.2                           release
+  c2me-fabric                      0.3.7+alpha.0.61+26.1                    alpha
+  clumps                           26.1.0.2                                 release
+  dynamic-fps                      3.11.7                                   release
+  entityculling                    1.12.2                                   release
+  fast-ip-ping                     v1.0.12-mc26.1.2                         release
+  fastquit                         3.1.4+mc26.1.x                           release
+  ferrite-core                     9.0.0-fabric                             release
+  forcecloseworldloadingscreen     2.3.5                                    release
+  immediatelyfast                  1.15.3+26.1-fabric                       release
+  ixeris                           4.6.11+26.1.2-fabric                     release
+  krypton                          0.3.0                                    release
+  ksyxis                           1.4.6                                    release
+  language-reload                  1.7.8+26.1.2                             release
+  lithium                          mc26.1.2-0.24.7-fabric                   release
+  modernfix-mvus                   5.27.19-build.1                          release
+  moreculling                      1.7.4                                    release
+  packet-fixer                     3.3.5                                    release
+  particle-core                    0.3.2+26.1                               release
+  quick-pack                       fabric-1.3.2+26.1.2                      release
+  resourcepackcached               1.3.0-fabric                             release
+  rrls                             5.2.6+mc26.1                             beta
+  rsls                             1.2.3                                    release
+  scalablelux                      0.2.0+fabric.2b63825                     release
+  serverpingerfixer                1.1.1                                    release
+  sodium                           mc26.1.1-0.8.9-fabric                    release
+  sodium-extra                     mc26.1.1-0.8.7+fabric                    release
+  spark                            1.10.187-fabric                          release
+  structure-layout-optimizer       1.1.5+26.1-fabric                        release
+  vmp-fabric                       0.2.0+beta.7.232+26.1                    alpha
+  zfastnoise                       1.1.1+26.1                               release
+
+Quality of life (11):
+  appleskin                        3.0.10+mc26.1.2                          release
+  betterf3                         18.0.2                                   release
+  bobby                            5.2.13.1+mc26.1                          release
+  chat-heads                       1.3.3                                    release
+  controlling                      26.1.0.3                                 release
+  cubes-without-borders            5.0.0+26.1                               release
+  mouse-tweaks                     26.1-2.31-fabric                         release
+  no-chat-reports                  Fabric-MC26.1-v2.19.3                    release
+  reeses-sodium-options            mc26.1.2-2.2.0+fabric                    release
+  searchables                      1.0.4                                    release
+  shulkerboxtooltip                5.2.18+26.1-fabric                       release
+
+Optional extras (10):
+  3dskinlayers                     1.11.4                                   release
+  continuity                       3.0.1-beta.2+26.1                        release
+  distanthorizons                  3.3.2-26.1.2                             release
+  entity-model-features            3.3.12-fabric-26.1                       release
+  entitytexturefeatures            7.2.7-fabric-26.1                        release
+  jade                             26.1.9+fabric                            release
+  lambdynamiclights                4.11.2+26.1.2                            release
+  not-enough-animations            1.12.7                                   release
+  xaeros-minimap                   fabric-26.1.2-26.6.2                     release
+  xaeros-world-map                 fabric-26.1.2-1.47.2                     release
+
+Libraries (7):
+  cloth-config                     26.1.154+fabric                          release  [needed by moreculling]
+  fabric-api                       0.155.3+26.1.2                           release  [needed by entityculling]
+  fabric-language-kotlin           1.14.2+kotlin.2.4.21                     release  [needed by particle-core]
+  fzzy-config                      0.7.7+26.1                               release  [needed by particle-core]
+  libjf                            26.1.2                                   release  [needed by async-pack-scan]
+  resourceful-config               4.0.1                                    release  [needed by structure-layout-optimizer]
+  zconfig                          1.0.0+26.x                               release  [needed by zfastnoise]
+
+Not in this version (no Fabric build yet):
+  debugify: no Fabric build for 26.1
+  notenoughcrashes: no Fabric build for 26.1
+
+Optional extras left out because they clash with the pack on this version:
+  iris: distanthorizons (distanthorizons) breaks iris <1.11.2 (pack has 1.10.9+mc26.1.1)
+
+Older file taken so it works with the rest of the pack: better-block-entities (1.3.4+mc26.1.2), distanthorizons (3.3.2-26.1.2), reeses-sodium-options (mc26.1.2-2.2.0+fabric)
+
+Checked: every mod's own rules are met.

@@ -1,0 +1,67 @@
+# Treasure Pack: one Modrinth project per line: <slug> <group>
+# groups: perf = performance, qol = quality of life, opt = optional extra (off unless ticked when installing)
+# Libraries the mods need are added by tools/build_pack.py on its own.
+
+# ---- performance
+sodium perf
+sodium-extra perf
+immediatelyfast perf
+entityculling perf
+moreculling perf
+particle-core perf
+better-block-entities perf
+lithium perf
+ferrite-core perf
+modernfix-mvus perf
+badoptimizations perf
+clumps perf
+c2me-fabric perf
+scalablelux perf
+zfastnoise perf
+structure-layout-optimizer perf
+vmp-fabric perf
+krypton perf
+packet-fixer perf
+fast-ip-ping perf
+serverpingerfixer perf
+ksyxis perf
+fastquit perf
+forcecloseworldloadingscreen perf
+dynamic-fps perf
+language-reload perf
+rrls perf
+quick-pack perf
+async-pack-scan perf
+resourcepackcached perf
+ixeris perf
+rsls perf
+asynclogger perf
+spark perf
+
+# ---- quality of life
+appleskin qol
+mouse-tweaks qol
+controlling qol
+searchables qol
+shulkerboxtooltip qol
+chat-heads qol
+no-chat-reports qol
+betterf3 qol
+cubes-without-borders qol
+bobby qol
+reeses-sodium-options qol
+debugify qol
+notenoughcrashes qol
+
+# ---- optional extras
+iris opt
+distanthorizons opt
+xaeros-minimap opt
+xaeros-world-map opt
+lambdynamiclights opt
+entity-model-features opt
+entitytexturefeatures opt
+continuity opt
+3dskinlayers opt
+not-enough-animations opt
+jade opt

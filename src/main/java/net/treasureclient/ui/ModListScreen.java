@@ -38,6 +38,8 @@ public class ModListScreen extends TCScreen {
     private final long openedAt = System.nanoTime();
     private long pickedAt = System.nanoTime();
     private final List<Object[]> hits = new ArrayList<>();
+    private String failedId = "";
+    private long failedAt;
 
     public ModListScreen(Screen parent) {
         super(Component.literal("Mods"));
@@ -57,6 +59,21 @@ public class ModListScreen extends TCScreen {
             int ra = rank(a.id), rb = rank(b.id);
             return ra != rb ? Integer.compare(ra, rb) : a.name.compareToIgnoreCase(b.name);
         });
+    }
+
+    private static boolean hasSettings(Entry e) {
+        return e.id.equals("treasureclient") || ModSettings.has(e.id);
+    }
+
+    private void openSettings(Entry e) {
+        if (e.id.equals("treasureclient")) {
+            V.open(new ModMenuScreen(this));
+            return;
+        }
+        if (!ModSettings.open(e.id, this)) {
+            failedId = e.id;
+            failedAt = System.currentTimeMillis();
+        }
     }
 
     private static int rank(String id) {
@@ -169,7 +186,7 @@ public class ModListScreen extends TCScreen {
                         selected = idx;
                         pickedAt = System.nanoTime();
                     }
-                }});
+                }, hasSettings(e) ? (Runnable) () -> openSettings(e) : null});
             }
         }
         Ui.unclip();
@@ -191,6 +208,17 @@ public class ModListScreen extends TCScreen {
         for (String line : ModMenuScreen.wrap(Ui.MONO, meta, 11.5f, .04f, w)) {
             Ui.mono(line, x0, y, 11.5f, Theme.alpha(th.a1(), p), .04f);
             y += 11.5f * 1.7f;
+        }
+        if (hasSettings(e)) {
+            String label = "Settings ›";
+            float s = 11.5f, cw = Ui.chipW(label, s), ch = Ui.chipH(s);
+            boolean hover = Ui.in(mx, my, x0, y + 4, cw, ch);
+            Ui.chip(label, x0, y + 4, s, hover, th.a1(), p);
+            hits.add(new Object[]{new float[]{x0, y + 4, cw, ch}, (Runnable) () -> openSettings(e)});
+            if (e.id.equals(failedId) && System.currentTimeMillis() - failedAt < 6000)
+                Ui.text(Ui.TEXT, "Its settings page couldn't open (the game log says why).", x0 + cw + 12,
+                    y + 4 + (ch - Ui.lineH(Ui.TEXT, 13)) / 2, 13, Theme.alpha(0xFFE07A6E, p));
+            y += ch + 8;
         }
         y += 14;
         String desc = e.description.isEmpty() ? "No description." : e.description;
@@ -249,12 +277,14 @@ public class ModListScreen extends TCScreen {
     // ------------------------------------------------------------------ input
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
-        if (e.button() != 0) return true;
+        if (e.button() != 0 && e.button() != 1) return true;
         float mx = Ui.mx(e.x()), my = Ui.my(e.y());
         for (int i = hits.size() - 1; i >= 0; i--) {
-            float[] r = (float[]) hits.get(i)[0];
+            Object[] h = hits.get(i);
+            float[] r = (float[]) h[0];
             if (Ui.in(mx, my, r[0], r[1], r[2], r[3])) {
-                ((Runnable) hits.get(i)[1]).run();
+                if (e.button() == 0) ((Runnable) h[1]).run();
+                else if (h.length > 2 && h[2] != null) ((Runnable) h[2]).run();  // right click: the row's settings
                 return true;
             }
         }

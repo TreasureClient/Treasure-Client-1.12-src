@@ -1,0 +1,84 @@
+Treasure Pack 1.0.0 for Minecraft 1.21.11 (Fabric Loader 0.20.1)
+
+Performance (34):
+  async-pack-scan                  0.2.14                                   beta
+  asynclogger                      2.2.3+1.21.11-fabric                     release
+  badoptimizations                 2.4.1                                    release
+  better-block-entities            1.3.4+mc1.21.11                          release
+  c2me-fabric                      0.3.6.0.0                                release
+  clumps                           29.0.0.1                                 release
+  dynamic-fps                      3.11.6                                   release
+  entityculling                    1.12.2                                   release
+  fast-ip-ping                     v1.0.12-mc1.21.11-fabric                 release
+  fastquit                         3.1.3+mc1.21.11                          release
+  ferrite-core                     8.2.0-fabric                             release
+  forcecloseworldloadingscreen     2.3.4                                    release
+  immediatelyfast                  1.14.3+1.21.11-fabric                    release
+  ixeris                           4.6.11+1.21.11-fabric                    release
+  krypton                          0.2.10                                   release
+  ksyxis                           1.4.6                                    release
+  language-reload                  1.7.7+1.21.11                            release
+  lithium                          mc1.21.11-0.21.4-fabric                  release
+  modernfix-mvus                   5.26.3-build.2                           release
+  moreculling                      1.6.2                                    release
+  packet-fixer                     3.3.5                                    release
+  particle-core                    0.3.2+1.21.11                            release
+  quick-pack                       fabric-1.5.2+1.21.11                     release
+  resourcepackcached               1.3.0-fabric                             release
+  rrls                             5.1.15+mc1.21.11-fabric                  beta
+  rsls                             1.1.18                                   release
+  scalablelux                      0.1.6+fabric.c25518a                     release
+  serverpingerfixer                1.0.6                                    release
+  sodium                           mc1.21.11-0.8.14-fabric                  release
+  sodium-extra                     mc1.21.11-0.9.5+fabric                   release
+  spark                            1.10.170-fabric                          release
+  structure-layout-optimizer       1.1.5+1.21.11-fabric                     release
+  vmp-fabric                       0.2.0+beta.7.227+1.21.11                 alpha
+  zfastnoise                       1.1.2+1.21.11                            release
+
+Quality of life (13):
+  appleskin                        3.0.8+mc1.21.11                          release
+  betterf3                         17.0.0                                   release
+  bobby                            5.2.11.1+mc1.21.11                       release
+  chat-heads                       1.3.3                                    release
+  controlling                      29.0.1                                   release
+  cubes-without-borders            5.0.0+1.21.11.fabric                     release
+  debugify                         1.21.11+1.2                              release
+  mouse-tweaks                     1.21.11-2.30-fabric                      release
+  no-chat-reports                  Fabric-MC1.21.11-v2.18.3                 release
+  notenoughcrashes                 4.4.9+1.21.11-fabric                     release
+  reeses-sodium-options            mc1.21.11-2.2.4+fabric                   release
+  searchables                      1.0.4                                    release
+  shulkerboxtooltip                5.2.16+1.21.11-fabric                    release
+
+Optional extras (11):
+  3dskinlayers                     1.11.4                                   release
+  continuity                       3.0.1-beta.1+1.21.11                     release
+  distanthorizons                  3.3.3-1.21.11                            release
+  entity-model-features            3.3.12-fabric-1.21.11                    release
+  entitytexturefeatures            7.2.7-fabric-1.21.11                     release
+  iris                             1.10.8+1.21.11-fabric                    release
+  jade                             21.1.6+fabric                            release
+  lambdynamiclights                4.9.1+1.21.11                            release
+  not-enough-animations            1.12.7                                   release
+  xaeros-minimap                   fabric-1.21.11-26.6.2                    release
+  xaeros-world-map                 fabric-1.21.11-1.47.2                    release
+
+Libraries (9):
+  cloth-config                     21.11.153+fabric                         release  [needed by moreculling]
+  fabric-api                       0.141.6+1.21.11                          release  [needed by entityculling]
+  fabric-language-kotlin           1.14.2+kotlin.2.4.21                     release  [needed by particle-core]
+  forge-config-api-port            21.11.1                                  release  [needed by rrls]
+  fzzy-config                      0.7.7+1.21.11                            release  [needed by particle-core]
+  libjf                            3.19.12                                  release  [needed by async-pack-scan]
+  resourceful-config               3.11.3                                   release  [needed by structure-layout-optimizer]
+  yacl                             3.8.2+1.21.11-fabric                     release  [needed by debugify]
+  zconfig                          1.0.0+1.21.x                             release  [needed by zfastnoise]
+
+Every mod in the list has a build for this version.
+
+Notes:
+  c2me-fabric: its optional part c2me-opts-natives-math is skipped (needs java >=22)
+  zfastnoise: its optional part zfastnoise-ocl is skipped (needs java >=25)
+
+Checked: every mod's own rules are met.

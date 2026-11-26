@@ -1,0 +1,80 @@
+Treasure Pack 1.0.0 for Minecraft 26.3 (Fabric Loader 0.20.1)
+
+Performance (34):
+  async-pack-scan                  26.3.0                                   beta
+  asynclogger                      2.2.3+26.1.2-fabric                      release
+  badoptimizations                 2.4.1                                    release
+  better-block-entities            1.4.1+mc26.3                             release
+  c2me-fabric                      0.4.2-alpha.0.126+26.3                   alpha
+  clumps                           26.3.2                                   release
+  dynamic-fps                      3.11.10                                  release
+  entityculling                    1.12.2                                   release
+  fast-ip-ping                     v1.0.12-mc26.3                           release
+  fastquit                         3.1.5+mc26.2                             release
+  ferrite-core                     9.0.0-fabric                             release
+  forcecloseworldloadingscreen     2.3.7                                    release
+  immediatelyfast                  1.17.1+26.3-fabric                       release
+  ixeris                           4.6.11+26.3-fabric                       release
+  krypton                          0.3.2                                    release
+  ksyxis                           1.4.6                                    release
+  language-reload                  1.7.8+26.3                               release
+  lithium                          mc26.3-0.26.4-fabric                     release
+  modernfix-mvus                   5.27.20-build.2                          release
+  moreculling                      1.9.2                                    release
+  packet-fixer                     3.3.6                                    release
+  particle-core                    0.3.3+fix1+26.2                          release
+  quick-pack                       fabric-1.5.2+26.3                        release
+  resourcepackcached               1.3.0-fabric                             release
+  rrls                             5.3.0+mc26.3                             release
+  rsls                             1.4.1                                    release
+  scalablelux                      0.3.0-alpha.0.6+26.3                     alpha
+  serverpingerfixer                1.1.1                                    release
+  sodium                           mc26.3-0.9.3-fabric                      release
+  sodium-extra                     mc26.3-0.9.6+fabric                      release
+  spark                            1.10.187-fabric                          release
+  structure-layout-optimizer       1.1.5+26.3-fabric                        release
+  vmp-fabric                       0.2.0+beta.7.238+26.3                    alpha
+  zfastnoise                       1.1.3+26.3                               release
+
+Quality of life (13):
+  appleskin                        3.0.10+mc26.3                            release
+  betterf3                         20.0.0                                   release
+  bobby                            5.2.16+mc26.3                            release
+  chat-heads                       1.3.3                                    release
+  controlling                      26.3.4                                   release
+  cubes-without-borders            5.0.0+26.3                               release
+  debugify                         26.3.0.0                                 release
+  mouse-tweaks                     26.3-2.31-fabric                         release
+  no-chat-reports                  Fabric-MC26.3-v2.21.3                    release
+  notenoughcrashes                 4.5.1+26.3-fabric                        release
+  reeses-sodium-options            mc26.3-2.2.6+fabric                      release
+  searchables                      1.0.3                                    release
+  shulkerboxtooltip                5.4.3+26.3-fabric                        release
+
+Optional extras (10):
+  3dskinlayers                     1.11.4                                   release
+  continuity                       3.0.1+26.3                               release
+  distanthorizons                  3.3.4-26.3                               release
+  entity-model-features            3.3.12-fabric-26.3                       release
+  entitytexturefeatures            7.2.7-fabric-26.3                        release
+  jade                             26.3.5+fabric                            release
+  lambdynamiclights                4.13.0+26.3                              release
+  not-enough-animations            1.12.7                                   release
+  xaeros-minimap                   fabric-26.3-26.6.2                       release
+  xaeros-world-map                 fabric-26.3-1.47.2                       release
+
+Libraries (7):
+  cloth-config                     26.3.161+fabric                          release  [needed by moreculling]
+  fabric-api                       0.166.2+26.3                             release  [needed by entityculling]
+  fabric-language-kotlin           1.14.2+kotlin.2.4.21                     release  [needed by particle-core]
+  fzzy-config                      0.7.7+fix3+26.3                          release  [needed by particle-core]
+  libjf                            26.3.1                                   release  [needed by async-pack-scan]
+  resourceful-config               6.0.2                                    release  [needed by structure-layout-optimizer]
+  zconfig                          1.0.0+26.x                               release  [needed by zfastnoise]
+
+Every mod in the list has a build for this version.
+
+Optional extras left out because they clash with the pack on this version:
+  iris: none of its files for 26.3 work with the rest of the pack
+
+Checked: every mod's own rules are met.
