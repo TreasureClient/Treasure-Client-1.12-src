@@ -11,6 +11,7 @@
     "GuiEntityRendererMixin",
     "GuiSkinRendererMixin",
     "HurtCamMixin",
+    "KeyBackspaceMixin",
     "LivingRendererLayersAccessor",
     "LowFireMixin",
     "MenuBackgroundMixin",

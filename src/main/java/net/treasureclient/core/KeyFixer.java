@@ -12,20 +12,24 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Sorts out key clashes once, the first time the game starts with a key binding we haven't seen:
- * when two bindings are still on their default key and share it, the more important one keeps it.
- * The other moves to a free key if it matters (Minecraft's own keys, Treasure Client's, a few key
- * mod keys like opening Xaero's world map or Iris' shader menu) or is unbound if it's a minor extra.
+ * Sorts out key clashes: when two key bindings share a key, the more important one keeps it. The
+ * other moves to a free key if it matters (Minecraft's own keys, Treasure Client's, a few key mod
+ * keys like opening Xaero's world map or Iris' shader menu) or is unbound if it's a minor extra.
  *
- * It only ever touches bindings that are still on their default key and that it hasn't checked
- * before, so a key you set yourself is never changed, and a new mod's keys are checked once when
- * it's added (they give way to the keys you already have). F3 debug keys are left alone (they
- * only work while F3 is held). Every change is written to the game log.
+ * Once (and again whenever FULL goes up) it cleans up every clash, including keys that a modpack's
+ * settings or you set earlier (Minecraft only shows a clash in red when one side isn't on its
+ * default, so those are the ones you see). After that it only checks bindings it hasn't seen
+ * before, such as a mod you add later, and those give way to the keys you already have, so a key
+ * you set yourself after the clean-up is never changed. F3 debug keys are left alone (they only
+ * work while F3 is held). Every change is written to the game log as "Key clash fixed".
  */
 public final class KeyFixer {
     private KeyFixer() {}
 
     private static boolean done;
+
+    /** Raise this to run the full clean-up again for everyone. */
+    private static final int FULL = 3;
 
     /** Minecraft keys that are rarely used: they give way to Treasure Client's (e.g. Save Hotbar on C vs Zoom). */
     private static final Set<String> MINOR_VANILLA = Set.of("key.saveToolbarActivator", "key.loadToolbarActivator",
@@ -46,7 +50,9 @@ public final class KeyFixer {
 
     /** Called every client tick until it has run once. */
     public static void tick(Minecraft mc) {
-        if (done || mc.options == null) return;
+        // wait until the game has finished loading (every mod has added its keys by then)
+        // (the main menu or a world only appears once loading is over)
+        if (done || mc.options == null || (net.treasureclient.compat.V.screen() == null && mc.level == null)) return;
         done = true;
         try {
             fix(mc);
@@ -74,53 +80,83 @@ public final class KeyFixer {
     private static void fix(Minecraft mc) {
         Config cfg = Config.get();
         Set<String> seen = new HashSet<>(cfg.keysChecked);
-        // every non-debug binding that's bound, grouped by the key it's on
-        Map<String, List<KeyMapping>> byKey = new LinkedHashMap<>();
-        List<KeyMapping> all = new ArrayList<>();
-        for (KeyMapping k : mc.options.keyMappings) {
-            if (debug(k)) continue;
-            all.add(k);
-            if (!k.isUnbound()) byKey.computeIfAbsent(k.saveString(), x -> new ArrayList<>()).add(k);
-        }
-        Set<String> used = new HashSet<>(byKey.keySet());
+        boolean full = cfg.keyFixVersion < FULL;
+        KeyMapping[] all = mc.options.keyMappings;
         List<String> log = new ArrayList<>();
-        for (Map.Entry<String, List<KeyMapping>> e : byKey.entrySet()) {
-            List<KeyMapping> on = e.getValue();
-            if (on.size() < 2) continue;
-            // the ones we may move: still on their default key and never checked
-            List<KeyMapping> fresh = new ArrayList<>();
-            for (KeyMapping k : on) if (k.isDefault() && !seen.contains(k.getName())) fresh.add(k);
-            if (fresh.isEmpty()) continue;
-            boolean keeperSet = fresh.size() < on.size();  // a key you set (or already had) keeps its place
-            KeyMapping keep = null;
-            if (!keeperSet) {
-                for (KeyMapping k : fresh) if (keep == null || rank(k) < rank(keep)) keep = k;
-            }
-            for (KeyMapping k : fresh) {
-                if (k == keep) continue;
-                String was = k.getTranslatedKeyMessage().getString();
-                if (rank(k) <= 3) {
-                    String to = null;
-                    for (String s : SPARE) if (!used.contains("key.keyboard." + s)) { to = "key.keyboard." + s; break; }
-                    if (to != null) {
-                        k.setKey(InputConstants.getKey(to));
-                        used.add(to);
-                        log.add(k.getName() + ": " + was + " -> " + k.getTranslatedKeyMessage().getString());
-                        continue;
+        // a few rounds: a key that had to move can only land on a key nothing else uses, so one round
+        // is normally enough; the extra rounds are a safety net
+        for (int round = 0; round < 4; round++) {
+            Map<String, List<KeyMapping>> byKey = new LinkedHashMap<>();
+            for (KeyMapping k : all)
+                if (!k.isUnbound()) byKey.computeIfAbsent(k.saveString(), x -> new ArrayList<>()).add(k);
+            // every key anything is on, F3 debug keys included, counts as taken
+            Set<String> used = new HashSet<>(byKey.keySet());
+            int changes = 0;
+            for (List<KeyMapping> on : byKey.values()) {
+                if (on.size() < 2) continue;
+                List<KeyMapping> others = new ArrayList<>();  // everything but the F3 debug keys (those never move)
+                boolean hasDebug = false;
+                for (KeyMapping k : on) {
+                    if (debug(k)) hasDebug = true;
+                    else others.add(k);
+                }
+                if (others.isEmpty() || (others.size() == 1 && (!hasDebug || others.get(0).isDefault()))) continue;
+                // the ones we may move: all of them in the full clean-up, otherwise only new ones still on their default
+                List<KeyMapping> movable = new ArrayList<>();
+                for (KeyMapping k : others) if (full || (k.isDefault() && !seen.contains(k.getName()))) movable.add(k);
+                if (movable.isEmpty()) continue;
+                KeyMapping keep = null;
+                if (movable.size() == others.size()) {
+                    for (KeyMapping k : movable) {
+                        // next to an F3 debug key only a key on its default may stay (Minecraft shows the rest in red)
+                        if (hasDebug && !k.isDefault()) continue;
+                        if (keep == null || rank(k) < rank(keep) || (rank(k) == rank(keep) && !k.isDefault() && keep.isDefault()))
+                            keep = k;
                     }
                 }
-                k.setKey(InputConstants.UNKNOWN);
-                log.add(k.getName() + ": " + was + " -> unbound");
+                for (KeyMapping k : movable) {
+                    if (k == keep) continue;
+                    String was = k.getTranslatedKeyMessage().getString();
+                    changes++;
+                    if (rank(k) <= 3) {
+                        String to = null;
+                        for (String sp : SPARE) if (!used.contains("key.keyboard." + sp)) { to = "key.keyboard." + sp; break; }
+                        if (to != null) {
+                            k.setKey(InputConstants.getKey(to));
+                            used.add(to);
+                            log.add(k.getName() + ": " + was + " -> " + k.getTranslatedKeyMessage().getString());
+                            continue;
+                        }
+                    }
+                    k.setKey(InputConstants.UNKNOWN);
+                    log.add(k.getName() + ": " + was + " -> unbound");
+                }
             }
+            if (changes == 0) break;
         }
         boolean added = false;
         for (KeyMapping k : all) added |= seen.add(k.getName());
+        var logger = org.slf4j.LoggerFactory.getLogger("treasureclient");
         if (!log.isEmpty()) {
             KeyMapping.resetMapping();
             mc.options.save();
-            for (String l : log) org.slf4j.LoggerFactory.getLogger("treasureclient").info("Key clash fixed: {}", l);
+            for (String l : log) logger.info("Key clash fixed: {}", l);
         }
-        if (added || !log.isEmpty()) {
+        // what Minecraft's Controls screen would still show in red (its own rule: two bindings on the
+        // same key, unless both are on their default)
+        List<String> red = new ArrayList<>();
+        for (KeyMapping k : all) {
+            if (k.isUnbound()) continue;
+            for (KeyMapping o : all)
+                if (o != k && !o.isUnbound() && k.same(o) && !(k.isDefault() && o.isDefault())) {
+                    red.add(k.getName() + " (" + k.getTranslatedKeyMessage().getString() + ")");
+                    break;
+                }
+        }
+        if (full) logger.info("Key clash clean-up done: {} change(s), {} still clashing", log.size(), red.size());
+        if (!red.isEmpty()) logger.info("Keys still clashing (you set these yourself): {}", String.join(", ", red));
+        if (added || full || !log.isEmpty()) {
+            cfg.keyFixVersion = FULL;
             cfg.keysChecked = new ArrayList<>(seen);
             java.util.Collections.sort(cfg.keysChecked);
             cfg.markDirty();

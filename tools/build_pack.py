@@ -231,6 +231,21 @@ def matches(rule, have):
 
 
 NOTES = []
+
+
+def download(url, path, tries=4):
+    """Downloads to path, trying again a few times if the connection drops."""
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=120) as r, open(path + ".part", "wb") as out:
+                shutil.copyfileobj(r, out)
+            os.replace(path + ".part", path)
+            return
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
+            if i == tries - 1:
+                raise
+            time.sleep(3 + i * 5)
 CACHE = tempfile.mkdtemp(prefix="tcpack-cache-")  # jars downloaded while checking (deleted at the end)
 
 
@@ -246,10 +261,7 @@ def check(mc, picked, tc_jar, loader):
         for slug, url, sha in jars:
             path = os.path.join(CACHE, sha[:32] + ".jar")
             if not os.path.exists(path):
-                req = urllib.request.Request(url, headers={"User-Agent": UA})
-                with urllib.request.urlopen(req, timeout=120) as r, open(path + ".part", "wb") as out:
-                    shutil.copyfileobj(r, out)
-                os.replace(path + ".part", path)
+                download(url, path)
             if hashlib.sha512(open(path, "rb").read()).hexdigest() != sha:
                 return [(f"{slug}: download didn't match its checksum", {slug}, None)]
             metas += read_meta(path, slug)

@@ -34,6 +34,8 @@ public final class Config {
     public Map<String, String> cosmeticKeys = new LinkedHashMap<>();
     /** Key bindings the key clash fixer has already looked at (it only checks each one once). */
     public java.util.List<String> keysChecked = new java.util.ArrayList<>();
+    /** Which full clean-up of key clashes has run (see KeyFixer.FULL). */
+    public int keyFixVersion;
 
     private transient boolean dirty;
     private transient long dirtyAt;
