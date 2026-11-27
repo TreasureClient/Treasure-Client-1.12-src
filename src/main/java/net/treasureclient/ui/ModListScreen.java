@@ -28,7 +28,17 @@ import net.treasureclient.core.Theme;
  */
 public class ModListScreen extends TCScreen {
     private record Entry(String id, String name, String version, String authors, String description,
-                         String license, String homepage) {}
+                         String license, String homepage, boolean library) {}
+
+    /** Libraries that don't mark themselves as one (Mod Menu's "library" badge covers the rest). */
+    private static final java.util.Set<String> LIBS = java.util.Set.of("fabric-api", "fabric-language-kotlin", "cloth-config",
+        "cloth-config2", "fzzy_config", "libjf", "resourcefulconfig", "zconfig", "yet_another_config_lib_v3", "midnightlib",
+        "architectury", "owo", "forgeconfigapiport", "puzzleslib", "balm", "collective", "geckolib", "placeholder-api",
+        "kotlinforforge", "konkrete", "satin", "framework", "libipn", "fabric-language-scala", "mixinextras");
+
+    /** Like Mod Menu: libraries, Minecraft and Fabric Loader only show when this is on. */
+    private static boolean showLibs;
+    private int modCount, libCount;
 
     private final Screen parent;
     private final List<Entry> all = new ArrayList<>();
@@ -52,13 +62,36 @@ public class ModListScreen extends TCScreen {
             for (Person p : m.getAuthors()) people.add(p.getName());
             all.add(new Entry(m.getId(), m.getName(), m.getVersion().getFriendlyString(), String.join(", ", people),
                 m.getDescription() == null ? "" : m.getDescription(), String.join(", ", m.getLicense()),
-                m.getContact().get("homepage").orElse("")));
+                m.getContact().get("homepage").orElse(""), isLibrary(m)));
+        }
+        for (Entry e : all) {
+            if (e.library) libCount++;
+            else modCount++;
         }
         // Treasure Client first, then Minecraft, then by name
         all.sort((a, b) -> {
             int ra = rank(a.id), rb = rank(b.id);
             return ra != rb ? Integer.compare(ra, rb) : a.name.compareToIgnoreCase(b.name);
         });
+    }
+
+    /** Minecraft, Fabric Loader and the other built-in parts, and mods that say they are a library. */
+    private static boolean isLibrary(ModMetadata m) {
+        String id = m.getId();
+        if ("builtin".equals(m.getType()) || LIBS.contains(id) || id.startsWith("libjf")) return true;
+        try {
+            if (m.containsCustomValue("modmenu")) {
+                net.fabricmc.loader.api.metadata.CustomValue mm = m.getCustomValue("modmenu");
+                if (mm.getType() == net.fabricmc.loader.api.metadata.CustomValue.CvType.OBJECT) {
+                    net.fabricmc.loader.api.metadata.CustomValue b = mm.getAsObject().get("badges");
+                    if (b != null && b.getType() == net.fabricmc.loader.api.metadata.CustomValue.CvType.ARRAY)
+                        for (net.fabricmc.loader.api.metadata.CustomValue v : b.getAsArray())
+                            if (v.getType() == net.fabricmc.loader.api.metadata.CustomValue.CvType.STRING && v.getAsString().equals("library")) return true;
+                }
+            }
+        } catch (RuntimeException ignored) {
+        }
+        return false;
     }
 
     private static boolean hasSettings(Entry e) {
@@ -87,10 +120,10 @@ public class ModListScreen extends TCScreen {
 
     private List<Entry> listed() {
         String q = search.trim().toLowerCase(Locale.ROOT);
-        if (q.isEmpty()) return all;
         List<Entry> out = new ArrayList<>();
         for (Entry e : all)
-            if (e.name.toLowerCase(Locale.ROOT).contains(q) || e.id.contains(q) || e.authors.toLowerCase(Locale.ROOT).contains(q))
+            if (showLibs || !e.library)
+                if (q.isEmpty() || e.name.toLowerCase(Locale.ROOT).contains(q) || e.id.contains(q) || e.authors.toLowerCase(Locale.ROOT).contains(q))
                 out.add(e);
         return out;
     }
@@ -147,7 +180,20 @@ public class ModListScreen extends TCScreen {
         float p = a(openedAt, 550, 60);
         float x0 = Ui.vw * 0.05f - 20 * (1 - p), w = listW();
         float y = headTop() + 24 + Ui.vh * 0.05f;
-        Ui.mono("Mods · " + all.size() + " installed", x0, y, 11.5f, Theme.alpha(Theme.INK_DIM, p), .06f);
+        float cw = Ui.mono("Mods · " + modCount + " installed", x0, y, 11.5f, Theme.alpha(Theme.INK_DIM, p), .06f);
+        if (libCount > 0) {
+            // "+ 9 libraries" switch: shows or hides the libraries and Minecraft's own parts
+            String lt = (showLibs ? "Hide " : "+ ") + libCount + (libCount == 1 ? " library" : " libraries");
+            float lx = x0 + cw + 14, lw = Ui.width(Ui.MONO, lt.toUpperCase(), 11.5f, .06f), lh = Ui.lineH(Ui.MONO, 11.5f);
+            boolean lhov = Ui.in(mx, my, lx - 4, y - 3, lw + 8, lh + 6);
+            Ui.mono(lt, lx, y, 11.5f, Theme.alpha(lhov ? Theme.INK : th.a1(), p), .06f);
+            hits.add(new Object[]{new float[]{lx - 4, y - 3, lw + 8, lh + 6}, (Runnable) () -> {
+                showLibs = !showLibs;
+                selected = 0;
+                scroll = scrollTarget = 0;
+                pickedAt = System.nanoTime();
+            }});
+        }
         y += Ui.lineH(Ui.MONO, 11.5f) + 14;
         // the search line (just type)
         boolean typing = !search.isEmpty();
