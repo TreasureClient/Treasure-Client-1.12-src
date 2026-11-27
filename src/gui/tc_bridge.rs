@@ -18,7 +18,7 @@
 //!   come back if it stops).
 
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 
 use base64::Engine;
 
@@ -53,13 +53,61 @@ fn remove(key: &str) {
 static TITLE_SHOWN: AtomicBool = AtomicBool::new(false);
 static TITLE_SINCE: AtomicU64 = AtomicU64::new(0);
 static TITLE_AT: AtomicU64 = AtomicU64::new(0);
-static MENU_LAST_LIVE: AtomicU64 = AtomicU64::new(0);
 static MENU_FLAG_AT: AtomicU64 = AtomicU64::new(0);
-static MENU_LIVE: AtomicBool = AtomicBool::new(false);
+static MENU_WATCH: Watch = Watch::new();
+static COS_WATCH: Watch = Watch::new();
 static MENU_CHECKED: AtomicU64 = AtomicU64::new(0);
 
 fn now_ms() -> u64 {
     js_sys::Date::now() as u64
+}
+
+/// The overlay has answered at least once since the game started.
+static EVER_ANSWERED: AtomicBool = AtomicBool::new(false);
+
+/// Decides when a screen the overlay draws (main menu, Cosmetics) should show the game's own
+/// plain buttons. They're only a safety net for an overlay that doesn't work at all: once it has
+/// answered this session, a slow moment must never bring the old look back, so it then needs
+/// 20 s of silence across at least 300 drawn frames (a long freeze never counts as silence).
+/// Same rule as the browser editions' TCOverlayWatch.
+struct Watch {
+    start: AtomicU64,
+    live: AtomicU64,
+    frames: AtomicU32,
+    live_frames: AtomicU32,
+}
+
+impl Watch {
+    const fn new() -> Self {
+        Self { start: AtomicU64::new(0), live: AtomicU64::new(0), frames: AtomicU32::new(0), live_frames: AtomicU32::new(0) }
+    }
+    fn start(&self, now: u64) {
+        self.start.store(now, Ordering::Relaxed);
+        self.live.store(0, Ordering::Relaxed);
+        self.frames.store(0, Ordering::Relaxed);
+        self.live_frames.store(0, Ordering::Relaxed);
+    }
+    fn frame(&self) {
+        self.frames.fetch_add(1, Ordering::Relaxed);
+    }
+    fn live(&self, now: u64) {
+        EVER_ANSWERED.store(true, Ordering::Relaxed);
+        self.live.store(now, Ordering::Relaxed);
+        self.live_frames.store(self.frames.load(Ordering::Relaxed), Ordering::Relaxed);
+    }
+    fn fallback(&self, now: u64) -> bool {
+        let frames = self.frames.load(Ordering::Relaxed);
+        if !EVER_ANSWERED.load(Ordering::Relaxed) {
+            return now.saturating_sub(self.start.load(Ordering::Relaxed)) > 3000 && frames > 45;
+        }
+        let live = self.live.load(Ordering::Relaxed);
+        let (since, f) = if live == 0 {
+            (self.start.load(Ordering::Relaxed), frames)
+        } else {
+            (live, frames.wrapping_sub(self.live_frames.load(Ordering::Relaxed)))
+        };
+        now.saturating_sub(since) > 20_000 && f > 300
+    }
 }
 
 /// The title screen is drawing this frame. The first frame tells the overlay to show the
@@ -69,7 +117,7 @@ pub(crate) fn title_frame(info: &str) -> u64 {
     if !TITLE_SHOWN.swap(true, Ordering::Relaxed) {
         TITLE_SINCE.store(now, Ordering::Relaxed);
         MENU_CHECKED.store(0, Ordering::Relaxed);
-        MENU_LAST_LIVE.store(0, Ordering::Relaxed);
+        MENU_WATCH.start(now);
         MENU_FLAG_AT.store(now, Ordering::Relaxed);
         set("tcmenuinfo", info.as_bytes());
         set("tcmenu", &[1]);
@@ -82,6 +130,7 @@ pub(crate) fn title_frame(info: &str) -> u64 {
             set("tcmenu", &[1]);
         }
     }
+    MENU_WATCH.frame();
     TITLE_AT.store(now, Ordering::Relaxed);
     now.saturating_sub(TITLE_SINCE.load(Ordering::Relaxed))
 }
@@ -93,7 +142,8 @@ pub(crate) fn take_menu_action() -> Option<String> {
     String::from_utf8(value).ok().map(|s| s.trim().to_owned())
 }
 
-/// Whether the overlay is drawing the main menu (it writes the time every 400 ms).
+/// Whether the overlay is drawing the main menu (it writes the time every 400 ms). False only
+/// if it isn't answering (see Watch), then the title draws its own buttons.
 pub(crate) fn menu_overlay_live() -> bool {
     let now = now_ms();
     if now.saturating_sub(MENU_CHECKED.load(Ordering::Relaxed)) >= 200 {
@@ -103,14 +153,10 @@ pub(crate) fn menu_overlay_live() -> bool {
             .and_then(|s| s.trim().parse::<u64>().ok())
             .unwrap_or(0);
         if now.abs_diff(ack) < 2500 {
-            MENU_LAST_LIVE.store(now, Ordering::Relaxed);
+            MENU_WATCH.live(now);
         }
-        // live once it has answered, until it's been quiet for 8 s (it used to be 2.5 s, so one
-        // slow moment swapped the menu for the old buttons)
-        let last = MENU_LAST_LIVE.load(Ordering::Relaxed);
-        MENU_LIVE.store(last != 0 && now.saturating_sub(last) < 8000, Ordering::Relaxed);
     }
-    MENU_LIVE.load(Ordering::Relaxed)
+    !MENU_WATCH.fallback(now)
 }
 
 /// Hides the overlay's main menu once the title screen stops drawing.
@@ -129,13 +175,12 @@ fn title_gone_check() {
 // "back" or "skin") and the time to `tccosack` every 400 ms while it shows the page.
 
 static COS_OPEN: AtomicBool = AtomicBool::new(false);
-static COS_SINCE: AtomicU64 = AtomicU64::new(0);
 static COS_BEAT: AtomicU64 = AtomicU64::new(0);
 
 /// Opens the Cosmetics page (from the main menu's Cosmetics word).
 pub(crate) fn cos_open() {
     COS_OPEN.store(true, Ordering::Relaxed);
-    COS_SINCE.store(now_ms(), Ordering::Relaxed);
+    COS_WATCH.start(now_ms());
     COS_BEAT.store(0, Ordering::Relaxed);
     remove("tccosact");
     // the main menu words hide while the Cosmetics page shows
@@ -154,7 +199,7 @@ pub(crate) fn cos_close() {
 }
 
 /// The Cosmetics page is showing this frame (`name` = your player name). Returns what the
-/// overlay asked for, and whether it answers (false for a second and a half = it isn't there).
+/// overlay asked for, and whether it answers (false only if it isn't working; see Watch).
 pub(crate) fn cos_frame(name: &str) -> (Vec<String>, bool) {
     let now = now_ms();
     if now.saturating_sub(COS_BEAT.load(Ordering::Relaxed)) >= 400 {
@@ -179,7 +224,11 @@ pub(crate) fn cos_frame(name: &str) -> (Vec<String>, bool) {
         .and_then(|v| String::from_utf8(v).ok())
         .and_then(|s| s.trim().parse::<u64>().ok())
         .unwrap_or(0);
-    let live = now.abs_diff(ack) < 2500 || now.saturating_sub(COS_SINCE.load(Ordering::Relaxed)) < 1500;
+    COS_WATCH.frame();
+    if now.abs_diff(ack) < 2500 {
+        COS_WATCH.live(now);
+    }
+    let live = !COS_WATCH.fallback(now);
     (acts, live)
 }
 
