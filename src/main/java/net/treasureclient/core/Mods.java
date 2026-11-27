@@ -67,6 +67,8 @@ public final class Mods {
         add("zoom", "Zoom", "Hold a key to zoom in", "render",
             new Slider("zoomLevel", "Zoom field of view", 10, 60, 5, 30, "°"),
             new Toggle("smoothZoom", "Smooth zoom", false));
+        ALL.add(new ModDef("betterShift", "Better Shift", "Sneaking lowers your view only a little, like 1.8, so bridging doesn't bounce the screen (camera only)",
+            "render", "toggleSneak", false, List.of()));
 
         // ---- Performance ----
         add("noParticles", "No Particles", "Disable all particles for more FPS", "perf");

@@ -6,6 +6,7 @@
   "client": [
     "AvatarRendererMixin",
     "AvatarRenderStateMixin",
+    "BetterShiftMixin",
     "ClientPacketListenerMixin",
     "FullbrightMixin",
     "GuiEntityRendererMixin",

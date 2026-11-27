@@ -68,7 +68,7 @@ Libraries (7):
   fabric-api                       0.166.2+26.3                             release  [needed by entityculling]
   fabric-language-kotlin           1.14.2+kotlin.2.4.21                     release  [needed by particle-core]
   fzzy-config                      0.7.7+fix3+26.3                          release  [needed by particle-core]
-  libjf                            26.3.1                                   release  [needed by async-pack-scan]
+  libjf                            26.3.2                                   release  [needed by async-pack-scan]
   resourceful-config               6.0.2                                    release  [needed by structure-layout-optimizer]
   zconfig                          1.0.0+26.x                               release  [needed by zfastnoise]
 
