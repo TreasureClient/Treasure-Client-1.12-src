@@ -19,6 +19,7 @@
     "MouseHandlerMixin",
     "ParticleEngineMixin",
     "PlayerSkinWidgetAccessor",
+    "ScreenshotMixin",
     "SkinBoxMixin",
     "TitleHookMixin",
     "WidgetLabelMixin",

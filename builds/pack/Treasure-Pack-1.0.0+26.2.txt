@@ -75,4 +75,4 @@ Libraries (7):
 
 Every mod in the list has a build for this version.
 
-Checked: every mod's own rules are met.
+No problems found (jars not checked).

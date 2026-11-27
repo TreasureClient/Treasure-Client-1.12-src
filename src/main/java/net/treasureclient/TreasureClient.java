@@ -36,6 +36,9 @@ public final class TreasureClient implements ClientModInitializer {
         V.registerKey(MENU_KEY);
         V.registerKey(ZOOM_KEY);
         V.registerHud(Identifier.fromNamespaceAndPath("treasureclient", "hud"), Hud::render);
+        // the "Screenshot saved" pop-up: over the HUD in a world, and over every screen
+        V.registerHud(Identifier.fromNamespaceAndPath("treasureclient", "screenshot"), net.treasureclient.ui.ShotToast::renderHud);
+        V.registerScreenOverlay(net.treasureclient.ui.ShotToast::render);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             Config.get().tick();

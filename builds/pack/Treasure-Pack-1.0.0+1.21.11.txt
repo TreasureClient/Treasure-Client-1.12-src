@@ -77,8 +77,4 @@ Libraries (9):
 
 Every mod in the list has a build for this version.
 
-Notes:
-  c2me-fabric: its optional part c2me-opts-natives-math is skipped (needs java >=22)
-  zfastnoise: its optional part zfastnoise-ocl is skipped (needs java >=25)
-
-Checked: every mod's own rules are met.
+No problems found (jars not checked).

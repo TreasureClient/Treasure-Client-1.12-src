@@ -93,4 +93,13 @@ public final class V {
             draw.run();
         });
     }
+
+    /** Draws on top of every screen, after the screen itself (26.x: AfterExtract). */
+    public static void registerScreenOverlay(Runnable draw) {
+        net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((mc, screen, w, h) ->
+            net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> {
+                Gfx.set(g);
+                draw.run();
+            }));
+    }
 }
