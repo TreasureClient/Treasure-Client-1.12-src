@@ -73,9 +73,9 @@ public class GuiMainMenu extends GuiScreen {
 	// main-menu brand line shows whatever the user renamed the client to
 	// (e.g. "Frost Client"). Falls back to the default when unset. Throttled so
 	// renaming in the overlay shows up live without a per-frame storage read.
-	private static String brandTitle = "Treasure Client 1.5 Beta";
+	private static String brandTitle = "Treasure Client 1.5";
 	private static boolean customBrand = false; // true when the user set a custom title
-	/** The version shown on the 1.5 main menu, taken from the default title above (e.g. "1.5 Beta"). */
+	/** The version shown on the 1.5 main menu, taken from the default title above (e.g. "1.5"). */
 	private static final String TC_VERSION = brandTitle.startsWith("Treasure Client ") ? brandTitle.substring(16) : brandTitle;
 	private static long brandRead = 0L;
 
@@ -87,14 +87,14 @@ public class GuiMainMenu extends GuiScreen {
 				byte[] b = EagRuntime.getStorage("tctitle");
 				if (b != null && b.length > 0) {
 					String s = new String(b, StandardCharsets.UTF_8).trim();
-					if (s.isEmpty()) { brandTitle = "Treasure Client 1.5 Beta"; customBrand = false; }
+					if (s.isEmpty()) { brandTitle = "Treasure Client 1.5"; customBrand = false; }
 					else { brandTitle = s; customBrand = true; }
 				} else {
-					brandTitle = "Treasure Client 1.5 Beta"; customBrand = false;
+					brandTitle = "Treasure Client 1.5"; customBrand = false;
 				}
 			}
 		} catch (Throwable t) {
-			brandTitle = "Treasure Client 1.5 Beta"; customBrand = false;
+			brandTitle = "Treasure Client 1.5"; customBrand = false;
 		}
 		return brandTitle;
 	}
