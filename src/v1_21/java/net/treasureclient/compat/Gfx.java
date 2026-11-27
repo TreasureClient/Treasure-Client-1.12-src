@@ -44,4 +44,9 @@ public final class Gfx {
     public static void unscissor() {
         g.disableScissor();
     }
+
+    /** An item's icon (16 x 16 in the current units). */
+    public static void item(net.minecraft.world.item.ItemStack stack, int x, int y) {
+        g.renderItem(stack, x, y);
+    }
 }

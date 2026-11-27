@@ -1,6 +1,7 @@
 package net.treasureclient.core;
 
 import net.treasureclient.core.ModDef.Choice;
+import net.treasureclient.core.ModDef.Colors;
 import net.treasureclient.core.ModDef.Setting;
 import net.treasureclient.core.ModDef.Slider;
 import net.treasureclient.core.ModDef.Toggle;
@@ -32,6 +33,28 @@ public final class Mods {
         return new Choice(key, label, v, l, def);
     }
 
+    /** Colour swatches: name, 0xRRGGBB, name, 0xRRGGBB... ("theme" = the theme's accent colour). */
+    private static Colors colors(String key, String label, String def, Object... namesAndColors) {
+        List<String> v = new ArrayList<>();
+        List<Integer> c = new ArrayList<>();
+        for (int i = 0; i + 1 < namesAndColors.length; i += 2) {
+            v.add((String) namesAndColors[i]);
+            c.add((Integer) namesAndColors[i + 1]);
+        }
+        return new Colors(key, label, v, c, def);
+    }
+
+    /** The colour a Colors setting is set to (0xRRGGBB); "theme" follows the theme's accent colour. */
+    public static int color(String key) {
+        for (ModDef d : ALL)
+            for (Setting s : d.settings())
+                if (s instanceof Colors c && c.key().equals(key)) {
+                    String v = Config.get().str(key, c.def());
+                    return v.equals("theme") ? Theme.current().a1() & 0xFFFFFF : c.rgb(v);
+                }
+        return 0xFFFFFF;
+    }
+
     static {
         // ---- HUD ----
         add("coords", "Coordinates", "X, Y, Z and biome", "hud",
@@ -57,6 +80,28 @@ public final class Mods {
         add("ping", "Ping Display", "Connection latency to the server", "hud");
         add("fpsGraph", "FPS Graph", "Recent framerate history", "hud");
         add("perfMonitor", "Performance Monitor", "FPS, frame time & ping together", "hud");
+        add("crosshair", "Custom Crosshair", "Your own crosshair: shape, size, gap and colour", "hud",
+            choice("crosshairStyle", "Style", "cross", "cross", "Cross", "dot", "Dot", "tshape", "T-Shape"),
+            new Slider("crosshairSize", "Size", 12, 40, 1, 22, ""),
+            new Slider("crosshairThickness", "Thickness", 1, 5, 1, 2, ""),
+            new Slider("crosshairGap", "Gap", 0, 8, 1, 3, ""),
+            colors("crosshairColor", "Colour", "theme", "theme", 0xFFD76B, "white", 0xFFFFFF, "red", 0xFF4A4A,
+                "green", 0x5BEA6B, "cyan", 0x45E3E3, "black", 0x111111),
+            new Slider("crosshairOpacity", "Opacity", 20, 100, 5, 100, "%"));
+        add("chAddons", "Crosshair Addons", "Small icons around the crosshair: target in reach, elytra, rocket boost, hit marker, shields", "hud",
+            new Toggle("chTarget", "Brackets when a player is in reach", true),
+            new Toggle("chMobs", "Hostile mobs too", false),
+            new Toggle("chElytra", "Elytra icon while wearing one", true),
+            new Toggle("chRocket", "Rocket boost time left", true),
+            new Toggle("chHit", "Hit marker when your arrow hits a player", true),
+            new Toggle("chHitMelee", "Hit marker on melee hits too", false),
+            new Toggle("chShieldBreak", "Shield break when you stun a shield", true),
+            new Toggle("chShieldUp", "Shield icon when your target is blocking", true));
+        add("satDisplay", "Saturation Display", "Gold outlines on the food bar show hidden saturation", "hud");
+        add("sbOn", "Scoreboard", "Hide the red numbers, change the size and background of the sidebar", "hud",
+            new Toggle("sbNoNums", "Hide the red numbers", true),
+            new Slider("sbScale", "Size", 50, 150, 5, 100, "%"),
+            choice("sbBg", "Background", "normal", "normal", "Normal", "light", "Lighter", "none", "None"));
 
         // ---- Render ----
         add("fullbright", "Fullbright", "Max brightness — see in caves & at night", "render");
@@ -67,6 +112,26 @@ public final class Mods {
         add("zoom", "Zoom", "Hold a key to zoom in", "render",
             new Slider("zoomLevel", "Zoom field of view", 10, 60, 5, 30, "°"),
             new Toggle("smoothZoom", "Smooth zoom", false));
+        add("boOn", "Block Outline", "Colour and thickness of the box around the block you're looking at", "render",
+            colors("boColor", "Colour", "black", "black", 0x000000, "white", 0xFFFFFF, "red", 0xFF4A4A, "orange", 0xFF8A3C,
+                "yellow", 0xFFE066, "green", 0x5BEA6B, "cyan", 0x45E3E3, "blue", 0x4A8CFF, "purple", 0x9A6BFF, "pink", 0xFF6FA8),
+            new Slider("boWidth", "Thickness", 1, 6, 1, 2, ""),
+            new Slider("boAlpha", "Opacity", 10, 100, 5, 40, "%"));
+        add("hitColorOn", "Hit Color", "Change the red flash when players and mobs get hurt", "render",
+            colors("hitColor", "Colour", "red", "red", 0xFF0000, "orange", 0xFF8A00, "yellow", 0xFFE000, "green", 0x30E030,
+                "cyan", 0x00E0E0, "blue", 0x3070FF, "purple", 0xA040FF, "pink", 0xFF50B0, "white", 0xFFFFFF),
+            new Slider("hitAlpha", "Strength", 10, 80, 5, 50, "%"));
+        add("clearLiquids", "Clear Liquids", "See clearly when you are inside water or lava", "render");
+        ALL.add(new ModDef("dynfov", "Dynamic FOV", "Zoom the view when sprinting, flying, with Speed or drawing a bow (turn off to keep it still)",
+            "render", "dynfov", true, List.of()));
+        add("tntTimer", "TNT Timer", "Show the fuse countdown above lit TNT", "render");
+        add("lowShield", "Low Shield", "Lower the shield in your hand so it covers less of your view", "render",
+            new Slider("lowShieldA", "How much lower", 0, 60, 5, 30, "%"));
+        add("smallTotem", "Small Totem", "Shrink the totem-pop effect on your screen", "render",
+            new Slider("totemScale", "Size", 10, 100, 5, 40, "%"));
+        add("oldAnim", "1.7 Animations", "Old-school item animations: a small dip after hitting, and swinging while you eat, drink, draw a bow or block", "render",
+            new Toggle("oaNoDip", "Small item dip after a hit (instead of the big cooldown dip)", true),
+            new Toggle("oaUseSwing", "Swing while eating, drinking, using a bow or blocking", true));
         ALL.add(new ModDef("betterShift", "Better Shift", "Sneaking lowers your view only a little, like 1.8, so bridging doesn't bounce the screen (camera only)",
             "render", "toggleSneak", false, List.of()));
 
@@ -78,6 +143,10 @@ public final class Mods {
             new Toggle("sprintStatus", "Show Sprint on the HUD", false));
         add("toggleSneak", "Toggle Sneak", "Sneak key flips ON (stay sneaking) / OFF (vanilla)", "misc",
             new Toggle("sneakStatus", "Show Sneak on the HUD", false));
+        add("autoGG", "Auto GG", "Says gg in chat for you when a game ends", "misc",
+            choice("agMsg", "Message", "gg", "gg", "gg", "ggs", "ggs", "ggwp", "gg wp", "goodgame", "good game", "gf", "gf"),
+            new Slider("agDelay", "Delay", 0, 3000, 250, 1000, "ms"),
+            new Toggle("agGlhf", "Say \"glhf\" when a game starts", false));
         ALL.add(new ModDef("guiAnim", "Menu Animations", "Smooth open / close & hover transitions", "misc", "guiAnim", true, List.of()));
     }
 

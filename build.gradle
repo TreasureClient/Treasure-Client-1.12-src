@@ -39,7 +39,13 @@ dependencies {
 
 // code that differs between Minecraft versions: src/v1_21 (1.21.11), src/v26 (all 26.x) plus src/v26_1 (26.1, 26.1.2) or src/v26_2 (26.2 and newer)
 if (obfuscated) sourceSets.main.java.srcDir('src/v1_21/java')
-else sourceSets.main.java.srcDirs('src/v26/java', mc.startsWith('26.1') ? 'src/v26_1/java' : 'src/v26_2/java') // 26.2 moved the open screen into Gui
+else {
+    // 26.2 moved the open screen into Gui
+    sourceSets.main.java.srcDirs('src/v26/java', mc.startsWith('26.1') ? 'src/v26_1/java' : 'src/v26_2/java')
+    // 26.3 moved the first-person hands and the totem animation: src/v26_2a is 26.2 only, src/v26_3 is 26.3
+    if (mc == '26.2') sourceSets.main.java.srcDir('src/v26_2a/java')
+    else if (!mc.startsWith('26.1')) sourceSets.main.java.srcDir('src/v26_3/java')
+}
 
 processResources {
     inputs.property 'version', project.version

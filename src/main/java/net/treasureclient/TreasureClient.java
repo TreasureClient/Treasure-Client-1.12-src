@@ -7,6 +7,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.treasureclient.cos.TCShare;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
@@ -39,6 +42,7 @@ public final class TreasureClient implements ClientModInitializer {
         // the "Screenshot saved" pop-up: over the HUD in a world, and over every screen
         V.registerHud(Identifier.fromNamespaceAndPath("treasureclient", "screenshot"), net.treasureclient.ui.ShotToast::renderHud);
         V.registerScreenOverlay(net.treasureclient.ui.ShotToast::render);
+        registerHudMods();
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             Config.get().tick();
@@ -46,6 +50,10 @@ public final class TreasureClient implements ClientModInitializer {
             TCShare.tick();
             Trackers.tick();
             Toggles.tick(mc);
+            net.treasureclient.feature.OldAnim.tick(mc);
+            net.treasureclient.feature.HitColor.tick();
+            net.treasureclient.feature.AutoGG.tick(mc);
+            net.treasureclient.feature.Crosshair.tick(mc);
             while (MENU_KEY.consumeClick()) {
                 if (V.screen() == null) V.open(new ModMenuScreen(null));
             }
@@ -74,6 +82,7 @@ public final class TreasureClient implements ClientModInitializer {
                 Vec3 eye = player.getEyePosition();
                 double d = Math.sqrt(entity.getBoundingBox().distanceToSqr(eye));
                 Trackers.attacked(entity.getId(), d);
+                net.treasureclient.feature.Crosshair.attacked(player, entity);
             }
             return InteractionResult.PASS;
         });
@@ -94,5 +103,30 @@ public final class TreasureClient implements ClientModInitializer {
         }
         mc.debugEntries.setStatus(DebugScreenEntries.ENTITY_HITBOXES, want ? DebugScreenEntryStatus.ALWAYS_ON : DebugScreenEntryStatus.NEVER);
         hitboxesApplied = want;
+    }
+
+    /** Mods that take over or add to Minecraft's own HUD parts. */
+    private static void registerHudMods() {
+        // Custom Crosshair draws instead of Minecraft's; Crosshair Addons go on top of either one
+        net.treasureclient.compat.HudHooks.replace(VanillaHudElements.CROSSHAIR,
+            net.treasureclient.feature.Crosshair::ours, net.treasureclient.feature.Crosshair::draw);
+        net.treasureclient.compat.HudHooks.after(VanillaHudElements.CROSSHAIR,
+            Identifier.fromNamespaceAndPath("treasureclient", "crosshair_addons"), net.treasureclient.feature.Crosshair::addons);
+        // Scoreboard size
+        net.treasureclient.compat.HudHooks.wrap(VanillaHudElements.SCOREBOARD,
+            net.treasureclient.feature.Sidebar::before, net.treasureclient.feature.Sidebar::after);
+        // Saturation Display
+        net.treasureclient.compat.HudHooks.after(VanillaHudElements.FOOD_BAR,
+            Identifier.fromNamespaceAndPath("treasureclient", "saturation"), net.treasureclient.feature.Saturation::draw);
+
+        // Auto GG: messages from the server (not other players' chat)
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay) net.treasureclient.feature.AutoGG.onChat(message.getString());
+        });
+        // Crosshair Addons: rocket boost time
+        UseItemCallback.EVENT.register((player, world, hand) -> {
+            if (world.isClientSide()) net.treasureclient.feature.Crosshair.usedItem(player, player.getItemInHand(hand));
+            return InteractionResult.PASS;
+        });
     }
 }

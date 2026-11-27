@@ -25,7 +25,16 @@
     "WidgetLabelMixin",
     "WidgetScopeMixin",
     "WidgetSpriteMixin",
-    "ZoomMixin"
+    "ZoomMixin",
+    "HitColorMixin",
+    "DynamicFovMixin",
+    "ClearLiquidsMixin",
+    "TntTimerMixin",
+    "SmallTotemMixin",
+    "OutlineMixin",
+    "ScoreboardMixin",
+    "HandMixin",
+    "HandTickMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -571,6 +571,8 @@ public class ModMenuScreen extends TCScreen {
                 y = settingRow(th, c.label(), x0, y, w, mx, my, p, (rx, ry, rh) -> seg(th, c, rx, ry, rh, mx, my, p));
             } else if (s instanceof ModDef.Slider sl) {
                 y = settingRow(th, sl.label(), x0, y, w, mx, my, p, (rx, ry, rh) -> slider(th, sl, rx, ry, rh, mx, my, p));
+            } else if (s instanceof ModDef.Colors cs) {
+                y = settingRow(th, cs.label(), x0, y, w, mx, my, p, (rx, ry, rh) -> swatches(th, cs, rx, ry, rh, mx, my, p));
             }
         }
     }
@@ -621,6 +623,32 @@ public class ModMenuScreen extends TCScreen {
                 playClick();
             }});
             bx += lw + gap;
+        }
+        return total;
+    }
+
+    /** A row of round colour swatches; the picked one gets a ring in the theme colour. */
+    private float swatches(Theme th, ModDef.Colors c, float x, float y, float h, float mx, float my, float p) {
+        String cur = Config.get().str(c.key(), c.def());
+        float d = 20, gap = 8;
+        float total = c.values().size() * (d + gap) - gap;
+        controlW.put(c.label(), total);
+        float cy = y + h / 2;
+        for (int i = 0; i < c.values().size(); i++) {
+            String v = c.values().get(i);
+            float cx = x + i * (d + gap) + d / 2;
+            boolean on = v.equals(cur), hover = Ui.in(mx, my, cx - d / 2, cy - d / 2, d, d);
+            int col = v.equals("theme") ? th.a1() : (0xFF000000 | c.argb().get(i));
+            if (on) Ui.circle(cx, cy, d / 2 + 3, Theme.alpha(th.a1(), p));
+            else if (hover) Ui.circle(cx, cy, d / 2 + 2, Theme.alpha(0x40FFFFFF, p));
+            Ui.circle(cx, cy, d / 2 + (on ? 1 : 0), Theme.alpha(0xFF0A0A0C, p));
+            Ui.circle(cx, cy, d / 2 - 1, Theme.alpha(col, p));
+            if (v.equals("theme")) Ui.circle(cx, cy, 3, Theme.alpha(0xFF0A0A0C, p)); // the "follows your theme" one has a dot
+            final String val = v;
+            hits.add(new Object[]{new float[]{cx - d / 2, cy - d / 2, d, d}, (Runnable) () -> {
+                Config.get().put(c.key(), val);
+                playClick();
+            }});
         }
         return total;
     }

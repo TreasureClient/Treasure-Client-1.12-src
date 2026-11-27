@@ -63,6 +63,7 @@ public final class Trackers {
             lastReach = pendingReach;
             combo++;
             lastComboHit = System.currentTimeMillis();
+            net.treasureclient.feature.Crosshair.meleeHit();
         }
     }
 
