@@ -1748,6 +1748,22 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 #tc-root.tc15 .tc-hs-mods:hover { filter: none; transform: none; border-color: var(--a-1); color: var(--t15-ink); }
 #tc-root.tc15 .tc-hs-hint { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .04em; color: var(--t15-dim); text-shadow: none; }
 #tc-root.tc15 .tc-hs-hint button { color: var(--t15-ink); }
+/* ---------------- F2 screenshot pop-up ---------------- */
+#tc-root.tc15 #tc-shot { position: fixed; right: 18px; bottom: 34px; z-index: 2147483600; display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px;
+  border-radius: 3px; background: rgba(10,10,12,.88); box-shadow: inset 2px 0 0 var(--a-1), 0 10px 30px rgba(0,0,0,.45); pointer-events: auto;
+  opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .25s var(--t15-ease); visibility: hidden; max-width: 380px; }
+#tc-root.tc15 #tc-shot.show { opacity: 1; transform: none; visibility: visible; }
+#tc-root.tc15 #tc-shot .s-thumb { width: 96px; height: auto; max-height: 60px; object-fit: cover; border-radius: 2px; display: block; background: #000; }
+#tc-root.tc15 #tc-shot .s-thumb[src=""] { display: none; }
+#tc-root.tc15 #tc-shot .s-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#tc-root.tc15 #tc-shot .s-title { font: 600 15px 'Archivo', 'Outfit', sans-serif; color: var(--t15-ink); }
+#tc-root.tc15 #tc-shot .s-where { font-size: 10.5px; color: var(--t15-dim); text-transform: none; letter-spacing: .02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#tc-root.tc15 #tc-shot .s-pick { align-self: flex-start; margin-top: 3px; padding: 4px 8px; border: 1px solid var(--t15-faint); border-radius: 3px; background: none;
+  color: var(--a-1); font-size: 10.5px; cursor: pointer; }
+#tc-root.tc15 #tc-shot .s-pick:hover { border-color: var(--a-1); color: var(--t15-ink); }
+#tc-root.tc15 #tc-shot-flash { position: fixed; inset: 0; z-index: 2147483599; background: #fff; opacity: 0; pointer-events: none; }
+#tc-root.tc15 #tc-shot-flash.go { animation: t15-shotflash .35s ease-out; }
+@keyframes t15-shotflash { 0% { opacity: .35; } 100% { opacity: 0; } }
 /* TC15 END */
 `;
   function ensureStyle() {
@@ -2971,6 +2987,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
     /* ===== TC15: Treasure Client 1.5 look \u2014 the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -3712,6 +3729,293 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
           setInterval(stack, 500);
         }
       } catch (e) { try { console.error('[TreasureClient] 1.5 HUD stacking failed:', e); } catch (e2) {} }
+    })();
+    /* ---------- F2 screenshots: the game AND everything Treasure Client draws on top (menus, Mod Menu, HUD) ----------
+       The game's own F2 only saw the game picture, so the 1.5 menus were missing. Now the page takes F2 (on a
+       Chromebook also the -> key above 2, which sends "BrowserForward"), grabs the game's last frame, draws the
+       overlay over it, and saves it to a folder you picked (Linux files etc., remembered) or else to Downloads.
+       A small pop-up shows it. Costs nothing until you press the key. */
+    (function () {
+      try {
+        if (!root || !root.classList.contains('tc15')) return;
+        var busy = false, folder = null, dbP = null, lastShot = null;
+        // ---- the remembered folder (a folder handle can only be kept in IndexedDB) ----
+        var idb = function () {
+          if (!dbP) dbP = new Promise(function (res, rej) {
+            var r = indexedDB.open('tc-screenshots', 1);
+            r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
+            r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); };
+          });
+          return dbP;
+        };
+        var kv = function (mode, fn) {
+          return idb().then(function (db) { return new Promise(function (res, rej) {
+            var tx = db.transaction('kv', mode), q = fn(tx.objectStore('kv'));
+            tx.oncomplete = function () { res(q && q.result); }; tx.onerror = function () { rej(tx.error); };
+          }); });
+        };
+        try { kv('readonly', function (s) { return s.get('dir'); }).then(function (h) { folder = h || null; }, function () {}); } catch (e) {}
+        var keepFolder = function (h) { folder = h; try { kv('readwrite', function (s) { return s.put(h, 'dir'); }).catch(function () {}); } catch (e) {} };
+        var canPick = typeof window.showDirectoryPicker === 'function';
+
+        // ---- the game's picture: the biggest canvas that isn't ours ----
+        var gameCanvas = function () {
+          var best = null, area = 0;
+          [].forEach.call(document.getElementsByTagName('canvas'), function (c) {
+            if (root.contains(c)) return;
+            var r = c.getBoundingClientRect(), a = r.width * r.height;
+            if (a > area) { area = a; best = c; }
+          });
+          return best;
+        };
+        // a WebGL canvas forgets its picture once it's on screen, so take the next frame from a short-lived stream
+        var grabGame = function () {
+          var c = gameCanvas();
+          if (!c) return Promise.resolve(null);
+          if (!c.captureStream) return Promise.resolve(c);
+          return new Promise(function (res) {
+            var stream, v, done = false;
+            var finish = function (img) {
+              if (done) return; done = true;
+              try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+              res(img);
+            };
+            try {
+              stream = c.captureStream();
+              v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = stream;
+              var take = function () {
+                try {
+                  var cv = document.createElement('canvas'); cv.width = v.videoWidth || c.width; cv.height = v.videoHeight || c.height;
+                  cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height); finish(cv);
+                } catch (e) { finish(c); }
+              };
+              if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(take); else v.addEventListener('loadeddata', take);
+              v.play().catch(function () {});
+              setTimeout(function () { finish(c); }, 1500);
+            } catch (e) { finish(c); }
+          });
+        };
+
+        // ---- our page drawn as a picture (an SVG with the elements copied in, every style written out) ----
+        var INHERIT = /^(color|cursor|direction|font|font-.*|letter-spacing|line-height|list-style.*|quotes|tab-size|text-align|text-indent|text-shadow|text-transform|visibility|white-space|word-.*|-webkit-text-.*|text-rendering|overflow-wrap|hyphens|fill|stroke.*)$/;
+        var SKIP = /^(animation|transition|will-change|cursor|pointer-events|user-select|-webkit-user-select)/;
+        var sandbox = null, defaults = {};
+        var defStyle = function (tag) {
+          if (defaults[tag]) return defaults[tag];
+          if (!sandbox) {
+            sandbox = document.createElement('iframe');
+            sandbox.style.cssText = 'position:fixed;left:-9999px;top:0;width:50px;height:50px;visibility:hidden;border:0';
+            document.body.appendChild(sandbox);
+          }
+          var d = sandbox.contentDocument, e = d.createElement(tag); d.body.appendChild(e);
+          var cs = sandbox.contentWindow.getComputedStyle(e), o = {};
+          for (var i = 0; i < cs.length; i++) o[cs[i]] = cs.getPropertyValue(cs[i]);
+          d.body.removeChild(e);
+          return (defaults[tag] = o);
+        };
+        var urls = {};
+        var inlineUrl = function (u) {
+          if (/^data:/.test(u)) return Promise.resolve(u);
+          if (urls[u]) return urls[u];
+          return (urls[u] = fetch(u).then(function (r) { return r.blob(); }).then(function (b) {
+            return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { res(fr.result); }; fr.onerror = function () { res(''); }; fr.readAsDataURL(b); });
+          }).catch(function () { return ''; }));
+        };
+        var fontCss = null;
+        var fonts = function () {
+          if (fontCss) return fontCss;
+          var parts = [];
+          // our own @font-face rules (same page), then Google's (fetched: its stylesheet can't be read from here)
+          [].forEach.call(document.styleSheets, function (sh) {
+            try { [].forEach.call(sh.cssRules || [], function (r) { if (r.type === 5) parts.push(Promise.resolve(r.cssText)); }); } catch (e) {}
+          });
+          [].forEach.call(document.querySelectorAll('link[rel=stylesheet]'), function (l) {
+            if (!/fonts\.googleapis\.com/.test(l.href)) return;
+            parts.push(fetch(l.href).then(function (r) { return r.text(); }).then(function (css) {
+              var faces = css.match(/@font-face\s*{[^}]*}/g) || [];
+              // only the basic latin part of each font (the rest is other alphabets)
+              faces = faces.filter(function (f) { return !/unicode-range/.test(f) || /U\+0000-00FF/i.test(f); });
+              return Promise.all(faces.map(function (f) {
+                var m = /url\(([^)]+)\)/.exec(f); if (!m) return f;
+                return inlineUrl(m[1].replace(/["']/g, '')).then(function (d) { return d ? f.replace(m[0], 'url(' + d + ')') : ''; });
+              })).then(function (a) { return a.join('\n'); });
+            }).catch(function () { return ''; }));
+          });
+          return (fontCss = Promise.all(parts).then(function (a) { return a.join('\n'); }));
+        };
+        var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+        var render = function (W, H) {
+          var css = [], n = 0, pending = [];
+          var copy = function (el) {
+            var cs = getComputedStyle(el);
+            if (cs.display === 'none' || el.id === 'tc-shot' || el.id === 'tc-shot-flash') return null;
+            var tag = el.tagName.toLowerCase();
+            if (el instanceof SVGElement) {
+              var s = el.cloneNode(true);
+              // svg icons take their colours from the page's CSS: write them on
+              var walkS = function (o, c) {
+                if (!(o instanceof SVGElement)) return;
+                var k = getComputedStyle(o);
+                c.setAttribute('style', 'fill:' + k.fill + ';stroke:' + k.stroke + ';stroke-width:' + k.strokeWidth + ';opacity:' + k.opacity + ';color:' + k.color +
+                  (o === el ? ';width:' + k.width + ';height:' + k.height + ';display:' + k.display + ';vertical-align:' + k.verticalAlign + ';flex:' + k.flex + ';transform:' + k.transform + ';margin:' + k.margin : ''));
+                for (var i = 0; i < o.children.length; i++) walkS(o.children[i], c.children[i]);
+              };
+              walkS(el, s);
+              return s;
+            }
+            var c;
+            if (tag === 'canvas') {
+              c = document.createElement('img');
+              try { c.src = el.toDataURL(); } catch (e) {}
+            } else if (tag === 'img') {
+              c = document.createElement('img');
+              var src = el.currentSrc || el.src || '';
+              if (src && !/^data:/.test(src)) pending.push(inlineUrl(src).then(function (d) { c.src = d; }));
+              else c.src = src;
+            } else if (tag === 'iframe' || tag === 'video' || tag === 'script' || tag === 'style' || tag === 'link') {
+              return null;
+            } else {
+              c = document.createElement(tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button' ? 'div' : tag);
+            }
+            var k = 'k' + (n++), def = defStyle(tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button' ? 'div' : tag);
+            c.setAttribute('class', k);
+            var rule = function (sel, st, base) {
+              var out = '';
+              for (var i = 0; i < st.length; i++) {
+                var p = st[i]; if (SKIP.test(p)) continue;
+                var v = st.getPropertyValue(p);
+                if (base && base[p] === v && !INHERIT.test(p)) continue;
+                if (/url\(/.test(v) && !/url\("?data:/.test(v)) {
+                  (function (prop, val) {
+                    var m = /url\("?([^")]+)"?\)/.exec(val);
+                    if (m) pending.push(inlineUrl(m[1]).then(function (d) { css.push(sel + '{' + prop + ':' + (d ? val.replace(m[0], 'url("' + d + '")') : 'none') + '}'); }));
+                  })(p, v);
+                  continue;
+                }
+                out += p + ':' + v + ';';
+              }
+              css.push(sel + '{' + out + '}');
+            };
+            rule('.' + k, cs, def);
+            ['::before', '::after'].forEach(function (ps) {
+              var pcs = getComputedStyle(el, ps), ct = pcs.getPropertyValue('content');
+              if (ct && ct !== 'none' && ct !== 'normal') rule('.' + k + ps, pcs, null);
+            });
+            if (tag === 'input' || tag === 'textarea') {
+              c.textContent = el.value || el.placeholder || '';
+              if (!el.value) css.push('.' + k + '{opacity:.6}');
+            }
+            for (var ch = el.firstChild; ch; ch = ch.nextSibling) {
+              if (ch.nodeType === 3) c.appendChild(document.createTextNode(ch.nodeValue));
+              else if (ch.nodeType === 1 && tag !== 'input' && tag !== 'textarea' && tag !== 'select') { var cc = copy(ch); if (cc) c.appendChild(cc); }
+            }
+            // a scrolled list: shift its contents the same way
+            if ((el.scrollTop || el.scrollLeft) && c.firstElementChild) {
+              css.push('.' + k + '>*:first-child{margin-top:' + (parseFloat(getComputedStyle(el.firstElementChild || el).marginTop) - el.scrollTop) + 'px !important}');
+            }
+            return c;
+          };
+          var box = document.createElement('div');
+          [root, document.getElementById('tc-watermark')].forEach(function (el) { if (el && el.isConnected) { var c = copy(el); if (c) box.appendChild(c); } });
+          return Promise.all(pending).then(function () { return fonts(); }).then(function (fcss) {
+            var html = new XMLSerializer().serializeToString(box);
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '"><foreignObject x="0" y="0" width="100%" height="100%">' +
+              '<div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:' + W + 'px;height:' + H + 'px;overflow:hidden;margin:0">' +
+              '<style>' + esc(fcss + '\n' + css.join('\n')) + '</style>' + html.replace(/^<div[^>]*>|<\/div>$/g, '') + '</div></foreignObject></svg>';
+            return new Promise(function (res, rej) {
+              var img = new Image();
+              img.onload = function () { (img.decode ? img.decode() : Promise.resolve()).catch(function () {}).then(function () { res(img); }); };
+              img.onerror = function () { rej(new Error('overlay picture failed')); };
+              img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+            });
+          });
+        };
+
+        // ---- saving ----
+        var pad = function (x) { return (x < 10 ? '0' : '') + x; };
+        var fileName = function () { var d = new Date(); return 'Treasure Client ' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + '.' + pad(d.getMinutes()) + '.' + pad(d.getSeconds()) + '.png'; };
+        var toFolder = function (blob, name, perm) {
+          return perm.then(function (p) {
+            if (p !== 'granted') throw new Error('no folder');
+            return folder.getFileHandle(name, { create: true });
+          }).then(function (fh) { return fh.createWritable(); })
+            .then(function (w) { return w.write(blob).then(function () { return w.close(); }); })
+            .then(function () { return folder.name; });
+        };
+        var download = function (blob, name) {
+          var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 20000);
+        };
+
+        // ---- the pop-up ----
+        var pop = document.createElement('div'); pop.id = 'tc-shot';
+        pop.innerHTML = '<img class="s-thumb" alt=""><div class="s-text"><b class="s-title">Screenshot saved</b><span class="s-where t15-mono"></span>' +
+          '<button class="s-pick t15-mono" type="button"></button></div>';
+        root.appendChild(pop);
+        var flash = document.createElement('div'); flash.id = 'tc-shot-flash'; root.appendChild(flash);
+        var hideT = 0;
+        var showPop = function (thumb, title, where, pickLabel) {
+          pop.querySelector('.s-thumb').src = thumb || '';
+          pop.querySelector('.s-title').textContent = title;
+          pop.querySelector('.s-where').textContent = where;
+          var b = pop.querySelector('.s-pick'); b.textContent = pickLabel || ''; b.style.display = pickLabel && canPick ? '' : 'none';
+          pop.classList.add('show');
+          clearTimeout(hideT); hideT = setTimeout(function () { if (!pop.matches(':hover')) pop.classList.remove('show'); else hideT = setTimeout(function () { pop.classList.remove('show'); }, 2500); }, 4500);
+        };
+        pop.querySelector('.s-pick').addEventListener('click', function () {
+          if (!canPick) return;
+          window.showDirectoryPicker({ id: 'tc-screenshots', mode: 'readwrite' }).then(function (h) {
+            keepFolder(h);
+            if (lastShot) return toFolder(lastShot.blob, lastShot.name, Promise.resolve('granted')).then(function (where) {
+              showPop(lastShot.thumb, 'Screenshot saved', 'In ' + where + ' · next ones go here too', 'Change folder');
+            });
+          }).catch(function (e) {
+            if (e && e.name === 'AbortError') return;
+            showPop(lastShot && lastShot.thumb, 'Can’t use that folder', 'Pick or make another one (Chrome won’t allow some folders)', 'Choose folder');
+          });
+        });
+
+        var take = function () {
+          if (busy) return; busy = true;
+          // ask for the folder now: the browser only allows it right after a key press
+          var perm = folder && folder.queryPermission ? folder.queryPermission({ mode: 'readwrite' }).then(function (p) {
+            return p === 'granted' ? p : folder.requestPermission({ mode: 'readwrite' });
+          }).catch(function () { return 'denied'; }) : Promise.resolve('none');
+          var W = innerWidth, H = innerHeight, dpr = Math.min(2, devicePixelRatio || 1);
+          Promise.all([grabGame(), render(W, H).catch(function (e) { try { console.error('[TreasureClient] screenshot overlay:', e); } catch (e2) {} return null; })]).then(function (r) {
+            var out = document.createElement('canvas'); out.width = Math.round(W * dpr); out.height = Math.round(H * dpr);
+            var ctx = out.getContext('2d'); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, out.width, out.height);
+            var gc = gameCanvas();
+            if (r[0]) { var gr = gc ? gc.getBoundingClientRect() : { left: 0, top: 0, width: W, height: H }; ctx.drawImage(r[0], gr.left * dpr, gr.top * dpr, gr.width * dpr, gr.height * dpr); }
+            if (r[1]) ctx.drawImage(r[1], 0, 0, out.width, out.height);
+            var th = document.createElement('canvas'); th.width = 160; th.height = Math.round(160 * H / W);
+            th.getContext('2d').drawImage(out, 0, 0, th.width, th.height);
+            var thumb = th.toDataURL('image/jpeg', .8);
+            return new Promise(function (res) { out.toBlob(res, 'image/png'); }).then(function (blob) {
+              var name = fileName();
+              lastShot = { blob: blob, name: name, thumb: thumb };
+              return toFolder(blob, name, perm).then(function (where) {
+                showPop(thumb, 'Screenshot saved', 'In ' + where, null);
+              }, function () {
+                download(blob, name);
+                showPop(thumb, 'Screenshot saved', 'In Downloads', 'Save them to a folder instead');
+              });
+            });
+          }).catch(function (e) {
+            try { console.error('[TreasureClient] screenshot failed:', e); } catch (e2) {}
+            showPop('', 'Screenshot didn’t work', 'Try again', null);
+          }).then(function () { busy = false; });
+          flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        };
+        addEventListener('keydown', function (e) {
+          if (e.code !== 'F2' && e.key !== 'F2' && e.code !== 'BrowserForward' && e.key !== 'BrowserForward') return;
+          if (e.ctrlKey || e.altKey || e.metaKey) return;
+          e.preventDefault(); e.stopImmediatePropagation(); // the game's own F2 would save a second picture without our menus
+          if (!e.repeat) take();
+        }, true);
+        window.__tcScreenshot = take;
+      } catch (e) { try { console.error('[TreasureClient] screenshots failed:', e); } catch (e2) {} }
     })();
     /* TC15 END */
 
