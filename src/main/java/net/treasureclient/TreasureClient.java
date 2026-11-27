@@ -74,6 +74,7 @@ public final class TreasureClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
             Trackers.reset();
             Toggles.reset();
+            net.treasureclient.feature.Cooldowns.reset();
         });
 
         // Reach Display: measure from your eyes to the nearest point of what you hit

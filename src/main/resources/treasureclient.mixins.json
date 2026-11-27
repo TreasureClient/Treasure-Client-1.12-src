@@ -34,7 +34,12 @@
     "OutlineMixin",
     "ScoreboardMixin",
     "HandMixin",
-    "HandTickMixin"
+    "HandTickMixin",
+    "ChatTweaksMixin",
+    "CooldownsMixin",
+    "WeatherMixin",
+    "TimeMixin",
+    "ChatAddMixin"
   ],
   "injectors": {
     "defaultRequire": 1

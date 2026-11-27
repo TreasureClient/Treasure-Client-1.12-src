@@ -80,6 +80,10 @@ public final class Mods {
         add("ping", "Ping Display", "Connection latency to the server", "hud");
         add("fpsGraph", "FPS Graph", "Recent framerate history", "hud");
         add("perfMonitor", "Performance Monitor", "FPS, frame time & ping together", "hud");
+        add("clock", "Clock", "The real time of day in a small box", "hud",
+            choice("clockFmt", "Format", "24", "24", "24-hour", "12", "12-hour"),
+            new Toggle("clockSecs", "Show seconds", false));
+        add("cooldowns", "Cooldowns", "Time left on ender pearls, chorus fruit, wind charges, shields and other items you can't use yet", "hud");
         add("crosshair", "Custom Crosshair", "Your own crosshair: shape, size, gap and colour", "hud",
             choice("crosshairStyle", "Style", "cross", "cross", "Cross", "dot", "Dot", "tshape", "T-Shape"),
             new Slider("crosshairSize", "Size", 12, 40, 1, 22, ""),
@@ -125,6 +129,9 @@ public final class Mods {
         ALL.add(new ModDef("dynfov", "Dynamic FOV", "Zoom the view when sprinting, flying, with Speed or drawing a bow (turn off to keep it still)",
             "render", "dynfov", true, List.of()));
         add("tntTimer", "TNT Timer", "Show the fuse countdown above lit TNT", "render");
+        add("timeChanger", "Time & Weather", "Pick the time of day and the weather you see (only on your screen; the server doesn't change)", "render",
+            choice("tcTime", "Time", "server", "server", "Server", "day", "Morning", "noon", "Noon", "sunset", "Sunset", "night", "Night", "midnight", "Midnight"),
+            choice("tcWeather", "Weather", "server", "server", "Server", "clear", "Clear", "rain", "Rain", "thunder", "Storm"));
         add("lowShield", "Low Shield", "Lower the shield in your hand so it covers less of your view", "render",
             new Slider("lowShieldA", "How much lower", 0, 60, 5, 30, "%"));
         add("smallTotem", "Small Totem", "Shrink the totem-pop effect on your screen", "render",
@@ -143,6 +150,11 @@ public final class Mods {
             new Toggle("sprintStatus", "Show Sprint on the HUD", false));
         add("toggleSneak", "Toggle Sneak", "Sneak key flips ON (stay sneaking) / OFF (vanilla)", "misc",
             new Toggle("sneakStatus", "Show Sneak on the HUD", false));
+        add("chatTweaks", "Chat Tweaks", "Times next to messages, repeated messages stacked into one line, and a longer chat history", "misc",
+            new Toggle("ctTime", "Show the time next to each message", true),
+            choice("ctTimeFmt", "Time format", "24", "24", "24-hour", "12", "12-hour"),
+            new Toggle("ctStack", "Stack repeated messages (x2, x3...)", true),
+            new Toggle("ctLong", "Keep 1000 messages instead of 100", true));
         add("autoGG", "Auto GG", "Says gg in chat for you when a game ends", "misc",
             choice("agMsg", "Message", "gg", "gg", "gg", "ggs", "ggs", "ggwp", "gg wp", "goodgame", "good game", "gf", "gf"),
             new Slider("agDelay", "Delay", 0, 3000, 250, 1000, "ms"),
@@ -168,5 +180,5 @@ public final class Mods {
         "fps", "ping", "fpsGraph", "perfMonitor", "fullbright", "noHurtCam", "dynfov", "tntTimer", "crosshair", "hitboxes",
         "tAnim", "oldAnim", "hitColorOn", "tierTagger", "lowFire", "lowShield", "smallTotem", "zoom", "perfpack",
         "noParticles", "pauseUnfocused", "dynResOn", "toggleSprint", "toggleSneak", "via", "autoGG", "autoLogin", "pwHide",
-        "guiAnim", "_gear", "_search");
+        "guiAnim", "_gear", "_search", "clock", "cooldowns", "chatTweaks", "timeChanger");
 }

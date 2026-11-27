@@ -386,7 +386,7 @@ public class ModMenuScreen extends TCScreen {
         Gfx.pose().rotate(angle);
         int s = Math.round(size * k);
         int i = Mods.ICONS.indexOf("_gear");
-        Gfx.blit(Ui.ICONS, -s / 2, -s / 2, (i % 8) * 64, (i / 8) * 64, s, s, 64, 64, 512, 384, argb);
+        Gfx.blit(Ui.ICONS, -s / 2, -s / 2, (i % 8) * 64, (i / 8) * 64, s, s, 64, 64, 512, 448, argb);
         Gfx.pose().popMatrix();
     }
 

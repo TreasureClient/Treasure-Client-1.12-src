@@ -148,7 +148,7 @@ public final class Crosshair {
             if (c.flag("chElytra", true) && you.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA))
                 icon(ELYTRA, cx - r - 16, cy + r - 4, 12, you.isFallFlying() ? 1f : 0.55f);
             if (c.flag("chRocket", true) && now < boostUntil && you.isFallFlying()) {
-                String s = String.format(java.util.Locale.ROOT, "%.1fs", (boostUntil - now) / 1000f);
+                String s = net.treasureclient.hud.Hud.dec1((boostUntil - now) / 1000f) + "s";
                 icon(ROCKET, cx + r + 2, cy + r - 4, 12, 1f);
                 Ui.text(Ui.MONOB, s, cx + r + 16, cy + r - 2, 9.5f, 0xFFFFFFFF, 0, 1);
             } else if (now >= boostUntil) {
@@ -194,14 +194,7 @@ public final class Crosshair {
 
     /** An item icon {@code size} CSS px wide at (x, y). */
     private static void icon(ItemStack stack, float x, float y, float size, float alpha) {
-        if (alpha < 0.3f) return; // item icons can't fade, so they just disappear at the end
-        var pose = Gfx.pose();
-        pose.pushMatrix();
-        pose.translate(x * Ui.k, y * Ui.k);
-        float s = size * Ui.k / 16f;
-        pose.scale(s, s);
-        Gfx.item(stack, 0, 0);
-        pose.popMatrix();
+        if (alpha >= 0.3f) Ui.item(stack, x, y, size); // item icons can't fade, so they just disappear at the end
     }
 
     private static float clamp(int v, int lo, int hi) {

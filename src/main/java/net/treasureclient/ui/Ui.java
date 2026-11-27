@@ -142,7 +142,19 @@ public final class Ui {
     public static void icon(String key, float x, float y, float size, int argb) {
         int i = Mods.ICONS.indexOf(key);
         if (i < 0) return;
-        image(ICONS, x, y, size, size, (i % 8) * 64, (i / 8) * 64, 64, 64, 512, 384, argb);
+        image(ICONS, x, y, size, size, (i % 8) * 64, (i / 8) * 64, 64, 64, 512, 448, argb);
+    }
+
+    /** An item's icon {@code size} CSS px wide at (x, y). */
+    public static void item(net.minecraft.world.item.ItemStack stack, float x, float y, float size) {
+        if (stack == null || stack.isEmpty()) return;
+        var pose = Gfx.pose();
+        pose.pushMatrix();
+        pose.translate(x * k, y * k);
+        float s = size * k / 16f;
+        pose.scale(s, s);
+        Gfx.item(stack, 0, 0);
+        pose.popMatrix();
     }
 
     public static Identifier chest() {

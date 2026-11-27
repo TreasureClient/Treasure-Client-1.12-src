@@ -52,6 +52,8 @@ public final class Hud {
         ENTRIES.add(new Entry("combo", "combo", new Anchor("left", 18, "top", 140),
             (x, y, d) -> line(x, y, d, "Combo", String.valueOf(Trackers.combo), "", Trackers.combo > 0 ? 0 : -1)));
         ENTRIES.add(new Entry("items", "itemCount", new Anchor("left", 18, "top", 168), Hud::items));
+        ENTRIES.add(new Entry("clock", "clock", new Anchor("center", 0, "top", 52), Hud::clock));
+        ENTRIES.add(new Entry("cooldowns", "cooldowns", new Anchor("center", 0, "bottom", 162), Hud::cooldowns));
         ENTRIES.add(new Entry("perfmon", "perfMonitor", new Anchor("left", 18, "top", 60), Hud::perf));
         ENTRIES.add(new Entry("potions", "potionEffects", new Anchor("right", 18, "bottom", 130), Hud::potions));
         ENTRIES.add(new Entry("held", "heldItem", new Anchor("center", 0, "bottom", 128), Hud::held));
@@ -148,7 +150,7 @@ public final class Hud {
     }
 
     /** A number with one decimal ("12.3"). */
-    static String dec1(double v) {
+    public static String dec1(double v) {
         long a = Math.round(Math.abs(v) * 10);
         return (v < 0 && a > 0 ? "-" : "") + (a / 10) + "." + (a % 10);
     }
@@ -271,6 +273,54 @@ public final class Hud {
             if (info != null) ms = info.getLatency();
         }
         return ms >= 0 ? line(x, y, draw, "Ping", String.valueOf(ms), "ms", 0) : line(x, y, draw, "Ping", "—", "", -1);
+    }
+
+    private static float[] clock(float x, float y, boolean draw) {
+        Config c = Config.get();
+        boolean twelve = c.str("clockFmt", "24").equals("12");
+        java.time.LocalTime t = java.time.LocalTime.now();
+        String s = net.treasureclient.feature.ChatTweaks.now(twelve);
+        String unit = "";
+        if (twelve) {
+            unit = s.substring(s.length() - 2);
+            s = s.substring(0, s.length() - 3);
+        }
+        if (c.flag("clockSecs", false)) s += ":" + (t.getSecond() < 10 ? "0" : "") + t.getSecond();
+        return line(x, y, draw, "Time", s, unit, 0);
+    }
+
+    private static final ItemStack SAMPLE_PEARL = new ItemStack(Items.ENDER_PEARL);
+
+    /** One small box per item on cooldown: icon, seconds left, and a bar that empties. */
+    private static float[] cooldowns(float x, float y, boolean draw) {
+        var rows = net.treasureclient.feature.Cooldowns.rows();
+        if (rows.isEmpty()) {
+            if (!(V.screen() instanceof HudEditorScreenMarker)) return new float[]{0, 0};
+            rows = List.of(new net.treasureclient.feature.Cooldowns.Row(SAMPLE_PEARL, 0.8f, 0.8f));
+        }
+        float icon = 16, s = 12f, bw = 0, gap = 4;
+        float[] ws = new float[rows.size()];
+        String[] txt = new String[rows.size()];
+        for (int i = 0; i < rows.size(); i++) {
+            txt[i] = dec1(rows.get(i).secondsLeft()) + "s";
+            ws[i] = 8 + icon + 6 + Ui.width(Ui.HUD, txt[i], s, .01f) + 9;
+            bw += ws[i] + (i > 0 ? gap : 0);
+        }
+        float h = 26;
+        if (draw) {
+            Theme th = Theme.current();
+            float cx = x;
+            for (int i = 0; i < rows.size(); i++) {
+                var r = rows.get(i);
+                box(cx, y, ws[i], h);
+                Ui.item(r.icon(), cx + 8, y + (h - icon) / 2 - 1, icon);
+                float base = y + (h - (Ui.asc(Ui.HUD) + 0.21f) * s) / 2 + Ui.asc(Ui.HUD) * s - 1;
+                Ui.textBase(Ui.HUD, txt[i], cx + 8 + icon + 6, base, s, Theme.INK, .01f);
+                Ui.rect(cx + 4, y + h - 3, (ws[i] - 6) * Math.max(0f, Math.min(1f, r.fraction())), 1.5f, th.a1());
+                cx += ws[i] + gap;
+            }
+        }
+        return new float[]{bw, h};
     }
 
     private static float[] reach(float x, float y, boolean draw) {
