@@ -1,6 +1,6 @@
 # Builds Treasure Launcher for Linux (.deb, .rpm, .AppImage), Windows (.msi, .exe) and macOS (.dmg)
 # on every push to the Launcher branch. The installers are attached to the workflow run
-# (Actions tab -> the run -> Artifacts). Nothing is published as a release.
+# (Actions tab -> the run -> Artifacts), each as its own file. Nothing is published as a release.
 name: Treasure Launcher
 
 on:
@@ -54,14 +54,22 @@ jobs:
           # Microsoft sign-in's client ID (a repository variable; empty = sign-in shows "coming soon")
           TREASURE_MS_CLIENT_ID: ${{ vars.TREASURE_MS_CLIENT_ID }}
         run: tauri build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Treasure-Launcher-${{ matrix.name }}
-          path: |
-            app/src-tauri/target/release/bundle/deb/*.deb
-            app/src-tauri/target/release/bundle/rpm/*.rpm
-            app/src-tauri/target/release/bundle/appimage/*.AppImage
-            app/src-tauri/target/release/bundle/msi/*.msi
-            app/src-tauri/target/release/bundle/nsis/*.exe
-            app/src-tauri/target/release/bundle/dmg/*.dmg
-          if-no-files-found: warn
+      # One download per installer, as the file itself (not a .zip): archive: false (upload-artifact v7)
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with: { path: app/src-tauri/target/release/bundle/appimage/*.AppImage, archive: false }
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with: { path: app/src-tauri/target/release/bundle/deb/*.deb, archive: false }
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with: { path: app/src-tauri/target/release/bundle/rpm/*.rpm, archive: false }
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with: { path: app/src-tauri/target/release/bundle/nsis/*.exe, archive: false }
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with: { path: app/src-tauri/target/release/bundle/msi/*.msi, archive: false }
+      - if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v7
+        with: { path: app/src-tauri/target/release/bundle/dmg/*.dmg, archive: false }
