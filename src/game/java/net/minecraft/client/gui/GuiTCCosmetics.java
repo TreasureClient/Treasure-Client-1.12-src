@@ -22,8 +22,8 @@ import net.minecraft.util.math.MathHelper;
 public class GuiTCCosmetics extends GuiScreen {
 
 	private final GuiScreen parent;
-	private long initAt = 0L;
-	private boolean overlayLive = false;
+	private final TCOverlayWatch watch = new TCOverlayWatch();
+	private boolean watchStarted = false;
 
 	// the player's turn: spins slowly by itself, turns round to show a new cape, can be dragged
 	private static float yaw = -25.0F;
@@ -47,7 +47,7 @@ public class GuiTCCosmetics extends GuiScreen {
 		this.buttonList.add(new GuiButton(4, bx, y + 132, bw, 20, "Skin & Eaglercraft cape..."));
 		this.buttonList.add(new GuiButton(5, bx, y + 156, bw, 20, "Done"));
 		this.labels();
-		if (this.initAt == 0L) this.initAt = EagRuntime.steadyTimeMillis();
+		if (!this.watchStarted) { this.watchStarted = true; this.watch.start(); }
 		this.lastFrame = EagRuntime.steadyTimeMillis();
 		this.heartbeat();
 		this.publish();
@@ -96,7 +96,7 @@ public class GuiTCCosmetics extends GuiScreen {
 	}
 
 	private boolean fallback() {
-		return !this.overlayLive && EagRuntime.steadyTimeMillis() - this.initAt > 1500L;
+		return this.watch.fallback(); // only if the overlay isn't answering (see TCOverlayWatch)
 	}
 
 	private void updateButtons() {
@@ -128,9 +128,8 @@ public class GuiTCCosmetics extends GuiScreen {
 					ack = 0L;
 				}
 			}
-			this.overlayLive = Math.abs(System.currentTimeMillis() - ack) < 2500L;
+			if (Math.abs(System.currentTimeMillis() - ack) < 2500L) this.watch.live();
 		} catch (Throwable t) {
-			this.overlayLive = false;
 		}
 		this.updateButtons();
 	}
@@ -201,6 +200,7 @@ public class GuiTCCosmetics extends GuiScreen {
 	}
 
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+		this.watch.frame();
 		TreasureBackground.draw(this.width, this.height, this.zLevel);
 
 		long now = EagRuntime.steadyTimeMillis();

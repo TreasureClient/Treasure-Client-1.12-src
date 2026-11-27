@@ -1736,6 +1736,18 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 @media (prefers-reduced-motion: reduce) {
   #tc-root.tc15 *, #tc-root.tc15 *::before, #tc-root.tc15 *::after { animation: none !important; transition: none !important; }
 }
+/* ---------------- HUD editor (Edit HUD in the Mod Menu): a slim 1.5 bar instead of the old big logo + gold button ---------------- */
+#tc-root.tc15 .tc-hs-card { flex-direction: row; align-items: center; gap: 22px; padding: 12px 20px 12px 18px; border-radius: 3px;
+  background: rgba(10,10,12,.82); box-shadow: inset 2px 0 0 var(--a-1); }
+#tc-root.tc15 .tc-hs-logo { flex-direction: row; gap: 10px; }
+#tc-root.tc15 .tc-hs .tc-hs-chest { height: 22px; filter: none; }
+#tc-root.tc15 .tc-hs .tc-hs-word { display: none; }
+#tc-root.tc15 .tc-hs-logo::after { content: "Edit HUD"; font: 600 22px 'Archivo', 'Outfit', sans-serif; font-stretch: 72%; text-transform: uppercase; color: var(--t15-ink); }
+#tc-root.tc15 .tc-hs-mods { font: 500 11.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; padding: 8px 14px;
+  border: 1px solid var(--t15-faint); border-radius: 3px; background: none; color: var(--a-1); box-shadow: none; transition: border-color .15s, color .15s; }
+#tc-root.tc15 .tc-hs-mods:hover { filter: none; transform: none; border-color: var(--a-1); color: var(--t15-ink); }
+#tc-root.tc15 .tc-hs-hint { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .04em; color: var(--t15-dim); text-shadow: none; }
+#tc-root.tc15 .tc-hs-hint button { color: var(--t15-ink); }
 /* TC15 END */
 `;
   function ensureStyle() {
@@ -2957,6 +2969,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
 
 
 
+
+
     /* ===== TC15: Treasure Client 1.5 look \u2014 the main menu words and the clean Mod Menu =====
        Runs inside the overlay's init, so it can use $, $$, root, gui, openGui, tcSetView.
        Main menu talk with the game (all through the game's storage, like tcopen):
@@ -3135,7 +3149,8 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             var vi = (sget('tcmenuinfo') || '').split('\n')[3];
             if (vi && wm.__v !== vi) { wm.__v = vi; wm.textContent = 'Treasure Client ' + utf8(vi); }
             var cv = sget('tccosui'), cosOn = !!cv && Math.abs(Date.now() - (parseInt(cv, 10) || 0)) < 2000;
-            wm.style.visibility = on || cosOn ? 'hidden' : '';
+            var wv = on || cosOn ? 'hidden' : '';
+            if (wm.style.visibility !== wv) wm.style.visibility = wv;
           }
           if (on !== shown) {
             shown = on;
@@ -3640,8 +3655,25 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         };
       } catch (e) { try { console.error('[TreasureClient] 1.5 HUD look failed:', e); } catch (e2) {} }
     })();
+    /* ---------- 1.5: Right Shift in a world opens the new Mod Menu (it used to open the old 1.4 "Right Shift screen"
+       with the big logo; that screen is now only the HUD editor, from Edit HUD in the Mod Menu) ---------- */
+    (function () {
+      try {
+        if (!root || !root.classList.contains('tc15')) return;
+        // the HUD editor sets window.__tcHudScreen later in the overlay's start-up, so wait for it
+        var tries = 0;
+        var wrap = function () {
+          var hs = window.__tcHudScreen;
+          if (hs && hs.open && !hs.__t15) window.__tcHudScreen = { __t15: true, open: function () { openGui(); }, close: hs.close, isOpen: hs.isOpen };
+          else if (!hs && ++tries < 50) setTimeout(wrap, 100);
+        };
+        wrap();
+      } catch (e) { try { console.error('[TreasureClient] 1.5 Right Shift failed:', e); } catch (e2) {} }
+    })();
     /* ---------- 1.5 HUD: boxes on the same side stack under each other (coordinates are 4 rows again) ----------
-       Only boxes still at their default spot move; one you placed with the HUD editor stays where you put it. */
+       Only boxes still at their default spot move; one you placed with the HUD editor stays where you put it.
+       It only measures when a box changes size or shows/hides (ResizeObserver, which never makes the browser
+       redo its layout early); it used to measure every box twice a second, which could cost a frame. */
     (function () {
       try {
         if (!root || !root.classList.contains('tc15')) return;
@@ -3649,7 +3681,9 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
         var placed = function (id) {
           try { var p = state.hudPositions && state.hudPositions[id]; return !!(p && typeof p.left === 'number'); } catch (e) { return false; }
         };
+        var queued = false, lastSig = '';
         var stack = function () {
+          queued = false;
           if (root.classList.contains('tc-nogame') || root.classList.contains('hud-editing')) return;
           var mid = innerWidth / 2, y = { l: 18, r: 18 };
           COL.forEach(function (id) {
@@ -3661,7 +3695,22 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
             y[side] += el.offsetHeight + 6;
           });
         };
-        setInterval(stack, 500);
+        // runs right after the browser's own layout for that frame, so reading sizes there is free
+        var later = function () { if (!queued) { queued = true; requestAnimationFrame(function () { setTimeout(stack, 0); }); } };
+        if (typeof ResizeObserver === 'function') {
+          var ro = new ResizeObserver(later);
+          COL.forEach(function (id) { var el = document.getElementById(id); if (el) ro.observe(el); });
+          addEventListener('resize', later);
+          // shown/hidden, placed with the editor, or leaving the editor: a cheap check of what's on, no measuring
+          setInterval(function () {
+            var sig = root.className.indexOf('hud-editing') >= 0 ? 'e' : '';
+            COL.forEach(function (id) { var el = document.getElementById(id); sig += el ? (el.className + (placed(id) ? 'p' : '') + '|') : '-'; });
+            if (sig !== lastSig) { lastSig = sig; later(); }
+          }, 500);
+          later();
+        } else {
+          setInterval(stack, 500);
+        }
       } catch (e) { try { console.error('[TreasureClient] 1.5 HUD stacking failed:', e); } catch (e2) {} }
     })();
     /* TC15 END */
@@ -4382,6 +4431,7 @@ window.__tcRefocusGame = function(){ try { var gf = document.getElementById("gam
       if (state.menuKeyCode && e.code === state.menuKeyCode && (!tcIsTypingTarget(e) || !e.key || e.key.length !== 1)
           && (tcMenuShown || tcPlaying())) {
         e.preventDefault(); e.stopImmediatePropagation();
+        if (e.repeat) return; // holding the key down: only the first press counts (it used to open and close over and over)
         if (tcIsTypingTarget(e)) { try { e.target.blur(); } catch (er) {} }
         // Treasure Client: in a world the key opens the Right Shift screen (logo, Mods, drag the HUD)
         var hsApi = window.__tcHudScreen;
