@@ -381,7 +381,7 @@ async fn search(q: modrinth::Query) -> R<modrinth::SearchResult> {
 
 fn pack_job(app: &AppHandle, inst: Instance, file: impl FnOnce(&ProgressFn) -> anyhow::Result<PathBuf> + Send + 'static) -> R<Instance> {
     let id = inst.id.clone();
-    job(app, &id, true, move |app| {
+    job(app, &inst.id, true, move |app| {
         let p = progress_for(app, &id);
         let path = file(&p)?;
         let mut i = instance::get(&id)?;
