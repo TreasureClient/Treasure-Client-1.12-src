@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Treasure Launcher</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="side" aria-label="Main">
+    <div class="brand">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="1" y="3" width="14" height="11" fill="var(--a3)"/><rect x="2" y="4" width="12" height="4" fill="var(--a2)"/><rect x="2" y="9" width="12" height="4" fill="var(--a2)"/><rect x="1" y="8" width="14" height="1" fill="#2a1a08"/><rect x="7" y="7" width="2" height="3" fill="var(--hi)"/><rect x="3" y="5" width="3" height="1" fill="var(--a1)"/><rect x="3" y="10" width="3" height="1" fill="var(--a1)"/></svg>
+      <b>TREASURE<small>LAUNCHER</small></b>
+      <button class="collapse" id="collapse" aria-label="Collapse sidebar" title="Collapse sidebar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+    </div>
+    <button class="nav" data-view="home" aria-current="page" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span class="lbl">Home</span></button>
+    <button class="nav" data-view="library" title="Library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="lbl">Library</span><span class="count lbl" id="lib-count"></span></button>
+    <button class="nav" data-view="browse" title="Browse Modrinth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg><span class="lbl">Browse</span></button>
+    <button class="nav" data-view="skins" title="Skins"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 3h8l4 4-3 3v11H7V10L4 7z"/></svg><span class="lbl">Skins</span><span class="soon">Soon</span></button>
+
+    <div class="np" id="np" hidden>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="np-text"><span class="mono" style="color:var(--ok)">Now playing</span><b id="np-name"></b><span class="mono dim" id="np-time">00:00</span></div>
+      <button class="stop" id="np-stop">Stop</button>
+    </div>
+
+    <div class="side-h">Pinned</div>
+    <div class="pins" id="pins"></div>
+
+    <div class="grow"></div>
+    <button class="nav" data-view="settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="lbl">Settings</span></button>
+    <div class="dl" id="side-dl" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      <div class="dl-text"><span id="side-dl-t"></span><div class="bar"><i id="side-dl-b"></i></div></div>
+    </div>
+    <button class="acct" id="acct-btn" aria-haspopup="dialog">
+      <svg class="face" viewBox="0 0 8 8" shape-rendering="crispEdges" id="face"></svg>
+      <span class="who"><b id="acct-name">Sign in</b><span class="mono dim" id="acct-sub">Microsoft account</span></span>
+    </button>
+  </aside>
+
+  <!-- ================= RIGHT ================= -->
+  <div class="right">
+    <header class="top">
+      <span class="crumb" id="crumb"><b>Home</b></span>
+      <span class="grow"></span>
+      <button class="kbar" id="kbar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>Search instances and pages</span><kbd>Ctrl K</kbd></button>
+      <button class="tb" id="dl-btn" title="Downloads" aria-label="Downloads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="badge" id="dl-badge" hidden></span></button>
+      <button class="tb" id="bell" title="Alerts" aria-label="Alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg><span class="badge" id="bell-badge" hidden></span></button>
+    </header>
+
+    <main class="scroll" id="scroll">
+      <!-- HOME -->
+      <section class="view" id="v-home">
+        <div class="hero" id="hero">
+          <canvas id="hero-art" aria-hidden="true"></canvas>
+          <span class="mono" style="color:var(--a1)" id="h-kicker">Jump back in</span>
+          <h2 id="h-name"></h2>
+          <div class="meta" id="h-meta"></div>
+          <div class="acts">
+            <div class="playgroup">
+              <button class="play" id="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg><span>Play</span></button>
+              <button class="pick" id="pick" aria-label="Choose instance" aria-haspopup="menu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m6 9 6 6 6-6"/></svg></button>
+              <div class="menu" id="pick-menu" role="menu" hidden style="left:0;top:calc(100% + 8px)"></div>
+            </div>
+            <button class="chip" id="h-open">Open instance</button>
+          </div>
+          <div class="bar" id="h-bar" hidden><i></i></div>
+          <div class="status mono" id="h-status" hidden></div>
+        </div>
+
+        <div id="jump-wrap" hidden>
+          <div class="row-h"><h3>Jump back in</h3><span class="hint">Your worlds, straight from here (Minecraft 1.20 and newer)</span></div>
+          <div class="rowscroll" id="jump" style="margin-top:12px"></div>
+        </div>
+
+        <div>
+          <div class="row-h"><h3>Your instances</h3><button class="more" data-goto="library">See all ›</button></div>
+          <div class="cards" id="home-cards" style="margin-top:12px"></div>
+        </div>
+
+        <div class="grid2">
+          <div id="news-wrap" hidden>
+            <div class="row-h"><h3>What's new in Treasure Client</h3></div>
+            <div class="stack" id="news" style="margin-top:12px"></div>
+          </div>
+          <div id="feat-wrap">
+            <div class="row-h"><h3>Popular modpacks</h3><button class="more" data-goto="browse">Browse ›</button></div>
+            <div class="stack" id="featured" style="margin-top:6px"><div class="loading">Loading from Modrinth</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIBRARY -->
+      <section class="view" id="v-library" hidden>
+        <div class="row-h"><h1 class="h1">Library</h1></div>
+        <div class="toolbar">
+          <label class="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--dim)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="lib-q" placeholder="Search your instances" aria-label="Search your instances"></label>
+          <select class="sel" id="lib-sort" aria-label="Sort"><option value="last">Last played</option><option value="name">Name</option><option value="time">Most played</option></select>
+          <div class="seg" role="group" aria-label="View"><button aria-pressed="true" data-lv="grid">Grid</button><button aria-pressed="false" data-lv="list">List</button></div>
+          <button class="add" data-new>+ New instance</button>
+        </div>
+        <div id="lib"></div>
+      </section>
+
+      <!-- INSTANCE -->
+      <section class="view" id="v-inst" hidden>
+        <div class="ihead">
+          <canvas id="inst-art" aria-hidden="true"></canvas>
+          <span id="i-icon"></span>
+          <div style="min-width:0">
+            <button class="chip" data-back style="margin-bottom:10px">‹ Library</button>
+            <h1 class="h1" id="i-name" style="font-size:40px"></h1>
+            <div class="meta" id="i-meta" style="margin-top:8px"></div>
+          </div>
+          <div class="acts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="chip" id="i-folder">Open folder</button>
+            <div class="playgroup"><button class="play" id="i-play" style="border-radius:12px;padding:12px 26px;font-size:19px"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg><span>Play</span></button></div>
+          </div>
+        </div>
+        <div class="bar" id="i-bar" hidden><i></i></div>
+        <div class="status mono" id="i-status" hidden style="color:var(--a1)"></div>
+        <div class="stats" id="i-stats"></div>
+        <div class="tabs" role="tablist" id="i-tabs">
+          <button class="tab" role="tab" aria-selected="true" data-pane="content">Content<span class="n" id="n-upd"></span></button>
+          <button class="tab" role="tab" aria-selected="false" data-pane="worlds">Worlds</button>
+          <button class="tab" role="tab" aria-selected="false" data-pane="shots">Screenshots</button>
+          <button class="tab" role="tab" aria-selected="false" data-pane="logs">Logs</button>
+          <button class="tab" role="tab" aria-selected="false" data-pane="iset">Settings</button>
+        </div>
+        <div class="pane" id="p-content">
+          <div class="toolbar" style="margin-bottom:12px">
+            <div class="seg" role="group" aria-label="Content type" id="ckind"><button aria-pressed="true" data-k="mod">Mods</button><button aria-pressed="false" data-k="resourcepack">Resource packs</button><button aria-pressed="false" data-k="shader">Shaders</button></div>
+            <label class="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--dim)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="mod-q" placeholder="Search this instance" aria-label="Search this instance"></label>
+            <button class="add ghost" id="upd-all" disabled>Checking for updates…</button>
+            <button class="add" id="add-content">+ Add content</button>
+          </div>
+          <div class="warn" id="i-warn" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--a1)" stroke-width="2"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18v.5"/></svg><span id="i-warn-t"></span></div>
+          <div id="mods"></div>
+        </div>
+        <div class="pane" id="p-worlds" hidden><div class="stack" id="worlds"></div></div>
+        <div class="pane" id="p-shots" hidden><div class="shots" id="shots"></div></div>
+        <div class="pane" id="p-logs" hidden>
+          <div class="toolbar" style="margin-bottom:10px"><span class="hint">Live while the game runs. Errors are red, warnings gold.</span><span style="flex:1"></span><button class="chip" id="copy-log">Copy log</button><button class="chip" id="log-folder">Logs folder</button></div>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="pane" id="p-iset" hidden>
+          <div class="set"><div><div>Name</div><div class="d">What it's called in the launcher.</div></div><input class="wide-in" id="s-name" maxlength="60"></div>
+          <div class="set"><div><div>Group</div><div class="d">Where it shows in the Library.</div></div><input class="wide-in" id="s-group" maxlength="40" list="groups"><datalist id="groups"></datalist></div>
+          <div class="set"><div><div>Memory</div><div class="d" id="s-mem-d">RAM this instance gets.</div></div><div class="row2"><input type="range" min="1024" max="16384" step="512" id="s-mem"><span class="mono" id="s-mem-v"></span></div></div>
+          <div class="set" id="s-tc-row"><div><div>Treasure Client</div><div class="d">Adds Treasure Client and Fabric API the next time you play. Off takes it out.</div></div><button class="switch" role="switch" aria-checked="false" id="s-tc" aria-label="Treasure Client in this instance"></button></div>
+          <div class="set"><div><div>Pin to the sidebar</div><div class="d">Keeps it one click away.</div></div><button class="switch" role="switch" aria-checked="false" id="s-pin" aria-label="Pin to the sidebar"></button></div>
+          <div class="set"><div><div>Window size</div><div class="d">Game window size when it opens (blank = Minecraft's own).</div></div><div class="row2"><input class="small-in" id="s-w" inputmode="numeric" placeholder="width"> × <input class="small-in" id="s-h" inputmode="numeric" placeholder="height"></div></div>
+          <div class="set"><div><div>Java</div><div class="d">Blank = the right Java, downloaded for you. Or the path to your own java.</div></div><input class="wide-in" id="s-java" placeholder="Automatic"></div>
+          <div class="set"><div><div>Extra Java arguments</div><div class="d">For people who know what these do.</div></div><input class="wide-in" id="s-args" placeholder="none"></div>
+          <div class="set"><div><div>Repair</div><div class="d">Checks every game file and Java and downloads any that are damaged.</div></div><button class="chip" id="s-repair">Repair</button></div>
+          <div class="set"><div><div>Make a copy</div><div class="d">Copies its mods, settings and worlds into a new instance.</div></div><button class="chip" id="s-dup">Duplicate</button></div>
+          <div class="set"><div><div style="color:var(--err)">Delete instance</div><div class="d">Removes its mods, settings and worlds.</div></div><button class="chip" id="s-del" style="border-color:color-mix(in srgb,var(--err) 50%,transparent);color:var(--err)">Delete…</button></div>
+        </div>
+      </section>
+
+      <!-- BROWSE -->
+      <section class="view" id="v-browse" hidden>
+        <div class="row-h"><h1 class="h1">Browse</h1><span class="hint">From Modrinth. Everything downloads from the author's page on Modrinth.</span></div>
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="What to browse" id="kinds">
+            <button aria-pressed="true" data-kind="modpack">Modpacks</button><button aria-pressed="false" data-kind="mod">Mods</button><button aria-pressed="false" data-kind="resourcepack">Resource packs</button><button aria-pressed="false" data-kind="shader">Shaders</button>
+          </div>
+          <label class="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--dim)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Search modpacks" aria-label="Search Modrinth"></label>
+          <label class="hint" style="display:flex;gap:8px;align-items:center" id="target-wrap" hidden>Add to <select class="sel" id="target" aria-label="Add to"></select></label>
+        </div>
+        <div class="browse">
+          <div class="filters">
+            <div class="grp" id="ver-grp"><span class="mono dim">Minecraft version</span><select class="sel" id="b-ver" aria-label="Minecraft version"></select></div>
+            <div class="grp"><span class="mono dim">Sort</span><select class="sel" id="b-sort" aria-label="Sort"><option value="relevance">Best match</option><option value="downloads">Most downloaded</option><option value="follows">Most followed</option><option value="updated">Recently updated</option><option value="newest">Newest</option></select></div>
+            <div class="grp" id="cats"><span class="mono dim">Category</span></div>
+          </div>
+          <div class="results" id="results"></div>
+        </div>
+      </section>
+
+      <!-- SKINS -->
+      <section class="view" id="v-skins" hidden>
+        <div class="row-h"><h1 class="h1">Skins</h1></div>
+        <div class="empty"><b>Coming in a later update</b>Changing your skin from the launcher needs Microsoft sign-in, which turns on once Mojang approves Treasure Launcher. Until then, change it at minecraft.net.</div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="v-settings" hidden>
+        <div class="row-h"><h1 class="h1">Settings</h1></div>
+        <div><div class="row-h"><h3>Theme</h3><span class="hint">The same themes as Treasure Client</span></div><div class="themes" id="themes" style="margin-top:12px"></div></div>
+        <div>
+          <div class="set"><div><div>Sidebar labels</div><div class="d">Show names next to the sidebar icons.</div></div><button class="switch" role="switch" aria-checked="true" id="set-labels" aria-label="Sidebar labels"></button></div>
+          <div class="set"><div><div>Memory for instances</div><div class="d" id="ram-d">Instances that don't set their own get this much RAM.</div></div><div class="row2"><input type="range" id="ram" min="1024" max="16384" step="512"><span class="mono" id="ram-v"></span></div></div>
+          <div class="set"><div><div>While the game is running</div><div class="d">Hiding the launcher leaves more memory for the game. It comes back when the game closes.</div></div><select class="sel" id="set-while" aria-label="While playing"><option value="hide">Hide the launcher</option><option value="minimize">Minimize it</option><option value="open">Keep it open</option></select></div>
+          <div class="set"><div><div>Downloads at once</div><div class="d">Fewer is gentler on slow internet.</div></div><div class="row2"><input type="range" id="set-dl" min="1" max="16"><span class="mono" id="set-dl-v"></span></div></div>
+          <div class="set"><div><div>Java for every instance</div><div class="d">Blank = the right Java for each version, downloaded for you.</div></div><input class="wide-in" id="set-java" placeholder="Automatic"></div>
+          <div class="set"><div><div>Reduce motion</div><div class="d">Turns off the shine, glow and slide animations.</div></div><button class="switch" role="switch" aria-checked="false" id="rm" aria-label="Reduce motion"></button></div>
+          <div class="set"><div><div>Data folder</div><div class="d" id="data-dir"></div></div><button class="chip" id="open-data">Open</button></div>
+          <div class="set"><div><div>Privacy</div><div class="d">No ads and no tracking. The launcher only talks to Mojang, Microsoft, Fabric, Modrinth and the Treasure Client website, to download and sign in.</div></div><span class="tag ok">Nothing collected</span></div>
+          <div class="set"><div><div>About</div><div class="d" id="about"></div></div><button class="chip" id="site">Website</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- NEW INSTANCE -->
+<div class="scrim" id="scrim" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ni-title">
+    <div class="row-h"><h2 id="ni-title">New instance</h2><span style="flex:1"></span><button class="chip" data-close>Close ✕</button></div>
+    <div class="choices">
+      <button class="choice" data-choice="tc" aria-pressed="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="1" y="3" width="14" height="11" fill="var(--a3)"/><rect x="2" y="4" width="12" height="4" fill="var(--a2)"/><rect x="2" y="9" width="12" height="4" fill="var(--a2)"/><rect x="7" y="7" width="2" height="3" fill="var(--hi)"/></svg><b>With Treasure Client</b><span>Fabric with the Treasure Client mod and Fabric API. Nothing else.</span></button>
+      <button class="choice" data-choice="plain" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg><b>Without</b><span>Plain Fabric or vanilla Minecraft. Add your own mods later.</span></button>
+      <button class="choice" data-choice="pack" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg><b>From a modpack</b><span>Any modpack on Modrinth, or a .mrpack file (you can also drop one on the window).</span></button>
+    </div>
+    <div class="form" id="ni-form">
+      <label class="field"><span class="mono">Name</span><input id="ni-name" value="My instance" maxlength="60"></label>
+      <label class="field"><span class="mono">Minecraft version</span><select id="ni-ver"></select></label>
+      <label class="field" id="ni-loader-f" hidden><span class="mono">Loader</span><select id="ni-loader"><option value="fabric">Fabric</option><option value="vanilla">Vanilla</option></select></label>
+      <label class="field"><span class="mono">Group</span><input id="ni-group" value="My instances" list="groups" maxlength="40"></label>
+      <div class="hint" id="ni-hint" style="grid-column:1/-1"></div>
+    </div>
+    <div class="form" id="ni-pack" hidden>
+      <button class="choice" id="ni-browse" style="min-height:0"><b>Browse Modrinth</b><span>Find a modpack and press Install.</span></button>
+      <button class="choice" id="ni-file" style="min-height:0"><b>Open a .mrpack file</b><span>A modpack file you downloaded or were sent.</span></button>
+      <input type="file" id="ni-file-in" accept=".mrpack" hidden>
+    </div>
+    <div class="foot"><button class="chip" data-close>Cancel</button><button class="add" id="create">Create instance</button></div>
+  </div>
+</div>
+
+<!-- SIGN IN -->
+<div class="scrim" id="signin" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="si-title" style="width:min(520px,100%)">
+    <div class="row-h"><h2 id="si-title">Sign in with Microsoft</h2><span style="flex:1"></span><button class="chip" id="si-close">Close ✕</button></div>
+    <div id="si-body"></div>
+  </div>
+</div>
+
+<!-- ASK -->
+<div class="scrim" id="ask" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="ask-title" style="width:min(460px,100%)">
+    <h2 id="ask-title"></h2>
+    <p class="hint" id="ask-text" style="margin:0"></p>
+    <div class="foot"><button class="chip" id="ask-no">Cancel</button><button class="add" id="ask-yes">OK</button></div>
+  </div>
+</div>
+
+<!-- CTRL+K -->
+<div class="scrim" id="pal-scrim" hidden>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Search">
+    <label class="search"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--dim)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="pal-q" placeholder="Type an instance, a page or an action" aria-label="Search everything"><kbd>Esc</kbd></label>
+    <div class="items" id="pal-items"></div>
+  </div>
+</div>
+
+<!-- POP-OVERS -->
+<div class="pop" id="dl-pop" hidden>
+  <div class="row-h"><h3>Downloads</h3><span class="hint" id="dl-none">Nothing downloading</span></div>
+  <div class="stack" id="dl-list"></div>
+</div>
+<div class="pop" id="bell-pop" hidden>
+  <div class="row-h"><h3>Alerts</h3></div>
+  <div id="bell-list"><p class="hint">Nothing new.</p></div>
+</div>
+<div class="pop" id="acct-pop" hidden>
+  <div class="row-h"><h3>Accounts</h3></div>
+  <div class="stack" id="acct-list"></div>
+  <button class="add ghost" id="acct-add">+ Sign in with Microsoft</button>
+  <span class="hint">Playing needs a Microsoft account that owns Minecraft: Java Edition.</span>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="drop" id="drop" hidden>Drop the .mrpack to make an instance</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[workspace]
+members = ["core", "cli"]
+exclude = ["app/src-tauri"]
+resolver = "2"
+
+[profile.dev]
+debug = 0
+
+[profile.release]
+opt-level = 3

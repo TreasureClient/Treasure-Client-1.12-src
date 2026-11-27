@@ -1,0 +1,11 @@
+[package]
+name = "tl"
+version = "0.1.0"
+edition = "2021"
+description = "Command-line test tool for Treasure Launcher's engine"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+serde_json = "1"
+treasure-core = { path = "../core" }

@@ -1,0 +1,67 @@
+# Builds Treasure Launcher for Linux (.deb, .rpm, .AppImage), Windows (.msi, .exe) and macOS (.dmg)
+# on every push to the Launcher branch. The installers are attached to the workflow run
+# (Actions tab -> the run -> Artifacts). Nothing is published as a release.
+name: Treasure Launcher
+
+on:
+  push:
+    branches: [Launcher]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engine:
+    name: Engine tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p treasure-core
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: engine
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu 22.04 so the Linux builds also run on older systems (Debian 12, ChromeOS Linux)
+          - { os: ubuntu-22.04, name: linux }
+          - { os: windows-latest, name: windows }
+          - { os: macos-latest, name: macos }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+      - name: Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf libfuse2 file
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g @tauri-apps/cli@2
+      - name: Build
+        working-directory: app/src-tauri
+        env:
+          # Microsoft sign-in's client ID (a repository variable; empty = sign-in shows "coming soon")
+          TREASURE_MS_CLIENT_ID: ${{ vars.TREASURE_MS_CLIENT_ID }}
+        run: tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Treasure-Launcher-${{ matrix.name }}
+          path: |
+            app/src-tauri/target/release/bundle/deb/*.deb
+            app/src-tauri/target/release/bundle/rpm/*.rpm
+            app/src-tauri/target/release/bundle/appimage/*.AppImage
+            app/src-tauri/target/release/bundle/msi/*.msi
+            app/src-tauri/target/release/bundle/nsis/*.exe
+            app/src-tauri/target/release/bundle/dmg/*.dmg
+          if-no-files-found: warn
